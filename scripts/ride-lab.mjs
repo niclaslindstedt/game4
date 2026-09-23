@@ -14,6 +14,8 @@
 //   npm run ride                       every scenario, one table
 //   npm run ride -- kicker             one scenario
 //   npm run ride -- accel --seconds 30
+//   npm run ride -- --sled mountain    one machine of the catalog
+//   npm run ride -- --sled all         every scenario on every machine, one table
 //
 // Writes previews/ride-<scenario>.png. Required before and after any change
 // to the suspension, the snow, the drive, the steering or the air.
@@ -38,11 +40,22 @@ const args = parseArgs(
   {
     scenario: { kind: "string", help: `which (${SCENARIO_IDS.join(", ")}); a bare word works too` },
     seconds: { kind: "number", help: "how long to ride (the scenario's own when left out)" },
+    sled: {
+      kind: "string",
+      default: "crossover",
+      help: `the machine (${E.SLEDS.map((s) => s.id).join(", ")}), or all`,
+    },
     "no-png": { kind: "flag", help: "print the numbers, draw nothing" },
     out: { kind: "string", default: "previews", help: "where the pictures go" },
   },
-  "usage: npm run ride -- [scenario] [--seconds s] [--no-png] [--out dir]",
+  "usage: npm run ride -- [scenario] [--sled id|all] [--seconds s] [--no-png] [--out dir]",
 );
+
+if (args.sled !== "all" && !E.isSledId(args.sled)) {
+  console.error(`unknown sled "${args.sled}" (${E.SLEDS.map((s) => s.id).join(", ")}, all)`);
+  process.exit(2);
+}
+const roster = args.sled === "all" ? E.SLEDS : [E.sledById(args.sled)];
 
 const wanted = args.scenario ?? args._[0];
 if (wanted && !SCENARIO_IDS.includes(wanted)) {
@@ -52,9 +65,9 @@ if (wanted && !SCENARIO_IDS.includes(wanted)) {
 const chosen = wanted ? SCENARIOS.filter((s) => s.id === wanted) : SCENARIOS;
 
 /** Ride a scenario and keep a frame every step. */
-function record(scenario) {
+function record(scenario, spec) {
   const level = scenario.level(S);
-  const state = E.createGame({ level, rivals: 0, countdown: 0, quiet: true });
+  const state = E.createGame({ level, rivals: 0, countdown: 0, spec, quiet: true });
   E.placeRun(state, scenario.place(S));
   const seconds = args.seconds ?? scenario.seconds;
   const frames = [];
@@ -96,18 +109,20 @@ function record(scenario) {
   return { frames, events, trees: level.trees };
 }
 
-console.log(
-  `ride lab — engine ${E.engineVersion} at ${E.TUNING.physicsHz} Hz · sled ${E.SLED.name}`,
-);
+console.log(`ride lab — engine ${E.engineVersion} at ${E.TUNING.physicsHz} Hz · sled ${args.sled}`);
 if (!args["no-png"]) mkdirSync(join(root, args.out), { recursive: true });
 for (const scenario of chosen) {
-  const run = record(scenario);
-  const lines = scenario.measure(run);
   console.log(`\n${scenario.id.padEnd(13)} ${scenario.title}`);
-  console.log("  " + lines.map(([k, v]) => `${k} ${v}`).join(" · "));
-  if (!args["no-png"]) {
-    const file = join(root, args.out, `ride-${scenario.id}.png`);
-    writeFileSync(file, drawRun(run, scenario, lines));
+  for (const spec of roster) {
+    const run = record(scenario, spec);
+    const lines = scenario.measure(run);
+    const who = roster.length > 1 ? `${spec.id.padEnd(10)} ` : "";
+    console.log("  " + who + lines.map(([k, v]) => `${k} ${v}`).join(" · "));
+    if (!args["no-png"]) {
+      const tag = roster.length > 1 || spec.id !== "crossover" ? `-${spec.id}` : "";
+      const file = join(root, args.out, `ride-${scenario.id}${tag}.png`);
+      writeFileSync(file, drawRun(run, scenario, lines));
+    }
   }
 }
 if (!args["no-png"]) console.log(`\nwrote ${args.out}/ride-*.png`);

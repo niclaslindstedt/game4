@@ -28,47 +28,60 @@ const S = TUNING.snow;
 const G = TUNING.grip;
 
 /** The support depth a probe settles toward, m: `packed` 0..1 is the
- * surface's share of groomed track, `speed` the machine's, and `scale` the
- * probe's own share of the tread's sink (the skis sink less). */
-export function sinkTarget(packed: number, speed: number, scale: number): number {
-  const r = speed / S.planeSpeed;
+ * surface's share of groomed track, `speed` the machine's, `scale` the
+ * probe's own share of the reference tread's sink (the skis sink less, a
+ * lightly loaded tread less again) and `plane` its planing speed as a
+ * multiple of `snow.planeSpeed` (`footprint.ts`). */
+export function sinkTarget(packed: number, speed: number, scale: number, plane = 1): number {
+  const r = speed / (S.planeSpeed * plane);
   const powder = S.powderSink * scale * Math.exp(-r * r);
   return powder * (1 - packed) + S.packedSink * packed;
 }
 
-/** The deepest a sled can sink here — a resting machine's — m. What the
- * chassis contacts read as the bottom of the snow (`sled.ts`): deep powder
- * does not hold a belly up, it is pushed aside by it. */
-export function powderFloor(packed: number): number {
-  return S.powderSink * (1 - packed) + S.packedSink * packed;
+/** The deepest a sled can sink here — a resting machine's — m, for a tread
+ * that sinks `scale` times the reference's (`Footprint.sink`). What the
+ * chassis contacts read as the bottom of the snow (`chassis.ts`): deep
+ * powder does not hold a belly up, it is pushed aside by it — down to the
+ * base the machine's own tread has pressed, and no further. */
+export function powderFloor(packed: number, scale = 1): number {
+  return S.powderSink * Math.max(1, scale) * (1 - packed) + S.packedSink * packed;
 }
 
 /** The resistance along a probe's line of travel, N, as a magnitude (the
  * caller gives it the sign against the motion): rolling, the plough off a
  * footprint `width` m wide sunk `sink` m into powder, and powder drag, at
  * `speed` m/s with `load` N on it. A groomed track's few centimetres of cut
- * is rolling resistance and nothing else: there is no powder to shove. */
+ * is rolling resistance and nothing else: there is no powder to shove.
+ * `compact` scales the powder drag for the footprint pressing it: the work
+ * of compacting snow goes as how far it is pressed down (Bekker's
+ * compaction resistance), so a footprint that sinks less pays less
+ * (`Footprint.sink`). */
 export function snowDrag(
   packed: number,
   sink: number,
   width: number,
   load: number,
   speed: number,
+  compact = 1,
 ): number {
   const v = Math.abs(speed);
   const crr = S.crrPacked * packed + S.crrPowder * (1 - packed);
   const plough = S.plough * width * sink * v * v * (1 - packed);
-  const powder = S.powderDrag * load * v * (1 - packed);
+  const powder = S.powderDrag * compact * load * v * (1 - packed);
   return crr * load + plough + powder;
 }
 
 export type Grip = { tread: number; treadSide: number; ski: number };
 
-/** The friction coefficients at `packed` 0..1, into `out`. */
-export function gripAt(packed: number, out: Grip): Grip {
+/** The friction coefficients at `packed` 0..1, into `out`, for a tread
+ * whose lugs bite `powderDrive` times the reference's in powder — driving
+ * and holding sideways alike, a paddle digs whichever way the snow is
+ * shoved — and hold `packedSide` times its sideways grip on the groomer
+ * (`footprint.ts`). */
+export function gripAt(packed: number, out: Grip, powderDrive = 1, packedSide = 1): Grip {
   const p = 1 - packed;
-  out.tread = G.treadPacked * packed + G.treadPowder * p;
-  out.treadSide = G.treadSidePacked * packed + G.treadSidePowder * p;
+  out.tread = G.treadPacked * packed + G.treadPowder * powderDrive * p;
+  out.treadSide = G.treadSidePacked * packedSide * packed + G.treadSidePowder * powderDrive * p;
   out.ski = G.skiPacked * packed + G.skiPowder * p;
   return out;
 }

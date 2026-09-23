@@ -27,29 +27,33 @@ npm run sim                        # seeds 1..8, solo, the map's laps
 npm run sim -- --count 20          # seeds 1..20
 npm run sim -- --seeds 3,7,38      # these seeds
 npm run sim -- --rivals 3          # a whole race
+npm run sim -- --sled mountain     # one machine of the catalog (the crossover when left out)
+npm run sim -- --sled all          # the roster: every machine's table, then who was quickest on each seed
 npm run sim -- --laps 1 --json out.json
 ```
 
 It exits non-zero when the bot finishes NO seed at all — a sled that cannot get round any map is broken, not slow. At the tuning in this tree:
 
 ```
- seed  fin    time              laps     cps    len  mean   top   air  best  jmp hrsh tree  rst auto miss  plc    digest
-    1  yes   422.6       138/137/137   67/67   3277    85   124  11.3   1.3    9    0    0    0    0    0    1  a9521577
-    2  yes   370.7       120/119/119   58/58   2915    86   125  13.1   1.6    9    5    0    0    0    0    1  90f7df3c
-    3  yes   425.5       140/139/139   61/61   2992    77   120  11.0   1.4    9    3    0    0    0    0    1  0f50bf7f
-    4  yes   389.7       129/126/126   58/58   2908    82   122  10.1   1.2    9    0    0    0    0    0    1  de56737f
-    5  yes   368.6       122/120/120   61/61   2986    88   124  11.3   1.3    9    0    0    0    0    0    1  ca8c6b9d
-    6  yes   413.2       136/135/135   67/67   3281    87   126  11.7   1.5    9    0    0    0    0    0    1  af5cec1b
-    7  yes   381.5       124/123/123   55/55   2687    77   115  12.1   1.4    9    3    0    0    0    0    1  0391b094
-    8  yes   374.3       123/121/121   61/61   2927    85   124  11.3   1.3    9    0    0    0    0    0    1  0b2e1a76
+ seed  fin    time              laps     cps    len  pow  mean   top   air  best  jmp hrsh tree  rst auto miss  plc    digest
+    1  yes   431.7       144/143/143   67/67   3277  14%    82   140  11.2   1.3    9    0    0    0    0    0    1  f36e28fb
+    2  yes   459.0       153/152/152   58/58   2915  43%    69   137  13.0   1.6    9    3    0    0    0    0    1  b087c700
+    3  yes   415.1       138/138/138   61/61   2992   2%    79   136  10.9   1.4    9    3    0    0    0    0    1  af33f7c9
+    4  yes   384.5       129/127/127   58/58   2908   6%    82   145  10.0   1.2    9    0    0    0    0    0    1  178bf2f3
+    5  yes   448.6       150/149/149   61/61   2986  37%    72   144  11.3   1.3    9    0    0    0    0    0    1  c79879ca
+    6  yes   505.6       168/168/168   67/67   3281  40%    71   140  11.6   1.4    9    0    0    0    0    0    1  b3ca7172
+    7  yes   371.7       124/123/123   55/55   2687   4%    79   130  12.2   1.4    9    0    0    0    0    0    1  1a607aaf
+    8  yes   433.5       145/143/144   61/61   2927  29%    73   135  11.3   1.4    9    3    0    0    0    0    1  06a38ad2
 
-8/8 finished · mean 83 km/h · top 126 km/h · air 11.5 s/run · jumps 72 · harsh 11 · trees 0 · resets 0 (auto 0) · missed 0
+8/8 finished · mean 76 km/h · top 145 km/h · air 11.4 s/run · jumps 72 · harsh 9 · trees 0 · resets 0 (auto 0) · missed 0
 ```
 
 ## Reading the table
 
+- **`pow`** is how much of the loop lies under a drift (R17) — the column the roster is read against. `--sled all` ends with one row a seed, every machine's race time and a `*` on the quickest: no machine should win them all, the trail sled should take the groomed maps and the mountain sled the drifted ones.
+
 - **`fin` NO** on any seed is a regression until it is explained: the bot is a competent rider, and a map it cannot finish is a map a player will not finish either — or a sled that cannot climb what the generator builds.
-- **`laps`** should be three near-equal numbers. The first is a few seconds longer (the run from the grid through the powder onto the track); a first lap tens of seconds longer than the others is the bot circling at the start line.
+- **`laps`** should be three near-equal numbers. The first is a few seconds longer (the standing start from the grid); a first lap tens of seconds longer than the others is the bot circling at the start line.
 - **`mean`** sits around 75–90 km/h. A drop across every seed is a sled that got slower or a bot that got timid; a drop on one seed is that map.
 - **`air`/`jmp`** are the on-track kickers (three a lap on most seeds). Fewer jumps is a kicker the bot is taking too slowly to leave the snow; `best` over 2.5 s is a kicker overshot.
 - **`hrsh`** counts landings past `air.harshSpeed`: a few is a kicker whose landing the bot's plan misjudges; many is a landing model gone hard.

@@ -12,7 +12,7 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 2. **The front door.** One lit tile, **RACE**: three laps against three riders on a map dealt fresh from a seed, with the seed printed on the tile — that number is the map, and `?seed=<n>` on the URL rides it again. Along the foot: the sound switch, **OPTIONS**, the keys you ride on, the build. Behind the card a bot is already racing the map and the camera circles its sled; nothing is paused.
 3. **The loading card.** The map generated from its seed, the field stood on the grid, the terrain, the forest and the checkpoints built, every shader compiled — a second or two, shown as a bar per phase.
 4. **The lights.** You stand in deep powder beside the track with the field abreast of you. Three lights, then GO.
-5. **Onto the track.** The first thing a race asks is the run through the powder onto the packed trail. The start line is the track point nearest the grid; crossing it opens lap one.
+5. **Off the grid.** The field stands in rows on the track behind the start line; crossing it opens lap one. Stretches of the track lie drifted over with fresh snow (R17) — slower going on a short-tread sled, and where a mountain sled earns its keep.
 6. **The race.** Checkpoints — a pair of flagged poles either side of the track, the next one loud red, the rest muted — must be taken in order. Ride past one and the HUD warns you, with an arrow back to it and the metres to go; the next one is not credited until the missed one is taken. Three laps, then the flag. The round map under the buttons in the top right turns with you, so ahead is always up: the grey line is the track, the red bar the checkpoint you owe (a red chevron on the rim points at it when it is off the map), and the coloured dots the other three sleds.
 7. **The finish plate.** Your place and time, then the whole field's table, live, as the others cross the line. **RACE AGAIN** (the same map from the grid), **NEW MAP**, or **MAIN MENU**.
 
@@ -44,7 +44,7 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 | Escape             | Pause                                            |
 | Arrows, Enter, Esc | Walk a card, press a row, go back                |
 
-**Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it anchors where your thumb lands; drag DOWN to open the throttle, push UP to brake. The top-right corner carries three presses: pause, reset, camera.
+**Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it is WIDE OPEN the moment your thumb lands; slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera.
 
 **Cameras** (C, or the camera press): **hood** and **bars** are bolted to the sled and pitch and roll with it; **chase** (the default), **far** and **high** stand behind on a boom. The game remembers the one you chose.
 

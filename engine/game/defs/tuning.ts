@@ -60,6 +60,24 @@ export const TUNING = {
     powderDrag: 0.008,
   },
 
+  /** THE FOOTPRINT — how much each machine's own tread is worth against the
+   * reference's (`footprint.ts`; the crossover reads 1 on every one). */
+  footprint: {
+    /** The rest sink goes as the ground pressure to this power: a sink is
+     * the snow compacted until it carries the load, and fresh snow stiffens
+     * as it packs, so halving the pressure takes off less than half. */
+    floatExp: 0.8,
+    /** The powder drive goes as the lug height to this power — a paddle
+     * twice as tall moves about half again the snow. */
+    lugPowder: 0.35,
+    /** The groomer's sideways hold goes as the INVERSE lug height to this
+     * power: a tall lug folds over under a sideways load. */
+    lugSide: 0.5,
+    /** The belt's own losses go as the lug height to this power, beside
+     * its length — a tall paddle is more rubber flexed round every idler. */
+    lugLoss: 0.8,
+  },
+
   /** GRIP — the friction coefficients between the machine and the snow,
    * each a peak reached over its reference slip speed (a `tanh` curve,
    * which is how a lugged belt or a carbide keel lets go: progressively). */
@@ -88,12 +106,13 @@ export const TUNING = {
      * sled, and what spins free in the air. */
     beltMass: 22,
     /** Internal losses: the slide rails, the idler wheels and the belt's
-     * own flexing, N per (m/s)² of belt speed — the largest of a sled's
-     * drags at speed, and why a sled at full power tops out at the speed it
-     * does rather than at the gearing's. */
-    lossQuad: 1.1,
+     * own flexing, N per (m/s)² of belt speed, on the reference machine's
+     * belt (`footprint.ts` scales it for another's) — with the air, what an
+     * 850-class sled's 123 kW tops out against at 160–175 km/h on the
+     * groomer, where the class runs 105–128 mph flat out. */
+    lossQuad: 0.3,
     /** ...and a linear part, N per m/s. */
-    lossLin: 8,
+    lossLin: 5,
     /** Engine braking with the throttle shut, N per m/s of belt speed while
      * the driven clutch is still engaged. */
     engineBrake: 45,
@@ -234,10 +253,10 @@ export const TUNING = {
     /** Metres either side of a checkpoint's visible width that still count
      * — the benefit of the doubt at gate range. */
     grace: 2,
-    /** ...and the START LINE's first crossing, m more still: the field comes
-     * onto the track out of the powder, off the grid's lane, and a rider who
-     * swings wide turning onto the loop has still started the race. Every
-     * later crossing of the line is judged like any other checkpoint. */
+    /** ...and the START LINE's first crossing, m more still: a field
+     * jostling off the grid, or one coming onto the track out of the powder
+     * on a hand-built map, has still started the race if it swings wide.
+     * Every later crossing of the line is judged like any other checkpoint. */
     startGrace: 10,
     /** A reset stands the sled this far PAST the last checkpoint it took,
      * m (or this far short of the start line before it has taken one). */

@@ -6,6 +6,7 @@
 // the bot finishes what the generator builds. Runs are deterministic: the
 // same seed and level always produce the same digest.
 
+import { SLED, type SledSpec } from "../game/defs/sled.ts";
 import { TUNING } from "../game/defs/tuning.ts";
 import { createGame, step } from "../game/step.ts";
 import type { GameEvent } from "../game/state.ts";
@@ -20,6 +21,8 @@ export type SimOptions = {
   /** Rivals on the grid beside the bot (0 when left out: a solo run is the
    * measurement; a field is the race). */
   rivals?: number;
+  /** The machine the bot rides (the crossover when left out). */
+  spec?: SledSpec;
   profile?: BotProfile;
   /** Give up after this much simulated time, s. */
   maxSeconds?: number;
@@ -29,6 +32,11 @@ export type SimOptions = {
 
 export type RunReport = {
   seed: number;
+  /** The machine ridden. */
+  sled: string;
+  /** How much of the loop's centreline is not groomed — its share lying
+   * under a drift (R17) — 0..1. What a roster's rows are read against. */
+  powder: number;
   finished: boolean;
   /** Race clock at the flag (or the timeout), s. */
   time: number;
@@ -74,6 +82,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
     laps: options.laps,
     rivals: options.rivals ?? 0,
     countdown: 0,
+    spec: options.spec,
     quiet: true,
   });
   const events: GameEvent[] = [];
@@ -127,8 +136,13 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
   mix(state.sled.y);
   mix(state.sled.z);
   const p = state.progress;
+  const pts = state.level.track.points;
+  let soft = 0;
+  for (const pt of pts) soft += 1 - state.level.packedAt(pt.x, pt.z);
   return {
     seed,
+    sled: (options.spec ?? SLED).id,
+    powder: soft / pts.length,
     finished: p.finished,
     time: p.time,
     laps: p.lap,

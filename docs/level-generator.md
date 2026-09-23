@@ -3,7 +3,7 @@
 Every map in Powder Run is GENERATED from a seed: a basin of snowy hills
 ringed by mountain flanks, forests and open powder meadows, kickers on the
 hilltops, and one closed loop of packed snow laid over the country and
-graded into it, with the riders' grid standing out in the powder beside it.
+graded into it, drifted over in stretches, with the riders' grid standing on it behind the start line.
 Nothing is authored and nothing is stored — the same seed builds the same
 map on every machine, and a map is the seed's to share.
 
@@ -17,20 +17,20 @@ holds the two copies together, word for word.
 
 `generateLevel(seed, opts?)` returns a `Level` (`engine/mapgen/types.ts`):
 
-| Field                      | What it is                                                                                   |
-| -------------------------- | -------------------------------------------------------------------------------------------- |
-| `size`, `cell`             | The map is `[0, size] × [0, size]` metres (1600), heights on a grid of `cell` (2 m) cells    |
-| `ground`                   | The baked heightfield, the track's grading and every kicker included                         |
-| `groundAt`, `normalAt`     | Bilinear height and unit normal off `ground`                                                 |
-| `packedAt`                 | 0 = virgin powder … 1 = packed track, off the baked `packed` field                           |
-| `track`                    | The closed loop: points every ~2 m with `x, z, y, s, heading, width`; `length`; `closed`     |
-| `checkpoints`              | Gates every 120–200 m; index 0 is the start/finish line at arc length 0                      |
-| `spawn`, `grid`            | The grid's anchor in the powder 25–90 m off the track, and four slots abreast (player first) |
-| `trees`                    | Every trunk: position, ground height, height, trunk radius, crown radius                     |
-| `kickers`                  | Every crest shaped to throw a sled: `K1…` on the track (with their arc length), `X1…` off it |
-| `sun`                      | Solar hour, day of the year and latitude of a clear winter day                               |
-| `laps`                     | 3                                                                                            |
-| `basin`, `attempt`, `seed` | The basin's middle and rim radius; which sub-seed attempt was accepted; the seed             |
+| Field                      | What it is                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `size`, `cell`             | The map is `[0, size] × [0, size]` metres (1600), heights on a grid of `cell` (2 m) cells               |
+| `ground`                   | The baked heightfield, the track's grading and every kicker included                                    |
+| `groundAt`, `normalAt`     | Bilinear height and unit normal off `ground`                                                            |
+| `packedAt`                 | 0 = virgin powder … 1 = packed track, off the baked `packed` field                                      |
+| `track`                    | The closed loop: points every ~2 m with `x, z, y, s, heading, width`; `length`; `closed`                |
+| `checkpoints`              | Gates every 120–200 m; index 0 is the start/finish line at arc length 0                                 |
+| `spawn`, `grid`            | The grid's anchor on the centreline behind the start line, and four slots in rows of two (player first) |
+| `trees`                    | Every trunk: position, ground height, height, trunk radius, crown radius                                |
+| `kickers`                  | Every crest shaped to throw a sled: `K1…` on the track (with their arc length), `X1…` off it            |
+| `sun`                      | Solar hour, day of the year and latitude of a clear winter day                                          |
+| `laps`                     | 3                                                                                                       |
+| `basin`, `attempt`, `seed` | The basin's middle and rim radius; which sub-seed attempt was accepted; the seed                        |
 
 Two queries answer what every reader of a loop asks (`engine/mapgen/query.ts`):
 
@@ -68,12 +68,16 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    the width and a flat shoulder, a bank back into the country, and the packed field beside it.
 6. **The kickers off the track** (`kickers.ts`, R4) — the same profile stamped on hilltops the
    search climbs to, well clear of the corridor.
-7. **The start** (`spawn.ts`, R11–R13) — a spot in the powder beside the loop, the grid round it,
-   the loop re-indexed to begin at the point nearest it, and the checkpoints from there.
+7. **The start** (`spawn.ts`, R11–R13) — a station on the loop searched for the start line, the
+   loop re-indexed to begin there, the checkpoints from it, and the grid behind it on the track.
 8. **The forest** (`forest.ts`, R14) — a jittered candidate per cell, kept by a forest noise, and
-   refused near the track, on steep ground, up the rim, on a kicker, or in the spawn's clearing and
-   its lane.
-9. **The day** (`sun.ts`, R15), and the compile (`compile.ts`) that binds it all into a `Level`.
+   refused near the track, on steep ground, up the rim, on a kicker, or within `forest.gap` of a
+   tree already standing, so there is always room to ride between two trunks.
+9. **The drifts** (`drift.ts`, R17) — stretches of the finished loop dealt to lie under fresh
+   snow, off a stream of their own (the attempt's sub-seed, salted), so they thin the packed
+   field through the corridor's own nearest-segment index and move nothing else the map draws.
+   `Level.drifts` publishes each stretch's core as arc lengths.
+10. **The day** (`sun.ts`, R15), and the compile (`compile.ts`) that binds it all into a `Level`.
 
 A map builds in about half a second on Node.
 
@@ -106,16 +110,18 @@ A map builds in about half a second on Node.
 
 - **R9** KICKERS ON THE TRACK. The loop carries `kickers.on.count` (1–3) crests that make jumps: a ramp `kickers.on.ramp` times the lip's height long rising `kickers.on.height` metres to a lip, steepest at the lip, and a landing `kickers.on.landing` times the lip's height long falling away past it. Each stands on a stretch that turns no more than `kickers.on.straight` radians from the foot of its ramp to the end of its landing, where the line comes up to the lip no steeper downhill than `kickers.on.approachGrade` and runs level or downhill past it — a brow before a descent; two stand at least `kickers.on.spacing` metres apart along the loop.
 
-- **R10** PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's width and fades to 0 over `track.shoulder.packed` metres beyond each edge; everywhere else the snow is virgin powder, the spawn's run-in included.
+- **R10** PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's width and fades to 0 over `track.shoulder.packed` metres beyond each edge — except where R17 drifts it over; everywhere else the snow is virgin powder.
 
-- **R11** CHECKPOINTS EVERY 120–200 m. Checkpoint 0 — the start and finish line — is the track point nearest the spawn, and the loop is re-indexed to begin there, so its arc length is 0. The rest follow in the direction of travel, evenly spaced as near `checkpoint.spacing.target` (150 m) as divides the loop, and never outside `checkpoint.spacing` (120–200 m). A checkpoint spans the track's width plus `checkpoint.margin` metres either side.
+- **R11** CHECKPOINTS EVERY 120–200 m. Checkpoint 0 — the start and finish line — stands at the station R12 chooses, and the loop is re-indexed to begin there, so its arc length is 0. The rest follow in the direction of travel, evenly spaced as near `checkpoint.spacing.target` (150 m) as divides the loop, and never outside `checkpoint.spacing` (120–200 m). A checkpoint spans the track's width plus `checkpoint.margin` metres either side.
 
-- **R12** THE SPAWN IS IN POWDER BESIDE THE TRACK. The riders start at a seeded spot `spawn.distance` (25–90 m) from the nearest point of the track, on ground no steeper than `spawn.maxSlope`, in powder, with no tree within `spawn.clear` metres and a lane `spawn.lane` metres wide clear of trees to the track, facing that nearest point — so the race opens with a run through the powder onto the loop. The start line stands at least `spawn.kickerGap` metres along the loop from any kicker's lip, and the run-in never climbs or falls more steeply than `spawn.maxRunIn`.
+- **R12** THE START LINE. The line stands at a seeded station of the loop at least `spawn.kickerGap` metres along it from any kicker's lip, where the loop turns no more than `spawn.straight` radians over the `spawn.run` metres before the line — the stretch the grid stands on — and climbs or falls no more steeply than `spawn.maxSlope` over it.
 
-- **R13** THE GRID. The riders stand `grid.slots` (4) abreast across the spawn's heading, `grid.spacing` (4.5 m) apart, the player's slot first in the list and nearest the middle.
+- **R13** THE GRID ON THE TRACK. The riders stand on the groomer behind the start line, facing along the loop: `grid.slots` (4) of them in rows of `grid.abreast` (2) straddling the centreline `grid.spacing` (5 m) apart, the front row `grid.back` (10 m) behind the line and each row `grid.row` (8 m) behind the one before, the player's slot first in the list — the front row's left. The spawn is the front row's point on the centreline.
 
-- **R14** FORESTS AND MEADOWS. Conifers stand where a slow noise says forest — at most one per `forest.spacing` metre cell, jittered — thinning to `forest.meadow` of that density in the open meadows between, with `forest.clearings.count` round clearings cut out of the woods. A tree is `forest.height` (6–19 m) tall with a trunk of `forest.trunk` and a crown `forest.crown` of its height across. No tree stands within `forest.corridor` metres of the track's edge, on ground steeper than `forest.maxSlope`, above `forest.treeLine` of the way up the rim, on a kicker, or in the spawn's clearing or its lane.
+- **R14** FORESTS AND MEADOWS. Conifers stand where a slow noise says forest — at most one per `forest.spacing` metre cell, jittered — thinning to `forest.meadow` of that density in the open meadows between, with `forest.clearings.count` round clearings cut out of the woods. A tree is `forest.height` (6–19 m) tall with a trunk of `forest.trunk` and a crown `forest.crown` of its height across, never wider than `forest.crownMax`. No two trunks stand closer than `forest.gap` (9 m), so a sled can be ridden between any two trees. No tree stands within `forest.corridor` metres of the track's edge, on ground steeper than `forest.maxSlope`, above `forest.treeLine` of the way up the rim, or on a kicker.
 
 - **R15** A CLEAR WINTER DAY. The map lies at a seeded latitude in `sun.latitude` (46–64°N) on a seeded day of the year in `sun.dayOfYear` (mid-January to mid-March), and the race starts at a seeded solar hour in `sun.hour` (9–16 h) at which the sun stands at least `sun.minElevation` degrees over the horizon.
 
 - **R16** THREE LAPS. A race is `race.laps` (3) laps of the loop.
+
+- **R17** DRIFTS ACROSS THE TRACK. The wind lays fresh snow over stretches of the groomer. A map is dealt a share of its loop in `drift.share` (0–50 %) to lie drifted, laid as stretches `drift.length` (60–180 m) long, at least `drift.gap` metres apart; across a stretch the packed field — the track's width and its shoulders — falls to `drift.packed` of its groomed value, easing in and out over `drift.fade` metres at either end. No drift lies within `drift.clear` metres of the start line, nor within `drift.fade` metres of a kicker's ramp or landing (R9). The drifts are dealt off a stream of their own, so a map's drifts move nothing else it draws; `Level.drifts` publishes every stretch.

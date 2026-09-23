@@ -62,7 +62,7 @@ export function placeRun(state: GameState, moment: RunMoment): void {
   const packed = level.packedAt(moment.x, moment.z);
   const probes = probesOf(c.spec);
   for (let i = 0; i < probes.length; i++)
-    c.sinks[i] = sinkTarget(packed, speed, probes[i].sinkScale);
+    c.sinks[i] = sinkTarget(packed, speed, probes[i].sinkScale, probes[i].planeScale);
   if (moment.height !== undefined && moment.height > 0) {
     c.y = level.groundAt(moment.x, moment.z) + moment.height;
     c.airborne = true;

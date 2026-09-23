@@ -4,8 +4,10 @@
 // that only resembles the one the physics applies is a rider in a different
 // machine. Nothing here has state: they are questions about a SPEC.
 
-import type { SledSpec } from "./defs/sled.ts";
+import { SLED, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
+import { footprintOf, skiShare } from "./footprint.ts";
+import { probesOf } from "./suspension.ts";
 import { skiLockAt } from "./sled.ts";
 
 /** The redline, rpm. */
@@ -30,21 +32,58 @@ export function lockAt(spec: SledSpec, speed: number): number {
   return skiLockAt(spec, speed);
 }
 
+/** THE TIPPING POINT, as a lateral acceleration over g: past it a sled
+ * lifts its inside ski before it slides. Half the ski stance, plus how far
+ * the rider hanging off carries the whole machine's weight outboard, over
+ * the height of the centre of gravity — the static stability factor, which
+ * is why a wide, low trail sled holds a bend a narrow mountain sled lifts
+ * a ski in, and why long travel (a taller machine) gives some of it back. */
+export function tipLimit(spec: SledSpec): number {
+  const hang = (spec.riderReach * spec.riderMass) / totalMass(spec);
+  return (spec.skiStance / 2 + hang) / spec.cogHeight;
+}
+
 /** HOW HARD A SLED CAN CORNER, m/s², on snow `packed` 0..1: the skis' and
- * the tread's sideways grip over the whole weight, which is what a sled
- * holding a line round a bend can call on. The bot reads it to judge a
- * corner's speed. */
-export function cornerGrip(packed: number): number {
+ * the tread's sideways grip over the whole weight, each on the share of it
+ * the geometry puts there (`skiShare`) — or the tipping point, whichever
+ * comes first. That is what a sled holding a line round a bend can call on;
+ * the bot reads it to judge a corner's speed. */
+export function cornerGrip(spec: SledSpec, packed: number): number {
   const G = TUNING.grip;
+  const fit = footprintOf(spec);
   const ski = G.skiPacked * packed + G.skiPowder * (1 - packed);
-  const tread = G.treadSidePacked * packed + G.treadSidePowder * (1 - packed);
-  // The skis carry about a third of the weight and the tread the rest.
-  return TUNING.g * (ski / 3 + (tread * 2) / 3);
+  const tread =
+    G.treadSidePacked * fit.packedSide * packed +
+    G.treadSidePowder * fit.powderDrive * (1 - packed);
+  const share = skiShare(spec);
+  return TUNING.g * Math.min(ski * share + tread * (1 - share), tipLimit(spec));
 }
 
 /** How hard a sled can stop, m/s², on snow `packed` 0..1: the tread locked
  * on its grip, less what the skis carry. */
-export function brakeDecel(packed: number): number {
+export function brakeDecel(spec: SledSpec, packed: number): number {
   const G = TUNING.grip;
-  return TUNING.g * (G.treadPacked * packed + G.treadPowder * (1 - packed)) * (2 / 3);
+  const fit = footprintOf(spec);
+  const tread = G.treadPacked * packed + G.treadPowder * fit.powderDrive * (1 - packed);
+  return TUNING.g * tread * (1 - skiShare(spec));
+}
+
+const harsh = new WeakMap<SledSpec, number>();
+
+/** THE HARDEST LANDING A MACHINE TAKES WHOLE, m/s into the slope. A spring
+ * stroked to its bump stop has stored ½·k·x², and the landing it can take
+ * without bottoming is the one whose energy that covers: v = √(2E / m). So
+ * `air.harshSpeed` — measured on the reference machine — scales as the
+ * square root of the stroke energy per kilo, summed over every probe, which
+ * is how long travel on stiff springs lands what a soft short stroke
+ * bottoms on. Read by the landing (`flight.ts`) and by the bot, which plans
+ * a kicker's speed against it. */
+export function harshSpeedOf(spec: SledSpec): number {
+  const hit = harsh.get(spec);
+  if (hit !== undefined) return hit;
+  const stroke = (s: SledSpec): number =>
+    probesOf(s).reduce((sum, p) => sum + 0.5 * p.susp.rate * p.susp.travel ** 2, 0) / totalMass(s);
+  const v = TUNING.air.harshSpeed * Math.sqrt(stroke(spec) / stroke(SLED));
+  harsh.set(spec, v);
+  return v;
 }

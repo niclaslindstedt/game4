@@ -6,7 +6,30 @@ Every number below is quoted with its unit as `TUNING` or `SLED` states it; the 
 
 ## The machine (`defs/sled.ts`)
 
-ONE sled: a trail/cross machine of `dryMass` = 230 kg with an `riderMass` = 85 kg rider, 3.1 × 1.2 × 1.25 m, its centre of gravity (sled and rider together, the body frame's origin) `cogHeight` = 0.55 m over the snow. Two skis `skiStance` = 1.05 m apart stand `skiForward` = 1.15 m ahead of it; the tread (the rubber track, so it is never confused with the race track) is `treadLength` = 3.35 m of belt × `treadWidth` = 0.38 m, on the snow from `treadFront` = 0.2 m ahead of the CoG to `treadRear` = 1.3 m behind it. A 110 kW engine peaking at 7900 rpm, idling at 1500, engaging its clutch at 3800 and limited at 8400, drives the tread through a CVT that gives `gearTop` = 36 m/s of belt at the redline in its top ratio and runs `gearSpan` = 3.6 times slower in its lowest, with `driveline` = 0.8 of the crank's power reaching the snow. `topSpeed` = 120 km/h and `accel0to100` = 4.5 s are documented EXPECTATIONS, not inputs: the physics delivers them and `tests/sled_test.ts` holds it to them.
+FOUR sleds, each an answer to a kind of snow rather than a point on one scale (`SLEDS`; `sledById`). Every number is kept inside the real band for its class, never a make and a model:
+
+|                            | Trail              | Crossover (`SLED`) | Mountain       | Cross                 |
+| -------------------------- | ------------------ | ------------------ | -------------- | --------------------- |
+| dry mass                   | 227 kg             | 230 kg             | 195 kg         | 212 kg                |
+| engine                     | 123 kW             | 123 kW             | 134 kW (turbo) | 123 kW, revs to 8700  |
+| belt                       | 3.28 m, 32 mm lugs | 3.71 m, 44 mm      | 3.94 m, 66 mm  | 3.48 m, 32 mm         |
+| on the snow                | 1.40 m             | 1.65 m             | 1.95 m         | 1.45 m                |
+| ski stance                 | 1.09 m             | 1.04 m             | 0.89 m         | 1.09 m                |
+| travel, front / rear       | 0.22 / 0.28 m      | 0.23 / 0.30 m      | 0.23 / 0.33 m  | 0.265 / 0.34 m, stiff |
+| CVT top ratio              | 52 m/s of belt     | 50                 | 44             | 41 (geared short)     |
+| `topSpeed` / `accel0to100` | 168 km/h / 3.5 s   | 160 / 4.1          | 151 / 4.3      | 146 / 3.5             |
+
+Every machine carries an `riderMass` = 85 kg rider; the crossover is 3.2 × 1.2 × 1.25 m with its centre of gravity (sled and rider together, the body frame's origin) `cogHeight` = 0.55 m over the snow, its skis `skiForward` = 1.15 m ahead of it, its belt on the snow from `treadFront` = 0.2 m ahead of the CoG to `treadRear` = 1.45 m behind it. Its engine peaks at 7900 rpm, idles at 1500, engages its clutch at 3800 and is limited at 8400, and drives the tread through a CVT that runs `gearSpan` = 3.6 times slower in its lowest ratio than in its top, with `driveline` = 0.8 of the crank's power reaching the snow. `topSpeed` and `accel0to100` are documented EXPECTATIONS, not inputs: the physics delivers them and `tests/catalog_test.ts` holds every machine to its own.
+
+**The crossover is the reference machine.** Every shared number in `TUNING` was tuned on it, and `footprint.ts` prices every other machine's tread as multipliers on the shared snow model that read exactly 1 for it:
+
+- _the pressure_ is the tread's share of the weight over its footprint on the snow (2.4 kPa on the mountain sled, 3.2 on the crossover, 4.1 on the trail sled). The rest sink goes as `(p / p₀)^footprint.floatExp` (0.8), the planing speed as `√(p / p₀)`, and the powder drag — the work of compacting the snow, which goes as how far it is pressed (Bekker; CRREL's snow-mobility models price motion resistance the same way) — with the sink;
+- _the lugs_ bite powder as `(h / h₀)^lugPowder` (0.35), driving and sideways alike, and hold the groomer sideways as `(h₀ / h)^lugSide` (0.5) — a tall lug folds over under a sideways load;
+- _the belt's own losses_ go as `(L / L₀) · (h / h₀)^lugLoss` (0.8): riders put a 144-inch belt at a tenth off a 136-inch one at 60 mph of track speed, and a 156-inch belt with 2-inch lugs at a quarter off.
+
+The exponents are tuning values, bounded by the measurements above rather than read off a paper; `make ride ARGS="--sled all"` is what they are judged by.
+
+**The corner** a machine can hold (`cornerGrip`, read by the yaw hold and the bot) is its sideways grip or its TIPPING POINT, whichever comes first (`tipLimit`): half the ski stance, plus how far the rider hanging off carries the weight outboard, over the CoG's height — the static stability factor, which is why a wide, low trail sled holds a groomed bend a narrow mountain sled lifts a ski in. **The landing** a machine takes whole (`harshSpeedOf`) scales `air.harshSpeed` by the square root of its springs' stroke energy per kilo, so long travel on stiff springs lands what a soft short stroke bottoms on.
 
 The inertia is the envelope as a solid box (`inertiaOf`): about 290 kg·m² in pitch and yaw and 79 in roll — which is why a sled rolls far more readily than it pitches.
 
@@ -28,7 +51,7 @@ Two FUSES, which are not models: no probe may push more than `MAX_LOAD` = 15 tim
 sink = powderSink · scale · exp(−(v / planeSpeed)²) · (1 − packed) + packedSink · packed
 ```
 
-with `powderSink` = 0.26 m (a resting tread buried to its rails in fresh snow), `packedSink` = 0.02 m (a groomed track's cut), `planeSpeed` = 8 m/s, `scale` 1 for the tread and `skiSink` = 0.7 for the skis (a wider, lighter footprint), and `packed` the level's `packedAt` under the probe. Each probe's support eases toward that over `sinkLag` = 0.25 s — a sled slowing in powder settles rather than drops. At the planing speed a sled carries a third of its rest sink and by 40 km/h it rides a few centimetres into the powder: the moment a rider feels it lift onto the top. The sink is the support's depth under the untouched surface — the springs push against `groundAt − sink` — and it is what every `SnowContact` reports; the renderer's trail is drawn at that depth or at the powder's own furrow, whichever is deeper (`drawnDepth` in `pwa/src/game/trail-stamp.ts`), never shallower.
+with `powderSink` = 0.26 m (the reference tread at rest, buried to its rails in fresh snow), `packedSink` = 0.02 m (a groomed track's cut), `planeSpeed` = 8 m/s, `scale` the machine's own `Footprint.sink` for the tread and `skiSink` = 0.7 for the skis (a wider, lighter footprint), the planing speed scaled by `Footprint.plane`, and `packed` the level's `packedAt` under the probe. Each probe's support eases toward that over `sinkLag` = 0.25 s — a sled slowing in powder settles rather than drops. At the planing speed a sled carries a third of its rest sink and by 40 km/h it rides a few centimetres into the powder: the moment a rider feels it lift onto the top. The sink is the support's depth under the untouched surface — the springs push against `groundAt − sink` — and it is what every `SnowContact` reports; the renderer's trail is drawn at that depth or at the powder's own furrow, whichever is deeper (`drawnDepth` in `pwa/src/game/trail-stamp.ts`), never shallower.
 
 **The resistance**, per probe, along its line of travel, faded out below `DRAG_FADE` = 0.3 m/s so a sled at rest is not rocked through zero:
 
@@ -44,7 +67,7 @@ with `powderSink` = 0.26 m (a resting tread buried to its rails in fresh snow), 
 
 **The CVT** is modelled by what it does rather than by its sheaves: with the throttle open it holds the engine at the rpm the lever asks for — from the clutch's engagement up to the power peak at full throttle — shifting up as the tread gains speed, until it runs out of ratio; past that the engine is locked to the belt (`rpmAtTop`) and climbs with it to the limiter, which cuts the fuel over the last 2 %. So the drive offers the belt POWER over belt speed — flat power, falling force — floored at `launchFloor` = 2.5 m/s (the clutch slipping off the line) and capped at what the peak torque can do through the lowest ratio (`maxDriveForce`, about 9.4 kN). The engine's rpm follows the CVT's goal at `rpmRate` = 9 /s; the throttle follows the lever at `throttleRate` = 8 /s. With the throttle shut and the belt still driving the engine past engagement, it brakes the belt at `engineBrake` = 45 N per m/s.
 
-**The belt** is a mass of its own (`stepTread`, `beltMass` = 22 kg reflected): the engine pushes it, the snow pushes back through every tread probe's grip (the sum of what those put into the snow), its rails and idlers drag it (`lossLin` = 8 N per m/s, `lossQuad` = 1.1 N per (m/s)² — the largest of a sled's drags at speed, and why it tops out where it does rather than at the gearing's ceiling), and the brake clamps it — `brakeForce` = 3.4 kN at full lever, holding it at zero if that is enough. It never runs backwards: the drive is one-way. So the tread spins faster than the sled goes whenever the grip cannot take what the engine gives — off the line on packed snow, and nearly always in powder, where it runs up to the limiter (`SledState.slip`) — and it spins up free in the air.
+**The belt** is a mass of its own (`stepTread`, `beltMass` = 22 kg reflected): the engine pushes it, the snow pushes back through every tread probe's grip (the sum of what those put into the snow), its rails and idlers drag it (`lossLin` = 5 N per m/s, `lossQuad` = 0.3 N per (m/s)² on the reference belt, scaled for another's — with the air, what an 850-class sled tops out against), and the brake clamps it — `brakeForce` = 3.4 kN at full lever, holding it at zero if that is enough. It never runs backwards: the drive is one-way. So the tread spins faster than the sled goes whenever the grip cannot take what the engine gives — off the line on packed snow, and nearly always in powder, where it runs up to the limiter (`SledState.slip`) — and it spins up free in the air.
 
 ## Steering and the rider
 
@@ -76,25 +99,30 @@ A rider's own (`SledInput.reset`) or the engine's: a sled whose up axis has been
 
 ## Measured
 
-`npm run ride` rides each scenario (`scripts/lib/ride-scenarios.mjs`) on the synthetic maps and draws it to `previews/ride-<scenario>.png`. At the tuning in this tree:
+`npm run ride` rides each scenario (`scripts/lib/ride-scenarios.mjs`) on the synthetic maps and draws it to `previews/ride-<scenario>.png`; `--sled all` rides every scenario on every machine. At the tuning in this tree, the crossover:
 
-| Scenario                      | What came back                                                                                                  |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| rest (packed)                 | CoG 0.530 m over the snow, skis 0.081 m and tread 0.087 m of sag, 0.02 m of sink, level, no drift               |
-| rest (powder)                 | CoG 0.315 m over the untouched surface, 0.26 m of sink, 2° nose up (the skis sink less)                         |
-| accel (packed)                | 0–50 km/h 1.87 s, 0–100 km/h 4.18 s in 63 m, top 121.9 km/h with 0.6 m/s of tread slip                          |
-| accel (powder)                | 0–50 km/h 8.0 s, planed (sink under 5 cm) at 38 km/h, top 90.3 km/h with the tread spinning 7 m/s over the snow |
-| brake                         | 100–0 km/h in 5.0 s and 65 m (0.56 g)                                                                           |
-| turn, 60 km/h full lock       | radius 42 m, 0.71 g, 4° of roll                                                                                 |
-| turn, 100 km/h full lock      | radius 119 m, 0.66 g                                                                                            |
-| brake into a turn             | worst slide 34°, stopped in 49 m, no spin                                                                       |
-| turn in powder, 50 km/h       | radius 68 m at 70 km/h, 0.57 g, 12° of lean into it                                                             |
-| the stadium kicker at 45 km/h | 0.96 s of air, 13 m carry, 2.5 m up                                                                             |
-| the same at 100 km/h          | 2.0 s of air, 51 m carry, 6.2 m up, a flat landing at 10.5 m/s costing 23 %                                     |
-| dropped 3 m at 70 km/h        | 7.6 m/s impact, 8 % lost                                                                                        |
-| 30° powder slope at 70 km/h   | climbs 17 m before it stalls                                                                                    |
-| 45° face at 90 km/h           | climbs 13.5 m, stalls, slides back                                                                              |
-| 40° sidehill at 40 km/h       | holds 48° of roll, slides 43 m down it                                                                          |
-| a trunk at 50 km/h            | 55 km/h into it, 21 km/h out, turned 18°                                                                        |
+| Scenario                      | What came back                                                                          |
+| ----------------------------- | --------------------------------------------------------------------------------------- |
+| rest (packed)                 | CoG 0.530 m over the snow, skis 0.088 m and tread 0.083 m of sag, 0.02 m of sink, level |
+| rest (powder)                 | CoG 0.317 m over the untouched surface, 0.26 m of sink, 2° nose up (the skis sink less) |
+| accel (packed)                | 0–50 km/h 1.97 s, 0–100 km/h 4.07 s in 58 m, top 160 km/h                               |
+| accel (powder)                | 0–50 km/h 8.9 s, planed at 38 km/h, top 90 km/h with the tread spinning over the snow   |
+| brake                         | 100–0 km/h in 5.2 s and 69 m (0.54 g)                                                   |
+| turn, 100 km/h full lock      | radius 123 m, 0.68 g                                                                    |
+| brake into a turn             | worst slide 33°, stopped in 51 m, no spin                                               |
+| the stadium kicker at 75 km/h | launched at 112 km/h, 2.2 s of air, 62 m carry, a flat landing at 11 m/s costing 25 %   |
+| 30° powder slope at 70 km/h   | climbs 20 m before it stalls                                                            |
+| a trunk at 50 km/h            | 55 km/h into it, 20 km/h out, turned 17°                                                |
 
-What the bot makes of it on generated maps is `npm run sim`'s, and `docs/simulation.md` says how to read it.
+And where the roster parts:
+
+| Scenario                       | Trail          | Crossover      | Mountain       | Cross          |
+| ------------------------------ | -------------- | -------------- | -------------- | -------------- |
+| top on packed snow             | 168 km/h       | 160            | 151            | 146            |
+| 0–100 km/h on packed           | 3.5 s          | 4.1            | 4.3            | 3.5            |
+| rest sink in powder            | 0.32 m         | 0.26           | 0.21           | 0.30           |
+| 0–50 km/h in powder, top there | 23 s, 55 km/h  | 8.9 s, 90      | 5.1 s, 106     | 16 s, 75       |
+| 30° powder slope at 70 km/h    | stalls at 16 m | stalls at 20 m | tops it (28 m) | stalls at 17 m |
+| the kicker at 75 km/h, landing | −30 %          | −25 %          | −24 %          | −18 %          |
+
+What the bot makes of it on generated maps is `npm run sim`'s (`--sled all` for the roster), and `docs/simulation.md` says how to read it.

@@ -130,7 +130,8 @@ describe("steering and braking", () => {
   it("turns right with the bars right, and left with them left", () => {
     for (const side of [1, -1]) {
       const state = stage(PACKED, 60 / 3.6);
-      ride(state, 2, { ...NEUTRAL_INPUT, throttle: 0.5, steer: side });
+      // A third of the lever holds an 850 near the 60 km/h it was put down at.
+      ride(state, 2, { ...NEUTRAL_INPUT, throttle: 0.3, steer: side });
       expect(Math.sign(state.sled.heading)).toBe(side);
       expect(Math.abs(state.sled.heading)).toBeGreaterThan(0.5);
       expect(Math.abs(state.sled.roll)).toBeLessThan(0.5);

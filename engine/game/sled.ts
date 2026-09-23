@@ -35,7 +35,8 @@ import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingLoss } from "./flight.ts";
 import { chassisContacts } from "./chassis.ts";
 import { gripAt, sinkTarget, snowDrag, type Grip } from "./snow.ts";
-import { cornerGrip } from "./limits.ts";
+import { cornerGrip, harshSpeedOf } from "./limits.ts";
+import { footprintOf } from "./footprint.ts";
 import { probesOf } from "./suspension.ts";
 import { stepRpm, stepTread } from "./traction.ts";
 import type { GameEvent, GameState, SledInput, SledState, SnowContact } from "./state.ts";
@@ -198,6 +199,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
 
   // ── The suspension and the grip, probe by probe ───────────────────────
   const probes = probesOf(spec);
+  const fit = footprintOf(spec);
   let touching = 0;
   let beltReaction = 0;
   let loadSum = 0;
@@ -231,7 +233,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const dx = -up.x;
     const dz = -up.z;
     const packed = level.packedAt(ax, az);
-    const target = sinkTarget(packed, speed0, p.sinkScale);
+    const target = sinkTarget(packed, speed0, p.sinkScale, p.planeScale);
     c.sinks[i] += (target - c.sinks[i]) * Math.min(1, dt / TUNING.snow.sinkLag);
     const sink = c.sinks[i];
     // Where the ray meets the support: Newton's method along the ray, off
@@ -324,7 +326,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const side = cross(normal.x, normal.y, normal.z, tx, ty, tz);
     const vf = pvx * tx + pvy * ty + pvz * tz;
     const vl = pvx * side.x + pvy * side.y + pvz * side.z;
-    gripAt(packed, grip);
+    gripAt(packed, grip, fit.powderDrive, fit.packedSide);
     let along = 0;
     let across = 0;
     if (p.kind === "tread") {
@@ -345,7 +347,14 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     } else {
       across -= grip.ski * load * Math.tanh(vl / G.sideRef);
     }
-    const drag = snowDrag(packed, sink, p.ploughs ? p.width : 0, load, vf);
+    const drag = snowDrag(
+      packed,
+      sink,
+      p.ploughs ? p.width : 0,
+      load,
+      vf,
+      p.kind === "tread" ? fit.sink : 1,
+    );
     along -= drag * Math.tanh(vf / DRAG_FADE);
     push(
       cx,
@@ -402,7 +411,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const S = TUNING.steer;
     const way = c.way;
     const flat = Math.hypot(c.vx, c.vz);
-    const reach = Math.abs(way) > 1 ? (cornerGrip(packed) * S.pathShare) / Math.abs(way) : 0;
+    const reach = Math.abs(way) > 1 ? (cornerGrip(spec, packed) * S.pathShare) / Math.abs(way) : 0;
     const asked = clamp((way * Math.tan(c.skiAngle)) / S.base, -reach, reach);
     const slip = flat > S.slipFrom && way > 0 ? angleDiff(Math.atan2(c.vx, c.vz), c.heading) : 0;
     tb.y +=
@@ -457,7 +466,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     c.airborne = false;
     c.airTime = 0;
     if (flew >= TUNING.air.counts) {
-      const lost = landingLoss(impact);
+      const lost = landingLoss(impact, harshSpeedOf(spec));
       if (lost > 0) {
         // The bottomed suspension takes it out of the way along the slope.
         level.normalAt(c.x, c.z, normal);

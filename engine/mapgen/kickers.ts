@@ -21,7 +21,7 @@
 // a hilltop the search climbs to, across a width that blends into the snow
 // at its sides — something a rider leaves the loop to find.
 
-import { angleDiff } from "../lib/math.ts";
+import { angleDiff, smoothstep } from "../lib/math.ts";
 import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
 import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
@@ -40,11 +40,6 @@ export function kickerProfile(height: number, ramp: number, landing: number, u: 
   }
   const t = 1 - u / landing;
   return height * t * t;
-}
-
-function smoothstep(a: number, b: number, v: number): number {
-  const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
-  return t * t * (3 - 2 * t);
 }
 
 /** An on-track kicker before the loop is re-indexed: its lip's station. */

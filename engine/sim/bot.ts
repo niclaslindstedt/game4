@@ -3,9 +3,10 @@
 // GameState the HUD reads and produces the same SledInput a thumb produces.
 // It rides the TRACK'S CENTRELINE: a point a speed-dependent distance ahead
 // of where it stands on the loop is what it steers at; it reads the bends
-// coming and brakes for the ones it cannot take at the speed it has; it
-// rides from the grid through the powder onto the track short of the start
-// line, so it crosses it riding along it; it levels the machine to the slope
+// coming and brakes for the ones it cannot take at the speed it has; off
+// the track before the start line (a hand-built map's grid in the powder),
+// it rides onto the track short of the line, so it crosses it riding along
+// it; it levels the machine to the slope
 // it is going to land on while in the air; it steers round a trunk in its
 // way; and it asks to be reset when a checkpoint has not come for too long.
 //
@@ -20,7 +21,8 @@ import { arcAhead, nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Kicker, Level, TrackHit, TrackPoint } from "../mapgen/types.ts";
 import { TUNING } from "../game/defs/tuning.ts";
 import { treesNear } from "../game/collision.ts";
-import { brakeDecel, cornerGrip } from "../game/limits.ts";
+import { brakeDecel, cornerGrip, harshSpeedOf } from "../game/limits.ts";
+import type { SledSpec } from "../game/defs/sled.ts";
 import { NEUTRAL_INPUT, type GameState, type SledInput } from "../game/state.ts";
 
 export type BotProfile = {
@@ -143,18 +145,23 @@ function bendAt(level: Level, s: number, span: number): number {
  * still come down on its landing rather than past it — found by flying a
  * point off the lip at the ramp's own angle over the real snow, at each
  * speed in turn, until the impact into the slope would bottom the
- * suspension. A rider learns this on his first lap; the bot is handed it.
- * Worked out once per kicker. */
-const kickerSpeeds = new WeakMap<Kicker, number>();
-function kickerSpeed(level: Level, k: Kicker, profile: BotProfile): number {
-  const known = kickerSpeeds.get(k);
+ * suspension of the machine he is on. A rider learns this on his first lap;
+ * the bot is handed it. Worked out once per kicker per machine. */
+const kickerSpeeds = new WeakMap<SledSpec, WeakMap<Kicker, number>>();
+function kickerSpeed(level: Level, k: Kicker, spec: SledSpec, profile: BotProfile): number {
+  let mine = kickerSpeeds.get(spec);
+  if (!mine) {
+    mine = new WeakMap();
+    kickerSpeeds.set(spec, mine);
+  }
+  const known = mine.get(k);
   if (known !== undefined) return known;
   const fx = Math.sin(k.heading);
   const fz = Math.cos(k.heading);
   const lip = level.groundAt(k.x, k.z);
   const angle = Math.atan((lip - level.groundAt(k.x - fx * 2, k.z - fz * 2)) / 2);
   const floor = 0.55;
-  const limit = TUNING.air.harshSpeed * profile.kickerMargin;
+  const limit = harshSpeedOf(spec) * profile.kickerMargin;
   const n = { x: 0, y: 1, z: 0 };
   let best = 8;
   for (let v = 8; v <= 40; v += 1) {
@@ -178,7 +185,7 @@ function kickerSpeed(level: Level, k: Kicker, profile: BotProfile): number {
     if (impact > limit) break;
     best = v;
   }
-  kickerSpeeds.set(k, best);
+  mine.set(k, best);
   return best;
 }
 
@@ -186,8 +193,9 @@ function kickerSpeed(level: Level, k: Kicker, profile: BotProfile): number {
  * braking reach to be taken at its own speed, m/s. */
 function speedAllowed(state: GameState, s: number, speed: number, profile: BotProfile): number {
   const level = state.level;
-  const aLat = cornerGrip(1) * profile.cornerShare;
-  const decel = brakeDecel(1) * profile.brakeShare;
+  const spec = state.sled.spec;
+  const aLat = cornerGrip(spec, 1) * profile.cornerShare;
+  const decel = brakeDecel(spec, 1) * profile.brakeShare;
   const reach = (speed * speed) / (2 * decel) + 30;
   let allowed = Infinity;
   for (let d = 0; d <= reach; d += 4) {
@@ -201,7 +209,7 @@ function speedAllowed(state: GameState, s: number, speed: number, profile: BotPr
     if (!k.onTrack || k.s === undefined) continue;
     const d = arcAhead(level, s, k.s);
     if (d > reach) continue;
-    const v = kickerSpeed(level, k, profile);
+    const v = kickerSpeed(level, k, spec, profile);
     const now = Math.sqrt(v * v + 2 * decel * d);
     if (now < allowed) allowed = now;
   }
@@ -259,7 +267,8 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   const on = locate(state);
   const cps = level.checkpoints;
   let aimS = on.s + profile.lookBase + profile.lookPerSpeed * speed;
-  // BEFORE THE START LINE and still out in the powder: aim onto the track
+  // BEFORE THE START LINE and off the track (a grid in the powder, on a
+  // hand-built map): aim onto the track
   // SHORT of the line, so it is crossed riding along the track.
   const halfWidth = trackPointAt(level, on.s, pa).width / 2;
   if (!p.started && p.nextCheckpoint === 0 && on.distance > halfWidth) {
@@ -313,18 +322,18 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   // ...and the turn onto the track at the end of the grid's lane, braked
   // for before the lane runs out.
   if (!p.started && on.distance > halfWidth) {
-    const grip = cornerGrip(c.packed) * profile.cornerShare;
+    const grip = cornerGrip(c.spec, c.packed) * profile.cornerShare;
     const turn = Math.sqrt(grip * profile.entryRadius);
     const left = on.distance - halfWidth;
     allowed = Math.min(
       allowed,
-      Math.sqrt(turn * turn + 2 * brakeDecel(c.packed) * profile.brakeShare * left),
+      Math.sqrt(turn * turn + 2 * brakeDecel(c.spec, c.packed) * profile.brakeShare * left),
     );
   }
   const reach = Math.hypot(tx - c.x, tz - c.z);
   const bend = (2 * Math.abs(Math.sin(angleDiff(c.heading, bearing)))) / Math.max(reach, 1);
   if (bend > 1e-3) {
-    const grip = cornerGrip(c.packed) * profile.cornerShare;
+    const grip = cornerGrip(c.spec, c.packed) * profile.cornerShare;
     allowed = Math.min(allowed, Math.max(profile.crawl, Math.sqrt(grip / bend)));
   }
   if (speed > allowed + 1) {

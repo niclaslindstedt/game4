@@ -16,7 +16,6 @@
 // smell the loop reads and nobody has to fix.
 
 import { angleDiff } from "../lib/math.ts";
-import { segmentDistance } from "../lib/polyline.ts";
 import { sunAt } from "../lib/solar.ts";
 import { nearestTrackPoint, nearestWithin, trackPointAt } from "../mapgen/query.ts";
 import { LEVEL_RULES as R, withinBand, type Band } from "../mapgen/rules.ts";
@@ -55,7 +54,8 @@ export type LevelAnalysis = {
     checkpoints: number;
     spacingMin: number;
     spacingMax: number;
-    spawnDistance: number;
+    /** The closest two trunks stand, m (R14). */
+    treeGap: number;
     trees: number;
     /** Trees standing within R14's corridor. */
     treesOnCorridor: number;
@@ -63,6 +63,8 @@ export type LevelAnalysis = {
     relief: number;
     sunElevation: number;
     attempt: number;
+    /** Share of the loop lying under a drift's core (R17). */
+    drifted: number;
   };
 };
 
@@ -228,12 +230,16 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     add("R4", "warn", `only ${offKickers.length} kicker(s) off the track`);
   }
 
-  // R10 — packed on the line, powder off it.
+  // R10 — packed on the line, powder off it — outside the drifts (R17),
+  // each read with its ease either side, which is what they published.
+  const drifts = level.drifts ?? [];
+  const F = R.drift.fade;
+  const drifted = (s: number): boolean => drifts.some((d) => s > d.from - F && s < d.to + F);
   let packedLow = 1;
   let packedHigh = 0;
   for (let i = 0; i < n; i += 5) {
     const p = pts[i];
-    packedLow = Math.min(packedLow, level.packedAt(p.x, p.z));
+    if (!drifted(p.s)) packedLow = Math.min(packedLow, level.packedAt(p.x, p.z));
     const off = p.width / 2 + R.track.shoulder.packed + 3;
     const rx = Math.cos(p.heading);
     const rz = -Math.sin(p.heading);
@@ -242,8 +248,6 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   if (packedLow < 0.98) add("R10", "error", `the centreline is only ${fmt(packedLow, 2)} packed`);
   if (packedHigh > 0.02)
     add("R10", "error", `powder beside the track is ${fmt(packedHigh, 2)} packed`);
-  if (level.packedAt(level.spawn.x, level.spawn.z) > 0)
-    add("R10", "error", "the spawn is on packed snow");
 
   // R11 — the checkpoints.
   const cps = level.checkpoints;
@@ -268,60 +272,55 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   }
   if (cps.length > 0 && Math.abs(cps[0].s) > 1e-6)
     add("R11", "error", "checkpoint 0 is not at arc length 0");
-  let nearest = 0;
-  let nearestD = Infinity;
-  for (let i = 0; i < n; i++) {
-    const d = Math.hypot(pts[i].x - level.spawn.x, pts[i].z - level.spawn.z);
-    if (d < nearestD) {
-      nearestD = d;
-      nearest = i;
+
+  // R12 — the start line: clear of every kicker, on a straight and gentle
+  // stretch the grid can stand on.
+  for (const k of trackKickers) {
+    const ds = Math.abs(k.s ?? 0);
+    if (Math.min(ds, L - ds) < R.spawn.kickerGap - 1) {
+      add("R12", "error", `${k.id} stands ${fmt(Math.min(ds, L - ds), 0)} m from the start line`);
     }
   }
-  if (
-    nearest !== 0 &&
-    nearestD < Math.hypot(pts[0].x - level.spawn.x, pts[0].z - level.spawn.z) - 0.01
-  ) {
-    add(
-      "R11",
-      "error",
-      `the start line is not the track point nearest the spawn (that is point ${nearest})`,
-    );
+  const line = pts[0];
+  let bend = 0;
+  let steepest = 0;
+  for (let u = 0; u <= R.spawn.run; u += step) {
+    const a = trackPointAt(level, L - u);
+    const b = trackPointAt(level, L - u - step);
+    bend = Math.max(bend, Math.abs(angleDiff(b.heading, line.heading)));
+    steepest = Math.max(steepest, Math.abs(a.y - b.y) / step);
+  }
+  if (bend > R.spawn.straight + 0.02) {
+    add("R12", "error", `the grid's stretch turns ${fmt(bend, 2)} rad before the line`);
+  }
+  if (steepest > R.spawn.maxSlope + 0.02) {
+    add("R12", "error", `the grid's stretch is ${fmt(steepest * 100, 0)} % steep`);
   }
 
-  // R12 — the spawn.
-  const spawnHit = nearestTrackPoint(level, level.spawn.x, level.spawn.z);
-  if (!withinBand(spawnHit.distance, R.spawn.distance)) {
-    add(
-      "R12",
-      "error",
-      `the spawn stands ${fmt(spawnHit.distance)} m from the track (band ${bandText(R.spawn.distance, " m")})`,
-    );
-  }
-  const aim = Math.atan2(pts[0].x - level.spawn.x, pts[0].z - level.spawn.z);
-  if (Math.abs(angleDiff(level.spawn.heading, aim)) > 0.02) {
-    add("R12", "error", "the spawn does not face the start line");
-  }
-  const clear2 = R.spawn.clear * R.spawn.clear;
-  let spawnTrees = 0;
-  let laneTrees = 0;
-  for (const t of level.trees) {
-    if ((t.x - level.spawn.x) ** 2 + (t.z - level.spawn.z) ** 2 < clear2) spawnTrees++;
-    else if (
-      segmentDistance(t.x, t.z, level.spawn.x, level.spawn.z, pts[0].x, pts[0].z) <
-      R.spawn.lane / 2 - 0.5
-    ) {
-      laneTrees++;
-    }
-  }
-  if (spawnTrees > 0) add("R12", "error", `${spawnTrees} tree(s) inside the spawn's clearing`);
-  if (laneTrees > 0) add("R12", "error", `${laneTrees} tree(s) in the lane to the track`);
-
-  // R13 — the grid.
+  // R13 — the grid: on the groomer, behind the line, facing along the loop,
+  // and no two riders on top of each other.
   if (level.grid.length !== R.grid.slots) add("R13", "error", `${level.grid.length} grid slots`);
-  for (let i = 1; i < level.grid.length; i++) {
-    const d = Math.hypot(level.grid[i].x - level.grid[0].x, level.grid[i].z - level.grid[0].z);
-    if (d < R.grid.spacing - 0.01)
-      add("R13", "error", `grid slot ${i} stands ${fmt(d)} m from the player`);
+  const grid = [level.spawn, ...level.grid];
+  grid.forEach((g, i) => {
+    const hit = nearestTrackPoint(level, g.x, g.z);
+    const p = pts[hit.index];
+    const who = i === 0 ? "the spawn" : `grid slot ${i - 1}`;
+    if (hit.distance > p.width / 2 - 1) add("R13", "error", `${who} stands off the track`);
+    if (level.packedAt(g.x, g.z) < 0.98) add("R13", "error", `${who} is not on packed snow`);
+    const behind = L - hit.s;
+    if (behind < R.grid.back - 1 || behind > R.spawn.run + 1) {
+      add("R13", "error", `${who} stands ${fmt(behind)} m behind the line`);
+    }
+    if (Math.abs(angleDiff(g.heading, p.heading)) > 0.05) {
+      add("R13", "error", `${who} does not face along the loop`);
+    }
+  });
+  const least = Math.min(R.grid.spacing, R.grid.row);
+  for (let a = 0; a < level.grid.length; a++) {
+    for (let b = a + 1; b < level.grid.length; b++) {
+      const d = Math.hypot(level.grid[a].x - level.grid[b].x, level.grid[a].z - level.grid[b].z);
+      if (d < least - 0.05) add("R13", "error", `grid slots ${a} and ${b} stand ${fmt(d)} m apart`);
+    }
   }
 
   // R14 — the forest.
@@ -335,6 +334,29 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   }
   if (treesOnCorridor > 0)
     add("R14", "error", `${treesOnCorridor} tree(s) stand on the track's corridor`);
+  // ...and room to ride between them: the closest two trunks, read off a
+  // hash of gap-sized buckets.
+  const buckets = new Map<number, { x: number; z: number }[]>();
+  let treeGap = Infinity;
+  for (const t of level.trees) {
+    const bx = Math.floor(t.x / R.forest.gap);
+    const bz = Math.floor(t.z / R.forest.gap);
+    for (let dz = -1; dz <= 1; dz++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        for (const u of buckets.get((bx + dx) * 8192 + bz + dz) ?? []) {
+          treeGap = Math.min(treeGap, Math.hypot(u.x - t.x, u.z - t.z));
+        }
+      }
+    }
+    const key = bx * 8192 + bz;
+    const list = buckets.get(key);
+    if (list) list.push(t);
+    else buckets.set(key, [t]);
+    if (t.crown > R.forest.crownMax + 1e-9) add("R14", "error", `a crown ${fmt(t.crown)} m wide`);
+  }
+  if (treeGap < R.forest.gap - 0.01) {
+    add("R14", "error", `two trunks stand ${fmt(treeGap)} m apart (least ${R.forest.gap} m)`);
+  }
   if (level.trees.length < 1000) add("R14", "warn", `only ${level.trees.length} trees`);
 
   // R15 — the day.
@@ -355,6 +377,42 @@ export function analyzeLevel(level: Level): LevelAnalysis {
 
   // R16 — the race.
   if (!(level.laps >= 1)) add("R16", "error", `${level.laps} laps`);
+
+  // R17 — the drifts: their length, their spacing, clear of the line and of
+  // every kicker, and the groomer under their cores actually drifted over.
+  let driftLength = 0;
+  for (let i = 0; i < drifts.length; i++) {
+    const d = drifts[i];
+    const len = d.to - d.from;
+    driftLength += len;
+    if (len < R.drift.length.min - 1 || len > R.drift.length.max + 1) {
+      add("R17", "error", `a drift at s ${fmt(d.from, 0)} m is ${fmt(len, 0)} m long`);
+    }
+    if (d.from - F < R.drift.clear - 1 || d.to + F > L - R.drift.clear + 1) {
+      add("R17", "error", `a drift at s ${fmt(d.from, 0)} m lies on the start line's approach`);
+    }
+    const next = drifts[i + 1];
+    if (next && next.from - d.to < R.drift.gap + 2 * F - 1) {
+      add("R17", "error", `two drifts stand ${fmt(next.from - d.to, 0)} m apart`);
+    }
+    for (const k of trackKickers) {
+      const s0 = k.s ?? 0;
+      if (d.from - F < s0 + k.landing && d.to + F > s0 - k.ramp) {
+        add("R17", "error", `a drift at s ${fmt(d.from, 0)} m lies over ${k.id}`);
+      }
+    }
+    let deepest = 0;
+    for (let s = d.from; s <= d.to; s += 5) {
+      const p = trackPointAt(level, s);
+      deepest = Math.max(deepest, level.packedAt(p.x, p.z));
+    }
+    if (deepest > R.drift.packed + 0.05) {
+      add("R17", "error", `the drift at s ${fmt(d.from, 0)} m is ${fmt(deepest, 2)} packed`);
+    }
+  }
+  if (driftLength / L > R.drift.share.max + R.drift.length.min / L + 0.01) {
+    add("R17", "warn", `${fmt((100 * driftLength) / L, 0)} % of the loop is drifted`);
+  }
 
   let lo = Infinity;
   let hi = -Infinity;
@@ -380,12 +438,13 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       checkpoints: cps.length,
       spacingMin,
       spacingMax,
-      spawnDistance: spawnHit.distance,
+      treeGap,
       trees: level.trees.length,
       treesOnCorridor,
       relief: hi - lo,
       sunElevation: elevation,
       attempt: level.attempt ?? 0,
+      drifted: driftLength / L,
     },
   };
 }

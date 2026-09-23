@@ -190,9 +190,8 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
   const s1 = pts[Math.min(pts.length - 1, 20)];
   arrow(canvas, px(s0.x), py(s0.z), px(s1.x) - px(s0.x), py(s1.z) - py(s0.z), INK, 2);
 
-  // ── The spawn and its grid, and the run-in through the powder ─────────
+  // ── The grid behind the start line ─────────────────────────────────────
   const sp = level.spawn;
-  canvas.line(px(sp.x), py(sp.z), px(s0.x), py(s0.z), [...MARK.start, 160], 1);
   for (const g of level.grid) canvas.disk(px(g.x), py(g.z), 2.5, MARK.start);
   arrow(
     canvas,
@@ -203,7 +202,7 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
     MARK.start,
     3,
   );
-  label(canvas, px(sp.x) + 8, py(sp.z) + 6, "SPAWN", MARK.start, 1);
+  label(canvas, px(sp.x) + 8, py(sp.z) + 6, "GRID", MARK.start, 1);
 
   // ── Title strip ────────────────────────────────────────────────────────
   canvas.text(title ?? `LEVEL ${level.seed}`, MARGIN, 14, INK, 2);

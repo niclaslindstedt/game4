@@ -62,17 +62,18 @@ export function rampToward(
   return target === 0 && Math.abs(next) < KEY_AXIS_SNAP ? 0 : next;
 }
 
-/** THE THROTTLE LEVER. A touch anchors the lever SHUT under the thumb, and
- * the throw runs DOWN the glass from there: `LEVER_FULL_PX` of travel toward
- * the palm is the throttle wide open. Down is the motion a thumb resting on
- * the lower right of a phone held sideways makes easily and holds easily at
- * speed, and anchoring at the touch point rather than at a fixed zero means
- * the lever works wherever the thumb lands. */
-export const LEVER_FULL_PX = 90;
-/** ...and UP from the anchor is the BRAKE: past a small dead band, so a
- * thumb settling on the glass never grabs it by accident, this much further
- * travel is the lever pulled all the way. Shorter than the throttle's,
- * because it is reached for in a hurry. */
+/** THE THROTTLE LEVER. A touch anchors the lever WIDE OPEN under the thumb:
+ * a thumb on the glass is a rider on the gas, which is what a race asks of
+ * him nearly all the time, and a lever that opened only as it was dragged
+ * made every start and every exit a hand-over. Anywhere at or below the
+ * anchor is full; sliding UP eases the throttle off over `LEVER_EASE_PX`,
+ * and the lever is shut at the top of that throw. Anchoring at the touch
+ * point rather than at a fixed zero means the lever works wherever the thumb
+ * lands. */
+export const LEVER_EASE_PX = 60;
+/** ...and further UP again is the BRAKE: past a small dead band over the
+ * shut point, so a thumb easing off never grabs it by accident, this much
+ * more travel is the lever pulled all the way. */
 export const LEVER_BRAKE_DEAD_PX = 12;
 export const LEVER_BRAKE_PX = 60;
 
@@ -86,17 +87,18 @@ export type TouchFeel = { sensitivity: number; invertLean: boolean };
 export const PLAIN_FEEL: TouchFeel = { sensitivity: 1, invertLean: false };
 
 /** How open the throttle is for a thumb `dyPx` below its anchor (screen y
- * grows downward): shut at the anchor and above it, opening analogue over
- * `LEVER_FULL_PX` of travel down. */
+ * grows downward): wide open at the anchor and below it, easing off analogue
+ * over `LEVER_EASE_PX` of travel up, shut past that. */
 export function leverThrottle(dyPx: number, feel: TouchFeel = PLAIN_FEEL): number {
-  return clamp((dyPx * feel.sensitivity) / LEVER_FULL_PX, 0, 1);
+  return clamp(1 + (dyPx * feel.sensitivity) / LEVER_EASE_PX, 0, 1);
 }
 
-/** ...and how far the brake is pulled for the same thumb: the travel ABOVE
- * the anchor past the dead band, 0..1. One throw carries both, so a rider
- * can never be asking for the throttle and the brake with the same thumb. */
+/** ...and how far the brake is pulled for the same thumb: the travel above
+ * the shut point past the dead band, 0..1. One throw carries both, so a
+ * rider can never be asking for the throttle and the brake with the same
+ * thumb. */
 export function leverBrake(dyPx: number, feel: TouchFeel = PLAIN_FEEL): number {
-  const past = -dyPx * feel.sensitivity - LEVER_BRAKE_DEAD_PX;
+  const past = -dyPx * feel.sensitivity - LEVER_EASE_PX - LEVER_BRAKE_DEAD_PX;
   if (past <= 0) return 0;
   return clamp(past / LEVER_BRAKE_PX, 0, 1);
 }

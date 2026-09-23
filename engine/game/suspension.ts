@@ -21,6 +21,7 @@
 
 import { totalMass, type SledSpec, type SuspensionSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
+import { footprintOf, skiShare } from "./footprint.ts";
 
 export type Probe = {
   kind: "ski" | "tread";
@@ -38,8 +39,10 @@ export type Probe = {
    * the front ones cut). */
   width: number;
   ploughs: boolean;
-  /** Its share of the tread's sink (`snow.ts`). */
+  /** Its share of the reference tread's sink, and its planing speed as a
+   * multiple of `snow.planeSpeed` (`snow.ts`, `footprint.ts`). */
   sinkScale: number;
+  planeScale: number;
 };
 
 export type HullPoint = { x: number; y: number; z: number };
@@ -54,13 +57,6 @@ const TREAD_EDGE = 0.7;
 
 const layouts = new WeakMap<SledSpec, Probe[]>();
 const hulls = new WeakMap<SledSpec, HullPoint[]>();
-
-/** The share of the weight the skis carry together at rest: the moment
- * balance of the ski line and the tread's centroid about the CoG. */
-export function skiShare(spec: SledSpec): number {
-  const tread = -(spec.treadFront + spec.treadRear) / 2;
-  return tread / (spec.skiForward + tread);
-}
 
 /** Every probe, skis first (left, right) then the tread front to back, left
  * before right. Built once per spec. */
@@ -85,8 +81,10 @@ export function probesOf(spec: SledSpec): Probe[] {
       width: spec.skiWidth,
       ploughs: true,
       sinkScale: TUNING.snow.skiSink,
+      planeScale: 1,
     });
   }
+  const fit = footprintOf(spec);
   const stations = TREAD_ROWS.length * 2;
   const treadRest = (weight * (1 - share)) / stations;
   for (let r = 0; r < TREAD_ROWS.length; r++) {
@@ -102,7 +100,8 @@ export function probesOf(spec: SledSpec): Probe[] {
         rest: treadRest,
         width: spec.treadWidth / 2,
         ploughs: r === 0,
-        sinkScale: 1,
+        sinkScale: fit.sink,
+        planeScale: fit.plane,
       });
     }
   }

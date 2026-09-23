@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE TOUCH CONTROLS — the two thumb zones the phone rides the sled with:
 // the HANDLEBAR on the lower left, the LEVER on the lower right (swapped for
-// a rider who has asked for the lever on the left) — the throttle dragged
-// DOWN from its anchor, the brake pushed UP from it. Both
+// a rider who has asked for the lever on the left) — wide open the moment a
+// thumb lands, eased off by sliding UP, and the brake further up still. Both
 // stop short of the top of the screen so the readouts and their presses keep
 // their own glass; styles.css owns where the line falls.
 //
@@ -31,7 +31,7 @@ import { useEffect, useMemo, useRef } from "preact/hooks";
 import {
   LEVER_BRAKE_DEAD_PX,
   LEVER_BRAKE_PX,
-  LEVER_FULL_PX,
+  LEVER_EASE_PX,
   barLean,
   barReachPx,
   barSteer,
@@ -192,18 +192,19 @@ export function BarZone({
   );
 }
 
-/** The lever's drawing: the throttle's throw below the anchor, the brake's
- * above it, with room round the track for the knob and its stroke, px. */
-const LEVER_UP_PX = LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX;
+/** The lever's drawing: the whole throw runs UP from the anchor — the
+ * throttle easing off to the shut mark, then the brake's past it — with room
+ * round the track for the knob and its stroke, px. */
+const LEVER_UP_PX = LEVER_EASE_PX + LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX;
 const LEVER_PAD_PX = 22;
 const LEVER_TOP_PX = -LEVER_UP_PX - LEVER_PAD_PX;
-const LEVER_BOX_PX = LEVER_UP_PX + LEVER_FULL_PX + LEVER_PAD_PX * 2;
+const LEVER_BOX_PX = LEVER_UP_PX + LEVER_PAD_PX * 2;
 
-/** The right thumb: touching anywhere in the zone anchors the LEVER, SHUT,
- * under the finger. Dragging DOWN toward the palm opens the throttle over
- * `LEVER_FULL_PX`; pushing UP past a small dead band pulls the BRAKE over
- * `LEVER_BRAKE_PX`. Analogue the whole way, held while the finger is down
- * and let go on the lift. `input-model.ts` states the maths once. */
+/** The right thumb: touching anywhere in the zone anchors the LEVER, WIDE
+ * OPEN, under the finger. Sliding UP eases the throttle off over
+ * `LEVER_EASE_PX` to shut; further up, past a small dead band, pulls the
+ * BRAKE over `LEVER_BRAKE_PX`. Analogue the whole way, held while the finger
+ * is down and let go on the lift. `input-model.ts` states the maths once. */
 export function LeverZone({
   touch,
   feel,
@@ -221,22 +222,22 @@ export function LeverZone({
   const write = (throttle: number, brake: number): void => {
     touch.throttle = throttle;
     touch.brake = brake;
-    // The knob rides the thumb: the anchor at 0 is shut, the throttle's
-    // travel runs down from it and the brake's up. The fill spans the anchor
-    // to the knob either way — downward it is the throttle that is open,
-    // upward the brake, drawn in the alarm colour so a thumb never has to
-    // ask which half of the throw it is in.
+    // The knob rides the thumb: the anchor at 0 is wide open, the shut mark
+    // `LEVER_EASE_PX` above it, the brake's travel above that. The fill spans
+    // the shut mark to the knob either way — below it it is the throttle
+    // that is open, above it the brake, drawn in the alarm colour so a thumb
+    // never has to ask which half of the throw it is in.
     const px =
       throttle > 0
-        ? throttle * LEVER_FULL_PX
+        ? -(1 - throttle) * LEVER_EASE_PX
         : brake > 0
-          ? -(LEVER_BRAKE_DEAD_PX + brake * LEVER_BRAKE_PX)
-          : 0;
+          ? -(LEVER_EASE_PX + LEVER_BRAKE_DEAD_PX + brake * LEVER_BRAKE_PX)
+          : -LEVER_EASE_PX;
     knobRef.current?.setAttribute("transform", `translate(0 ${px.toFixed(1)})`);
     const fill = fillRef.current;
     if (!fill) return;
-    fill.setAttribute("y", Math.min(0, px).toFixed(1));
-    fill.setAttribute("height", Math.abs(px).toFixed(1));
+    fill.setAttribute("y", Math.min(-LEVER_EASE_PX, px).toFixed(1));
+    fill.setAttribute("height", Math.abs(px + LEVER_EASE_PX).toFixed(1));
     fill.classList.toggle("hud-lever-fill-reverse", brake > 0);
   };
   const letGo = (): void => {
@@ -265,7 +266,7 @@ export function LeverZone({
           lever.style.display = "block";
         }
         touch.lever = true;
-        write(0, 0);
+        write(leverThrottle(0, feel), leverBrake(0, feel));
       }}
       onPointerMove={(e) => {
         if (!guard.owns(e.pointerId)) return;
@@ -293,13 +294,20 @@ export function LeverZone({
             x="-6"
             y={-LEVER_UP_PX}
             width="12"
-            height={LEVER_UP_PX + LEVER_FULL_PX}
+            height={LEVER_UP_PX}
             rx="6"
           />
           <rect ref={fillRef} class="hud-lever-fill" x="-6" y="0" width="12" height="0" rx="6" />
-          {/* The SHUT mark at the anchor: above it the brake, below it the
-              throttle, so the two read as two levers rather than one. */}
-          <line class="hud-lever-neutral" x1="-11" y1="0" x2="11" y2="0" />
+          {/* The SHUT mark, an easing-off above the anchor: above it the
+              brake, below it the throttle, so the two read as two levers
+              rather than one. */}
+          <line
+            class="hud-lever-neutral"
+            x1="-11"
+            y1={-LEVER_EASE_PX}
+            x2="11"
+            y2={-LEVER_EASE_PX}
+          />
           <g ref={knobRef}>
             <circle class="hud-lever-knob" cx="0" cy="0" r="15" />
           </g>

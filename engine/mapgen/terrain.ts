@@ -15,6 +15,7 @@
 // out by `basin.rim.warp` of slow noise so it does not read as drawn with a
 // compass.
 
+import { smoothstep } from "../lib/math.ts";
 import { createHeightfield, type Heightfield } from "../lib/heightfield.ts";
 import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
@@ -105,11 +106,6 @@ function ridged(x: number, z: number, scale: number, seed: number): number {
   const v = a * a * 0.7 + b * b * 0.3;
   // v^1.25, sharpening the crests, without a pow.
   return v * Math.sqrt(Math.sqrt(v));
-}
-
-function smoothstep(a: number, b: number, v: number): number {
-  const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
-  return t * t * (3 - 2 * t);
 }
 
 /** Distance from the basin's middle on the rounded square the rim is

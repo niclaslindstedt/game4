@@ -43,8 +43,8 @@ photographs the last change. `make world` builds its own bundle.
 
 | `make world` view | What it photographs |
 | --- | --- |
-| `spawn` | The grid in the powder on the lights |
-| `powder`, `powder-high` | The run through the powder onto the track — the roost, the sink — close and from the high boom |
+| `spawn` | The grid on the track behind the start line, on the lights |
+| `powder`, `powder-high` | The first drift across the track (R17) — the roost, the sink — close and from the high boom |
 | `lookback`, `furrow` | Back down the furrows the player has cut; close on them |
 | `track` | On the groomed track at pace — the corduroy, the flags |
 | `hood`, `bars`, `far` | The bolted and far rungs of the camera ladder |

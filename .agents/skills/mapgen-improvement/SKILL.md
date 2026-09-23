@@ -1,6 +1,6 @@
 ---
 name: mapgen-improvement
-description: "Use when improving the WORLD GENERATOR (engine/mapgen/) — the rules engine that builds every map fresh from its seed: the basin and its mountain flanks, the hills, ridges, tilt and bowls, the kickers on the hilltops and on the track, the closed race loop graded into the country and the packed snow on it, the spawn in the powder and the grid, the checkpoints, the forest and its meadows, the day. Owns the module split (rules.ts data / generate.ts search / terrain, track, kickers, spawn, forest, sun / compile.ts geometry / query.ts the track asked), the R-rules and their verbatim mirror, the TRACK-AND-TERRAIN craft (sculpting slopes and kickers, the closed loop, the spawn), and above all the LOOP: write, generate, ANALYZE (`make analyze`), fix, reflect on whether the analyzer measured the right thing, LOOK with `make level`, iterate, then take another seed."
+description: "Use when improving the WORLD GENERATOR (engine/mapgen/) — the rules engine that builds every map fresh from its seed: the basin and its mountain flanks, the hills, ridges, tilt and bowls, the kickers on the hilltops and on the track, the closed race loop graded into the country and the packed snow on it and the drifts across it, the start line and the grid on the track behind it, the checkpoints, the forest and its meadows, the day. Owns the module split (rules.ts data / generate.ts search / terrain, track, kickers, spawn, forest, sun / compile.ts geometry / query.ts the track asked), the R-rules and their verbatim mirror, the TRACK-AND-TERRAIN craft (sculpting slopes and kickers, the closed loop, the spawn), and above all the LOOP: write, generate, ANALYZE (`make analyze`), fix, reflect on whether the analyzer measured the right thing, LOOK with `make level`, iterate, then take another seed."
 ---
 
 # Improving the World Generator
@@ -106,8 +106,9 @@ inventing a proxy nobody believes.
 | `terrain.ts` | **The country (R2, R3):** the basin and its rim on a warped rounded square, the hills, ridges, tilt and bowls — a pure function of a PLAN drawn once, baked ONCE onto the grid (`planTerrain`, `bakeCountry`). |
 | `track.ts` | **The loop (R5–R8, R10):** drawn polar (`r(θ) = 1 + Σ aₖ sin(kθ + φₖ)`, star-shaped so the harmonics cannot cross), warped, scaled, resampled every 2 m; refused on a crossing, a tight corner or a reach up the rim; graded into the country; the corridor pressed into the ground and the packed field stamped (`drawLoop`, `gradeLoop`, `stampCorridor`). |
 | `kickers.ts` | **The kickers (R4, R9):** the ramp-and-landing profile, added to the graded line on the track, stamped into the ground in plan off it. |
-| `spawn.ts` | **Where the race starts (R11–R13):** the spawn in powder, the grid abreast, the loop re-indexed so checkpoint 0 is the point nearest the spawn, the checkpoints down it. |
-| `forest.ts` | **The forest (R14):** one candidate per cell, jittered, kept by the forest noise, refused by rule, sized by where it stands. Grown AFTER the spawn so it keeps the spawn's clearing and lane. |
+| `spawn.ts` | **Where the race starts (R11–R13):** the start line searched for on the loop, the loop re-indexed so checkpoint 0 is arc 0, the grid on the track behind it, the checkpoints down it. |
+| `forest.ts` | **The forest (R14):** one candidate per cell, jittered, kept by the forest noise, refused by rule — never within `forest.gap` of another trunk, so a sled rides between any two — and sized by where it stands. |
+| `drift.ts` | **The drifts (R17):** stretches of the finished loop dealt off their own stream and stamped into the packed field. |
 | `sun.ts` | **The day (R15):** latitude, day of the year, a solar hour with the sun over its floor — the arithmetic is `lib/solar.ts`'s. |
 | `compile.ts` | **The geometry:** the baked grids bound into the `Level` and its three queries (`groundAt`, `normalAt`, `packedAt`) as bilinear samples. Nothing downstream regenerates any of it. |
 | `query.ts` | **The track, asked:** `nearestTrackPoint` (off a lazily built spatial hash), `trackPointAt`, `arcAhead`, `arcBetween` — for the generator, the analysis, the physics, the bot and the renderer alike. |
@@ -199,18 +200,16 @@ is also a CHECK.
 
 ### The spawn
 
-- **The race opens OFF the track** (R12): the grid stands in powder a seeded
-  distance from the loop, facing its nearest point, so the first thing a race
-  asks is the run through the powder onto the packed trail. That nearest
-  point IS checkpoint 0, and the loop is re-indexed to begin there — every
-  arc length a reader meets is measured from the line the race is timed on.
-- **Searched for, not solved for.** A candidate is refused on anything unfair
-  or unrideable: ground too steep for a standing start, a run-in that climbs
-  a bank, a start line on a kicker's ramp. The forest is grown AFTER and
-  keeps the spawn's clearing and lane, so the spawn never dodges a tree.
-- **The grid is abreast across the spawn's heading** (R13), the player's slot
-  first; a field bigger than the grid stands its extras a row behind
-  (`rivals.ts`).
+- **The race opens ON the groomer** (R12, R13): the start line is a seeded
+  station of the loop, and the loop is re-indexed to begin there — every arc
+  length a reader meets is measured from the line the race is timed on. The
+  grid stands behind it in rows straddling the centreline, facing along the
+  loop, the player's slot first (front row, left). A start in the powder is
+  the roam mode's, the day it is built.
+- **Searched for, not solved for.** A station is refused on anything unfair
+  or unrideable: a kicker's lip within `spawn.kickerGap`, a bend or a slope
+  in the stretch behind the line the grid stands on. A field bigger than the
+  grid stands its extras further back (`rivals.ts`).
 
 When something looks wrong on the plan, ask which rule of the country it
 breaks before reaching for a number.

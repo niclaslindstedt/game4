@@ -6,6 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  SLEDS,
   createGame,
   fieldOrder,
   NEUTRAL_INPUT,
@@ -32,15 +33,30 @@ describe("the grid", () => {
       expect(r.run.level).toBe(level);
       expect(r.pace).toBeGreaterThanOrEqual(RACE.paceBand.min);
       expect(r.pace).toBeLessThanOrEqual(RACE.paceBand.max);
+      expect(SLEDS).toContain(r.run.sled.spec);
     }
+  });
+
+  it("deals the field its machines off the run's own stream", () => {
+    const machines = (seed: number): string[] =>
+      createGame({ level: syntheticLevel(), seed, quiet: true }).rivals.map(
+        (r) => r.run.sled.spec.id,
+      );
+    expect(machines(7)).toEqual(machines(7));
+    const seen = new Set<string>();
+    for (let seed = 1; seed <= 12; seed++) for (const id of machines(seed)) seen.add(id);
+    expect(seen.size).toBeGreaterThan(2);
   });
 
   it("holds the field under the lights and lets it go on GO", () => {
     const state = createGame({ level: syntheticLevel(), quiet: true });
     const start = state.rivals.map((r) => ({ x: r.run.sled.x, z: r.run.sled.z }));
     for (let i = 0; i < 2.5 * TUNING.physicsHz; i++) step(state, NEUTRAL_INPUT);
+    // Held, not parked: each machine settles into the powder at its own rest
+    // pitch, which walks its centre of gravity a few decimetres. A sled let
+    // go would be metres gone.
     state.rivals.forEach((r, i) => {
-      expect(Math.hypot(r.run.sled.x - start[i].x, r.run.sled.z - start[i].z)).toBeLessThan(0.3);
+      expect(Math.hypot(r.run.sled.x - start[i].x, r.run.sled.z - start[i].z)).toBeLessThan(0.5);
     });
     for (let i = 0; i < 5 * TUNING.physicsHz; i++) step(state, NEUTRAL_INPUT);
     for (const r of state.rivals) expect(r.run.sled.speed).toBeGreaterThan(3);
