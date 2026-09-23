@@ -353,3 +353,25 @@ export function saveGhost(run: GhostRun): void {
     // Storage unavailable or full — the time is still in the book.
   }
 }
+
+/** EVERY TAPE ON FILE, each read the way `loadGhost` reads one — for the
+ * cloud save (`cloud-save.ts`), which carries them to the rider's other
+ * devices. A key that is not a readable tape is skipped, never trusted. */
+export function loadGhosts(): GhostRun[] {
+  const out: GhostRun[] = [];
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key === null || !key.startsWith(GHOST_PREFIX)) continue;
+      try {
+        const parsed: unknown = JSON.parse(localStorage.getItem(key) ?? "null");
+        if (readsAsGhost(parsed) && GHOST_PREFIX + parsed.id === key) out.push(parsed);
+      } catch {
+        // Not JSON — that key is simply not a tape.
+      }
+    }
+  } catch {
+    // Storage unavailable — there are no tapes to carry.
+  }
+  return out;
+}

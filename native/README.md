@@ -18,16 +18,17 @@ See [`docs/platforms.md`](../docs/platforms.md) for where this sits.
 
 ## What the shell actually does
 
-Everything else is the website. The shell is five things a browser tab cannot
+Everything else is the website. The shell is six things a browser tab cannot
 give a phone:
 
-| The thing                | Where it lives                                         | Why the website cannot do it                                                                                                                                                                                                                                         |
-| ------------------------ | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| The game, on-device      | `src/local-server.ts`                                  | `assets/webroot.zip` unzipped once per bundle and served from a fixed loopback port, so the origin — and the stored settings on it — survives every launch                                                                                                           |
-| Sound through the ringer | `App.tsx` (`setAudioModeAsync`)                        | iOS silences a WebView's WebAudio on the ringer switch; a game should sound like a game                                                                                                                                                                              |
-| The snow in the hands    | `src/injected.ts` → `src/rumble.ts` → `src/haptics.ts` | a WKWebView has no Vibration API at all, and the phone under it has the best haptics the game will ever run on                                                                                                                                                       |
-| Off-site links           | `src/navigation.ts`                                    | there is no address bar and no back button, so a link out would replace the game with a page the rider cannot leave                                                                                                                                                  |
-| No caret loupe           | `App.tsx` (`textInteractionEnabled={false}`)           | the magnifier a double tap or a press-and-hold puts over the snow is a UIKit gesture recognized before the page is consulted, so the website's `user-select: none` cannot reach it — the cost is that the seed field types but cannot have a caret placed mid-number |
+| The thing                | Where it lives                                                                      | Why the website cannot do it                                                                                                                                                                                                                                         |
+| ------------------------ | ----------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The game, on-device      | `src/local-server.ts`                                                               | `assets/webroot.zip` unzipped once per bundle and served from a fixed loopback port, so the origin — and the stored settings on it — survives every launch                                                                                                           |
+| Sound through the ringer | `App.tsx` (`setAudioModeAsync`)                                                     | iOS silences a WebView's WebAudio on the ringer switch; a game should sound like a game                                                                                                                                                                              |
+| The snow in the hands    | `src/injected.ts` → `src/rumble.ts` → `src/haptics.ts`                              | a WKWebView has no Vibration API at all, and the phone under it has the best haptics the game will ever run on                                                                                                                                                       |
+| The book on every device | `src/injected.ts` → `src/cloud-ask.ts` → `src/cloud-save.ts` → `modules/cloud-save` | a web page cannot reach the iCloud account the phone is already signed into; the rider's records, ghosts, campaign board and preferences follow them to their other devices                                                                                          |
+| Off-site links           | `src/navigation.ts`                                                                 | there is no address bar and no back button, so a link out would replace the game with a page the rider cannot leave                                                                                                                                                  |
+| No caret loupe           | `App.tsx` (`textInteractionEnabled={false}`)                                        | the magnifier a double tap or a press-and-hold puts over the snow is a UIKit gesture recognized before the page is consulted, so the website's `user-select: none` cannot reach it — the cost is that the seed field types but cannot have a caret placed mid-number |
 
 ### The haptics bridge, end to end
 
@@ -52,23 +53,59 @@ a phone that silently stops buzzing** — change one, change all three.
 feeds what it dispatches to the page's own listener — asserting on the source
 would pass on a script that dispatches nothing.
 
+### The cloud save bridge, end to end
+
+The website owns WHAT is saved and how two devices reconcile
+([`pwa/src/game/cloud-save.ts`](../pwa/src/game/cloud-save.ts): the best row
+per record, the faster ghost, the furthest campaign, the later-changed
+settings — never the picture or the thumbs, which are facts about the machine)
+and WHEN (`use-cloud-sync.ts`: at boot, when told, after a write, on the way
+to the background). The shell moves one opaque string in and out of iCloud:
+
+```
+pwa/src/game/use-cloud-sync.ts  status → load → merge → save, one round trip at a time
+  → shell-host.ts               dispatches `sh-shell-cloud` with a requestId
+  → src/injected.ts             CLOUD_BRIDGE posts it over the message channel
+  → src/cloud-ask.ts            parsed (import-free, so the root suite holds it)
+  → src/cloud-save.ts           served against the native module
+  → modules/cloud-save          NSUbiquitousKeyValueStore (iOS only)
+  ← src/cloud-ask.ts            cloudReply: a `sh-shell-cloud-event` script, injected
+```
+
+An unavailable cloud is an answer, not an error: Android, Expo Go, a rider
+signed out of iCloud, or a build with `EXPO_PUBLIC_CLOUD_SAVE=off` all play a
+device-local game. `tests/shell_test.ts` holds the three spellings of the
+protocol together by running the scripts; `tests/cloud_save_test.ts` holds the
+merge.
+
+**Enabling it for a store build:** on the App ID in the Apple Developer
+portal, turn on the **iCloud** capability with **Key-value storage**. The
+entitlement (`com.apple.developer.ubiquity-kvstore-identifier`, the team
+prefix plus the bundle id) is written by `app.config.js`; a local build on a
+bare Apple ID without the capability sets `EXPO_PUBLIC_CLOUD_SAVE=off` so
+signing does not fail. No account, key or container id is committed — the
+save follows whichever Apple ID the device is signed into.
+
 ## The tree
 
-| File                          | What it is                                                                   |
-| ----------------------------- | ---------------------------------------------------------------------------- |
-| `App.tsx`                     | the whole shell: one WebView, the audio session, the message channel         |
-| `app.config.js`               | the Expo config, with name and colours READ off `pwa/src/identity.ts`        |
-| `src/config.ts`               | where the WebView points — the bundle, or `EXPO_PUBLIC_GAME_URL`             |
-| `src/local-server.ts`         | unzip the packed site once per bundle, serve it on a fixed port              |
-| `src/injected.ts`             | the three injected scripts: the shell flag, the rumble bridge, the hardening |
-| `src/navigation.ts`           | is this URL leaving the site — pure, so the root suite holds it              |
-| `src/rumble.ts`               | a pulse parsed and sized into taps — pure, for the same reason               |
-| `src/haptics.ts`              | the only file that touches `expo-haptics`                                    |
-| `scripts/bundle-web.mjs`      | `vite build` + a deterministic zip into `assets/webroot.zip`                 |
-| `scripts/ios-device.mjs`      | bundle → prebuild → sign → install → launch on a real iPhone over USB        |
-| `plugins/with-ios-signing.js` | pins `DEVELOPMENT_TEAM` so a prebuild does not discard it                    |
+| File                          | What it is                                                                                     |
+| ----------------------------- | ---------------------------------------------------------------------------------------------- |
+| `App.tsx`                     | the whole shell: one WebView, the audio session, the message channel                           |
+| `app.config.js`               | the Expo config, with name and colours READ off `pwa/src/identity.ts`                          |
+| `src/config.ts`               | where the WebView points — the bundle, or `EXPO_PUBLIC_GAME_URL`                               |
+| `src/local-server.ts`         | unzip the packed site once per bundle, serve it on a fixed port                                |
+| `src/injected.ts`             | the injected scripts: the shell flag, the rumble and cloud bridges, the hardening, the shutter |
+| `src/navigation.ts`           | is this URL leaving the site — pure, so the root suite holds it                                |
+| `src/rumble.ts`               | a pulse parsed and sized into taps — pure, for the same reason                                 |
+| `src/haptics.ts`              | the only file that touches `expo-haptics`                                                      |
+| `src/cloud-ask.ts`            | a cloud ask parsed, an answer scripted — pure, for the same reason                             |
+| `src/cloud-save.ts`           | an ask served against the native module                                                        |
+| `modules/cloud-save/`         | the local Expo module: iCloud key-value storage (Swift, iOS only)                              |
+| `scripts/bundle-web.mjs`      | `vite build` + a deterministic zip into `assets/webroot.zip`                                   |
+| `scripts/ios-device.mjs`      | bundle → prebuild → sign → install → launch on a real iPhone over USB                          |
+| `plugins/with-ios-signing.js` | pins `DEVELOPMENT_TEAM` so a prebuild does not discard it                                      |
 
-`src/rumble.ts` and `src/navigation.ts` import **nothing at all**, which is
+`src/rumble.ts`, `src/navigation.ts` and `src/cloud-ask.ts` import **nothing at all**, which is
 what lets the root vitest suite hold the seam without installing this tree;
 `tests/imports_test.ts` holds them to that.
 
@@ -121,10 +158,9 @@ missing before a first submission.
   personal and nothing secret is committed here, not even as a default a
   contributor could override.
 
-- **No cloud save.** The sibling jet-ski game's shell carries an iCloud
-  key-value bridge because its website has a save to sync. This game's website
-  has none, and a shell may only carry a bridge to something the website
-  already does.
+- **No cloud save on Android.** The bridge answers "unavailable" there and the
+  game stays device-local; a second platform is a new native module behind
+  the same messages (`src/cloud-ask.ts`), with no change to the website.
 - **The phone's own shutter IS bridged.** A screenshot taken with the
   hardware buttons is heard by `src/screen-capture.ts` (expo-screen-capture:
   iOS everywhere, Android 14+ on the install-time `DETECT_SCREEN_CAPTURE`;

@@ -34,6 +34,9 @@ export type CampaignApp = {
   /** A map picked, on to the sled card: a campaign RUNG, or a map off the
    * level card — which is kept as the one the RACE and TIME TRIAL ride. */
   choose: (level: CampaignLevel, rung: boolean) => void;
+  /** A board merged in from the rider's other devices (`use-cloud-sync.ts`)
+   * becomes the one this device renders and books into. */
+  adopt: (progress: CampaignProgress) => void;
 };
 
 export function useCampaign(world: {
@@ -67,5 +70,6 @@ export function useCampaign(world: {
       if (!isRung) world.setSettings((s) => ({ ...s, level: level.id }));
       world.setPage("sled");
     },
+    adopt: (next) => setProgress((held.current = next)),
   };
 }

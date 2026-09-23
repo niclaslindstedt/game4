@@ -9,8 +9,10 @@
   be a page a crawler, a rating board and a Play Console form all fail to
   read.
 
-  IT SAYS ONE THING, AND IT IS TRUE OF THE BUILD: nothing leaves the device.
-  Keep it that way — if the game ever gains an account, a leaderboard server,
+  IT SAYS ONE THING, AND IT IS TRUE OF THE BUILD: nothing reaches us. The one
+  thing that leaves the device is the iOS app's cloud save, into the rider's
+  own iCloud (pwa/src/game/cloud-save.ts), and the page says so. Keep it that
+  way — if the game ever gains an account, a leaderboard server,
   an analytics call or an advertising SDK, this page becomes false in the
   same commit.
 
@@ -112,20 +114,28 @@
         your own browser or app, on your own device, in ordinary local storage:
       </p>
       <ul>
-        <li>Your settings, once there are settings to keep.</li>
-        <li>Your best times, once there is a board to keep them on.</li>
+        <li>Your settings.</li>
+        <li>Your best times, the ghost runs that set them, and your campaign's results.</li>
       </ul>
       <p>
-        None of it is transmitted. Clearing the site data in your browser, or deleting the app,
-        deletes all of it, and there is no copy elsewhere to restore it from.
+        In the web game none of it is transmitted: clearing the site data in your browser deletes
+        all of it, and there is no copy elsewhere to restore it from.
+      </p>
+      <p>
+        In the iOS app, the same things — except the picture settings and the touch controls, which
+        belong to that device — are also kept in your own iCloud (Apple's key-value storage, under
+        the Apple ID the device is signed into), so your other devices can pick up where this one
+        left off. That copy is yours and Apple's; we have no access to it and no server that
+        receives it. Signing out of iCloud, or turning iCloud off for the app, keeps everything on
+        the device alone.
       </p>
 
       <h2>What the game sends</h2>
       <p>
-        Nothing. The web version loads the game's own files from its own address once, then runs
-        offline. The only connection you can cause is a link you press yourself — the source
-        repository, or a credit — which opens in your own browser and is then between you and that
-        site.
+        Nothing of ours, and nothing to us. The web version loads the game's own files from its own
+        address once, then runs offline. The only connection you can cause is a link you press
+        yourself — the source repository, or a credit — which opens in your own browser and is then
+        between you and that site.
       </p>
 
       <h2>Children</h2>

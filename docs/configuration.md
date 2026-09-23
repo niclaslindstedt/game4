@@ -38,6 +38,8 @@ One blob, in `localStorage` under `powderrun.settings.v1` (`pwa/src/game/setting
 
 A free ride keeps no record and no ghost: its runs are not comparable (`keepsRecords`).
 
+**The cloud save** (the store app on iOS only; `pwa/src/game/cloud-save.ts`, driven by `use-cloud-sync.ts`) carries the record book, the ghosts, the campaign's board and the rider's half of the settings to the rider's other devices, as one blob in the iCloud key-value store under the Apple ID the device is signed into — no account of the game's own, nothing sent anywhere else. It is merged, never overwritten: the better row per record, the faster tape per row, the further campaign, and for the settings the side changed LATER — every carried row but the picture (`video`, `probed`) and the thumbs (`touch`), which are facts about the machine and never leave it. The one thing it keeps of its own is `powderrun.cloud.v1`: the moment the rider last moved a carried setting on this device. Ghosts go up smallest first while the save stays under 900 000 characters; one that does not fit stays on the device, its time still in the book. In a browser none of this runs and nothing is written.
+
 **The screenshot roll** is not in `localStorage` at all: a picture is hundreds of kilobytes of PNG, so it lives in IndexedDB, in a database named `powderrun-shots` (`pwa/src/lib/shot-store.ts`), one record per picture — its id, when it was taken, its size, its caption and the PNG. Newest first, **forty kept**, the oldest pruned off the disk by key on every new picture (`pwa/src/lib/shot-roll.ts`). It is never load-bearing: a browser with no IndexedDB (a private tab, storage switched off) keeps the roll in memory for the life of the tab, and a picture is never lost over a store that would not open. Nothing is read from it until the GALLERY is opened.
 
 **The first visit's picture.** A fresh visit opens on the MEDIUM picture and, under the front door, times itself drawing it for a second and a half (`pwa/src/game/video-probe.ts`): a machine with room for twice and a half the frame at the display's own rate is moved to HIGH, one already missing frames is moved to LOW, and the verdict is stored so it is asked once. It never touches a picture anybody has changed, never runs over a race, and `?probe=0` or `?video=` hold it off.
@@ -57,7 +59,7 @@ Every dependency resolves from the public npm registry, so `npm install` needs n
 
 `.env.example` at the root documents the same set; copy it to `.env` (gitignored) to override locally.
 
-The platform shells (`tauri/`, `native/`) each bring an environment of their own, read neither by the website's build nor by each other: the desktop app's launch-time `SH_GAME_URL` (point the window at a deploy slot instead of its bundled copy), and the store app's `native/.env` (`native/.env.example` documents it — the store identifier, the Expo project, the signing team). See [platforms.md](platforms.md).
+The platform shells (`tauri/`, `native/`) each bring an environment of their own, read neither by the website's build nor by each other: the desktop app's launch-time `SH_GAME_URL` (point the window at a deploy slot instead of its bundled copy), and the store app's `native/.env` (`native/.env.example` documents it — the store identifier, the Expo project, the signing team, and `EXPO_PUBLIC_CLOUD_SAVE=off` to drop the iCloud entitlement from a local build). See [platforms.md](platforms.md).
 
 ## The deploy slots
 
