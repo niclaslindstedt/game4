@@ -139,6 +139,7 @@ half-float target; the boreal pays neither).
 - [ ] 16/16 through `make analyze REGION=<id>`; `make level` looked at
 - [ ] a new surface felt through an optional `Level` field, boreal arithmetic unchanged
 - [ ] `region-look.ts`, `colour-grade.ts`, `STRINGS.regionNames` rows
+- [ ] the wildlife rows name the new region (`regions` on every row of `bird-defs.ts` and `beast-defs.ts` that lives there — no tree bird where there is no wood); `tests/birds_test.ts` deals a few species in it; `make birds`
 - [ ] `tests/region_test.ts` green; generator-version, determinism and sim digests unmoved
 - [ ] `make world` / `make screenshots` looked at; `make profile` beside the boreal
 - [ ] `make sim REGION=<id>` — every seed finishes; boreal table unchanged

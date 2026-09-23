@@ -172,15 +172,18 @@ export function createBeasts(level: Level, haze: HazeUniforms): Beasts {
             Math.hypot(pose.x - lastX[slot], pose.z - lastZ[slot]) >= footfallSpacing(spec)
           ) {
             const before = stamps.length;
-            footfall(
-              spec,
-              pose.x,
-              pose.z,
-              pose.heading,
-              prints[slot]++,
-              level.packedAt(pose.x, pose.z),
-              stamps,
-            );
+            // Nothing is pressed into a frozen river's ice.
+            if (!ground.onIce(pose.x, pose.z)) {
+              footfall(
+                spec,
+                pose.x,
+                pose.z,
+                pose.heading,
+                prints[slot]++,
+                level.packedAt(pose.x, pose.z),
+                stamps,
+              );
+            }
             for (let s = before; s < stamps.length && fresh.length < MOST_FRESH; s++) {
               fresh.push(stamps[s]);
             }

@@ -75,7 +75,7 @@ function birdCell(spec: BirdSpec): Cell {
     { flap: -0.3, fold: 1 },
   ];
   return {
-    name: spec.name,
+    name: `${spec.name} — ${spec.regions.join(" · ")}`,
     foot:
       `span ${spec.span} m · ${spec.beatHz} Hz · glide ${spec.glide} · ` +
       (spec.home ? `${spec.home} · ${birdRarity(spec)}` : `crosses day ${spec.passage?.days.min}+`),
@@ -123,7 +123,7 @@ function beastCell(spec: BeastSpec): Cell {
     { gait: 0, stride: 0, graze: 1 },
   ];
   return {
-    name: spec.name,
+    name: `${spec.name} — ${spec.regions.join(" · ")}`,
     foot:
       `${spec.length} m · ${spec.height} m at the shoulder · ${spec.gait} · ` +
       `${spec.home} · ${beastRarity(spec)}`,

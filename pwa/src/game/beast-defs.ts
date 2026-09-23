@@ -23,10 +23,15 @@
 // carries antlers. And the LYNX, which most riders will never see: a grey
 // cat crossing a meadow on big soft feet, gone at the first sound.
 //
-// Rows are a plain array on purpose, so a later region of this country adds
-// a field and a filter rather than a table keyed by it.
+// EVERY ROW NAMES ITS REGIONS (R21, `regions`), and the placer lays only the
+// rows of the map's own. The hare and the fox are everywhere; the reindeer
+// is the open country's and the birch valley's, not the high alpine's; the
+// moose keeps to the woods and the lynx to the deep boreal forest. Where
+// there is no wood for an EDGE, an edge animal lives out in the open.
 //
 // The look (the coat, the ears, the antlers) belongs to `beast-shapes.ts`.
+
+import type { RegionId } from "@engine";
 
 import type { Band } from "./bird-defs.ts";
 import { rarityOf, type Rarity } from "./rarity.ts";
@@ -58,6 +63,8 @@ export type Prints = {
 export type BeastSpec = {
   readonly id: BeastId;
   readonly name: string;
+  /** The kinds of snow country it lives in (R21). */
+  readonly regions: readonly RegionId[];
   /** Nose to tail root, m, and the height at the shoulder, m. */
   readonly length: number;
   readonly height: number;
@@ -96,6 +103,7 @@ export const BEASTS: readonly BeastSpec[] = [
   {
     id: "hare",
     name: "Mountain hare",
+    regions: ["boreal", "alpine", "tundra", "birch"],
     length: 0.55,
     height: 0.3,
     gait: "bound",
@@ -118,6 +126,7 @@ export const BEASTS: readonly BeastSpec[] = [
   {
     id: "fox",
     name: "Red fox",
+    regions: ["boreal", "alpine", "tundra", "birch"],
     length: 0.7,
     height: 0.38,
     gait: "trot",
@@ -140,6 +149,7 @@ export const BEASTS: readonly BeastSpec[] = [
   {
     id: "reindeer",
     name: "Reindeer",
+    regions: ["boreal", "tundra", "birch"],
     length: 1.7,
     height: 1.05,
     gait: "walk",
@@ -162,6 +172,7 @@ export const BEASTS: readonly BeastSpec[] = [
   {
     id: "moose",
     name: "Moose",
+    regions: ["boreal", "birch"],
     length: 2.6,
     height: 1.85,
     gait: "walk",
@@ -184,6 +195,7 @@ export const BEASTS: readonly BeastSpec[] = [
   {
     id: "lynx",
     name: "Eurasian lynx",
+    regions: ["boreal"],
     length: 1,
     height: 0.6,
     gait: "walk",

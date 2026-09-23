@@ -24,6 +24,9 @@ export type WildGround = {
   /** Where the drawn snow stands: the ground plus the loose cover the
    * shader lifts off the groomer (`LOOSE`). */
   snowY(x: number, z: number): number;
+  /** Whether (`x`, `z`) is on a frozen river's ice (R21, `iceAt`) — kept
+   * clear of every animal and its prints, as the loop is. */
+  onIce(x: number, z: number): boolean;
   /** Rise over run of the ground. */
   slope(x: number, z: number): number;
   /** Inside the map with `margin` m to spare. */
@@ -71,6 +74,7 @@ export function wildGround(level: Level): WildGround {
     },
     trackDistance: (x, z) => nearestTrackPoint(level, x, z).distance,
     snowY: (x, z) => level.groundAt(x, z) + LOOSE * (1 - level.packedAt(x, z)),
+    onIce: (x, z) => (level.iceAt?.(x, z) ?? 0) > 0,
     slope(x, z) {
       level.normalAt(x, z, normal);
       return Math.sqrt(Math.max(0, 1 - normal.y * normal.y)) / Math.max(normal.y, 1e-3);

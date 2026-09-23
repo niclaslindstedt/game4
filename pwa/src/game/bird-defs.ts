@@ -31,11 +31,16 @@
 // the start of the thaw — the one thing in this sky that says which way
 // the year is going.
 //
-// Rows are a plain array on purpose: a later coast of this country (a
-// region of its own) adds a field to the row and a filter to the placer,
-// and nothing here has to be keyed by it first.
+// EVERY ROW NAMES ITS REGIONS (R21, `regions`), and the placer lays only the
+// rows of the map's own (`regionOf`). The boreal forest carries the whole
+// roster; the treeless high country keeps the raven, the ptarmigan and the
+// eagle and loses what lives in the spruce; the tundra plateau keeps the
+// raven and the ptarmigan; the birch valley is the boreal wood without the
+// crossbill, whose cones are the spruce's.
 //
 // The look (the paint, the wingtips, the bill) belongs to `bird-shapes.ts`.
+
+import type { RegionId } from "@engine";
 
 import type { Rarity } from "./rarity.ts";
 import { rarityOf } from "./rarity.ts";
@@ -72,6 +77,8 @@ export type BirdSpec = {
   readonly id: BirdId;
   /** The name a sheet or a plan shows. */
   readonly name: string;
+  /** The kinds of snow country it lives in or crosses (R21). */
+  readonly regions: readonly RegionId[];
   /** Wingtip to wingtip, m, and bill to tail, m — the real ones. */
   readonly span: number;
   readonly length: number;
@@ -128,6 +135,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "raven",
     name: "Common raven",
+    regions: ["boreal", "alpine", "tundra", "birch"],
     span: 1.3,
     length: 0.64,
     // The heavy bill and the wedge tail: from below a raven is a cross
@@ -154,6 +162,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "ptarmigan",
     name: "Willow ptarmigan",
+    regions: ["boreal", "alpine", "tundra", "birch"],
     span: 0.62,
     length: 0.39,
     neck: 0.3,
@@ -180,6 +189,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "capercaillie",
     name: "Capercaillie",
+    regions: ["boreal", "birch"],
     span: 1.2,
     length: 0.86,
     neck: 0.3,
@@ -204,6 +214,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "crossbill",
     name: "Common crossbill",
+    regions: ["boreal"],
     span: 0.29,
     length: 0.165,
     neck: 0.3,
@@ -228,6 +239,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "eagle",
     name: "Golden eagle",
+    regions: ["boreal", "alpine", "birch"],
     span: 2.1,
     length: 0.9,
     neck: 0.28,
@@ -253,6 +265,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "swan",
     name: "Whooper swan",
+    regions: ["boreal", "alpine", "tundra", "birch"],
     span: 2.4,
     length: 1.5,
     // The neck as long as the back: the whole silhouette.
@@ -284,6 +297,7 @@ export const BIRDS: readonly BirdSpec[] = [
   {
     id: "goose",
     name: "Bean goose",
+    regions: ["boreal", "alpine", "tundra", "birch"],
     span: 1.6,
     length: 0.8,
     neck: 0.45,

@@ -23,7 +23,7 @@
 // allowed to live out of sight of the loop, because it is only ever seen in
 // the air over it.
 
-import { TAU, createRng, weatherOf, type Level, type Rng } from "@engine";
+import { TAU, createRng, regionOf, weatherOf, type Level, type Rng } from "@engine";
 
 import { BIRDS, type Band, type BirdId, type BirdSpec } from "./bird-defs.ts";
 import { CROSSING_INTERVAL, walkLoop, type BirdPlan, type Flock, type Roost } from "./bird-plan.ts";
@@ -110,12 +110,15 @@ export function planBirds(level: Level): BirdPlan {
   const perches = ground.tallTrees(PERCH_TREE);
   const facing = weatherOf(level).windFrom;
   const flocks: Flock[] = [];
+  const region = regionOf(level).id;
 
   /** One try at a home for a flock of this species. */
   const homeFor = (spec: BirdSpec): Roost | null => {
     switch (spec.home) {
       case "tree": {
-        if (perches.length === 0) return null;
+        // A country with no tall tree in it (the tundra, the high alpine) is
+        // one a tree bird perches on the rock of instead.
+        if (perches.length === 0) return cragFor(rng, ground);
         // Weighted to the tallest: the first third of the list twice over.
         const pool = rng.chance(0.6) ? perches.slice(0, Math.ceil(perches.length / 3)) : perches;
         const t = rng.pick(pool);
@@ -128,6 +131,7 @@ export function planBirds(level: Level): BirdPlan {
         if (ground.nearestTree(x, z, BURROW_CLEAR)) return null;
         if (ground.trackDistance(x, z) < BURROW_OFF_TRACK) return null;
         if (ground.slope(x, z) > BURROW_SLOPE) return null;
+        if (ground.onIce(x, z)) return null;
         return { kind: "snow", x, z, y: ground.snowY(x, z) };
       }
       case "crag":
@@ -138,6 +142,7 @@ export function planBirds(level: Level): BirdPlan {
   };
 
   for (const spec of BIRDS) {
+    if (!spec.regions.includes(region)) continue;
     if (spec.home === undefined || spec.perKm <= 0) continue;
     const want = groupCount(rng, spec.perKm, km);
     const eagle = spec.home === "crag";
@@ -191,7 +196,7 @@ export function planBirds(level: Level): BirdPlan {
   const crossers: BirdId[] = [];
   for (const spec of BIRDS) {
     const p = spec.passage;
-    if (!p || day < p.days.min || day > p.days.max) continue;
+    if (!p || !spec.regions.includes(region) || day < p.days.min || day > p.days.max) continue;
     for (let i = 0; i < p.share; i++) crossers.push(spec.id);
   }
   return {

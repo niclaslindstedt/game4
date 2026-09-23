@@ -14,12 +14,15 @@
 import { describe, expect, it } from "vitest";
 import {
   createGame,
+  generateLevel,
   levelDigest,
   step,
   withDay,
   NEUTRAL_INPUT,
+  REGION_IDS,
   type GameState,
   type Level,
+  type RegionId,
 } from "@engine";
 
 import { BEASTS, beastById, beastRarity } from "../pwa/src/game/beast-defs.ts";
@@ -91,6 +94,73 @@ describe("the wildlife never moves a map or a run", () => {
     const level = levelFor(LEVEL_SEEDS[1]);
     expect(JSON.stringify(planBirds(level).flocks)).toBe(JSON.stringify(planBirds(level).flocks));
     expect(JSON.stringify(planBeasts(level).groups)).toBe(JSON.stringify(planBeasts(level).groups));
+  });
+});
+
+describe("the wildlife by region (R21)", () => {
+  /** Two maps of each region but the boreal, built once for the block. */
+  const maps = new Map<RegionId, Level[]>();
+  const mapsOf = (region: RegionId): Level[] => {
+    let hit = maps.get(region);
+    if (!hit) {
+      hit =
+        region === "boreal"
+          ? [levelFor(LEVEL_SEEDS[0]), levelFor(LEVEL_SEEDS[1])]
+          : [generateLevel(38, { region }), generateLevel(75, { region })];
+      maps.set(region, hit);
+    }
+    return hit;
+  };
+
+  it("names at least one region on every row, and the boreal on every one", () => {
+    // The boreal forest is the roster as it was before there were regions:
+    // every row lives there, so a boreal map's wildlife did not move.
+    for (const row of [...BIRDS, ...BEASTS]) {
+      expect(row.regions.length, row.id).toBeGreaterThan(0);
+      for (const r of row.regions) expect(REGION_IDS, `${row.id} → ${r}`).toContain(r);
+      expect(row.regions, row.id).toContain("boreal");
+    }
+    // What lives in the spruce is not dealt where there is no spruce wood.
+    for (const id of ["crossbill", "capercaillie"] as const) {
+      expect(birdById(id).regions).not.toContain("tundra");
+      expect(birdById(id).regions).not.toContain("alpine");
+    }
+    expect(beastById("moose").regions).not.toContain("tundra");
+    expect(birdById("crossbill").regions).not.toContain("birch");
+  });
+
+  it("deals a few species in every region, and only that region's rows", () => {
+    for (const region of REGION_IDS) {
+      const seen = new Set<string>();
+      for (const level of mapsOf(region)) {
+        for (const f of planBirds(level).flocks) {
+          expect(birdById(f.species).regions, `${f.species} in the ${region}`).toContain(region);
+          seen.add(f.species);
+        }
+        for (const g of planBeasts(level).groups) {
+          expect(beastById(g.species).regions, `${g.species} in the ${region}`).toContain(region);
+          seen.add(g.species);
+        }
+      }
+      expect(seen.size, `${region}: ${[...seen].join(", ")}`).toBeGreaterThanOrEqual(3);
+    }
+  });
+
+  it("keeps every animal and its prints off the frozen river", () => {
+    for (const level of mapsOf("birch")) {
+      expect(level.iceAt, "the birch valley has its river").toBeDefined();
+      const ground = wildGround(level);
+      const pose = freshBeastPose();
+      for (const g of planBeasts(level).groups) {
+        const prints: Stamp[] = [];
+        priorPrints(g, level.packedAt, prints);
+        for (const s of prints) expect(ground.onIce(s.bx, s.bz), g.species).toBe(false);
+        for (let t = 0; t < 300; t += 11) {
+          beastPose(g, 0, t, ground, pose);
+          expect(ground.onIce(pose.x, pose.z), g.species).toBe(false);
+        }
+      }
+    }
   });
 });
 

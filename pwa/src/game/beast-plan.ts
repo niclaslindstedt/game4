@@ -27,6 +27,7 @@
 import {
   TAU,
   createRng,
+  regionOf,
   fromEuler,
   hash2,
   type GameState,
@@ -352,6 +353,7 @@ export function spookAt(
     const ez = lead.z + dz;
     if (!ground.inside(ex, ez, 20)) continue;
     if (ground.trackDistance(ex, ez) < OFF_TRACK) continue;
+    if (ground.onIce(ex, ez)) continue;
     return { at: t, dx, dz, ox, oz };
   }
   return { at: t, dx: 0, dz: 0, ox, oz };
@@ -366,6 +368,7 @@ function roundFits(ground: WildGround, round: Round): boolean {
     if (ground.trackDistance(at.x, at.z) < OFF_TRACK) return false;
     if (ground.nearestTree(at.x, at.z, OFF_TRUNK)) return false;
     if (ground.slope(at.x, at.z) > ROUND_SLOPE) return false;
+    if (ground.onIce(at.x, at.z)) return false;
   }
   return true;
 }
@@ -373,7 +376,8 @@ function roundFits(ground: WildGround, round: Round): boolean {
 /** One try at a home of the kind a species keeps. */
 function homeFor(rng: Rng, ground: WildGround, spec: BeastSpec): { x: number; z: number } | null {
   const level = ground.level;
-  if (spec.home === "meadow") {
+  // With no wood to have an edge, an edge animal lives out in the open.
+  if (spec.home === "meadow" || level.trees.length === 0) {
     const x = rng.range(0, level.size);
     const z = rng.range(0, level.size);
     if (ground.nearestTree(x, z, MEADOW_OPEN)) return null;
@@ -399,8 +403,9 @@ export function planBeasts(level: Level): BeastPlan {
   const ground = wildGround(level);
   const km = level.track.length / 1000;
   const groups: BeastGroup[] = [];
-  if (level.trees.length === 0) return { seed: level.seed, groups };
+  const region = regionOf(level).id;
   for (const spec of BEASTS) {
+    if (!spec.regions.includes(region)) continue;
     const want = groupCount(rng, spec.perKm, km);
     for (let n = 0; n < want; n++) {
       for (let attempt = 0; attempt < TRIES; attempt++) {
