@@ -70,6 +70,7 @@ describe("the snapshot (snapshot.ts)", () => {
     expect(takenThisLap({ ...p, started: true, nextCheckpoint: 7 }, 10)).toBe(7);
     // Every checkpoint of the lap taken; only the line to close it owed.
     expect(takenThisLap({ ...p, started: true, nextCheckpoint: 0 }, 10)).toBe(10);
+    expect(takenThisLap({ ...p, started: true, nextCheckpoint: 1, finished: true }, 10)).toBe(10);
     expect(lapOf({ ...p, lap: 0 }, 3)).toBe(1);
     expect(lapOf({ ...p, lap: 2 }, 3)).toBe(3);
     // The last crossing belongs to the last lap, not to a fourth.

@@ -101,8 +101,11 @@ export function lapOf(p: Progress, laps: number): number {
 }
 
 /** Checkpoints taken in the lap being ridden, the start line that opened it
- * counted as the first. Before the line is first crossed, none. */
+ * counted as the first. Before the line is first crossed, none; after the
+ * flag, all of them — the crossing that ended the race closed its last lap
+ * rather than opening a fourth. */
 export function takenThisLap(p: Progress, checkpoints: number): number {
+  if (p.finished) return checkpoints;
   if (!p.started) return 0;
   return p.nextCheckpoint === 0 ? checkpoints : p.nextCheckpoint;
 }
