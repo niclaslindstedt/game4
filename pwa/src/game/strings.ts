@@ -389,7 +389,29 @@ export const STRINGS = {
   pauseResume: "RESUME",
   pauseRestart: "RESTART RACE",
   pauseRestartFree: "START AGAIN",
+  pauseOptions: "OPTIONS",
   pauseMainMenu: "MAIN MENU",
+  /** The card BEHIND the pause card's own options panel, named on the way
+   * back to it. */
+  pauseBack: "PAUSED",
+  /** The options panel's line while no row is being looked at. */
+  pauseOptionsCaption:
+    "What the frame in front of you looks and sounds like. The rest is on the front door.",
+  /** THE CAPTION ON THE HELD RACE'S RECORD CELL (`pause-stats.ts`); the
+   * other cells wear the HUD's own captions. */
+  pauseRecord: "RECORD",
+  /** THE CAMERA ROW on the pause card's panel, and a word per rung
+   * (`RUN_CAMERAS`). */
+  optCameraGroup: "CAMERA",
+  optCamera: "VIEW",
+  optCameraHint: "Where the eye rides — the same ladder the C key walks.",
+  cameraWords: {
+    hood: "HOOD",
+    bars: "BARS",
+    chase: "CHASE",
+    far: "FAR",
+    high: "HIGH",
+  },
 
   /* ── THE TIME TRIAL AND THE RECORD BOOK (menu-main.tsx, hud.tsx,
         hud-result.tsx) ─────────────────────────────────────────────────── */

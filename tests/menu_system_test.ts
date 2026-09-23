@@ -11,6 +11,12 @@ import { describe, expect, it } from "vitest";
 import { TUNING } from "@engine";
 
 import { pickNeighbour, type NavRect } from "../pwa/src/game/menu-cursor.ts";
+import {
+  PAUSE_STATS,
+  pauseStats,
+  type PauseRun,
+  type PauseStat,
+} from "../pwa/src/game/pause-stats.ts";
 import { createRunActions, type RunPress } from "../pwa/src/game/run-actions.ts";
 import {
   advanceLoad,
@@ -61,6 +67,7 @@ import {
   splashSkipped,
 } from "../pwa/src/game/splash.ts";
 import { dealSeed, readParams } from "../pwa/src/game/url-params.ts";
+import { STRINGS } from "../pwa/src/game/strings.ts";
 import { SHELL_COMMANDS } from "../pwa/src/shell-host.ts";
 
 describe("the six surfaces (shell.ts)", () => {
@@ -424,5 +431,85 @@ describe("the cursor's walk (menu-cursor.ts)", () => {
 
   it("wraps off the bottom to the top", () => {
     expect(pickNeighbour(card, 3, "down")).toBe(0);
+  });
+});
+
+describe("what the pause card bills a held race with (pause-stats.ts)", () => {
+  /** A race nobody has ridden anywhere yet: every figure at its floor, so
+   * each case below turns on exactly the fields it sets. */
+  const RESTING: PauseRun = {
+    place: 1,
+    riders: 1,
+    time: 0,
+    free: false,
+    lap: 1,
+    laps: 1,
+    taken: 0,
+    checkpoints: 8,
+    bestAir: 0,
+    distance: 0,
+    best: null,
+  };
+  const run = (over: Partial<PauseRun>): PauseRun => ({ ...RESTING, ...over });
+  const keys = (over: Partial<PauseRun>): string[] => pauseStats(run(over)).map((stat) => stat.key);
+
+  it("never carries more cells than the card has room for", () => {
+    const everything = run({
+      riders: 4,
+      place: 2,
+      laps: 3,
+      lap: 2,
+      bestAir: 1.4,
+      distance: 900,
+      best: { time: 150, sled: "trail", at: 0 },
+    });
+    expect(pauseStats(everything)).toHaveLength(PAUSE_STATS);
+    expect(pauseStats(everything, 2)).toHaveLength(2);
+    expect(pauseStats(everything, -1)).toHaveLength(0);
+  });
+
+  it("leads a race with the standing and the clock, then the race's own story", () => {
+    expect(keys({ riders: 4, laps: 3, bestAir: 1.2, distance: 400 })).toEqual([
+      "place",
+      "time",
+      "air",
+      "distance",
+    ]);
+    // With no story yet it IS the corner's reading — nothing else is true.
+    expect(keys({ riders: 4, laps: 3 })).toEqual(["place", "time", "lap", "checkpoint"]);
+  });
+
+  it("puts the record a time trial is ridden against ahead of the flights", () => {
+    expect(keys({ best: { time: 95, sled: "trail", at: 0 }, bestAir: 1, distance: 50 })).toEqual([
+      "time",
+      "record",
+      "air",
+      "distance",
+    ]);
+    const record = pauseStats(run({ best: { time: 95, sled: "trail", at: 0 } })).find(
+      (stat) => stat.key === "record",
+    )!;
+    expect(record.value).toBe(STRINGS.resultTime(95));
+    expect(record.label).toBe(STRINGS.pauseRecord);
+  });
+
+  it("bills no standing alone, no lap on a one-lap run and no checkpoint on a free ride", () => {
+    expect(keys({})).toEqual(["time", "checkpoint"]);
+    expect(keys({ free: true, laps: 3, riders: 1, bestAir: 0.8, distance: 1200 })).toEqual([
+      "time",
+      "air",
+      "distance",
+    ]);
+    expect(keys({ free: true })).toEqual(["time"]);
+  });
+
+  it("reads each figure the way the HUD's own chip does", () => {
+    const race = pauseStats(run({ riders: 4, place: 3, time: 72.5, laps: 3, lap: 2, taken: 5 }));
+    const by = (key: string): PauseStat => race.find((stat) => stat.key === key)!;
+    expect(by("place").value).toBe(STRINGS.place(3, 4));
+    expect(by("place").label).toBe(STRINGS.placeLabel);
+    expect(by("time").value).toBe(STRINGS.resultTime(72.5));
+    expect(by("lap").value).toBe(STRINGS.laps(2, 3));
+    expect(by("checkpoint").value).toBe(STRINGS.checkpoints(5, 8));
   });
 });
