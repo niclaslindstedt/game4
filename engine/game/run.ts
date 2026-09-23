@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // ONE RIDER'S STEP — the sled, the trees and the edge, the air record, the
-// clock, the course and the automatic reset, in that order, for ONE run:
+// clock and the odometer, the course (when the rules count one — a free
+// ride does not) and the automatic reset, in that order, for ONE run:
 // the player's, or one of the rivals' (`rivals.ts`), which is a run of its
 // own over the same map. The field is stepped by this same function — a
 // rival that rode a different step would be a rival in a different game.
@@ -42,7 +43,8 @@ export function stepRun(run: GameState, input: SledInput, events: GameEvent[]): 
   const p = run.progress;
   if (p.finished) return;
   p.time += TUNING.dt;
-  stepCourse(run, x0, z0, events);
+  p.distance += Math.hypot(c.x - x0, c.z - z0);
+  if (run.rules.course) stepCourse(run, x0, z0, events);
   if (p.finished) return;
   const R = TUNING.reset;
   if (c.overFor >= R.overFor || c.stuckFor >= R.stuckFor) resetSled(run, events, true);

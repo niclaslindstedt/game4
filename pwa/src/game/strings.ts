@@ -30,6 +30,12 @@ export const STRINGS = {
   air: (seconds: number): string => `${seconds.toFixed(1)}s`,
   airLabel: "AIR",
   airBest: "BEST",
+  /** THE FREE RIDE's two readouts in place of the race's: the longest
+   * flight so far, and how far has been ridden. */
+  bestAirLabel: "BEST AIR",
+  distance: (metres: number): string =>
+    metres < 1000 ? `${Math.round(metres)} M` : `${(metres / 1000).toFixed(2)} KM`,
+  distanceLabel: "RIDDEN",
   /** THE LIGHTS: the whole second still to run, and the word after. */
   count: (left: number): string => String(left),
   go: "GO!",
@@ -92,6 +98,8 @@ export const STRINGS = {
   menuRaceLine: (seed: number, laps: number, riders: number): string =>
     `SEED ${seed} · ${laps} LAPS · ${riders} RIDERS`,
   menuRacePinned: "PINNED BY THE LINK",
+  menuFree: "FREE RIDE",
+  menuFreeLine: "THE WHOLE MAP · NO CLOCK TO BEAT",
   menuSound: (on: boolean): string => (on ? "SOUND ON" : "SOUND OFF"),
   /** The front door's line of keys, off the bindings the rider has: each
    * part is a key's cap and what it does. */
@@ -124,6 +132,49 @@ export const STRINGS = {
     powder: "POWDER",
     landing: "LANDINGS",
   },
+
+  /* ── THE START CARD (menu-start.tsx, seed-preview.tsx) ─────────────── */
+  startTitle: "FREE RIDE",
+  startNext: "NEXT",
+  startMap: "MAP",
+  startMapHint: "Which map: every seed is another basin. Type one, or step through them.",
+  startReroll: "ANOTHER MAP",
+  startDate: "DATE",
+  startDateHint:
+    "The day of the year: how high the sun climbs and how long the shadows are. Starts on the map's own.",
+  startTime: "TIME",
+  startTimeHint:
+    "The hour the ride starts at, sunrise to sunset on that date. The sun moves an hour every ten minutes of riding.",
+  startWeather: "WEATHER",
+  startWeatherHint:
+    "The sky over the ride: the map's own, or clear, fair, high cloud, overcast (flat light, the bumps hard to read), falling snow or a valley fog.",
+  /** The WEATHER row's stops: the map's own first, then R18's six. */
+  weatherDealt: "AS DEALT",
+  weatherNames: {
+    clear: "CLEAR",
+    fair: "FAIR",
+    high: "HIGH CLOUD",
+    overcast: "OVERCAST",
+    snow: "SNOWING",
+    fog: "FOG",
+  },
+  startSnow: "SNOW",
+  startSnowHint:
+    "How deep the powder is: how far a sled sinks in it standing still. Deeper is slower going and softer landings.",
+  /** The date row's reading: a day of a month (0 = January). */
+  date: (day: number, month: number): string =>
+    `${day} ${["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][month]}`,
+  /** The snow row's reading: the rest sink it asks for. */
+  snowRead: (metres: number): string => `${Math.round(metres * 100)} CM`,
+  startGrid: "FROM THE GRID",
+  startCaption: "Tap the chart to start anywhere on the map · the arrows are kickers",
+  seedReading: "SHAPING THE MAP…",
+  seedRefused: "NO MAP ON THIS SEED",
+  /** The line under the chart. */
+  seedRead: (loop: number, kickers: number): string =>
+    `${(loop / 1000).toFixed(1)} KM LOOP · ${kickers} KICKERS`,
+  seedChart: (seed: number, kickers: number): string =>
+    `The map on seed ${seed}, with ${kickers} kickers`,
 
   /* ── OPTIONS (menu-options.tsx) and its rows (menu-knobs.tsx) ──────── */
   optCaption: "Point at a row to read what it does",
@@ -245,7 +296,36 @@ export const STRINGS = {
   pauseHead: "PAUSED",
   pauseSub: (seed: number, lap: number, laps: number): string =>
     `SEED ${seed} · LAP ${lap} OF ${laps}`,
+  /** ...over a free ride, where there is no lap to count. */
+  pauseSubFree: (seed: number): string => `SEED ${seed} · FREE RIDE`,
   pauseResume: "RESUME",
   pauseRestart: "RESTART RACE",
+  pauseRestartFree: "START AGAIN",
   pauseMainMenu: "MAIN MENU",
+
+  /* ── THE TIME TRIAL AND THE RECORD BOOK (menu-main.tsx, hud.tsx,
+        hud-result.tsx) ─────────────────────────────────────────────────── */
+  menuTrial: "TIME TRIAL",
+  menuTrialLine: (seed: number, laps: number): string =>
+    `SEED ${seed} · ${laps} ${laps === 1 ? "LAP" : "LAPS"} · ALONE`,
+  /** The row standing for this map, sled and length, on the tile. */
+  menuTrialBest: (seconds: number, sled: string): string =>
+    `BEST ${formatTime(seconds)} · ${sled.toUpperCase()}`,
+  menuTrialNoBest: "NO TIME SET YET",
+  /** The chip that walks the trial's length. */
+  menuTrialLaps: (laps: number): string => `TRIAL ${laps} ${laps === 1 ? "LAP" : "LAPS"}`,
+  /** The gap to the record at a crossing: `-0.42` ahead, `+1.30` behind. */
+  gap: (seconds: number): string => `${seconds < 0 ? "−" : "+"}${Math.abs(seconds).toFixed(2)}`,
+  gapLabel: "VS BEST",
+  resultTrialTitle: "TIME TRIAL",
+  resultRecord: "NEW RECORD",
+  /** The row that stood, with its sled and the day it was set. */
+  resultBest: (seconds: number, sled: string, at: number): string =>
+    `BEST ${formatTime(seconds)} · ${sled.toUpperCase()}${
+      at > 0 ? ` · ${new Date(at).toISOString().slice(0, 10)}` : ""
+    }`,
+  resultOff: (seconds: number): string => `+${seconds.toFixed(2)} OFF THE RECORD`,
+  resultTrialAgain: "RIDE AGAIN",
+  /** The news line at the flag of a run with nobody else on it. */
+  newsFinishAlone: (seconds: number): string => `FINISH  ${formatTime(seconds)}`,
 } as const;

@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE RACE, and the rules a run is played by. This slice has ONE way onto
-// the snow — a race against a field over the map's loop — so a mode is not
-// a menu here; but the rules are still a plain record on the state
-// (`GameState.rules`) read by every system that answers to one, and nothing
-// branches on anything else. `OPEN_RULES` is what a measurement rides: no
+// THE MODES, and the rules a run is played by. A mode is a named bundle of
+// rules (`MODE_RULES`): the RACE against a field over the map's loop, the
+// TIME TRIAL, the same loop alone against the clock, and the FREE RIDE, the
+// whole map to explore with no course counted at all. The rules are a plain
+// record on the state (`GameState.rules`) read by every system that answers
+// to one, and nothing below the app branches on a mode's name. `OPEN_RULES`
+// is what a measurement rides: no
 // lights and nobody else out there, so a simulated run's digest carries the
 // rider and nothing in front of him.
 
@@ -17,6 +19,11 @@ export type RunRules = {
   countdown: number;
   /** Whether one sled can lean on another (`rivals.ts`'s `clipRiders`). */
   contact: boolean;
+  /** WHETHER THE COURSE COUNTS: the checkpoints, the laps and the flag
+   * (`course.ts`). Off on a FREE RIDE, where the loop is only a groomed
+   * road through the country, nothing is owed and a reset stands the sled
+   * on the nearest point of it rather than at a checkpoint. */
+  course: boolean;
 };
 
 /** HOW MUCH HELP THE RIDER IS GIVEN — the arcade's two hands on the sled,
@@ -54,10 +61,62 @@ export const RACE = {
 /** The race as a rider is dealt it: the field, the lights, contact on. The
  * laps are the level's own and are filled in by `createGame`. */
 export function raceRules(laps: number): RunRules {
-  return { rivals: RACE.rivals, laps, countdown: RACE.countdown, contact: true };
+  return { rivals: RACE.rivals, laps, countdown: RACE.countdown, contact: true, course: true };
 }
 
 /** What a measurement rides: the level's laps, no lights, nobody else. */
 export function openRules(laps: number): RunRules {
-  return { rivals: 0, laps, countdown: 0, contact: true };
+  return { rivals: 0, laps, countdown: 0, contact: true, course: true };
 }
+
+/** THE FREE RIDE: nobody else out there, no lights, and no course — the
+ * whole map to ride, the clock running only as a record of the outing. */
+export function freeRules(laps: number): RunRules {
+  return { rivals: 0, laps, countdown: 0, contact: true, course: false };
+}
+
+/** THE SNOW'S DEPTH, a RUN DIAL: how deep untouched powder lets a sled
+ * sink, as a multiple of `TUNING.snow.powderSink` (`snow.ts`). One is the
+ * snow every race is ridden on; a free ride may ask for a dusting over a
+ * crust or a bottomless dump. It is read, never written, during a run and
+ * draws nothing from the stream, so a run replays the same at any depth and
+ * a run that names none moves no digest. */
+export const SNOW_DIAL = { min: 0.25, max: 2, step: 0.25 } as const;
+
+/** A depth held inside {@link SNOW_DIAL}; anything that is not a number is
+ * the ordinary snow. */
+export function clampSnowDepth(depth: number | undefined): number {
+  if (depth === undefined || !Number.isFinite(depth)) return 1;
+  return Math.min(SNOW_DIAL.max, Math.max(SNOW_DIAL.min, depth));
+}
+
+/** THE WAYS ONTO THE SNOW. A mode is a NAME for a bundle of `RunRules`
+ * (`MODE_RULES`) and nothing below the app branches on it: the engine reads
+ * the rules, and the app reads the name to decide which card is up and which
+ * row of the record book a run is filed under. */
+export type GameMode = "race" | "timeTrial" | "free";
+
+export const GAME_MODES: readonly GameMode[] = ["race", "timeTrial", "free"];
+
+export function isGameMode(value: unknown): value is GameMode {
+  return typeof value === "string" && (GAME_MODES as readonly string[]).includes(value);
+}
+
+/** THE TIME TRIAL'S NUMBERS: the race's lights, nobody else on the snow,
+ * and the two lengths it is offered at — the race's three laps, or one. */
+export const TIME_TRIAL = {
+  countdown: RACE.countdown,
+  laps: [3, 1] as readonly number[],
+} as const;
+
+/** The time trial as a rider is dealt it: the lights and the loop, alone. */
+export function timeTrialRules(laps: number): RunRules {
+  return { rivals: 0, laps, countdown: TIME_TRIAL.countdown, contact: true, course: true };
+}
+
+/** EVERY MODE'S RULES by its name — the one place a name becomes a bundle. */
+export const MODE_RULES: Readonly<Record<GameMode, (laps: number) => RunRules>> = {
+  race: raceRules,
+  timeTrial: timeTrialRules,
+  free: freeRules,
+};

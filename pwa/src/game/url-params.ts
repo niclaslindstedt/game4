@@ -9,6 +9,8 @@
 //                   menu stands over is built on it too.
 //   ?start=race     boot straight into a race on the grid (the splash and
 //                   the front door skipped). `start=1` is the same.
+//   ?start=free     ...or into a FREE RIDE on the start card's stored map,
+//                   day and snow (the seed a `?seed=` names over it).
 //   ?t=<s>          ...with this many seconds of it already ridden — by the
 //                   BOT, so a picture of a race is a picture of one moving.
 //   ?shot=1         ...and held still once drawn, so nothing moves under a
@@ -18,12 +20,16 @@
 //   ?sled=<id>      the player's machine for this visit (trail, crossover,
 //                   mountain, cross), over the stored one and never written
 //                   back — how a lab photographs a sled it did not pick.
+//   ?mode=trial     the run a link boots into (or the next one pressed) is
+//                   a TIME TRIAL — alone, against the record and the ghost —
+//                   rather than a race.
 //   ?bot=1          the player's own sled ridden by the bot for the whole
 //                   run, not just the pre-roll — a race watched from the
 //                   saddle to its finish plate with nobody's hands on it.
 //   ?menu=root      open on the front door rather than the attract card;
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
-//                   the sled card RACE opens.
+//                   the sled card RACE opens; `start` on the free ride's
+//                   start card.
 //   ?weather=<kind> ride the map under this sky instead of the one R18
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -42,20 +48,29 @@
 // DOM-free: the query string is an argument, so `tests/menu_system_test.ts`
 // reads every rule here without a browser.
 
-import { WEATHER_KINDS, isSledId, type SkyOverride, type SledId, type WeatherKind } from "@engine";
+import {
+  WEATHER_KINDS,
+  isSledId,
+  type GameMode,
+  type SkyOverride,
+  type SledId,
+  type WeatherKind,
+} from "@engine";
 
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "sled" | "options" | "keys";
-const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys"];
+export type MenuPage = "root" | "sled" | "options" | "keys" | "start";
+const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys", "start"];
 
 export type UrlParams = {
   seed: number | null;
   /** The URL names a RACE to boot into rather than a card. */
   rides: boolean;
+  /** ...and that ride is a FREE RIDE. */
+  free: boolean;
   /** Seconds of the race to pre-ride before the first frame is shown. */
   t: number;
   shot: boolean;
@@ -63,6 +78,8 @@ export type UrlParams = {
   camera: CameraRung | null;
   /** The player's machine for this visit. */
   sled: SledId | null;
+  /** The mode a booted run is ridden in. */
+  mode: GameMode;
   /** The bot rides the player's sled for the whole run. */
   bot: boolean;
   /** The URL names the front door. */
@@ -106,14 +123,17 @@ export function readParams(search: string): UrlParams {
   const sled = q.get("sled");
   return {
     seed: seedOf(q.get("seed")),
-    rides: start === "race" || start === "1" || paused || q.get("shot") === "1",
+    rides: start === "race" || start === "free" || start === "1" || paused || q.get("shot") === "1",
+    free: start === "free",
     t: Number.isFinite(t) && t > 0 ? Math.min(t, 600) : 0,
     shot: q.get("shot") === "1",
     paused,
     camera:
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
     sled: sled !== null && isSledId(sled) ? sled : null,
+    mode: start === "free" ? "free" : q.get("mode") === "trial" ? "timeTrial" : "race",
     bot: q.get("bot") === "1",
+
     menu: q.get("menu") !== null,
     page: MENU_PAGES.includes(q.get("menu") as MenuPage) ? (q.get("menu") as MenuPage) : "root",
     video: TIERS.includes(q.get("video") as Tier) ? (q.get("video") as Tier) : null,

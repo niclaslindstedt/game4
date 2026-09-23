@@ -10,6 +10,7 @@
 //   sled-body.ts    the four machines and their riders
 //   spray.ts        the roost, the ski spray and the landing puff
 //   snowfall.ts     the snow falling round the lens, the spindrift
+//   ghost-model.ts  the time trial's ghost, see-through and trail-less
 //   camera.ts       the ladder of lenses and the hand-over between them
 //
 // WHAT IT COSTS is the picture it is handed (`settings-video.ts`): every
@@ -43,6 +44,7 @@ import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
 import { createForest, type Forest } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
+import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
 import type { CameraRung, WorldRenderer } from "./renderer-api.ts";
@@ -171,6 +173,8 @@ export function createWorldRenderer(
   let spray: Spray | null = null;
   let clear: LineClear | undefined;
   let riders: Rider[] = [];
+  let ghost: GhostModel | null = null;
+  let ghostRun: GameState | null = null;
   const stamps: Stamp[] = [];
   let lastTick = -1;
   let lastState: GameState | null = null;
@@ -207,6 +211,8 @@ export function createWorldRenderer(
       if (o) scene.remove(o);
     }
     for (const r of riders) scene.remove(r.model.root);
+    ghost?.dispose();
+    ghost = null;
     terrain = forest = gates = trail = spray = null;
     clear = undefined;
     riders = [];
@@ -254,7 +260,7 @@ export function createWorldRenderer(
   /** How much deeper the drawn furrow is than the physics' sink under the
    * tread — the machine is drawn that much lower, so it sits IN the trough
    * it is cutting rather than hovering over it. */
-  function extraSink(sled: SledState): number {
+  function extraSink(sled: SledState, depth: number): number {
     if (!level) return 0;
     let sum = 0;
     let n = 0;
@@ -264,7 +270,7 @@ export function createWorldRenderer(
       // The drawn surface under the probe is the loose cover's height over
       // the ground less the furrow; the physics has it at the ground less
       // its own sink.
-      sum += drawnDepth(c, packed) - c.sink - LOOSE * (1 - packed);
+      sum += drawnDepth(c, packed, 1, depth) - c.sink - LOOSE * (1 - packed);
       n++;
     }
     return n > 0 ? Math.max(-0.1, Math.min(0.2, (sum / n) * 0.85)) : 0;
@@ -312,6 +318,7 @@ export function createWorldRenderer(
       spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
       riders = runsOf(state).map((run, i) => riderFor(i, run.sled.spec));
+      ghost = createGhostModel(scene, wrap);
       lastTick = -1;
       lastState = null;
       lens.snap();
@@ -370,11 +377,11 @@ export function createWorldRenderer(
         observe(r.track, sled, run.tick);
         sample(r.track, alpha, r.drawn);
         // With the trails off there is no furrow to sit in.
-        const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled) : 0;
+        const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled, run.snowDepth) : 0;
         r.sink += (want - r.sink) * (1 - Math.exp(-dt * 10));
         r.model.pose(sled, r.drawn, r.sink);
         if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
-          stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps);
+          stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps, run.snowDepth);
         }
         // The landing puff: grounded now, in the air at the last frame.
         let landed = 0;
@@ -387,6 +394,8 @@ export function createWorldRenderer(
         if (sled.airborne) r.vy = sled.vy;
       }
       lastTick = state.tick;
+      // The ghost is posed and drawn, and nothing more: no furrow, no spray.
+      ghost?.draw(ghostRun?.level === level ? ghostRun : null, alpha);
 
       const player = riders[0];
       const sled = state.sled;
@@ -440,6 +449,10 @@ export function createWorldRenderer(
       snowfall.update(look, wind, lens.camera, level, dt);
 
       if (present) gl.render(scene, lens.camera);
+    },
+
+    setGhost(run) {
+      ghostRun = run;
     },
 
     setOverride(view) {

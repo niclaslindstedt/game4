@@ -6,7 +6,9 @@
 //   top left      the race clock, the POSITION, the LAP and the CHECKPOINT
 //                 count on one row — the facts about how the race is going,
 //                 read down one left-aligned column — and under them the
-//                 SPLIT at the last checkpoint while it is fresh
+//                 SPLIT at the last checkpoint while it is fresh. On a FREE
+//                 RIDE, which has no race to read, the clock, the BEST AIR
+//                 and the distance RIDDEN
 //   top right     the three presses: PAUSE, RESET and CAMERA, and under
 //                 them the MINIMAP — the loop, the field and the checkpoint
 //                 owed, turned heading-up about the rider (minimap.tsx)
@@ -103,23 +105,41 @@ export function Hud({
             <span class="hud-clock-time">{formatTime(snap.time)}</span>
             <span class="hud-chip-sub">{STRINGS.clockLabel}</span>
           </div>
+          {/* THE FREE RIDE'S TWO: the longest flight so far — keyed on it,
+              so a new best lands with its own beat — and the odometer. */}
+          {snap.free && (
+            <div class="hud-chip hud-best-air" key={snap.bestAir}>
+              <span>{STRINGS.air(snap.bestAir)}</span>
+              <span class="hud-chip-sub">{STRINGS.bestAirLabel}</span>
+            </div>
+          )}
+          {snap.free && (
+            <div class="hud-chip">
+              <span>{STRINGS.distance(snap.distance)}</span>
+              <span class="hud-chip-sub">{STRINGS.distanceLabel}</span>
+            </div>
+          )}
           {/* THE PLACE — the one number a racer reads more than the clock.
               Keyed on the place, so a pass lands with its own beat. Left
               out of a race alone, where 1 / 1 says nothing. */}
-          {snap.riders > 1 ? (
+          {!snap.free && snap.riders > 1 ? (
             <div class="hud-chip hud-place" key={snap.place}>
               <span>{STRINGS.place(snap.place, snap.riders)}</span>
               <span class="hud-chip-sub">{STRINGS.placeLabel}</span>
             </div>
           ) : null}
-          <div class="hud-chip">
-            <span>{STRINGS.laps(snap.lap, snap.laps)}</span>
-            <span class="hud-chip-sub">{STRINGS.lapsLabel}</span>
-          </div>
-          <div class="hud-chip">
-            <span>{STRINGS.checkpoints(snap.taken, snap.checkpoints)}</span>
-            <span class="hud-chip-sub">{STRINGS.checkpointsLabel}</span>
-          </div>
+          {!snap.free && (
+            <div class="hud-chip">
+              <span>{STRINGS.laps(snap.lap, snap.laps)}</span>
+              <span class="hud-chip-sub">{STRINGS.lapsLabel}</span>
+            </div>
+          )}
+          {!snap.free && (
+            <div class="hud-chip">
+              <span>{STRINGS.checkpoints(snap.taken, snap.checkpoints)}</span>
+              <span class="hud-chip-sub">{STRINGS.checkpointsLabel}</span>
+            </div>
+          )}
         </div>
         {/* THE SPLIT, under the row it belongs to: the clock as it stood at
             the checkpoint just taken, held for a few seconds and then gone,
@@ -131,6 +151,17 @@ export function Hud({
               <span>{STRINGS.split(snap.split)}</span>
               <span class="hud-chip-sub">{STRINGS.splitLabel}</span>
             </div>
+            {/* ...and beside it, against the record at the same crossing:
+                green ahead, red behind. */}
+            {snap.gap !== null && (
+              <div
+                class={`hud-chip hud-split hud-gap ${snap.gap < 0 ? "hud-gap-ahead" : "hud-gap-behind"}`}
+                key={`gap-${snap.split}`}
+              >
+                <span>{STRINGS.gap(snap.gap)}</span>
+                <span class="hud-chip-sub">{STRINGS.gapLabel}</span>
+              </div>
+            )}
           </div>
         )}
       </div>

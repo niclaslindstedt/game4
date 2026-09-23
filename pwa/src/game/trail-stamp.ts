@@ -59,9 +59,12 @@ export type Stamp = {
 
 /** THE DEPTH A PROBE IS DRAWN AT, m, on snow `packed` (0 powder … 1
  * groomed) — its load share (`0..1`) scales the furrow, so a ski barely
- * kissing the snow on a hop leaves less than one carrying the nose. */
-export function drawnDepth(contact: SnowContact, packed: number, load = 1): number {
-  const furrow = contact.kind === "ski" ? TRAIL.powderSki : TRAIL.powderTread;
+ * kissing the snow on a hop leaves less than one carrying the nose, and the
+ * run's snow dial (`GameState.snowDepth`) scales the powder's own furrow the
+ * way it scales the physics' sink: a dusting leaves a scuff, a dump a
+ * trench. */
+export function drawnDepth(contact: SnowContact, packed: number, load = 1, depth = 1): number {
+  const furrow = (contact.kind === "ski" ? TRAIL.powderSki : TRAIL.powderTread) * depth;
   const p = Math.min(1, Math.max(0, packed));
   const drawn = (furrow * (1 - p) + TRAIL.packedDepth * p) * Math.min(1, Math.max(0.25, load));
   return Math.min(TRAIL.maxDepth, Math.max(contact.sink, drawn));
@@ -82,7 +85,7 @@ export function createPen(probes: number): TrailPen {
  * The capsules one rider lays since its last stamp, pushed onto `out`.
  * `packedAt` is the level's own; `nominalLoad` is the load (N) a probe
  * carries standing still, which is what "a full furrow" is measured
- * against.
+ * against; `depth` is the run's snow dial.
  */
 export function stampsOf(
   contacts: readonly SnowContact[],
@@ -90,6 +93,7 @@ export function stampsOf(
   packedAt: (x: number, z: number) => number,
   nominalLoad: number,
   out: Stamp[],
+  depth = 1,
 ): void {
   for (let i = 0; i < contacts.length && i < pen.xs.length; i++) {
     const c = contacts[i];
@@ -106,15 +110,15 @@ export function stampsOf(
     pen.down[i] = 1;
     if (moved > TRAIL.jump) continue;
     const load = nominalLoad > 0 ? c.load / nominalLoad : 1;
-    const depth = drawnDepth(c, packedAt(c.x, c.z), load);
+    const drawn = drawnDepth(c, packedAt(c.x, c.z), load, depth);
     out.push({
       ax,
       az,
       bx: c.x,
       bz: c.z,
       half: c.width * 0.5,
-      depth,
-      berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare),
+      depth: drawn,
+      berm: Math.min(TRAIL.maxBerm, drawn * TRAIL.bermShare),
     });
   }
 }

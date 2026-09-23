@@ -15,7 +15,7 @@ export {
 } from "./query.ts";
 export { kickerProfile } from "./kickers.ts";
 export { dealDrifts, driftAt } from "./drift.ts";
-export { declinationOf, sunWindow } from "./sun.ts";
+export { dayOfYearOf, declinationOf, freeHours, sunWindow, withDay } from "./sun.ts";
 export {
   CLEAR_WEATHER,
   WEATHER_KINDS,

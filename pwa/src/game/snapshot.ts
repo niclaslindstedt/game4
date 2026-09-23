@@ -23,6 +23,7 @@ import {
 
 import { SCREEN_TO_ENGINE } from "./input-model.ts";
 import { buildMinimap, type HudMinimap } from "./minimap-view.ts";
+import { splitGap, type RunLedger } from "./records.ts";
 
 /** The brake's share past which the rev bar says the brake is on. */
 const BRAKE_SHOWN = 0.05;
@@ -78,6 +79,13 @@ export type HudSnapshot = {
   /** The race clock at the last checkpoint taken, while it is fresh; null
    * otherwise. */
   split: number | null;
+  /** THE GAP to the record at that same crossing, s — negative is ahead —
+   * while the split is up and there is a row to be measured against. */
+  gap: number | null;
+  /** The mode being ridden, and the record standing when the run began
+   * (`records.ts`) — what the finish plate bills the result against. */
+  mode: RunLedger["mode"];
+  best: { time: number; sled: string; at: number } | null;
   /** THE AIR CLOCK, s — the flight so far, and 0 until it has lasted
    * `TUNING.air.counts`: a hop off a bump is not air time, and a readout
    * that counted it would flicker through every mogul. */
@@ -88,6 +96,13 @@ export type HudSnapshot = {
    * from straight ahead, and how far, m — or null with nothing owed. */
   missed: { angle: number; distance: number } | null;
   seed: number;
+  /** A FREE RIDE: no field, no laps, no checkpoint owed — the HUD shows the
+   * run's best air and the distance ridden in their place. */
+  free: boolean;
+  /** The run's longest flight so far, s. */
+  bestAir: number;
+  /** How far has been ridden, m. */
+  distance: number;
   /** THE FINISH: the player's own result once the flag has fallen, and the
    * whole field's table under it — live, because the field is still racing
    * home behind the rider. Null until then. */
@@ -131,7 +146,10 @@ export function standingsOf(state: GameState): Standing[] {
   });
 }
 
-export function takeSnapshot(state: GameState): HudSnapshot {
+/** A run with no book behind it: a race, measured against nothing. */
+const NO_LEDGER: RunLedger = { mode: "race", standing: null };
+
+export function takeSnapshot(state: GameState, ledger: RunLedger = NO_LEDGER): HudSnapshot {
   const c = state.sled;
   const p = state.progress;
   const n = state.level.checkpoints.length;
@@ -139,6 +157,9 @@ export function takeSnapshot(state: GameState): HudSnapshot {
   const last = p.lastCheckpoint;
   const lastAt = last >= 0 ? p.splits[last] : Number.NaN;
   const airTime = c.airborne && c.airTime > TUNING.air.counts ? c.airTime : 0;
+  const split =
+    Number.isFinite(lastAt) && p.time - lastAt < SPLIT_HOLD && !p.finished ? lastAt : null;
+  const standing = ledger.standing;
   const owed = p.missed !== null ? bearingToNext(state) : null;
   return {
     speedKmh: c.speed * 3.6,
@@ -155,11 +176,17 @@ export function takeSnapshot(state: GameState): HudSnapshot {
     laps,
     taken: takenThisLap(p, n),
     checkpoints: n,
-    split: Number.isFinite(lastAt) && p.time - lastAt < SPLIT_HOLD && !p.finished ? lastAt : null,
+    split,
+    gap: split !== null ? splitGap(standing, p.passed - 1, split) : null,
+    mode: ledger.mode,
+    best: standing ? { time: standing.value, sled: standing.sled, at: standing.at } : null,
     airTime,
     airBest: airTime > 0 && airTime > p.bestAir,
     missed: owed ? { angle: owed.error * SCREEN_TO_ENGINE, distance: owed.distance } : null,
     seed: state.seed,
+    free: !state.rules.course,
+    bestAir: p.bestAir,
+    distance: p.distance,
     result: p.finished ? { place: racePlace(state), time: p.time } : null,
     standings: p.finished ? standingsOf(state) : null,
     minimap: buildMinimap(state),

@@ -233,7 +233,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const dx = -up.x;
     const dz = -up.z;
     const packed = level.packedAt(ax, az);
-    const target = sinkTarget(packed, speed0, p.sinkScale, p.planeScale);
+    const target = sinkTarget(packed, speed0, p.sinkScale, p.planeScale, state.snowDepth);
     c.sinks[i] += (target - c.sinks[i]) * Math.min(1, dt / TUNING.snow.sinkLag);
     const sink = c.sinks[i];
     // Where the ray meets the support: Newton's method along the ray, off
@@ -353,7 +353,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
       p.ploughs ? p.width : 0,
       load,
       vf,
-      p.kind === "tread" ? fit.sink : 1,
+      (p.kind === "tread" ? fit.sink : 1) * state.snowDepth,
     );
     along -= drag * Math.tanh(vf / DRAG_FADE);
     push(
@@ -439,7 +439,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.vx += (fx / m) * dt;
   c.vy += (fy / m) * dt;
   c.vz += (fz / m) * dt;
-  const chassis = chassisContacts(c, level);
+  const chassis = chassisContacts(c, level, state.snowDepth);
   const hullTouch = chassis > 0;
   if (chassis > impact) impact = chassis;
   c.x += c.vx * dt;

@@ -15,9 +15,12 @@
 //     by the bot, held still once drawn so nothing moves under the shutter.
 //   ?paused=1        ...held under the pause card instead.
 //   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
+//   ?mode=trial      the run is a TIME TRIAL rather than a race (--trial).
 //   ?splash=1 / ?menu=root   the attract card / the front door;
 //   ?menu=options|keys       OPTIONS, and its KEYS page.
 //   ?menu=sled[&sled=id]     the sled card RACE opens, on a machine.
+//   ?menu=start      the free ride's start card (its chart built in a worker).
+//   ?start=free      a FREE RIDE on the start card's stored map and day.
 //   ?video=<tier>    ride at a picture preset (low, medium, high) this visit.
 //   ?weather=<kind>  the map under another sky (clear, fair, high, overcast,
 //                    snow, fog), and ?hour=<h> from another start hour.
@@ -99,6 +102,16 @@ const SURFACES = {
     wait: ".sled-pick-canvas",
     settle: 1800,
   },
+  // THE FREE RIDE'S START CARD: waited on until its chart — a whole map
+  // generated in a worker — has landed on it.
+  start: { params: { menu: "start" }, wait: ".seed-preview-map image", settle: 700 },
+  // ...and the free ride itself, twenty seconds in, held still: the HUD's
+  // best air and distance where the race's place and laps would be.
+  free: {
+    params: { start: "free", t: "20", shot: "1" },
+    wait: ".hud-best-air",
+    settle: 1500,
+  },
 };
 
 /** The reference viewports — and the phone is a TOUCHSCREEN, not a narrow
@@ -129,6 +142,7 @@ const args = parseArgs(
     update: { kind: "flag", help: "draw the new-build button (?update=1)" },
     weather: { kind: "string", help: `ride under this sky (${WEATHERS.join(", ")}, all)` },
     hour: { kind: "number", help: "the race's solar start hour, 0–24" },
+    trial: { kind: "flag", help: "a time trial rather than a race (?mode=trial)" },
     viewport: {
       kind: "string",
       default: "all",
@@ -137,7 +151,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
   },
   "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
-    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--viewport v] [--timeout s]",
+    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--trial] [--viewport v] [--timeout s]",
 );
 const viewports =
   args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
@@ -277,8 +291,9 @@ if (args.surface) {
       if (args.update) params.update = "1";
       if (sky !== undefined) params.weather = sky;
       if (args.hour !== undefined) params.hour = String(args.hour);
+      if (args.trial) params.mode = "trial";
       const name =
-        `${scene}${sky !== undefined ? `-${sky}` : ""}` +
+        `${scene}${args.trial ? "-trial" : ""}${sky !== undefined ? `-${sky}` : ""}` +
         `${args.hour !== undefined ? `-h${args.hour}` : ""}` +
         `${args.t !== undefined ? `-t${args.t}` : ""}` +
         `${args.camera !== undefined ? `-${args.camera}` : ""}` +

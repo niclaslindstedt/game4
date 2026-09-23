@@ -28,7 +28,8 @@ export type SledInput = {
    * it moves his weight fore and aft; in the air it is the pitch control. */
   lean: number;
   /** Edge-triggered: stand the sled back on the track at the last
-   * checkpoint it took (`course.ts`). */
+   * checkpoint it took — on a free ride, at the nearest point of the
+   * track (`course.ts`). */
   reset: boolean;
 };
 
@@ -171,6 +172,9 @@ export type Progress = {
   lastResetAt: number;
   /** The run's longest flight, s. */
   bestAir: number;
+  /** How far the sled has been ridden, m of plan distance — a reset's jump
+   * not counted. The free ride's odometer; a race keeps it too. */
+  distance: number;
 };
 
 /** ANOTHER RIDER ON THE SAME SNOW (`rivals.ts`): a whole run of its own
@@ -238,6 +242,10 @@ export type GameState = {
   /** The arcade's help (`Assist`), 0..1 per hand; the field always rides
    * with every hand on. */
   assist: Assist;
+  /** THE SNOW DIAL (`SNOW_DIAL`): the powder's sink as a multiple of the
+   * ordinary snow's, 1 unless the run asked otherwise. Read, never written,
+   * during a run, and shared with the field. */
+  snowDepth: number;
   /** THE FIELD: every other rider, in grid order; empty on a solo run. */
   rivals: Rival[];
   /** Seconds of the lights still to run; 0 once they are out. */
