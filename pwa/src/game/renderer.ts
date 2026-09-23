@@ -11,7 +11,8 @@
 //   spray.ts        the roost, the ski spray and the landing puff
 //   snowfall.ts     the snow falling round the lens, the spindrift
 //   ghost-model.ts  the time trial's ghost, see-through and trail-less
-//   camera.ts       the ladder of lenses and the hand-over between them
+//   wildlife.ts     the birds over the woods, the animals and their prints
+//   camera.ts      the ladder of lenses and the hand-over between them
 //
 // WHAT IT COSTS is the picture it is handed (`settings-video.ts`): every
 // module above is built or tuned off one `VideoSettings`, and `setVideo` is
@@ -75,6 +76,7 @@ import {
 } from "./settings-video.ts";
 import { createTerrain, type Terrain } from "./terrain.ts";
 import { createTrailMap, type TrailMap } from "./trail-map.ts";
+import { createWildlife, type Wildlife } from "./wildlife.ts";
 import {
   bodyStampOf,
   createPen,
@@ -198,6 +200,7 @@ export function createWorldRenderer(
   let gates: Gates | null = null;
   let trail: TrailMap | null = null;
   let spray: Spray | null = null;
+  let wildlife: Wildlife | null = null;
   let clear: LineClear | undefined;
   let riders: Rider[] = [];
   let ghost: GhostModel | null = null;
@@ -233,14 +236,16 @@ export function createWorldRenderer(
     gates?.dispose();
     trail?.dispose();
     spray?.dispose();
+    wildlife?.dispose();
     for (const r of riders) r.model.dispose();
-    for (const o of [terrain?.group, forest?.group, gates?.group, spray?.points]) {
+    for (const o of [terrain?.group, forest?.group, gates?.group, spray?.points, wildlife?.group]) {
       if (o) scene.remove(o);
     }
     for (const r of riders) scene.remove(r.model.root);
     ghost?.dispose();
     ghost = null;
     terrain = forest = gates = trail = spray = null;
+    wildlife = null;
     clear = undefined;
     riders = [];
     level = null;
@@ -372,6 +377,8 @@ export function createWorldRenderer(
       gates = createGates(lv, env.haze);
       clear = createLineClear(lv);
       scene.add(gates.group);
+      wildlife = createWildlife(lv, env.haze);
+      scene.add(wildlife.group);
       spray = createSpray(env.haze);
       spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
@@ -415,6 +422,7 @@ export function createWorldRenderer(
         if (lastState !== null) {
           trail.clear(gl);
           spray.clear();
+          wildlife?.reset();
         }
         for (const r of riders) {
           r.track = createTrack();
@@ -491,6 +499,14 @@ export function createWorldRenderer(
         player.model.setRiderVisible(true);
       }
 
+      const fine = trail.uniforms;
+      wildlife?.update(
+        state,
+        lens.camera.position.x,
+        lens.camera.position.z,
+        TRAIL_LOOK[video.trails].stamp ? stamps : null,
+        { x: fine.uFineOrigin.value.x, z: fine.uFineOrigin.value.y, span: fine.uFineSpan.value },
+      );
       trail.update(gl, stamps, sled.x, sled.z);
       terrain.follow(lens.camera.position.x, lens.camera.position.z);
       const sky = skyLevel ?? level;
@@ -569,6 +585,7 @@ export function createWorldRenderer(
         }
         trail?.dispose();
         trail = buildTrail(level);
+        wildlife?.retrack();
         terrain = buildTerrain(level, trail);
         terrain.follow(lens.camera.position.x, lens.camera.position.z);
       }
