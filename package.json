@@ -28,6 +28,7 @@
     "audition": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/audition.mjs",
     "screenshots": "node scripts/screenshot.mjs",
     "profile": "node scripts/profile-render.mjs",
+    "world": "node scripts/world-preview.mjs",
     "tauri": "npm --prefix tauri run start --",
     "tauri:bundle": "npm --prefix tauri run bundle",
     "tauri:test": "npm --prefix tauri test",

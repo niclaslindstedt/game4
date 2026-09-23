@@ -63,13 +63,14 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 | `make level`       | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`) |
 | `make analyze`     | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                 |
 | `make ride`        | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`)                                |
+| `make world`       | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)    |
 | `make audition`    | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                    |
 | `make screenshots` | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)            |
 | `make profile`     | What one frame costs the renderer: draw calls, triangles, binds (`make build` first)                        |
 | `make changelog`   | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                       |
 | `make bump`        | Print the semver bump the release would derive from the changeset fragments                                 |
 
-The browser-driven labs (`screenshots`, `profile`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
+The browser-driven labs (`screenshots`, `profile`, `world`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
 
 ## Controls
 

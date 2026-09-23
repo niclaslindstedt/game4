@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // WHAT THE RIDER FEELS — the seam that carries a pulse out to the phone, and
-// (once the app has one) the vibration table behind it.
+// the vibration table behind it.
 //
 // A pulse is named in THREE files that cannot import each other — the page's
 // `shell-host.ts` (the event), the store app's injected bridge (the listener
@@ -15,8 +15,19 @@
 
 import { describe, expect, it } from "vitest";
 
+import { TUNING, type GameEvent } from "@engine";
+
 import { RUMBLE_BRIDGE } from "../native/src/injected.ts";
 import { RUMBLE_KIND, parseRumble, rumbleBurst } from "../native/src/rumble.ts";
+import {
+  ROLL_OVER,
+  RUMBLE,
+  createRunRumble,
+  rumbleForChatter,
+  rumbleForEvent,
+  type Rumble,
+  type SledRead,
+} from "../pwa/src/game/rumble.ts";
 import { SHELL_RUMBLE, askShellRumble } from "../pwa/src/shell-host.ts";
 
 /** Run the injected bridge the way a WebView does — as a PROGRAM against a
@@ -106,17 +117,122 @@ describe("the seam out to the phone", () => {
   });
 });
 
-// TODO(app): the VIBRATION TABLE is the website's, not the shell's — what is
-// felt and how big, `pwa/src/game/rumble.ts` (a pure `rumbleForEvent(event)`
-// → `{ ms, strength } | null`, and a one-motor ledger over it), with
-// `pwa/src/game/haptics.ts` as the one `navigator.vibrate` that also calls
-// `askShellRumble`. Neither exists in this tree yet. When they land, these
-// become real cases (the sibling jet-ski game's `rumble_test.ts` is the shape)
-// and the fixed durations above are read off the table's own constants.
-describe("what an event is worth in the hands (waits for pwa/src/game/rumble.ts)", () => {
-  it.todo("sizes a landing by how fast the sled was coming down");
-  it.todo("sizes a tree by how fast the sled met it");
-  it.todo("gives rolling over the whole of what the motor has, and nothing else reaches it");
-  it.todo("leaves the news (a checkpoint, a lap, the finish) to the HUD and the sound");
-  it.todo("never lets the chatter of a rough track truncate the landing it comes down into");
+// THE VIBRATION TABLE is the website's, not the shell's — what is felt and
+// how big is `pwa/src/game/rumble.ts` (`rumbleForEvent`, and the one-motor
+// ledger over it), and `pwa/src/game/haptics.ts` is the one
+// `navigator.vibrate` that also calls `askShellRumble`. These are the table's
+// own promises, read without a device.
+describe("what an event is worth in the hands (pwa/src/game/rumble.ts)", () => {
+  const land = (impact: number, harsh = false): GameEvent => ({
+    kind: "land",
+    t: 1,
+    airTime: 1,
+    impact,
+    speed: 20,
+    harsh,
+    lost: harsh ? 0.1 : 0,
+  });
+
+  it("sizes a landing by how fast the sled was coming down", () => {
+    const soft = rumbleForEvent(land(2))!;
+    const hard = rumbleForEvent(land(10))!;
+    expect(hard.ms).toBeGreaterThan(soft.ms);
+    expect(hard.strength).toBeGreaterThan(soft.strength);
+    // ...and one the suspension could not take is a step harder again.
+    expect(rumbleForEvent(land(10, true))!.strength).toBeGreaterThan(hard.strength);
+  });
+
+  it("sizes a tree by how fast the sled met it", () => {
+    const brush = rumbleForEvent({ kind: "hit", t: 1, speed: 3, x: 0, z: 0 })!;
+    const wreck = rumbleForEvent({ kind: "hit", t: 1, speed: 25, x: 0, z: 0 })!;
+    expect(wreck.ms).toBeGreaterThan(brush.ms);
+    expect(wreck.strength).toBeGreaterThan(brush.strength);
+    expect(wreck.ms).toBeLessThan(RUMBLE.longest);
+  });
+
+  it("gives rolling over the whole of what the motor has, and nothing else reaches it", () => {
+    expect(ROLL_OVER).toEqual({ ms: RUMBLE.longest, strength: 1 });
+    const felt: Rumble[] = [];
+    const rumble = createRunRumble((p) => felt.push(p));
+    rumble.step(sledRead({ overFor: 0 }));
+    rumble.step(sledRead({ overFor: 0.01 }));
+    // Once per roll: still over is not a second roll.
+    rumble.step(sledRead({ overFor: 0.5 }));
+    expect(felt).toEqual([ROLL_OVER]);
+    for (const e of [land(40, true), { kind: "hit", t: 1, speed: 99, x: 0, z: 0 } as GameEvent]) {
+      const p = rumbleForEvent(e)!;
+      expect(p.strength).toBeLessThan(1);
+      expect(p.ms).toBeLessThan(RUMBLE.longest);
+    }
+  });
+
+  it("leaves the news (a lap, a miss, a reset, the finish) to the HUD and the sound", () => {
+    const news: GameEvent[] = [
+      { kind: "lap", t: 1, lap: 1, time: 60 },
+      { kind: "missed", t: 1, index: 3 },
+      { kind: "reset", t: 1, checkpoint: 2, auto: false },
+      { kind: "finish", t: 1, time: 180, place: 1 },
+      { kind: "air", t: 1, vy: 4, speed: 20 },
+      { kind: "count", t: 1, left: 2 },
+    ];
+    for (const e of news) expect(rumbleForEvent(e), e.kind).toBe(null);
+    // A checkpoint is the one piece of news that is felt — as the lightest
+    // tick in the table, never enough to cover a blow.
+    const tick = rumbleForEvent({ kind: "checkpoint", t: 1, index: 2, lap: 0, split: 30 })!;
+    expect(tick).toEqual(RUMBLE.checkpoint);
+    expect(tick.strength).toBeLessThan(rumbleForEvent(land(0))!.strength);
+    expect(tick.strength).toBeLessThan(RUMBLE.chatterStrength[0] * 2);
+  });
+
+  it("never lets the chatter of a rough track truncate the landing it comes down into", () => {
+    const felt: Rumble[] = [];
+    const rumble = createRunRumble((p) => felt.push(p));
+    rumble.events([land(10, true)]);
+    expect(felt.length).toBe(1);
+    const landing = felt[0];
+    // The track hammering the skis for the whole of the landing's pulse —
+    // and the suspension's slam on it is the landing's own for a moment.
+    let comp = 0.05;
+    const steps = Math.floor((0.9 * landing.ms) / 1000 / TUNING.dt);
+    for (let i = 0; i < steps; i++) {
+      comp = comp === 0.05 ? 0.12 : 0.05;
+      rumble.step(sledRead({ comp, landing: 0.5 }));
+      if (i % 2 === 0) rumble.frame(TUNING.dt * 2);
+    }
+    // Nothing weaker than the landing may have cut in while it was running.
+    const during = felt.slice(1);
+    for (const p of during) expect(p.strength).toBeGreaterThan(landing.strength);
+    // ...and once it is over the chatter IS felt, so the guard is the
+    // ledger's and not a switch that went off.
+    for (let i = 0; i < 60; i++) {
+      comp = comp === 0.05 ? 0.12 : 0.05;
+      rumble.step(sledRead({ comp, landing: 1 }));
+      rumble.frame(TUNING.dt);
+    }
+    expect(felt.length).toBeGreaterThan(1);
+    // A chatter pulse is the short kind.
+    expect(felt[felt.length - 1].ms).toBe(RUMBLE.chatterMs);
+  });
+
+  it("feels no chatter off smooth snow, and none in the air", () => {
+    expect(rumbleForChatter(sledRead({ comp: 0.05 }), 0.05)).toBe(null);
+    expect(rumbleForChatter(sledRead({ comp: 0.12, airborne: true }), 0.05)).toBe(null);
+    expect(rumbleForChatter(sledRead({ comp: 0.12 }), 0.05)).not.toBe(null);
+  });
 });
+
+/** Just what the rumble reads off a sled. */
+function sledRead(o: {
+  comp?: number;
+  landing?: number;
+  overFor?: number;
+  airborne?: boolean;
+}): SledRead {
+  const c = o.comp ?? 0.05;
+  return {
+    skiCompression: [c, c],
+    landing: o.landing ?? 10,
+    overFor: o.overFor ?? 0,
+    airborne: o.airborne ?? false,
+  };
+}

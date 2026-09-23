@@ -6,15 +6,23 @@ Powder Run has no runtime configuration surface (no accounts, no server); everyt
 
 The running game reads its situation off the URL, which is what makes a map a link and a bug report a repro:
 
-| Parameter | Meaning                                                                                                                            |
-| --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
-| `seed`    | Which map to build (an integer). The same seed is the same hills, forest, track, checkpoints, start and sun hour on every machine. |
+| Parameter     | Meaning                                                                                                                                                              |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seed`        | Which map to build (an integer). The same seed is the same hills, forest, track, checkpoints, start and sun hour on every machine. Pins the front door's RACE to it. |
+| `start=race`  | Boot straight into a race on the grid, the attract card and the front door skipped (`start=1` is the same).                                                          |
+| `t`           | ...with this many seconds of it already ridden — by the bot, so a picture of a race is of one moving.                                                                |
+| `shot=1`      | ...held still once drawn, so nothing moves under a screenshot's shutter.                                                                                             |
+| `paused=1`    | ...or held under the pause card.                                                                                                                                     |
+| `camera`      | The race's camera rung: `hood`, `bars`, `chase`, `far`, `high`.                                                                                                      |
+| `menu=root`   | Open on the front door rather than the attract card.                                                                                                                 |
+| `splash=1\|0` | Force the attract card up, or off an ordinary visit.                                                                                                                 |
+| `update=1`    | Draw the new-build button as if a build were waiting.                                                                                                                |
 
-The first slice reads only the seed. The staged-moment and camera parameters the browser-driven labs stand the app at (`make screenshots`, `make profile`) arrive with the app shell; when they do, this table, the app's URL readers and `scripts/screenshot.mjs` move together.
+`pwa/src/game/url-params.ts` is the reading of all of them; it, this table and `scripts/screenshot.mjs` move together.
 
 ## What the game remembers
 
-Nothing yet. The slice has no options page, no record book and no saved runs, so nothing is written to the browser's storage beyond what the service worker caches to play offline. When settings arrive they live in one module in the app, keyed per app so the sibling games on neighbouring origins can never read them, and are listed here.
+Two things, in `localStorage` under `powderrun.settings.v1` (`pwa/src/game/settings.ts`): the camera rung the rider last chose, and whether the sound is on. A stored value this build does not offer is dropped for the default rather than trusted. Nothing else is written beyond what the service worker caches to play offline.
 
 ## Installing
 

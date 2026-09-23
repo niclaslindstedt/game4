@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -37,6 +37,14 @@ install:
 # pwa/public/icons/icon.svg and pwa/src/game/app-mark.ts in lockstep).
 icons:
 	npm run icons
+
+# THE WORLD LAB: one seed ridden by the bot and photographed through the
+# game's own renderer at named moments — previews/world-<view>.png. Builds
+# its own one-off bundle from pwa/world-preview.html (never deployed) and
+# needs a Chromium: CHROMIUM_PATH=/opt/pw-browsers/chromium in a web
+# session. SEED=n picks the map; ARGS="--views=powder,lookback" a subset.
+world:
+	npm run world -- $(if $(SEED),--seed $(SEED),) $(ARGS)
 
 # ---------------------------------------------------------------------------
 # The desktop app (tauri/)

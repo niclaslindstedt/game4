@@ -16,64 +16,35 @@
 
 :root {
   /* PALETTE from identity.ts, restated because a stylesheet cannot import a
-     TypeScript module. There is no third copy: this is a leaf.
-
-     PORTED FROM THE SIBLING WATER GAME, and the rules below still read the
-     old names: `--sea` is the brand ground (here the high sky), `--sea-deep`
-     the deepest tone behind it, `--sea-shallow` the mid tone, `--foam` the
-     snow and `--buoy` the checkpoint flag. The app's own pass renames them
-     as it prunes the rules that read them. */
-  --sea: #6fa8dc;
-  --sea-deep: #0d2233;
-  --sea-shallow: #b9cde0;
+     TypeScript module. There is no third copy: this is a leaf. */
+  --sky-high: #6fa8dc;
   --sky: #cfe6f7;
-  --foam: #f4f8fb;
-  --buoy: #e8412c;
   --snow: #f4f8fb;
   --snow-shadow: #b9cde0;
   --track: #dfe7ee;
   --flag: #e8412c;
   --pine: #1f4a36;
-  --granite: #8d9298;
-  /* HOW FAR THE HUD'S CHROME IS DIPPED, 0..1 — the day value. `hud.tsx`
-     writes the live one onto `.hud` off the craft's own lamp switch, and
-     the ramp every token below it takes is documented there. It is stated
-     here as well so a rule that reads it from outside the HUD gets the
-     undipped chrome rather than an invalid declaration. */
-  --hud-dark: 0;
+  --pine-dark: #143326;
+  /* The deepest tone a card is washed toward — the HUD's own navy. */
+  --night: #0d2233;
   --hud-ink: #ffffff;
   /* THE CHROME'S OWN NAVY, as bare channels so every plate can still mix
      its own alpha off it — the glyph a letter is stamped in and the ground
-     under a button are one idea, and stating it once is what lets the night
-     dressing below take the whole of the chrome down with a single number.
-     The MENU cards mix their own: they are pages rather than instruments,
-     and none of them is ever read over moving water. */
+     under a button are one idea, stated once. */
   --hud-plate: 13 34 51;
   --hud-shadow: rgb(var(--hud-plate));
+  /* The SIGNAL colours: the flag's red is the way on and the thing a rider
+     is hunting for out on the snow; the alarm is every warning. */
   --hud-good: #e8412c;
   --hud-bad: #ff5a4e;
   --hud-info: #cfe6f7;
-  /* The minimap's plate, edge to edge — and with it the two presses under
-     it, which are sized off this and nothing else. The map is the instrument
-     that is read while the sea is still moving, so it is sized to be legible
-     at a glance rather than to be unobtrusive: at sixteen vmin a course of a
-     dozen gates was a smear of dots, and the gate a rider is actually aiming
-     at was the same two pixels as the one behind them.
-
-     The rem FLOOR is the term that carries a phone on its side, where vmin
-     is the SHORT edge and a map sized by it alone comes out half the size of
-     the one the same phone gets held upright. The cap is what stops a
-     desktop from being given a chart instead of a map. Matches the sibling
-     rally game's plate, which is the same instrument at the same reading
-     distance. */
-  --hud-map: clamp(6.24rem, 20.8vmin, 9.75rem);
-  /* The gap between the two glyph buttons. It is the one term of their size
-     that does NOT vary with the map, which is why it can live up here: their
-     diameter is `--hud-press` on `.hud`, computed against the map that
-     element currently has. A size computed HERE would be resolved against
-     `:root`'s own `--hud-map` and would keep the landscape map's proportions
-     on a phone held upright. */
-  --hud-mini-gap: 0.3rem;
+  /* THE TOP-RIGHT CLUSTER'S WIDTH — the row of three presses, sized to be
+     found at a glance from the corner of an eye that is on the track. The
+     rem FLOOR carries a phone on its side, where vmin is the short edge. */
+  --hud-cluster: clamp(8rem, 24vmin, 11rem);
+  /* The gap between the glyph buttons. Their diameter is `--hud-press` on
+     `.hud`, computed against the cluster width that element has. */
+  --hud-mini-gap: 0.35rem;
 
   /* WHERE THE PAGE IS VISIBLE. `--shell-height` is how tall the viewport is,
      and stays a UNIT — only a unit can reach past the layout viewport to the
@@ -96,7 +67,7 @@ body {
   height: var(--shell-height);
   overflow: hidden;
   overscroll-behavior: none;
-  background: var(--sea);
+  background: var(--sky-high);
   color: var(--hud-ink);
   touch-action: none;
   -webkit-user-select: none;
@@ -109,7 +80,7 @@ body {
 /* NO TEXT INTERACTION ANYWHERE — the loupe, the callout, the word select.
    iOS reads a double tap (and a press-and-hold) as the start of "put the
    caret somewhere" and answers it with a magnifying lens over the page. On a
-   document that is the point; on a game it is a lens over the water because
+   document that is the point; on a game it is a lens over the snow because
    a thumb bounced on the screen. Stated on EVERY element rather than
    inherited, because iOS decides from the element under the touch, and a
    UA-styled element never sees what the shell passed down. A surface that
@@ -138,7 +109,7 @@ canvas {
 /* iOS EDGE TO EDGE, and the fallback under the measured shell. A fixed,
    non-scrolling shell laid out with `inset: 0` stops at the LAYOUT viewport,
    which on iOS leaves a dead band along the bottom of the screen — the game
-   paints down to the layout edge and `body`'s own `--sea` fills the rest, a
+   paints down to the layout edge and `body`'s own `--sky-high` fills the rest, a
    flat blue strip under the instrument panel. Percentage heights
    (`height: 100%`) land in the same place for the same reason: the document
    stops at the letterboxed viewport instead of reaching under the home
@@ -180,7 +151,7 @@ canvas {
   }
 }
 
-/* The boot card: the name over the water while the game loads. */
+/* The boot card: the name over the snow while the game loads. */
 .boot {
   position: absolute;
   inset: 0;
@@ -189,20 +160,8 @@ canvas {
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  background: linear-gradient(180deg, var(--sea-deep) 0%, var(--sea) 100%);
+  background: linear-gradient(180deg, var(--night) 0%, var(--sky-high) 100%);
   text-shadow: 0 2px 0 var(--hud-shadow);
-}
-.boot-name {
-  font-size: clamp(2.4rem, 9vw, 5rem);
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-.boot-note {
-  font-size: 1rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--hud-info);
 }
 
 /* THE HUD's ground: a layer over the canvas that never takes the touch the
@@ -215,102 +174,20 @@ canvas {
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
     env(safe-area-inset-left);
 
-  /* ── THE NIGHT DRESSING: the cluster dips with the lamp ──────────────
-     A machine's instruments dip when its lamp goes on, and so do these.
-     `--hud-dark` is 0..1 — how lit the craft's own lamp is (`lampsAt`,
-     read into the snapshot as `dark` and written here by `hud.tsx`) — and
-     every colour below is a ramp along it. Nothing else on this screen
-     has an opinion about how dark it is.
-
-     THE REASON IS CONTRAST, NOT MOOD. Every colour here was mixed to hold
-     over a bright sea at noon: full white ink, a hard navy drop under
-     every glyph, plates in the arcade's own blue and a chart in the
-     corner with a sand-coloured shore on it. Over a coast lit by nothing
-     but the craft's lamp and a moon, that same chrome has several times
-     the contrast it needs and spends the surplus as glare — a screenful
-     of white sitting in front of the one thing the rider is straining to
-     see into, which is the dark past the end of the beam. The dip hands
-     the surplus back.
-
-     Three rules decide what moves and what does not:
-
-       * THE CHROME COMES DOWN A STOP, AND NEVER FURTHER. The ink goes off
-         pure white; the navy goes to nearly black, which takes the drop
-         under every glyph and the ground under every plate with it in one
-         number (`--hud-plate`).
-       * THE DRESSING LOSES ITS LIGHT; THE SIGNAL KEEPS IT. Note what is
-         NOT ramped here: `--hud-bad` and `--hud-good`. The red is every
-         warning the screen has — the redline, the brake, a missed gate,
-         the craft's own mark on the chart — and a warning lamp is the one
-         thing on a real cluster that never dims. The orange is the BUOY's
-         own, the colour the rider is hunting for out on the water, and the
-         gate on the chart has to keep agreeing with the gate in the frame.
-       * THE GLYPHS GET THEIR SHAPE BACK. The hard 1 px drop is a DAYLIGHT
-         tool — it thickens every letterform against a lit sea, which is
-         worth paying for at noon and not against a black coast. It fades
-         out as a soft one fades in, and the letters end the ramp the shape
-         they were drawn in.
-
-     AND IT RAMPS RATHER THAN SWITCHING, which is where this parts company
-     with the sibling rally game's version of the same idea. That car's
-     headlamps reach main beam on one frame, so its cluster dips on one
-     frame too; our lamp comes up smoothly over the four degrees either
-     side of the horizon, and a cluster that stepped while the lamp faded
-     would read as two machines. It is the same rule — the instruments
-     follow the lamp switch, never a light meter of their own — and it
-     comes out continuous here because the switch is a dimmer.
-
-     WHY THE LAMP AND NOT THE WORD UNDER THE CLOCK. `daylight` bands the
-     sun's elevation into dawn / day / dusk / night, and those bands are
-     about the SKY rather than about how much light is on the water: a
-     taiga winter noon at 62°N is a sun 8.9° up, which the bands call dusk
-     and the frame shows as the brightest hour that seed ever gets. Dipping
-     there would dim the HUD against its hardest background. */
-  --hud-ink: color-mix(in srgb, #ffffff, #d3dce8 calc(var(--hud-dark) * 100%));
-  --hud-info: color-mix(in srgb, #9cc6d8, #7a9db2 calc(var(--hud-dark) * 100%));
-  --hud-plate: calc(8 - 3 * var(--hud-dark)) calc(42 - 30 * var(--hud-dark))
-    calc(56 - 36 * var(--hud-dark));
-  /* Restated rather than left to `:root`'s alias: a `var()` inside a custom
-     property is substituted where the property is DECLARED, so the root's
-     `--hud-shadow` resolved against the root's own plate and would carry
-     the day navy down here however far this one ramps. */
-  --hud-shadow: rgb(var(--hud-plate));
   /* THE CHROME'S WHITE EDGE — the rim round a pressable plate, and the
-     line along a gauge's track. After the chart these are the brightest
-     things left in the corner of a night frame, and a 65% white rim was
-     drawn to be found against a SKY: against a black sea it only has to be
-     found. Both come down by the same share, and each keeps the daylight
-     weight it was drawn at — a button's rim and a gauge's track are set
-     apart on purpose, and the dip is not the place to relitigate that. */
-  --hud-edge: rgb(255 255 255 / calc(65% - 38% * var(--hud-dark)));
-  --hud-track: rgb(255 255 255 / calc(70% - 41% * var(--hud-dark)));
+     line along a gauge's track. */
+  --hud-edge: rgb(255 255 255 / 65%);
+  --hud-track: rgb(255 255 255 / 70%);
 
-  /* THE TWO PRESSES' DIAMETER, and the one statement of it. Two to the map's
-     width would be `(map - gap) / 2`; they are drawn at four fifths of that,
-     because a disc reads as a control at a glance where a rounded plate read
-     as another chip, and it no longer has to be map-sized to be found. The
-     pair therefore comes to less than the map's width, and the row it sits in
-     keeps that width and centres them in it (`.hud-action-stack`) — the
-     cluster stays one column down the right-hand edge rather than a chart
-     with a short row slipped to one end of it.
+  /* THE THREE PRESSES' DIAMETER, and the one statement of it: a third of
+     the cluster's width less the gaps. Declared HERE rather than in `:root`
+     because two subtrees need it — the buttons and `.hud-zone`'s clearance
+     over them — and a `var()` inside a custom property is substituted
+     against the element it is DECLARED on; `.hud` is the element the
+     portrait query re-declares `--hud-cluster` on, so both resolve together. */
+  --hud-press: calc((var(--hud-cluster) - 2 * var(--hud-mini-gap)) / 3);
 
-     It is declared HERE rather than beside `--hud-map` in `:root` because two
-     subtrees need it — the buttons themselves and `.hud-zone`'s clearance over
-     them — and a `var()` inside a custom property is substituted against the
-     element the property is DECLARED on. `:root` would freeze the landscape
-     map's proportions into a phone held upright; `.hud` is the element the
-     portrait query re-declares `--hud-map` on, so both resolve together. */
-  --hud-press: calc(0.8 * (var(--hud-map) - var(--hud-mini-gap)) / 2);
-  /* The gap BETWEEN the cluster's rows — the map and the row of presses under
-     it. Here rather than only on `.hud-topright` because `.hud-zone`'s
-     clearance is that cluster's height, and a term left out of it is a thumb
-     zone lying over a button: at 844×390 the row's foot came out one pixel
-     BELOW the glass before this was counted. */
-  --hud-cluster-gap: 0.5rem;
-
-  text-shadow:
-    0 1px 0 rgb(var(--hud-plate) / calc(100% - 78% * var(--hud-dark))),
-    0 1px 3px rgb(0 0 0 / calc(82% * var(--hud-dark)));
+  text-shadow: 0 1px 0 rgb(var(--hud-plate));
 }
 .hud button,
 .hud [data-touch] {
@@ -322,7 +199,7 @@ canvas {
    boxed unless it is a button. Sizes are `vmin`-clamped so the same layout
    reads on a phone held either way and on a desktop. */
 
-/* The run's own corner: the clock and the gate count on one row, the wind
+/* The run's own corner: the clock and the checkpoint count on one row, the wind
    vane on the next. All three are facts about how the run is going, and they
    are read down a single left-aligned column. */
 .hud-top {
@@ -333,12 +210,17 @@ canvas {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.45rem;
+  /* Never under the presses: the row WRAPS before it reaches the corner
+     they own, which on a phone held upright is what puts the chips on a
+     second line under the clock. */
+  max-width: calc(100% - var(--hud-cluster) - 2.6rem);
 }
 
 .hud-top-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
-  gap: 1rem;
+  gap: 0.35rem 1rem;
 }
 
 .hud-clock {
@@ -385,7 +267,7 @@ canvas {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: var(--hud-cluster-gap);
+  gap: 0.5rem;
 }
 
 /* THE NOTICE STANDING OVER A CARD (App.tsx): the front door is a layer of
@@ -399,31 +281,16 @@ canvas {
   z-index: 1600;
 }
 
-/* THE TWO PRESSES, side by side under the map: two targets a thumb finds
-   without leaving the water, hung off the one square in this corner whose
-   size and place the rider already knows (hud-actions.tsx).
-
-   THE ROW IS THE MAP'S WIDTH AND THE DISCS ARE CENTRED IN IT. They come to
-   less than the map now that they are drawn at four fifths of half of it
-   (`--hud-press`), and a pair that size pushed to one end reads as a row that
-   has slipped rather than as the foot of the cluster. Taking the map's width
-   HERE rather than leaning on `.hud-topright`'s own `align-items` is what
-   holds that true: the column is only as wide as its widest child, and the
-   diagnostics under it (`.hud-meters`, the frame cost) have no cap — a long
-   enough line there would widen the column and centre the presses under the
-   line instead of under the chart. */
+/* THE THREE PRESSES, side by side in the top-right corner: targets a thumb
+   finds without leaving the snow, in the corner the rider glances at between
+   checkpoints (hud-actions.tsx). The row is the cluster's width and the discs
+   share it, so a press added or taken out is one edit to `--hud-press`. */
 .hud-action-stack {
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  width: var(--hud-map);
+  width: var(--hud-cluster);
   gap: var(--hud-mini-gap);
-}
-
-/* The sun's clock, under the run row: the same chip, left-aligned like it. */
-.hud-sun {
-  align-items: flex-start;
-  text-align: left;
 }
 
 .hud-mini {
@@ -437,32 +304,20 @@ canvas {
   padding: 0.3rem 0.6rem;
   cursor: pointer;
   text-shadow: none;
-  /* The same as the map's plate above these two: no double-tap wait on a
-     press a rider makes mid-run, and the browser never claims the touch for
-     a gesture of its own halfway through one (`hud-press.ts`). */
+  /* No double-tap wait on a press a rider makes mid-race, and the browser
+     never claims the touch for a gesture of its own halfway through one
+     (`hud-press.ts`). */
   touch-action: manipulation;
   /* A button that squashes turns its glyph into a smear. */
   flex: none;
 }
 
 /* A GLYPH BUTTON is a DISC around its mark rather than a plate padded round a
-   word, and it is sized off the MINIMAP rather than off its own glyph — the
-   map above it is the one thing in this corner whose size the rider already
-   knows, and two presses at half its width come to exactly its edge.
-
-   IT IS ROUND BECAUSE IT IS THE ONLY THING IN THIS CORNER THAT IS PRESSED.
-   As a rounded square it wore the chips' own chrome, and the chips are read
-   and never touched — so the two controls over the water read as two more
-   readouts that happened to have pictures in them. A disc is the one shape on
-   this screen that can only be a button, and it is the shape of the thing
-   doing the pressing: the corners of a square target are area no thumb ever
-   lands on.
-
-   The flair is what keeps a disc from reading as a flat sticker — a sheen off
-   the top as if the sky were on it, a rim of light along its upper edge, and
-   a shadow it stands off the water on — and every part of it is mixed from
-   the night dressing's own tokens, so the pair dips with the lamp along with
-   everything else in the corner. */
+   word. IT IS ROUND BECAUSE IT IS THE ONLY THING IN THIS CORNER THAT IS
+   PRESSED: the chips are read and never touched, and a disc is the one shape
+   on this screen that can only be a button. The flair — a sheen off the top,
+   a rim of light along its upper edge, a shadow it stands off the snow on —
+   is what keeps it from reading as a flat sticker. */
 .hud-mini-icon {
   /* The halo the missed state hangs off is this element's own `::after`. */
   position: relative;
@@ -486,9 +341,9 @@ canvas {
     rgb(var(--hud-plate) / 62%)
   );
   /* The rim of light along the top of the moulding, and the shadow the disc
-     stands off the sea on — the same separation the map beside it is given. */
+     stands off the snow on — the same separation the map beside it is given. */
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / calc(28% - 16% * var(--hud-dark))),
+    inset 0 1px 0 rgb(255 255 255 / 28%),
     0 2px 3px rgb(0 0 0 / 45%);
   transition:
     transform 110ms ease,
@@ -504,9 +359,9 @@ canvas {
   outline: none;
   border-color: var(--hud-ink);
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / calc(34% - 18% * var(--hud-dark))),
+    inset 0 1px 0 rgb(255 255 255 / 34%),
     0 2px 3px rgb(0 0 0 / 45%),
-    0 0 10px rgb(255 255 255 / calc(20% - 10% * var(--hud-dark)));
+    0 0 10px rgb(255 255 255 / 20%);
 }
 
 /* ...and pressed, it goes INTO the panel: the crown's rim becomes a shadow
@@ -523,8 +378,8 @@ canvas {
    being a convenience and becomes the answer — and it is also the moment the
    rider is least likely to be remembering that the key is R, because he is
    turned round somewhere he did not mean to be. So the disc goes to the
-   warning colour and beats, on the SAME 900 ms heartbeat the missed gate
-   wears out on the chart (`.hud-minimap-missed-halo`): one machine saying one
+   warning colour and beats, on the SAME 900 ms heartbeat the missed checkpoint
+   warning pulses on over the nose (the missed-checkpoint warning over the nose): one machine saying one
    thing in two corners rather than two corners each having an idea. On
    `--hud-bad`, which the night dressing deliberately never dims.
 
@@ -539,7 +394,7 @@ canvas {
      WHICH way the arrow curls — the face keeps its own plate with a cast of
      the warning in it, just enough that the lamp is plainly lit, and the mark
      keeps the contrast it was drawn with. The urgency is carried by the rim,
-     the glow and the ring, which have the whole sea to be seen against. */
+     the glow and the ring, which have the whole snow to be seen against. */
   background: radial-gradient(
     118% 118% at 50% 2%,
     color-mix(in srgb, rgb(var(--hud-plate) / 88%), var(--hud-bad) 15%),
@@ -547,7 +402,7 @@ canvas {
     rgb(var(--hud-plate) / 68%)
   );
   box-shadow:
-    inset 0 1px 0 rgb(255 255 255 / calc(28% - 16% * var(--hud-dark))),
+    inset 0 1px 0 rgb(255 255 255 / 28%),
     0 2px 3px rgb(0 0 0 / 45%),
     0 0 12px color-mix(in srgb, var(--hud-bad) 45%, transparent);
 }
@@ -708,547 +563,6 @@ canvas {
   opacity: 1;
 }
 
-/* ── THE MINIMAP ─────────────────────────────────────────────────────────
-   A square of sea seen from above, under the wind chip in the corner a
-   rider already glances at. The plate's own ground is the DEEP water, so
-   the layers over it are everything that is not that.
-
-   The corner radius is derived from the ring's own geometry in minimap.tsx
-   (RING_R + RING_SW / 2, over a 100-unit box) so the chassis and the gauge
-   share one corner at every screen scale — change the constants there and
-   this number moves with them. */
-.hud-minimap {
-  position: relative;
-  display: block;
-  width: var(--hud-map);
-  height: var(--hud-map);
-  /* The plate's ground is the DEEPEST water — the bottom rung of the depth
-     ramp the two bands are drawn over, so it is set below `--sea-deep`
-     rather than at it: three tones that step have to step. After dark it is
-     the ground under the only lit rectangle left on the screen, so it goes
-     down with the rest of the chrome (`--hud-dark`, the night dressing on
-     `.hud`). */
-  background: color-mix(
-    in srgb,
-    color-mix(in srgb, var(--sea-deep), #041a26 34%),
-    #05101a calc(var(--hud-dark) * 62%)
-  );
-  border-radius: calc(var(--hud-map) * 0.175);
-  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 45%));
-  /* The schematic fills the whole box and runs off every side of it: the
-     plate's own corners are what cut it back to the shape of the frame. */
-  overflow: hidden;
-  /* THE PLATE IS A BUTTON — it is the way into the pause card, and on a
-     phone it is the only one (minimap.tsx). It wears no button chrome at
-     all: a border or a background here would be a second frame inside the
-     gauge ring that IS this thing's frame. */
-  appearance: none;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-  touch-action: manipulation;
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* Pressable, said the only way a frameless plate can say it: the whole map
-   lifts. `filter` restates the drop shadow because the two compose in one
-   property and the shadow is the plate's own separation from the sea. */
-.hud-minimap:hover,
-.hud-minimap:focus-visible,
-.hud-minimap.nav-cursor {
-  outline: none;
-  filter: drop-shadow(0 2px 3px rgb(0 0 0 / 45%)) brightness(1.14);
-}
-
-.hud-minimap:active {
-  transform: translateY(1px);
-}
-
-.hud-minimap-face,
-.hud-minimap-ring {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-}
-
-/* The coast: scaled for the speedo's zoom and slid to wherever the craft
-   has got since the paths were cut (minimap.tsx's `worldPose`). The origin
-   is written into the transform list itself, so this only has to make sure
-   nothing else is imposed on it. Tweened at the snapshot's own rate, so the
-   coast SCROLLS and BREATHES rather than stepping twelve times a second —
-   the same treatment the craft icon gets. */
-.hud-minimap-world {
-  transform-origin: 0 0;
-  transition: transform 120ms linear;
-}
-
-/* Every stroked line is held OFF the zoom: the window opening up at speed
-   has to mean more sea in the frame, not a thinner shoreline in it. The
-   fills scale with the world, because a bay really is a piece of ground and
-   the racing line at this framing really is not — it is a metre of truth
-   drawn twenty wide so it can be read at all. */
-.hud-minimap-shoreline,
-.hud-minimap-surf,
-.hud-minimap-route-case,
-.hud-minimap-route {
-  vector-effect: non-scaling-stroke;
-}
-
-/* THE SEA'S OWN SURFACE, under every band: a sparse swell running across
-   the water, the oldest mark on any chart for "this is not land".
-
-   It rides INSIDE the travelling group, so it slides past under the craft
-   and opens out as the window does — which is the difference between a map
-   of a sea and a map that reads as one being crossed. The bands over it are
-   translucent, so the swell carries through all three and only the shore
-   puts it out: every piece of water on the plate is textured, and no piece
-   of land is. */
-.hud-minimap-sea {
-  fill: url(#hud-map-swell);
-}
-
-.hud-minimap-swell {
-  fill: none;
-  stroke: rgb(160 214 230 / calc(23% - 9% * var(--hud-dark)));
-  stroke-width: 0.6;
-  stroke-linecap: round;
-}
-
-/* THE DEPTH RAMP — the shelf, then the shallows over it, then the shore.
-   Each is the whole region above its own level rather than a ring, so they
-   are drawn over one another and the ramp is what the eye adds up
-   (minimap-scene.ts's `bedBands`).
-
-   The hairline stroke on each is not decoration: a band is thousands of
-   abutting cell polygons, and abutting edges antialias into visible seams.
-   Stroking the path in its own fill closes them, and the group `opacity`
-   below is what keeps the overlaps from darkening where they meet. */
-.hud-minimap-shelf,
-.hud-minimap-shallows {
-  stroke-width: 0.35;
-  vector-effect: non-scaling-stroke;
-}
-
-/* Where the bottom has come up far enough to be worth knowing about, but
-   not far enough to be a warning. It is the band that tells a rider which
-   way the shore is when no shore is in the window at all. */
-.hud-minimap-shelf {
-  fill: var(--sea);
-  stroke: var(--sea);
-  opacity: calc(0.5 - 0.14 * var(--hud-dark));
-}
-
-/* Water shallow enough to stand a wave up and to ground a hull dropping off
-   one. The inner band of the ramp, and the only warning on the map that is
-   about the sea bed rather than about a thing on it. */
-.hud-minimap-shallows {
-  fill: var(--sea-shallow);
-  stroke: var(--sea-shallow);
-  opacity: calc(0.52 - 0.18 * var(--hud-dark));
-}
-
-/* THE SHORE, PAINTED AS WHAT IT IS. This coast is granite sliding into the
-   water under a pine wood, with bare headland where the trees stop — which
-   is what `terrain.ts` paints out in the world and therefore what the map
-   owes the rider. A flat beige for all of it read as a beach, and a beach
-   is the one thing most of this shore is not.
-
-   So: the land is WOODED GREEN, stippled with its own canopy, and the
-   ground over the tree line is bare STONE. The two tones are the world's,
-   pulled toward the light so they read at seven rem over dark water —
-   `--pine`/`--granite` are `identity.ts`'s, restated here the way the sea's
-   three already are. When a second coast lands, this pair is what a
-   biome-side table hands the map, the way `water-optics.ts` hands it the
-   sea's; one coast does not earn the table.
-
-   Muted all the same, because the rider is on the WATER: the sea is the
-   thing being read and the land is its edge, so the land may not be the
-   brightest mass on the plate.
-
-   THE SHORE IS ALSO THE BIGGEST BLOCK OF LIGHT ON A NIGHT SCREEN — a lit
-   window in the corner of the eye, and the first thing a rider's pupil
-   gives up the sea for — so both go to wet slate with the rest of the
-   chrome. What stands ON them does not: the gates, the craft's own mark and
-   the chevron are the signal, and they keep their colour. */
-.hud-minimap-ground {
-  fill: color-mix(
-    in srgb,
-    color-mix(in srgb, var(--pine), #b9c79a 44%),
-    rgb(30 37 45) calc(var(--hud-dark) * 82%)
-  );
-}
-
-.hud-minimap-grain {
-  fill: color-mix(in srgb, rgb(30 66 42 / 46%), rgb(14 19 26 / 46%) calc(var(--hud-dark) * 80%));
-}
-
-.hud-minimap-land {
-  fill: url(#hud-map-grain);
-}
-
-/* Over the tree line: bare rock, flat and paler than the wood under it, so
-   a headland reads as a headland rather than as a hole in the canopy. It
-   takes no stipple — the stipple IS the wood. */
-.hud-minimap-highland {
-  fill: color-mix(
-    in srgb,
-    color-mix(in srgb, var(--granite), #e2ddcc 30%),
-    rgb(44 50 58) calc(var(--hud-dark) * 80%)
-  );
-}
-
-/* The shoreline itself — the edge the whole course is measured off, drawn
-   twice: a pale surf line laid in the WATER along it, then the coast's own
-   dark edge over the top. The surf is the chart-maker's trick and it is
-   worth its one extra stroke — it is what stops the two sides of the line
-   being a matter of interpretation at seven rem, and it puts the brightest
-   thing on the plate in the water rather than on the sand. */
-.hud-minimap-surf {
-  fill: none;
-  stroke: rgb(226 244 250 / calc(52% - 24% * var(--hud-dark)));
-  stroke-width: 3.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.hud-minimap-shoreline {
-  fill: none;
-  stroke: rgb(12 44 58 / 78%);
-  stroke-width: 1.2;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* A rock that breaks the surface is a thing the rider can see and steer
-   round; a reef is not, which is exactly why it is on the map. So the
-   skerry is solid and the reef is hollow — the same told-apart-at-a-glance
-   trick the gates use, and it survives a screenshot with no colour in it. */
-.hud-minimap-rock {
-  fill: rgb(12 44 58 / 88%);
-}
-
-.hud-minimap-reef {
-  fill: rgb(12 44 58 / 22%);
-  stroke: rgb(12 44 58 / 70%);
-  stroke-width: 0.7;
-}
-
-/* The racing line, drawn twice: a dark casing, then the line over it. The
-   casing is what separates it from the water and the sand under it. */
-.hud-minimap-route-case {
-  fill: none;
-  stroke: rgb(6 30 42 / 70%);
-  stroke-width: 3.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.hud-minimap-route {
-  fill: none;
-  stroke: rgb(242 247 248 / calc(66% - 26% * var(--hud-dark)));
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-/* THE GATES. State is a COLOUR, never a shape: a gate does not stop being
-   the same pair of buoys when it is taken, and a rider learning one glyph
-   is a rider who can read the whole course. Every shape in a gate reads its
-   colour out of `--gate`, so a state is one class on the group. */
-.hud-minimap-gate {
-  --gate: rgb(242 247 248 / 62%);
-}
-
-.hud-minimap-gate-passed {
-  --gate: rgb(242 247 248 / 24%);
-}
-
-.hud-minimap-gate-missed {
-  --gate: var(--hud-bad);
-}
-
-/* The one being ridden for, in the buoys' own orange — the colour the rider
-   is looking for out on the water. */
-.hud-minimap-gate-next {
-  --gate: var(--buoy);
-}
-
-.hud-minimap-buoy {
-  fill: var(--gate);
-}
-
-.hud-minimap-gate-line {
-  fill: none;
-  stroke: var(--gate);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-}
-
-.hud-minimap-slalom-line {
-  fill: none;
-  stroke-width: 1.8;
-  stroke-linecap: round;
-  stroke-dasharray: 2.4 1.8;
-}
-
-.hud-minimap-slalom-left {
-  fill: var(--hud-bad);
-  stroke: var(--hud-bad);
-}
-
-.hud-minimap-slalom-right {
-  fill: var(--buoy);
-  stroke: var(--buoy);
-}
-
-.hud-minimap-gate-passed .hud-minimap-slalom-left,
-.hud-minimap-gate-passed .hud-minimap-slalom-right {
-  opacity: 0.34;
-}
-
-.hud-minimap-gate-ring {
-  fill: none;
-  stroke: var(--gate);
-  stroke-width: 1.6;
-  stroke-dasharray: 2.6 2;
-}
-
-/* ...and the halo that breathes out of whichever gate is next. It is what
-   makes the mark findable rather than merely present, which is the whole
-   point of it: the gate earns the halo when the rider has been knocked off
-   the line and the window holds three sets of buoys. */
-.hud-minimap-halo {
-  fill: none;
-  stroke: var(--buoy);
-  stroke-width: 1.2;
-  opacity: 0;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .hud-minimap-halo {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: minimap-halo 1.9s ease-out infinite;
-  }
-}
-
-/* Out of the gate and away. It fades as it goes, so the mark reads as one
-   thing pulsing rather than as two rings that happen to share a centre. */
-@keyframes minimap-halo {
-  0% {
-    opacity: 0.8;
-    transform: scale(0.5);
-  }
-
-  70%,
-  100% {
-    opacity: 0;
-    transform: scale(1);
-  }
-}
-
-/* A checkpoint just left behind keeps its red gate shape and gains a ring
-   with a quicker heartbeat. Reduced motion leaves the circle standing at
-   full strength: the warning survives even when its movement does not. */
-.hud-minimap-missed-halo {
-  fill: none;
-  stroke: var(--hud-bad);
-  stroke-width: 1.6;
-  opacity: 0.9;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .hud-minimap-missed-halo {
-    transform-box: fill-box;
-    transform-origin: center;
-    animation: minimap-missed-beat 900ms ease-in-out infinite;
-  }
-}
-
-@keyframes minimap-missed-beat {
-  0%,
-  100% {
-    opacity: 0.55;
-    transform: scale(0.78);
-  }
-
-  45% {
-    opacity: 1;
-    transform: scale(1.12);
-  }
-}
-
-/* What the next gate becomes once it is off the window: a wedge on the rim,
-   turned to point at it. The window is a few hundred metres across and the
-   legs between gates are over a hundred, so this is the state the mark is in
-   whenever the rider has lost the line — and it is the whole reason the map
-   survives no longer showing the course end to end. */
-.hud-minimap-chevron {
-  fill: var(--buoy);
-  stroke: rgb(6 30 42 / 80%);
-  stroke-width: 1;
-  stroke-linejoin: round;
-}
-
-/* The run's two ends, as flags on a staff standing at the place itself.
-   Squared for the finish, swallow-tailed for the start, so the pair read
-   apart in a screenshot with no colour in it at all. */
-.hud-minimap-end {
-  stroke: rgb(6 30 42 / 80%);
-  stroke-width: 0.9;
-  stroke-linejoin: round;
-}
-
-.hud-minimap-end-start {
-  fill: var(--hud-info);
-}
-
-.hud-minimap-end-finish {
-  fill: var(--foam);
-}
-
-/* THE CRAFT, in the middle of the window — the one glyph that never moves,
-   because the window is centred on it. Only its heading changes, and that is
-   tweened between the HUD's 12 Hz snapshots, like the wind meter, so the icon
-   swings instead of stepping.
-
-   It is the one mark on the plate that must be findable over ANY ground —
-   near-black deep water, a pale beach, the route's white ribbon — so it is
-   built out of its own contrast rather than out of a colour chosen to beat
-   one background (minimap.tsx). Held off the zoom entirely: the icon is a
-   glyph, not a piece of the world, and a craft that shrank as the window
-   opened would be a craft that disappeared exactly when the map got busy. */
-.hud-minimap-craft {
-  transition: transform 120ms linear;
-}
-
-/* The disc under the lot. Dark and soft-edged, so the glyph always has the
-   same ground however loud the water under it is. */
-.hud-minimap-craft-plinth {
-  fill: rgb(4 20 30 / 34%);
-  stroke: rgb(4 20 30 / 18%);
-  stroke-width: 2.2;
-}
-
-/* The heading thrown forward of the bow — the one mark on the plate a rider
-   reads without looking at the plate. Faint on purpose: it is a direction,
-   not a route, and it must not be mistaken for the racing line. */
-.hud-minimap-craft-ray {
-  fill: rgb(255 255 255 / 20%);
-}
-
-/* `paint-order` is what makes the outline a HALO rather than a bite: a
-   centred stroke on a glyph eight units wide spends half its width eating
-   the hull it is meant to be separating, and the icon came back reading as
-   a white blob with a red middle. Drawn stroke-first, the whole width lands
-   outside the fill and the hull keeps its own shape. */
-.hud-minimap-craft-hull,
-.hud-minimap-craft-sponsons {
-  paint-order: stroke fill;
-  stroke-linejoin: round;
-}
-
-.hud-minimap-craft-hull {
-  fill: var(--hud-bad);
-  stroke: rgb(250 252 253 / 92%);
-  stroke-width: 1.5;
-}
-
-.hud-minimap-craft-seat {
-  fill: rgb(8 32 52 / 70%);
-}
-
-.hud-minimap-craft-sponsons {
-  fill: rgb(12 40 54 / 92%);
-  stroke: rgb(250 252 253 / 55%);
-  stroke-width: 0.9;
-}
-
-/* THE BOW, as an arrowhead struck INTO the hull's own colour. A hull this
-   small is nearly symmetric fore and aft, and a rider glancing at the map
-   has to come away with the heading and not merely with the position — so
-   the mark that carries it is set in the darkest ink on the glyph rather
-   than in the light the outline is already drawn in, where it read as the
-   halo bleeding round the nose. */
-.hud-minimap-craft-bow {
-  fill: rgb(8 32 52 / 82%);
-}
-
-/* THE FIELD on the plate: the same ink as the rocks' halo, so the eye reads
-   eleven of them as traffic and finds the red hull among them. */
-.hud-minimap-rival {
-  fill: rgb(250 252 253 / 78%);
-  stroke: rgb(8 32 52 / 80%);
-  stroke-width: 0.7;
-  paint-order: stroke fill;
-  transition: transform 120ms linear;
-}
-
-.hud-minimap-ring-track {
-  fill: none;
-  stroke: rgb(255 255 255 / 22%);
-}
-
-.hud-minimap-ring-fill {
-  fill: none;
-  stroke: var(--hud-good);
-  stroke-linecap: round;
-  transition: stroke-dasharray 160ms linear;
-}
-
-/* THE SCALE RULE, drawn in the face's own units so the bar it lays down IS
-   the distance its word claims. It has a casing for the same reason the
-   route does: a bare hairline over a textured sea has no edge of its own. */
-.hud-minimap-rule {
-  fill: none;
-  stroke: rgb(242 247 248 / calc(82% - 26% * var(--hud-dark)));
-  stroke-width: 1.3;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  paint-order: stroke;
-  filter: drop-shadow(0 0 1.2px rgb(4 20 30 / 90%));
-}
-
-/* THE FOOT: the rule's word on the left, the run's next gate on the right.
-   A centred figure stands ON a plate this size rather than under it and
-   crosses whatever water lies beneath. Split to the two corners, both halves
-   are read at a glance and the coast between them is still coast. */
-.hud-minimap-foot {
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 3.5%;
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  padding: 0 7%;
-  font-size: clamp(0.4rem, 1.25vmin, 0.54rem);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.06em;
-  pointer-events: none;
-  /* Both words sit over moving water, so each carries its own shadow rather
-     than a plate: a chip in this corner would be a second frame inside the
-     gauge that IS this thing's frame. */
-  text-shadow: 0 0 3px rgb(4 20 30 / 95%);
-}
-
-/* The rule's word is a CAPTION — it says what the picture is worth, which is
-   a thing read once a minute. The readout beside it is a number that changes
-   every second and is read at a glance, so the two are not set the same. */
-.hud-minimap-scale {
-  font-size: 0.82em;
-  opacity: 0.8;
-}
-
-.hud-minimap-read {
-  font-weight: 700;
-  opacity: 0.96;
-}
-
 /* The bottom-left corner is the instrument panel: revs over speed. */
 .hud-speed {
   position: absolute;
@@ -1258,212 +572,6 @@ canvas {
   flex-direction: column;
   align-items: flex-start;
   gap: 0.25rem;
-}
-
-/* THE MOVING INSTRUMENTS, standing side by side on the speed cluster
-   (hud-dial.tsx). AN ORDINARY GAP: the live space the altitude figure needs
-   to its right is reserved by the column that owns it (`.hud-alt`), which is
-   the only thing on this row that knows how wide that figure gets. A gap
-   picked wide enough to clear it instead carried the wind meter out past the
-   rev bar and the speedo under it, and a corner whose three rows start at one
-   edge and end at three different ones does not read as one panel. */
-.hud-instruments {
-  display: flex;
-  align-items: flex-start;
-  gap: clamp(0.6rem, 2vmin, 1.1rem);
-  margin-bottom: 0.15rem;
-}
-
-/* THE ALTITUDE TAPE. The
-   track is narrow on purpose: nothing is read OFF it — the figure riding
-   the marker says the number — so its whole job is to show the marker's
-   TRAVEL, and a wide bar there would be chrome over the water for no
-   reading. Its height is what it spends instead, because travel is the
-   only thing a tape has to say with.
-
-   Everything in it takes the dressing's own tokens, so the instrument dips
-   with the lamp along with the rev bar under it. */
-.hud-alt {
-  /* The tape's two sizes, declared on the COLUMN rather than on the parts
-     that wear them, because the column's own width is derived from both. */
-  --hud-tape-width: clamp(0.4rem, 1.3vmin, 0.55rem);
-  --hud-tape-figure: clamp(0.85rem, 2.4vmin, 1.2rem);
-  --hud-tape-figure-gap: 0.45rem;
-
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  /* THE LIVE SPACE THE FIGURE NEEDS, reserved here rather than by the gap to
-     whatever stands next in the row. The figure is OUT OF FLOW — it rides the
-     marker's height, so the column's content box is the caption's width and
-     says nothing about how far right the number reaches. The reserve is the
-     track, the figure's own gap off it, and the widest reading
-     `STRINGS.altitude` prints in practice ("188.6 m", 4.69 of the figure's
-     own em; a three-figure TROUGH is not a thing the sea does). In `em` of
-     that font rather than in px, so it holds at every step of the clamp. */
-  min-width: calc(
-    var(--hud-tape-width) + var(--hud-tape-figure-gap) + 4.8 * var(--hud-tape-figure)
-  );
-  /* Enough that the FIGURE still clears the caption with the marker at the
-     very foot of the track: it is centred on the marker's line, so half its
-     own height hangs below the tape, and a rider deep in an ocean trough is
-     exactly when this readout is worth having. */
-  gap: 0.7rem;
-}
-
-/* THE WIND METER, immediately to the tape's right. The plate is an oblique
-   plane and the arrow has a dark offset face under its lit face: together
-   they read as a thick object laid on a small console rather than as a flat
-   icon. It points where the wind is GOING relative to the craft's nose, so
-   straight up is a tailwind and the whole object turns as the craft turns. */
-.hud-wind {
-  display: flex;
-  width: clamp(4.4rem, 14vmin, 6.4rem);
-  flex-direction: column;
-  align-items: center;
-  line-height: 1;
-  text-align: center;
-}
-
-.hud-wind-dial {
-  display: block;
-  width: 100%;
-  height: clamp(3.3rem, 10vmin, 4.7rem);
-  overflow: visible;
-  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 48%));
-}
-
-.hud-wind-plate {
-  fill: rgb(var(--hud-plate) / 56%);
-  stroke: var(--hud-track);
-  stroke-width: 1.4;
-}
-
-.hud-wind-ring,
-.hud-wind-cross {
-  fill: none;
-  stroke: var(--hud-track);
-  stroke-width: 0.8;
-  opacity: 0.72;
-}
-
-.hud-wind-cross {
-  stroke-dasharray: 2 4;
-}
-
-.hud-wind-arrow {
-  transform-origin: 43px 32px;
-  transition: transform 90ms linear;
-}
-
-.hud-wind-arrow-side {
-  fill: color-mix(in srgb, var(--hud-info) 48%, rgb(var(--hud-plate)));
-}
-
-.hud-wind-arrow-face {
-  fill: var(--hud-info);
-  stroke: var(--hud-ink);
-  stroke-width: 0.8;
-  paint-order: stroke fill;
-}
-
-.hud-wind-arrow-facet {
-  fill: color-mix(in srgb, var(--hud-info) 64%, var(--hud-ink));
-  opacity: 0.62;
-}
-
-.hud-wind-reading {
-  margin-top: -0.12rem;
-  font-size: clamp(0.82rem, 2.35vmin, 1.12rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hud-wind-arrow {
-    transition: none;
-  }
-}
-
-.hud-tape {
-  position: relative;
-  width: var(--hud-tape-width);
-  height: clamp(4.5rem, 16vmin, 7.5rem);
-  border-radius: 2px;
-  background: rgb(var(--hud-plate) / 55%);
-  /* The rev bar's outline, as an INSET ring so the track's own percentages
-     still measure the whole of it. Without it the empty headroom above the
-     marker is invisible over a dark sea, and an instrument whose travel
-     cannot be seen has nothing to say. */
-  box-shadow:
-    inset 0 0 0 1px var(--hud-track),
-    0 2px 2px rgb(0 0 0 / 40%);
-}
-
-/* THE STILL-WATER LINE, drawn across the track and past both its edges so
-   it reads as a datum rather than as part of the fill. Everything above it
-   is air and everything below it is a trough. */
-.hud-tape-zero {
-  position: absolute;
-  left: -0.25rem;
-  right: -0.25rem;
-  height: 0;
-  border-top: 1px solid var(--hud-track);
-}
-
-/* ...and the fill FROM that line to the marker, which is why it carries
-   both ends rather than a height alone: it grows downward as readily as up. */
-.hud-tape-fill {
-  position: absolute;
-  left: 0;
-  right: 0;
-  border-radius: 2px;
-  background: var(--hud-ink);
-  /* Tweened between the HUD's 12 Hz snapshots, as the rev bar's fill is. */
-  transition:
-    bottom 90ms linear,
-    height 90ms linear;
-}
-
-/* THE RUN'S HIGH-WATER MARK: a tick left standing at the highest the run
-   has been, so a rider can see his own best against where he is now without
-   a word being printed. On the vane's colour rather than the buoy orange —
-   a peak is a reading, not a warning, and it comes down with the lamp like
-   the rest of the dressing. */
-.hud-tape-peak {
-  position: absolute;
-  left: -0.2rem;
-  right: -0.2rem;
-  height: 0;
-  border-top: 2px solid var(--hud-info);
-  transition: bottom 200ms ease-out;
-}
-
-/* THE MARKER, and the FIGURE riding beside it — the one thing on this
-   screen whose POSITION is the reading. It overhangs the track at both
-   edges so the eye finds it against the fill it caps. */
-.hud-tape-mark {
-  position: absolute;
-  left: -0.3rem;
-  right: -0.3rem;
-  height: 0;
-  border-top: 2px solid var(--hud-ink);
-  transition: bottom 90ms linear;
-}
-
-.hud-tape-num {
-  position: absolute;
-  left: 100%;
-  top: 0;
-  transform: translateY(-50%);
-  margin-left: var(--hud-tape-figure-gap);
-  font-size: var(--hud-tape-figure);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
 
 .hud-revs-row {
@@ -1534,7 +642,7 @@ canvas {
 }
 
 /* THE MISSED CHECKPOINT GUIDE. One quarter of the way down the frame, centred:
-   below the two top clusters, above the craft and the water the rider is
+   below the two top clusters, above the sled and the snow the rider is
    turning back across. The transparent slot
    is filled by camera-space geometry (`checkpoint-arrow.ts`), with the live
    distance directly below it so the three parts read top to bottom as one
@@ -1562,12 +670,6 @@ canvas {
   white-space: nowrap;
 }
 
-.hud-missed-arrow-slot {
-  display: block;
-  width: clamp(4rem, 12vmin, 6rem);
-  height: clamp(4rem, 12vmin, 6rem);
-}
-
 .hud-missed-distance {
   color: var(--hud-ink);
   font-size: clamp(0.78rem, 2.5vmin, 1.15rem);
@@ -1577,7 +679,7 @@ canvas {
 }
 
 /* THE AIR CLOCK, top centre — over the nose where the rider is aiming, and
-   drawn only while the hull is off the water. Centred on the frame rather
+   drawn only while the sled is off the snow. Centred on the frame rather
    than laid out between the two top corners: it is never up at the same
    time as anything that would crowd it, and a number that moved sideways
    with the clock's width would be harder to read at a glance than one that
@@ -1610,8 +712,8 @@ canvas {
      the frame instead of up under the notch.
 
      It arrives by FADING: this is the one readout that appears mid-run, and
-     a number that pops into the middle of the frame at the moment the hull
-     leaves the water is a flinch where the rider wanted a reading. */
+     a number that pops into the middle of the frame at the moment the sled
+     leaves the snow is a flinch where the rider wanted a reading. */
   --air-grow: 0;
   --air-size: clamp(2.5rem, 9vmin, 4.4rem);
   transform: translateX(-50%) scale(calc(1 + 0.5 * var(--air-grow)));
@@ -1635,36 +737,10 @@ canvas {
   align-items: center;
 }
 
-/* THE TWO HALVES OF ONE JUMP, side by side: how long it held him up and how
-   far it carried him. A ROW rather than a second line under the first,
-   because they are one reading of one flight and a rider takes them in one
-   glance — and on a BASELINE, so the big figure and the small one sit on the
-   same line of type instead of reading as a stack.
-
-   The pair is what keeps the centreline, not the clock alone. That is safe
-   because the two arrive and leave together: both are gated on the same
-   flight past the same line, so nothing here slides sideways mid-jump. The
-   one time the metres stand down is a spell UNDER the water, where the tile
-   has changed regime anyway and the seconds re-centring says so. */
-.hud-air-reads {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5em;
-}
-
 .hud-air-read {
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-/* The metres are the quieter of the two to LOOK at and the equal of it to
-   earn. Smaller because the clock is the anchor a rider's eye already knows
-   where to find on a frame he is not really looking at — and because two
-   figures at the full size is a tile half the width of a phone at the top of
-   a flight worth the whole of `--air-grow`. */
-.hud-air-len .hud-air-num {
-  font-size: calc(var(--air-size) * 0.62);
 }
 
 .hud-air-num {
@@ -1714,24 +790,7 @@ canvas {
   }
 }
 
-/* ── THE SCORE ─────────────────────────────────────────────────────────────
-   Two readouts of one thing, and the split is what a rider does with each.
-
-   `.hud-score` is the TOTAL, a chip at the foot of the top-left column with
-   the run's other settled facts. It is not animated except at the moment it
-   changes: hud.tsx keys the chip on the figure, so a banked combo mounts a
-   new element and this plays once. A number that crept up to its new value
-   would be read as a number still moving; one that arrives with a thump is
-   read as one that has landed.
-
-   `.hud-combo` is the MOMENT, under the air clock in the centre column,
-   riding inside `.hud-air` so it grows with the flight and shares the
-   centreline. It is the loud one because it is the one that can still be
-   taken away. */
-.hud-score {
-  animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
-}
-
+/* THE PLACE's beat: a place gained or lost lands with a thump. */
 @keyframes hud-score-bank {
   0% {
     transform: scale(1);
@@ -1743,153 +802,6 @@ canvas {
   100% {
     transform: scale(1);
   }
-}
-
-/* THE TRICK LINE — the names, over the figure. The arcade skating games
-   this scoring is borrowed from put it exactly here, and the reasons hold
-   on water: a rider mid-flight is looking at the horizon over his nose, the
-   line has to be legible in the corner of an eye that is busy, and it has
-   to read over ANY background, because what is behind it is whatever the
-   sea happens to be doing.
-
-   So it is the loudest type on this screen — all caps, tracked wide,
-   heavy — and it carries a real OUTLINE rather than the drop shadow the
-   rest of the HUD gets: four hard offsets plus the drop, which is the
-   cheapest way to a hard rim on every side without a paint-order trick, and
-   the one thing that keeps white type readable over a white crest.
-
-   It is sized off the same `--air-size` as the clock above it and comes out
-   a little under half of it: big enough to be the second thing read, small
-   enough that a five-element line at 390 px still fits between the two top
-   corners (`white-space: nowrap` on `.hud-air` would otherwise push it
-   under the map). */
-.hud-trick {
-  margin-top: 0.45em;
-  /* Wide enough to hold a long line and no wider — and divided by the
-     growth the COLUMN is being scaled by (`--air-grow` on `.hud-air`), so
-     the limit is the same share of the screen whether the tile is at its
-     floor or half again as big for a flight the tornado dealt. Without the
-     divisor a long line over a big flight is laid out to 92vw and then
-     scaled past the edge of the glass. */
-  max-width: calc(92vw / (1 + 0.5 * var(--air-grow)));
-  font-size: calc(var(--air-size) * 0.42);
-  font-weight: 800;
-  line-height: 1.05;
-  letter-spacing: 0.08em;
-  color: var(--hud-ink);
-  white-space: normal;
-  text-shadow:
-    1px 0 0 var(--hud-shadow),
-    -1px 0 0 var(--hud-shadow),
-    0 1px 0 var(--hud-shadow),
-    0 -1px 0 var(--hud-shadow),
-    0 3px 0 var(--hud-shadow);
-  animation: hud-trick-in 320ms cubic-bezier(0.16, 1.5, 0.36, 1);
-}
-
-/* Each new element mounts a fresh line (hud.tsx keys it on the text), so
-   this plays once per element won — the same beat the multiplier takes,
-   from the other direction: the name arrives squashed and springs out to
-   its width, where the rung drops onto its number from above. */
-@keyframes hud-trick-in {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.3;
-  }
-  60% {
-    transform: scale(1.06);
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.hud-combo {
-  display: flex;
-  align-items: baseline;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 0.3em;
-  margin-top: 0.3em;
-  line-height: 1;
-  white-space: nowrap;
-  color: var(--hud-good);
-  animation: hud-air-in 220ms ease-out;
-}
-
-.hud-combo-num {
-  font-size: clamp(1.25rem, 4.2vmin, 2rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-}
-
-/* THE MULTIPLIER, and the BEAT. Every rung won mounts a fresh element
-   (hud.tsx keys it on the value), so this plays exactly once per rung —
-   which is the "another multiplier" the beat is for. It overshoots and
-   settles rather than pulsing forever: a rung is an event, not a state, and
-   something that kept beating would be indistinguishable from the record
-   clock breathing a line above it. */
-.hud-combo-mult {
-  font-size: clamp(1.5rem, 5vmin, 2.5rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  /* NOT the points' colour. They sit on one line with a space between them
-     and they are two different readings — what the combo is worth, and the
-     rung it is being paid at — so a rider glancing at them has to be able
-     to tell which figure is which without reading either. Taking the ink
-     while the points keep the good colour is what separates them, and it is
-     the split the arcade games this is borrowed from use. */
-  color: var(--hud-ink);
-  animation: hud-combo-beat 420ms cubic-bezier(0.16, 1.5, 0.36, 1);
-}
-
-@keyframes hud-combo-beat {
-  0% {
-    transform: scale(2.1);
-    opacity: 0.25;
-  }
-  55% {
-    transform: scale(1.12);
-    opacity: 1;
-    text-shadow:
-      0 1px 0 var(--hud-shadow),
-      0 0 0.5em var(--hud-good);
-  }
-  100% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
-
-.hud-combo-label {
-  width: 100%;
-  text-align: center;
-}
-
-/* The two ways a combo ends. BANKED goes with the score chip's colour — it
-   is the same points, now in the corner — and BAILED turns the whole tile
-   over to the bad colour and strikes the figure through, because the number
-   still standing there is what the rider no longer has. */
-.hud-combo-bailed {
-  color: var(--hud-bad);
-}
-
-.hud-combo-bailed .hud-combo-num {
-  text-decoration: line-through;
-}
-
-/* A combo thrown away takes its NAMES with it: the line is still there for
-   the moment the tile is held, struck through beside the figure, because
-   what the rider lost is the whole string and not just the number. The
-   phase comes down from hud.tsx as a class of its own rather than being
-   read off the tile below with `:has()` — the line is drawn ABOVE the tile,
-   so a sibling selector would have to look forwards, and the rasterizer
-   that bakes this HUD into a screenshot should not have to. */
-.hud-trick-bailed {
-  color: var(--hud-bad);
-  text-decoration: line-through;
 }
 
 /* The bottom-right corner: the news column, with the new-build mark pinned
@@ -1961,7 +873,7 @@ canvas {
   }
 }
 
-/* §38.3 — the build corner: which build, which stage, which craft. Small,
+/* §38.3 — the build corner: which build, which map. Small,
    under the instrument panel's line of sight, never in the way. */
 .hud-build {
   position: absolute;
@@ -1981,40 +893,6 @@ canvas {
   pointer-events: auto;
 }
 
-/* THE DIAGNOSTICS, under the minimap: the frame rate and the frame cost.
-   Right-aligned under the map's own edge, stacked rather than in a row —
-   the cost line is long and the map is narrow, and a line that grew leftward
-   across the screen would be a readout wandering over the water.
-
-   Tabular figures because both lines change several times a second: without
-   them a rate crossing from 99 to 100 shifts everything beside it, which is
-   the one thing that makes a corner readout hard to read. */
-.hud-meters {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 0.1rem;
-  text-align: right;
-  font-size: clamp(0.5rem, 1.5vmin, 0.7rem);
-  letter-spacing: 0.06em;
-}
-
-.hud-meter {
-  color: var(--hud-ink);
-  font-variant-numeric: tabular-nums;
-  opacity: 0.9;
-  text-shadow: 0 1px 2px var(--hud-shadow);
-  white-space: nowrap;
-}
-
-/* THE LAST TEN SECONDS of a timed run: the clock goes the news column's
-   red and breathes, so a rider mid-combo knows the buzzer is close without
-   reading the figure. */
-.hud-clock-low .hud-clock-time {
-  color: var(--hud-bad);
-  animation: hud-clock-low 1s ease-in-out infinite;
-}
-
 @keyframes hud-clock-low {
   50% {
     opacity: 0.55;
@@ -2027,22 +905,10 @@ canvas {
   animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 
-/* THE GAP TO THE GHOST. The two tones the news column already speaks in, so
-   up and down read the same way here as they do there — and the colour is on
-   the FIGURE alone: the caption under it says what the number is about and
-   would only be shouting the same thing twice. */
-.hud-ghost > span:first-child {
-  color: var(--hud-good);
-}
-
-.hud-ghost-down > span:first-child {
-  color: var(--hud-bad);
-}
-
 /* THE LIGHTS. Dead centre, as big as the frame allows, and each one arrives
    with a punch and fades as its second runs out — the same beat the sound
    makes. Nothing is under the pointer here: the whole box lets presses
-   through to the water. */
+   through to the snow. */
 .hud-lights {
   pointer-events: none;
 }
@@ -2123,14 +989,6 @@ canvas {
   opacity: 0.8;
 }
 
-.hud-result-best {
-  font-size: clamp(0.9rem, 3vmin, 1.3rem);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--hud-good);
-  animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
-}
-
 .hud-result-note {
   margin-top: 0.3rem;
   opacity: 0.7;
@@ -2167,132 +1025,6 @@ canvas {
   color: var(--hud-info);
 }
 
-/* ── THE REPLAY BAR ──────────────────────────────────────────────────────
-   The strip over a run being WATCHED (hud-replay.tsx). Top centre, between
-   the two corners the HUD already owns — the clock on the left, the map and
-   the place on the right — and never wider than the gap between them: it
-   gives up its own lines before it reaches either, because the readouts are
-   reading the recording and are part of what is being watched.
-
-   `pointer-events` is claimed on the bar alone rather than on `.hud`, the way
-   every other pressable thing over the water claims it. */
-.hud-replay {
-  position: absolute;
-  /* `.hud` is transparent to the pointer; everything pressable over the
-     water claims it back for itself. */
-  pointer-events: auto;
-  top: max(0.6rem, env(safe-area-inset-top));
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.45rem;
-  max-width: min(44vw, 30rem);
-  padding: 0.55rem 1.1rem;
-  background: rgb(var(--hud-plate) / 74%);
-  border: 2px solid var(--hud-edge);
-  border-radius: 0.6rem;
-  text-align: center;
-}
-
-/* THE BAR'S OWN LAYER (App.tsx): a second `.hud` over the first, carrying
-   nothing but the bar. It exists so the HUD switch cannot take away the only
-   way out of a recording — the same exemption the new-build notice has. */
-.hud-replay-layer {
-  z-index: 2;
-}
-
-.hud-replay-text {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.hud-replay-label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: clamp(0.6rem, 1.7vmin, 0.78rem);
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  color: var(--hud-info);
-}
-
-/* THE PICTURE IS RUNNING SLOW, said in a word. Slow motion belongs to the
-   shot rather than to a setting (replay-shots.ts), so without this a rider
-   reads a third-speed backflip as a machine dropping frames. It pulses, which
-   is the one animation on this bar: a static word beside a static label reads
-   as part of the label. */
-.hud-replay-slow {
-  padding: 0.1rem 0.4rem;
-  border-radius: 0.3rem;
-  background: rgb(242 140 40 / 82%);
-  color: rgb(8 42 56);
-  animation: hud-replay-slow 1.1s ease-in-out infinite;
-}
-
-@keyframes hud-replay-slow {
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.55;
-  }
-}
-
-.hud-replay-title {
-  font-size: clamp(0.95rem, 3vmin, 1.35rem);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-.hud-replay-line {
-  font-size: clamp(0.65rem, 1.9vmin, 0.85rem);
-  color: var(--hud-info);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-/* HOW FAR THROUGH, as a rule. Scaled rather than sized, so the frame it moves
-   on costs no layout. */
-.hud-replay-bar {
-  width: 100%;
-  height: 3px;
-  margin-top: 0.3rem;
-  border-radius: 2px;
-  background: rgb(242 247 248 / 22%);
-  overflow: hidden;
-}
-
-.hud-replay-fill {
-  height: 100%;
-  background: var(--buoy);
-  transform-origin: left center;
-}
-
-.hud-replay-acts {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-}
-
-.hud-replay-note {
-  font-size: clamp(0.58rem, 1.6vmin, 0.72rem);
-  color: var(--hud-info);
-  white-space: nowrap;
-}
-
 /* THE WAYS ON, at the foot of the finish plate: presses made on a card rather
    than mid-ride, so they want room above them rather than a thumb zone. They
    WRAP — three words side by side is more than a phone held upright can take
@@ -2314,16 +1046,68 @@ canvas {
   padding: 0.45rem 0.9rem;
 }
 
-/* A phone held upright has no room between the corners for either, so the
-   note goes and the bar takes what is left. */
-@media (max-aspect-ratio: 1 / 1) {
-  .hud-replay {
-    max-width: min(76vw, 26rem);
-  }
+/* THE SPLIT: the clock at the checkpoint just taken, landing with the
+   place chip's own thump, in the flag's colour so it reads as news. */
+.hud-split {
+  animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
 
-  .hud-replay-note {
-    display: none;
-  }
+.hud-split > span:first-child {
+  color: var(--hud-good);
+}
+
+/* THE ARROW BACK: a chevron in the warning colour, turned by the HUD to point
+   at the checkpoint that is owed. The turn is a transform tweened across the
+   snapshot's twelve ticks a second, so the arrow swings rather than steps. */
+.hud-missed-arrow {
+  display: block;
+  width: clamp(3.2rem, 10vmin, 5rem);
+  height: clamp(3.2rem, 10vmin, 5rem);
+  margin: 0.2rem 0;
+  fill: var(--hud-bad);
+  stroke: var(--hud-shadow);
+  stroke-width: 4;
+  stroke-linejoin: round;
+  transition: transform 90ms linear;
+  filter: drop-shadow(0 2px 2px rgb(0 0 0 / 40%));
+}
+
+/* THE FIELD'S TABLE on the finish plate: place, name, time — a results
+   sheet, in the HUD's own condensed capitals, the rider's own row lit. */
+.hud-standings {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  font-size: clamp(0.8rem, 2.4vmin, 1.05rem);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+}
+
+.hud-standing {
+  display: grid;
+  grid-template-columns: 1.6em 1fr auto;
+  gap: 0.6rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 0.3rem;
+  background: rgb(var(--hud-plate) / 35%);
+}
+
+.hud-standing-you {
+  color: var(--hud-good);
+  background: rgb(var(--hud-plate) / 70%);
+}
+
+.hud-standing-place {
+  font-weight: 700;
+  text-align: right;
+}
+
+.hud-standing-time {
+  text-align: right;
 }
 
 /* ── THE TOUCH CONTROLS ──────────────────────────────────────────────────
@@ -2331,26 +1115,16 @@ canvas {
    middle. The bar or the lever anchors wherever the thumb lands in its zone.
 
    WHY A PROPORTION, AND WHY IT IS A FLOOR RATHER THAN THE WHOLE RULE. The
-   readouts and their two presses (RESET and CAMERA, hung under the map) are
-   sized in clamped rem, so the top-right cluster is a FIXED number of pixels
-   tall while the zone's top is a fraction of the viewport. The shorter the
-   screen, the further the zone climbs into that cluster, and a zone that
-   reaches a button eats the press: at 375×667 a bare 22% covered the
-   cluster's foot completely, so tapping a button there opened the throttle
-   instead.
+   presses in the top-right corner are sized in clamped rem, so that cluster
+   is a FIXED number of pixels tall while the zone's top is a fraction of the
+   viewport — and a zone that reaches a button eats the press. So the top is
+   the LOWER of the two: two fifths of the way down, unless the cluster
+   reaches further than that, stated as the cluster's own arithmetic (the top
+   inset and one press) so the sum cannot be left behind by a change to it.
 
    THE NEW-BUILD MARK IS THE ONE PRESS THIS RULE DOES NOT COVER: it sits in
    the bottom-right corner, deep inside the lever's own zone by design, and
-   keeps its press on `z-index` instead (`.hud-right`).
-
-   So the top is the LOWER of the two: three fifths of the screen is where a
-   thumb on a held phone can reach, and it is taken unless the cluster
-   reaches further down than that — on a phone on its SIDE it does, because
-   the cluster is a map with a row of presses under it and the screen is 393
-   px. Stated as the cluster's own arithmetic — the top inset, the map, the
-   gap the presses hang below it on, and one press: every term a var the
-   cluster itself is built from, so the sum cannot be left behind by a change
-   to any of them. A percentage that happens to clear it today can. */
+   keeps its press on `z-index` instead (`.hud-right`). */
 .hud-touch {
   position: absolute;
   inset: 0;
@@ -2362,13 +1136,7 @@ canvas {
   /* The cluster's foot plus a finger's clearance, or two fifths — whichever
      is further down. See the note above for why it is the arithmetic and not
      the fraction that is load-bearing. */
-  top: max(
-    40%,
-    calc(
-      max(0.6rem, env(safe-area-inset-top)) + var(--hud-map) + var(--hud-cluster-gap) +
-        var(--hud-press) + 1.1rem
-    )
-  );
+  top: max(40%, calc(max(0.6rem, env(safe-area-inset-top)) + var(--hud-press) + 1.1rem));
   bottom: 0;
   width: 50%;
   pointer-events: auto;
@@ -2491,10 +1259,9 @@ canvas {
   }
 
   /* The air clock cannot sit level with the two top corners on a narrow
-     screen: the gate count reaches the middle of the frame there and the map
-     comes down to meet it. So it drops below both of them — still on the
-     centreline, still over the nose, and now with the whole width of the
-     frame to itself. */
+     screen: the race's chips reach the middle of the frame there. So it
+     drops below both of them — still on the centreline, still over the
+     nose, and now with the whole width of the frame to itself. */
   .hud-air {
     top: auto;
     bottom: 62%;
@@ -2504,10 +1271,10 @@ canvas {
     gap: 0.7rem;
   }
 
-  /* The map shares the top of a narrow screen with the clock and the gate
-     count, so it is sized off the WIDTH there rather than off `vmin`. */
+  /* The presses share the top of a narrow screen with the clock and the
+     chips, so the cluster is sized off the WIDTH there rather than `vmin`. */
   .hud {
-    --hud-map: clamp(4rem, 23vw, 5.8rem);
+    --hud-cluster: clamp(6.6rem, 30vw, 8.4rem);
   }
 
   .hud-topright {
@@ -2537,13 +1304,6 @@ canvas {
 /* A short landscape (a phone on its side) has no height to spare: the
    panel tightens vertically. */
 @media (orientation: landscape) and (max-height: 30rem) {
-  /* The map is NOT one of the things that tightens here. This is the phone
-     held the way the game is actually played, and it is the viewport with
-     the least room for a map that has to be read at a glance — shrinking it
-     with the height is shrinking it exactly where it is needed most. The
-     base rule's rem floor carries it, and the thumb zones below move down
-     to clear the taller cluster rather than the cluster shrinking to clear
-     them (`.hud-zone`). */
   .hud-speed {
     gap: 0.1rem;
   }
@@ -2556,45 +1316,44 @@ canvas {
 /* ── THE MENU SYSTEM ───────────────────────────────────────────────────────
    Three cards, in the order the player meets them: the attract card the app
    opens on, the front door under it, and the loading card over a run being
-   stood up. All three sit over the SAME LIVE CANVAS — the sea is being
+   stood up. All three sit over the SAME LIVE CANVAS — the snow is being
    stepped and drawn the whole time any of them is up — so each one is a
    cover rather than a screen, and the chrome below is the same chrome the
    HUD wears so that lifting a card reads as the game arriving. */
 
 /* ── THE APP MARK, BUILDING ────────────────────────────────────────────────
-   The crest off the icon, filled left to right (`mark-wave.tsx`).
+   The two trails off the icon, laid left to right (`mark-trails.tsx`).
 
    IT IS A WIPE, NOT A STROKE. `stroke-dashoffset` is the obvious way to draw
    a line on and it is the wrong one: it animates on the MAIN THREAD, which is
-   the thread the loading card exists to cover for. Standing a shore up blocks
+   the thread the loading card exists to cover for. Standing a map up blocks
    that thread for seconds at a time, and a mark that froze for them would
    read as a hung game rather than a loading one. A transform does not —
    browsers run it on the compositor, so the fill keeps travelling through a
    block that would stop a stroke animation dead. */
-.mark-wave {
+.mark-trails {
   position: relative;
   display: block;
-  /* The drawing's own ratio — MARK_WAVE_RATIO in mark-wave.tsx, restated
-     here because a stylesheet cannot import a TypeScript module. It is the
-     ICON's framing widened to contain the curl (CURL_OVERHANG), so a mark
-     mounted anywhere needs only a width. Change one, change both. */
-  aspect-ratio: 322 / 205;
+  /* The drawing's own ratio — MARK_TRAIL_VIEWBOX in app-mark.ts (400 × 160),
+     restated because a stylesheet cannot import a TypeScript module, so a
+     mark mounted anywhere needs only a width. Change one, change both. */
+  aspect-ratio: 400 / 160;
 }
 
-.mark-wave svg {
+.mark-trails svg {
   display: block;
   width: 100%;
   height: auto;
   overflow: visible;
   fill: none;
-  stroke: var(--foam);
+  stroke: var(--snow);
   stroke-linecap: round;
 }
 
 /* The finished shape, faint, under everything. It holds the space the fill is
    about to take — so nothing beside the mark shifts as it runs, and the card
-   never shows a half-drawn wave adrift of its own box. */
-.mark-wave-ghost {
+   never shows a half-laid trail adrift of its own box. */
+.mark-trails-ghost {
   opacity: 0.22;
 }
 
@@ -2603,7 +1362,7 @@ canvas {
    stays put and only the window into it moves: at `translateX(-100%)` the
    window sits entirely left of the mark and nothing shows, and at `0` it
    covers all of it. Both halves are transforms, which is the whole point. */
-.mark-wave-wipe {
+.mark-trails-wipe {
   position: absolute;
   inset: 0;
   overflow: hidden;
@@ -2611,7 +1370,7 @@ canvas {
   will-change: transform;
 }
 
-.mark-wave-slide {
+.mark-trails-slide {
   position: absolute;
   inset: 0;
   will-change: transform;
@@ -2620,20 +1379,20 @@ canvas {
 /* Filled once, and left there: a flourish beside a title that has just come
    up. `both` is what keeps it — the mark holds the finished state rather than
    snapping back to empty at the end of the run. */
-.mark-wave-once .mark-wave-wipe {
+.mark-trails-once .mark-trails-wipe {
   animation: mark-wipe 900ms cubic-bezier(0.33, 0, 0.2, 1) both;
 }
 
-.mark-wave-once .mark-wave-slide {
+.mark-trails-once .mark-trails-slide {
   animation: mark-slide 900ms cubic-bezier(0.33, 0, 0.2, 1) both;
 }
 
 /* ...and over and over, for a load in progress. */
-.mark-wave-loop .mark-wave-wipe {
+.mark-trails-loop .mark-trails-wipe {
   animation: mark-wipe-loop 1700ms cubic-bezier(0.4, 0, 0.25, 1) infinite;
 }
 
-.mark-wave-loop .mark-wave-slide {
+.mark-trails-loop .mark-trails-slide {
   animation: mark-slide-loop 1700ms cubic-bezier(0.4, 0, 0.25, 1) infinite;
 }
 
@@ -2687,8 +1446,8 @@ canvas {
 }
 
 /* ── THE ATTRACT CARD ──────────────────────────────────────────────────────
-   The house's name while the sea is built, then the title and an invitation
-   (`splash-screen.tsx`). Painted in the same water the game is painted in, so
+   The house's name while the snow is built, then the title and an invitation
+   (`splash-screen.tsx`). Painted in the same snow the game is painted in, so
    the card lifting reads as the menu arriving rather than as a screen
    change. */
 .splash {
@@ -2703,7 +1462,12 @@ canvas {
   justify-content: center;
   gap: clamp(0.9rem, 3.6vmin, 2rem);
   padding: 1.5rem;
-  background: linear-gradient(180deg, var(--sea-deep) 0%, var(--sea) 62%, var(--sea-shallow) 100%);
+  background: linear-gradient(
+    180deg,
+    var(--night) 0%,
+    var(--sky-high) 62%,
+    var(--snow-shadow) 100%
+  );
   color: var(--hud-ink);
   font-weight: 700;
   letter-spacing: 0.06em;
@@ -2773,8 +1537,8 @@ canvas {
    own first frame. */
 .splash-title.held,
 .splash-title.held .splash-game,
-.splash-title.held .mark-wave-wipe,
-.splash-title.held .mark-wave-slide {
+.splash-title.held .mark-trails-wipe,
+.splash-title.held .mark-trails-slide {
   animation: none;
 }
 
@@ -2787,13 +1551,13 @@ canvas {
    holds its first frame through the wait (`both` on the animation itself),
    so what stands there in the meantime is the faint ghost of the finished
    shape — the mark present, and not yet made. */
-.splash-mark.mark-wave-once .mark-wave-wipe,
-.splash-mark.mark-wave-once .mark-wave-slide {
+.splash-mark.mark-trails-once .mark-trails-wipe,
+.splash-mark.mark-trails-once .mark-trails-slide {
   animation-delay: 300ms;
 }
 
 /* The crest's box. The ratio is the SVG's own viewBox, restated here so the
-   space is reserved before the wave has been drawn in it — and the height cap
+   space is reserved before the trails have been laid in it — and the height cap
    is what keeps the crest off the title on a phone held sideways, the
    tightest surface in the app. */
 .splash-mark {
@@ -2807,7 +1571,7 @@ canvas {
   line-height: 0.94;
   text-align: center;
   text-wrap: balance;
-  color: var(--buoy);
+  color: var(--flag);
   text-shadow: 0 3px 0 var(--hud-shadow);
 }
 
@@ -2826,7 +1590,7 @@ canvas {
   letter-spacing: 0.32em;
   text-indent: 0.32em;
   text-align: center;
-  color: var(--buoy);
+  color: var(--flag);
   text-shadow: 0 2px 0 var(--hud-shadow);
   /* It arrives LAST, after the name it sits under, and only then starts
      asking. The blink carries no fill of its own: a backwards fill would put
@@ -2843,11 +1607,11 @@ canvas {
    nothing.
 
    Drawn in the card's own ink, which is what every other mark on it is drawn
-   in — the gradient ends on `--sea-shallow`, a mid teal, so white carries
+   in — the gradient ends on `--snow-shadow`, a pale blue, so white carries
    further down here than the shadow's navy does.
 
    It turns on a TRANSFORM and nothing else. Beat one is precisely when the
-   main thread is building a shore, and anything animated off the compositor
+   main thread is building a map, and anything animated off the compositor
    stops dead for exactly as long as the player most needs to see something
    moving — the same reason every fill on the loading card is a transform. */
 .splash-spinner {
@@ -2915,9 +1679,9 @@ canvas {
 }
 
 /* ── THE FRONT DOOR AND ITS PAGES ──────────────────────────────────────────
-   A card over the live sea (`menu-main.tsx`). It is a COVER, not a scrim over
-   a stopped game: the water behind it is being stepped and drawn at full
-   rate, so the card is dimmed against it rather than the sea dimmed under the
+   A card over the live race (`menu-main.tsx`). It is a COVER, not a scrim over
+   a stopped game: the snow behind it is being stepped and drawn at full
+   rate, so the card is dimmed against it rather than the snow dimmed under the
    card. */
 .menu {
   position: absolute;
@@ -2928,25 +1692,8 @@ canvas {
   justify-content: center;
   padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
     max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
-  /* Just enough wash to hold contrast over a bright sea without hiding it. */
-  background: rgb(8 42 56 / 42%);
-}
-
-/* A CARD WITH A CAPTION STOPS ABOVE IT. The bar is fixed to the foot of the
-   window and the card is `max-height: 100%` of this box, so without a strip
-   reserved here a card tall enough to scroll ends UNDER the bar and its last
-   row is clipped by the one element that exists to explain a row.
-
-   Reserved on the page rather than inside the card, because padding inside a
-   scroller is dead space at the bottom of every card SHORT enough not to
-   scroll — which is most of them. Taken off the box the card is centred in, a
-   short card simply sits a few pixels higher and nothing reads as a gap.
-
-   `3.2rem` is the bar at its two-line worst plus the gap it stands off the
-   foot on. It wraps to three lines only on a phone held upright, and no card
-   fills that viewport: the tallest of them is OPTIONS at 763 px of 844. */
-.menu:has(.knob-caption) {
-  padding-bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.2rem);
+  /* Just enough wash to hold contrast over bright snow without hiding it. */
+  background: rgb(13 34 51 / 42%);
 }
 
 .menu-card {
@@ -2963,9 +1710,9 @@ canvas {
   -webkit-overflow-scrolling: touch;
   padding: clamp(1rem, 3.5vmin, 1.6rem);
   border-radius: 0.9rem;
-  background: rgb(11 61 79 / 88%);
-  border: 2px solid rgb(242 247 248 / 22%);
-  box-shadow: 0 10px 0 rgb(8 42 56 / 45%);
+  background: rgb(20 46 74 / 88%);
+  border: 2px solid rgb(244 248 251 / 22%);
+  box-shadow: 0 10px 0 rgb(13 34 51 / 45%);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
@@ -2995,7 +1742,7 @@ canvas {
    run that is standing still. It opens with a head of its own rather than a
    wordmark — the game's name is not the question here, WHICH RUN IS HELD is —
    and the rows under it are the front door's, so RESUME wears START's weight
-   and the eye lands on the way back to the water.
+   and the eye lands on the way back to the snow.
 
    IT IS THE TIGHTEST HEIGHT BUDGET IN THE GAME. A phone held SIDEWAYS is 390
    px tall and this card has to carry a head, a strip of figures and four
@@ -3020,71 +1767,7 @@ canvas {
   color: var(--hud-good);
 }
 
-/* HOW THE HELD RUN HAS GONE (`pause-stats.ts`): up to four figures in one
-   row, each over its caption — the HUD's own chip, because the rider reading
-   this card was reading those chips a second ago.
-
-   ONE ROW, NEVER TWO. `1fr` columns rather than `auto-fit` with a minimum:
-   a minimum that cannot be met WRAPS, silently, and a strip that wrapped
-   would cost this card a whole second line of height on exactly the viewport
-   that has none to give. Equal columns cannot wrap, so the figures are sized
-   to the cell instead, and the widest of them — a twelve-boat standing, ten
-   minutes on the clock — was MEASURED into a four-cell strip at every
-   reference viewport rather than eyeballed on the three-cell one a lab can
-   ride to. */
-.pause-stats {
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  gap: 0.3rem;
-  /* Every vertical measure on this card is scaled against the SHORT axis,
-     because the viewport that decides it is a phone on its side: 390 px of
-     height, of which the wash keeps some. `vmin` is what turns "roomy on a
-     desktop" into "tight on the one screen that cannot afford roomy"
-     without a second layout to keep in step. */
-  margin: 0.1rem 0 clamp(0.3rem, 1.5vmin, 0.55rem);
-  padding: clamp(0.28rem, 1.2vmin, 0.45rem) 0.2rem;
-  border-top: 2px solid rgb(242 247 248 / 14%);
-  border-bottom: 2px solid rgb(242 247 248 / 14%);
-}
-
-.pause-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
-  min-width: 0;
-}
-
-.pause-stat-value {
-  /* FLAT, and deliberately not clamped against a viewport. The card is
-     `min(24rem, 100%)` wide, so a four-cell strip is 81–88 px per cell at
-     every reference viewport — the column barely moves, and a figure sized
-     against the viewport moves anyway: against `vw` it reaches its maximum
-     on a wide SHORT screen whose cells are still a phone's, and the widest
-     figure walks out of its column into its neighbour's. This is the size
-     the widest figure was measured to fit the NARROWEST of those cells at. */
-  font-size: 0.82rem;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  line-height: 1.1;
-  color: var(--hud-ink);
-  white-space: nowrap;
-}
-
-.pause-stat-label {
-  font-size: 0.58rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  line-height: 1.1;
-  color: var(--hud-info);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 100%;
-}
-
-/* THE ROWS, ON THIS CARD ONLY. `.menu-item` is the craft card's RIDE and the
+/* THE ROWS, ON THIS CARD ONLY. `.menu-item` is the pause card's RESUME and the
    developer page's whole column as well, so the mark-and-a-line layout is
    scoped here rather than pushed onto all of them: the pause card is the one
    surface where four presses have to share a phone's short side with a head
@@ -3124,43 +1807,6 @@ canvas {
   flex: 1 1 auto;
 }
 
-/* WATCH REPLAY: the one row here nobody goes looking for, so it carries the
-   card's second accent — the shallows' cyan, never the buoy's orange, which
-   means THE WAY ON and means it once per card. A rule down the leading edge
-   and the mark lit to match: enough to be found at a glance, not enough to
-   compete with the lit press above it. */
-.menu-card-pause .menu-item-watch {
-  border-color: rgb(63 167 184 / 55%);
-  box-shadow: inset 3px 0 0 var(--sea-shallow);
-}
-
-.menu-card-pause .menu-item-watch .menu-glyph {
-  color: var(--sea-shallow);
-  opacity: 1;
-}
-
-.menu-card-pause .menu-item-watch:hover .menu-glyph,
-.menu-card-pause .menu-item-watch:focus-visible .menu-glyph,
-.menu-card-pause .menu-item-watch.nav-cursor .menu-glyph {
-  color: var(--hud-ink);
-}
-
-.menu-card-pause .menu-item-watch:hover,
-.menu-card-pause .menu-item-watch:focus-visible,
-.menu-card-pause .menu-item-watch.nav-cursor {
-  border-color: var(--sea-shallow);
-}
-
-/* The price, out at the end of the row it is a price ON — not under it. The
-   note keeps its footnote weight (`.menu-item-note`) and gives up the block
-   display that would have cost the card a line. */
-.menu-card-pause .menu-item-note {
-  margin-top: 0;
-  flex: 0 0 auto;
-  font-size: 0.62rem;
-  letter-spacing: 0.06em;
-}
-
 /* The way out of the run, held apart from the three above it and given the
    least of the card's weight — the front door's foot strip, as a row. */
 .menu-card-pause .menu-item-leave {
@@ -3186,11 +1832,12 @@ canvas {
 }
 
 .menu-brand-mark {
-  width: clamp(2.6rem, 11vmin, 4rem);
+  width: clamp(3.4rem, 13vmin, 5rem);
   flex: none;
 }
 
 .menu-brand-name {
+  white-space: nowrap;
   font-size: clamp(1.6rem, 7vmin, 2.6rem);
   font-weight: 700;
   letter-spacing: 0.07em;
@@ -3215,12 +1862,12 @@ canvas {
    is what the eye lands on, the word is what confirms it, and a player learns
    each one once.
 
-   THE COLOUR IS THE TIER, and the tier is how close the press is to water
+   THE COLOUR IS THE TIER, and the tier is how close the press is to snow
    (`menu-main.tsx`'s header states it in full). ORANGE is the way IN and
-   there is exactly one of it; SEA BLUE is a way onto water; the foot strip
+   there is exactly one of it; the sky's blue is a way onto snow; the foot strip
    below is everything that is not. A door where two tiles are lit is a door
    with no way on, because the eye is handed a choice where it wanted an
-   answer — so nothing but the hero is allowed the buoy's orange.
+   answer — so nothing but the hero is allowed the flag's red.
 
    THE GRID IS ONE GRID AT EVERY VIEWPORT and the hero is a SPAN in it, so
    the door turning sideways is a change of column count rather than a second
@@ -3231,7 +1878,7 @@ canvas {
    block). */
 .menu-tiles {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 0.5rem;
 }
 
@@ -3254,10 +1901,10 @@ canvas {
   gap: 0.5rem;
   min-height: 5.2rem;
   padding: 0.9rem 0.5rem;
-  border: 2px solid rgb(242 247 248 / 26%);
+  border: 2px solid rgb(244 248 251 / 26%);
   border-radius: 0.55rem;
-  background: rgb(27 111 138 / 55%);
-  box-shadow: 0 3px 0 rgb(8 42 56 / 50%);
+  background: rgb(44 92 140 / 55%);
+  box-shadow: 0 3px 0 rgb(13 34 51 / 50%);
   color: var(--hud-ink);
   font: inherit;
   /* The mark is sized off this, so the whole tile grows together: a laptop
@@ -3278,14 +1925,14 @@ canvas {
   position: relative;
   width: 2.3em;
   height: 2.3em;
-  color: var(--buoy);
+  color: var(--flag);
 }
 
 .menu-tile:hover,
 .menu-tile:focus-visible,
 .menu-tile.nav-cursor {
-  border-color: var(--buoy);
-  background: rgb(27 111 138 / 78%);
+  border-color: var(--flag);
+  background: rgb(44 92 140 / 78%);
   outline: none;
 }
 
@@ -3325,8 +1972,8 @@ canvas {
   gap: 0.9rem;
   min-height: 0;
   padding: 0.85rem 1.1rem;
-  background: rgb(242 140 40 / 82%);
-  border-color: rgb(242 247 248 / 45%);
+  background: rgb(232 65 44 / 82%);
+  border-color: rgb(244 248 251 / 45%);
   text-align: left;
 }
 
@@ -3335,14 +1982,14 @@ canvas {
 .menu-tile-hero .menu-glyph {
   width: 2.6em;
   height: 2.6em;
-  color: var(--foam);
+  color: var(--snow);
 }
 
 .menu-tile-hero:hover,
 .menu-tile-hero:focus-visible,
 .menu-tile-hero.nav-cursor {
-  background: var(--buoy);
-  border-color: var(--foam);
+  background: var(--flag);
+  border-color: var(--snow);
 }
 
 .menu-tile-words {
@@ -3370,10 +2017,10 @@ canvas {
 }
 
 /* THE SHEEN — a bar of light travelling the hero, the one moving thing on a
-   card that stands over moving water. It is a transform and an opacity and
+   card that stands over moving snow. It is a transform and an opacity and
    nothing else, so it is composited rather than repainted: this card is up
    while the engine is stepping a bot-ridden run behind it, and an effect
-   that cost the main thread would be paid for out of that sea's frame rate.
+   that cost the main thread would be paid for out of that snow's frame rate.
 
    Off unless the machine has said it wants motion — see the rule below. */
 .menu-tile-sheen {
@@ -3393,17 +2040,8 @@ canvas {
   pointer-events: none;
 }
 
-/* ── THE FOUR MODES ────────────────────────────────────────────────────────
-   The ways onto water that carry no ladder. All four wear the plain tile
-   above unchanged: they are four GAMES, not four rungs, and ranking them by
-   colour would be inventing a hierarchy the game does not have. The class
-   exists so the landscape rule can address them apart from the hero. */
-.menu-tile-mode {
-  grid-column: span 1;
-}
-
 /* ── THE FOOT STRIP ────────────────────────────────────────────────────────
-   Everything that is NOT a way onto the water, along the bottom of the card
+   Everything that is NOT a way onto the snow, along the bottom of the card
    in one low row. It is deliberately not tile-shaped: a press that cannot
    start a run should not wear the shape of one, and the strip is the cheapest
    tier in the door's height budget — which is right, because it is the tier
@@ -3427,10 +2065,10 @@ canvas {
   justify-content: center;
   gap: 0.45rem;
   padding: 0.5rem 0.7rem;
-  border: 2px solid rgb(242 247 248 / 18%);
+  border: 2px solid rgb(244 248 251 / 18%);
   border-radius: 0.5rem;
-  background: rgb(8 42 56 / 55%);
-  color: rgb(242 247 248 / 78%);
+  background: rgb(13 34 51 / 55%);
+  color: rgb(244 248 251 / 78%);
   font: inherit;
   font-size: 0.72rem;
   font-weight: 700;
@@ -3444,14 +2082,14 @@ canvas {
 .menu-chip .menu-glyph {
   width: 1.35em;
   height: 1.35em;
-  color: rgb(242 247 248 / 62%);
+  color: rgb(244 248 251 / 62%);
 }
 
 .menu-chip:hover,
 .menu-chip:focus-visible,
 .menu-chip.nav-cursor {
-  border-color: var(--buoy);
-  background: rgb(27 111 138 / 70%);
+  border-color: var(--flag);
+  background: rgb(44 92 140 / 70%);
   color: var(--hud-ink);
   outline: none;
 }
@@ -3459,29 +2097,18 @@ canvas {
 .menu-chip:hover .menu-glyph,
 .menu-chip:focus-visible .menu-glyph,
 .menu-chip.nav-cursor .menu-glyph {
-  color: var(--buoy);
+  color: var(--flag);
 }
 
 .menu-chip:active {
   transform: translateY(1px);
 }
 
-/* The developer chip, once it has been let out: on the strip, and visibly
-   not part of the game. */
-.menu-chip-dev {
-  border-style: dashed;
-  color: var(--hud-info);
-}
-
-.menu-chip-dev .menu-glyph {
-  color: var(--hud-info);
-}
-
 /* ── THE DOOR ARRIVING, AND THE ONE THING ON IT THAT MOVES ─────────────────
    The tiles come up in sequence rather than all at once — the arcade's own
    entrance, and the difference between a card that APPEARS and a card that
    is dealt. Both halves are a transform and an opacity, which is what keeps
-   them off the main thread the sea behind the card is being stepped on.
+   them off the main thread the snow behind the card is being stepped on.
 
    Asked for rather than assumed: a machine that has not said it wants motion
    gets the door standing there already, which is also what every screenshot
@@ -3563,93 +2190,22 @@ canvas {
 
 /* ── THE DOOR TURNED SIDEWAYS ──────────────────────────────────────────────
    HOW THE GAME IS ACTUALLY HELD. A phone on its side has width and no height
-   at all — 390 px of it, less the safe areas — and the upright door spends
-   its whole budget down the one axis that has none: three rows of tiles and
-   a brand block came to 129 px more than the viewport, so the card scrolled
-   and the last two ways onto the water were below the fold on the surface
-   most players meet the game on.
-
-   The answer is not smaller tiles. It is to spend the axis that HAS room:
-   the card is let out to twice its upright width, the grid goes to four
-   columns, and the hero takes the left quadrant instead of the top row. The
-   door comes to TWO rows of tiles and a strip, and everything is above the
-   fold at 390 px with room to spare.
-
-   `max-height` rather than a width query, because what is short is what
-   hurts: a desktop window dragged into a letterbox has exactly the same
-   problem and gets exactly the same door. The ceiling is the craft card's
-   own (34rem), not the HUD panel's 30rem: a card is paid for in the height
-   of its ROWS and runs out of room a good deal earlier than an instrument
-   that only has to tighten, and the upright door is within a few pixels of
-   the fold at 500 px. */
+   at all — 390 px of it, less the safe areas — so the brand comes down to one
+   line and the card spends the axis that HAS room. `max-height` rather than a
+   width query, because what is short is what hurts: a desktop window dragged
+   into a letterbox has the same problem and gets the same door. */
 @media (orientation: landscape) and (max-height: 34rem) {
   .menu-card-root {
-    width: min(48rem, 100%);
+    width: min(36rem, 100%);
     gap: 0.6rem;
-  }
-
-  /* One line, not a lockup: the name and its billing side by side, which is
-     the brand at a third of the height and no less of it. */
-  .menu-brand {
-    flex-direction: row;
-    align-items: baseline;
-    gap: 0.6rem;
-    margin-bottom: 0;
   }
 
   .menu-brand-mark {
-    width: 2.2rem;
-    align-self: center;
+    width: 3.2rem;
   }
 
   .menu-brand-name {
-    font-size: 1.5rem;
-  }
-
-  /* The hero's two columns are narrower than the modes' two, so the lit
-     tile takes a little under half the door rather than a little over: a
-     quadrant of flat orange wider than everything else put together stops
-     reading as the way in and starts reading as a wall. */
-  .menu-tiles {
-    grid-template-columns: 0.82fr 0.82fr 1fr 1fr;
-  }
-
-  /* The left quadrant: two columns and both rows. Tall as well as wide now,
-     so the hero stands its mark ABOVE its words rather than beside them —
-     a row of content pinned in the middle of a square reads as a tile that
-     did not finish loading. */
-  .menu-tile-hero {
-    grid-column: span 2;
-    grid-row: span 2;
-    flex-direction: column;
-    justify-content: center;
-    gap: 0.5rem;
-    padding: 0.7rem 1rem;
-    text-align: center;
-  }
-
-  /* The mark carries the tile here. It has two rows of height to fill and
-     nothing else to fill them with, and a small glyph adrift in the middle
-     of a square reads as a tile that did not finish loading. */
-  .menu-tile-hero .menu-glyph {
-    width: 4.4em;
-    height: 4.4em;
-  }
-
-  .menu-tile-words {
-    align-items: center;
-    text-align: center;
-  }
-
-  .menu-tile-mode {
-    min-height: 0;
-    padding: 0.55rem 0.4rem;
-    gap: 0.35rem;
-  }
-
-  .menu-tile-mode .menu-glyph {
-    width: 1.9em;
-    height: 1.9em;
+    font-size: 1.6rem;
   }
 }
 
@@ -3660,7 +2216,7 @@ canvas {
 }
 
 /* A row on the pause card, and the press that carries a page on (RIDE on the
-   craft card, NEXT on the start card's head). `position: relative` and
+   the pause card's RESUME). `position: relative` and
    `overflow: hidden` for the same reason a tile has them. */
 .menu-item {
   position: relative;
@@ -3668,9 +2224,9 @@ canvas {
   display: block;
   width: 100%;
   padding: 0.85rem 1rem;
-  border: 2px solid rgb(242 247 248 / 26%);
+  border: 2px solid rgb(244 248 251 / 26%);
   border-radius: 0.55rem;
-  background: rgb(27 111 138 / 55%);
+  background: rgb(44 92 140 / 55%);
   color: var(--hud-ink);
   font: inherit;
   font-size: 1.05rem;
@@ -3685,8 +2241,8 @@ canvas {
 .menu-item:hover,
 .menu-item:focus-visible,
 .menu-item.nav-cursor {
-  border-color: var(--buoy);
-  background: rgb(27 111 138 / 78%);
+  border-color: var(--flag);
+  background: rgb(44 92 140 / 78%);
   outline: none;
 }
 
@@ -3696,14 +2252,14 @@ canvas {
 
 /* The way ON, given the weight the eye should land on first. */
 .menu-item-start {
-  background: rgb(242 140 40 / 78%);
-  border-color: rgb(242 247 248 / 42%);
+  background: rgb(232 65 44 / 78%);
+  border-color: rgb(244 248 251 / 42%);
 }
 
 .menu-item-start:hover,
 .menu-item-start:focus-visible,
 .menu-item-start.nav-cursor {
-  background: var(--buoy);
+  background: var(--flag);
 }
 
 /* The one press on the pause card that ENDS the run, held visibly apart from
@@ -3713,30 +2269,13 @@ canvas {
    loses the cascade without a word. */
 .menu-item-leave {
   margin-top: 0.55rem;
-  background: rgb(8 42 56 / 70%);
+  background: rgb(13 34 51 / 70%);
   color: var(--hud-info);
   font-size: 0.88rem;
 }
 
 .menu-item-name {
   position: relative;
-}
-
-/* WHAT A ROW COSTS, said on the row. Only WATCH REPLAY carries one today
-   (menu-pause.tsx): watching a recording ends the run it is a recording of,
-   and a press whose price is only learned afterwards is a press nobody should
-   have been offered. Under the word, at a size that reads as a footnote
-   rather than as a second row — it is a qualifier on the press above it, not
-   another thing to choose between. */
-.menu-item-note {
-  display: block;
-  position: relative;
-  margin-top: 0.2rem;
-  font-size: 0.66rem;
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-indent: 0;
-  opacity: 0.72;
 }
 
 /* The build, at the far end of the foot strip, linking to its own commit.
@@ -3762,1628 +2301,16 @@ canvas {
   opacity: 0.5;
 }
 
-/* ── A PAGE UNDER THE FRONT DOOR ───────────────────────────────────────────
-   A head with the way out in it, then the rows. The developer page is a dozen
-   rows and a phone in portrait is not, so the CARD scrolls — see
-   `.menu-card`. */
-.menu-head {
-  display: grid;
-  /* Back, the billing, and — on a page that has one — the way ON. The third
-     column is `auto`, so a head with no action collapses it to nothing and
-     looks exactly as it did before there was one. */
-  grid-template-columns: auto 1fr auto;
-  align-items: start;
-  gap: 0.7rem;
-  padding-bottom: 0.6rem;
-  border-bottom: 2px solid rgb(242 247 248 / 16%);
-}
-
-/* A head that is only a title is one row, and the button centres on it; a
-   head carrying a subtitle is two rows tall and the way out stands level with
-   the TITLE rather than floating between them. */
-.menu-head-solo {
-  align-items: center;
-}
-
-.menu-back {
-  padding: 0.3rem 0.5rem;
-  border: 2px solid rgb(242 247 248 / 24%);
-  border-radius: 0.4rem;
-  background: transparent;
-  color: var(--hud-info);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.menu-back:hover,
-.menu-back:focus-visible,
-.menu-back.nav-cursor {
-  border-color: var(--buoy);
-  color: var(--hud-ink);
-  outline: none;
-}
-
-.menu-head-text {
+/* THE KEYS, on a machine that has them: one quiet line in the foot strip,
+   so a first race is not a race spent finding the throttle. */
+.menu-keys {
+  flex: 1 1 12rem;
   min-width: 0;
-}
-
-/* A PAGE'S WAY ON, STANDING IN ITS HEAD (menu.tsx's `action`). `.menu-item` is
-   a front-door ROW — full width, the card's whole measure — so everything that
-   made it one is given back here and only its colour and its weight are kept:
-   this is a corner, not a banner. It is the tallest thing in the head and the
-   billing under a title wraps to two lines on a phone, so it is pinned to the
-   head's TOP and stands level with the title and the way back — centred, it
-   drifts down the head by however many lines the subtitle happens to take. */
-.menu-head-go {
-  align-self: start;
-  width: auto;
-  padding: 0.5rem 1.1rem;
-  font-size: 0.86rem;
-  white-space: nowrap;
-}
-
-.menu-title {
-  font-size: 1.15rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-.menu-sub {
-  margin-top: 0.15rem;
-  font-size: 0.66rem;
-  letter-spacing: 0.08em;
-  text-transform: none;
+  font-size: clamp(0.6rem, 1.7vmin, 0.78rem);
+  letter-spacing: 0.04em;
   color: var(--hud-info);
-}
-
-/* ── THE KNOB ROWS (menu-knobs.tsx) ────────────────────────────────────────
-   ONE SILHOUETTE PER ROW: the setting's name on the left, its value on the
-   right between two arrows, and under the value the pips that say where on
-   its ladder it stands. Groups are a word over a rule; every sentence lives
-   in ONE caption bar under the rows, which reads the row being looked at — so
-   a page is as tall as its rows and no taller, and a dozen settings stand on
-   a phone without scrolling.
-
-   The ARROWS are the touch targets, 2.2rem square: 40px is the floor for a
-   thumb, and the row is sized by them rather than by its text. */
-
-.knob-groups,
-.knob-col {
-  display: flex;
-  flex-direction: column;
-  gap: clamp(0.5rem, 1.8vmin, 0.85rem);
-}
-
-.knob-group {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-/* THE HEADING IS WHAT MAKES THE PAGE SCANNABLE, so it is drawn to be found
-   rather than merely present: the mark first, then the word, over a rule that
-   runs the width of the group it opens. It used to be 0.62rem of letter-spaced
-   text with nothing beside it — the same ink, the same case and nearly the
-   same size as the row labels under it, which is a heading the eye reads as
-   one more row and walks straight past.
-
-   The MARK is the fix and the text is the confirmation: it is the only thing
-   in the column that is not a word, so a rider looking for the sound finds the
-   cone without reading anything at all. */
-.knob-group-title {
-  display: flex;
-  align-items: center;
-  gap: 0.42rem;
-  margin: 0;
-  font: inherit;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  color: var(--buoy);
-  padding: 0 0.2rem 0.25rem;
-  border-bottom: 2px solid rgb(242 140 40 / 42%);
-}
-
-/* Half again the heading's own size: the mark is what is being looked FOR,
-   and a glyph set to the text's `em` reads as punctuation beside it. */
-.knob-group-glyph {
-  width: 1.5em;
-  height: 1.5em;
-  opacity: 0.95;
-}
-
-.knob-rows {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-}
-
-/* The row. A transparent border rather than none, so lighting it on hover or
-   under the cursor changes a colour and never a size. */
-.knob {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.6rem;
-  min-height: 2.6rem;
-  font: inherit;
-  color: var(--hud-ink);
-  background: rgb(242 247 248 / 8%);
-  border: 2px solid transparent;
-  border-radius: 0.55rem;
-  padding: 0.2rem 0.3rem 0.2rem 0.7rem;
-  text-align: left;
-}
-
-.knob:hover,
-.knob:focus-within,
-.knob.nav-cursor {
-  background: rgb(242 140 40 / 14%);
-  border-color: rgb(242 140 40 / 45%);
-}
-
-/* The deal on screen belongs to a seed the worker has moved past — dimmed for
-   the same reason the chart above it is (`.seed-preview-waiting`), and more
-   gently, because the row stays pressable while it waits. */
-.knob-waiting {
-  opacity: 0.7;
-}
-
-.knob-label {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  color: var(--hud-info);
-}
-
-.knob-name {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.knob-ctl {
-  display: flex;
-  align-items: center;
-  gap: 0.15rem;
-  flex: none;
-}
-
-.knob-arrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
-  font: inherit;
-  font-size: 1.3rem;
-  line-height: 1;
-  color: var(--buoy);
-  background: transparent;
-  border: 0;
-  border-radius: 0.45rem;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.knob-arrow:hover,
-.knob-arrow:focus-visible {
-  background: rgb(242 247 248 / 14%);
-  outline: none;
-}
-
-.knob-arrow:active {
-  background: var(--buoy);
-  color: var(--hud-shadow);
-  transform: translateY(1px);
-}
-
-/* The value column is a FIXED width so the arrows stand on the same two x's
-   down the whole page — a page whose arrows wander is a page the eye has to
-   hunt across. */
-.knob-value {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.2rem;
-  width: clamp(6.5rem, 22vw, 9rem);
-}
-
-.knob-word {
-  position: relative;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--buoy);
-  white-space: nowrap;
-  font-variant-numeric: tabular-nums;
-}
-
-/* THE ANSWER THE SHORE CAME WITH (menu-knobs.tsx's `dealt`): a dot riding
-   over the value's own corner rather than a word beside it, so the mark
-   arriving and leaving as the ladder is walked never relays the row. It is
-   read together with the ringed pip under it, and the caption at the foot of
-   the card is where it is explained. */
-.knob-mark {
-  position: absolute;
-  top: -0.05rem;
-  right: -0.36rem;
-  width: 0.32rem;
-  height: 0.32rem;
-  border-radius: 50%;
-  background: var(--foam);
-}
-
-/* A VALUE THAT IS TYPED INTO — the seed. Drawn as the reading it is, with a
-   faint box that says "type here" without competing with the number inside
-   it, because a touch screen has no hover to find a control with. Tabular
-   figures, so stepping through seeds does not shuffle the arrows either side
-   of them. */
-.knob-field {
-  font-family: inherit;
-  font-weight: inherit;
-  font-style: inherit;
-  color: inherit;
-  width: 100%;
-  min-width: 0;
-  text-align: center;
-  border: 2px solid rgb(242 247 248 / 20%);
-  border-radius: 0.4rem;
-  padding: 0.05rem 0.3rem;
-  background: transparent;
-  cursor: text;
-  /* The one place in the game a caret belongs, so it takes its text
-     interaction back from the shell's blanket ban: a field that cannot be
-     selected in is a field you cannot correct a seed in. */
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-.knob-field:hover {
-  border-color: rgb(242 140 40 / 45%);
-}
-
-.knob-field:focus {
-  outline: none;
-  border-color: rgb(242 140 40 / 75%);
-  background: rgb(242 140 40 / 16%);
-}
-
-.knob-pips {
-  display: flex;
-  gap: 0.26rem;
-}
-
-.knob-pip {
-  width: 0.36rem;
-  height: 0.36rem;
-  border-radius: 50%;
-  background: rgb(242 247 248 / 28%);
-}
-
-.knob-pip-on {
-  background: var(--buoy);
-  box-shadow: 0 0 0.35rem rgb(242 140 40 / 70%);
-}
-
-/* Where the shore's own answer stands on the ladder, whether or not the value
-   is sitting on it — which is what makes the mark a bearing rather than a
-   badge: a rider two stops away can see which way back is. An OUTLINE rather
-   than a second box-shadow, because the pip it most often lands on is the lit
-   one and two box-shadows at equal specificity are one box-shadow: the ring
-   would take the glow away exactly where both are wanted. */
-.knob-pip-dealt {
-  outline: 2px solid rgb(242 247 248 / 70%);
-  outline-offset: 1px;
-}
-
-/* A fader: the ladder drawn as a track, filled to the level (`--fill` is
-   written by the row), THE READING OVER IT — and on the rows that have one,
-   the reading is also the press that means AUTO.
-
-   It takes no width of its own any more. The track stands exactly where a
-   ladder's pips stand and the reading exactly where a ladder's value stands,
-   so a column mixing the two has one value line down it instead of two; the
-   fader used to be two and a half rem wider than every row above it, which
-   put its answer somewhere the eye had to go and find. */
-.knob-fade {
-  gap: 0.05rem;
-}
-
-/* The one row that is taller than the rest, and the only honest way to have
-   both: the reading needs the value line, and the track needs a BAND to be
-   pressed on rather than the 8 px line drawn inside it. Stacking them costs
-   the difference, and a fader you can only set by catching its thumb is worse
-   than a row a third of a rem taller than its neighbours. */
-.knob-faded {
-  min-height: 2.8rem;
-}
-
-/* THE WHOLE BAND IS THE PRESS, not the line drawn inside it. A range input is
-   hit-tested on its own BOX, so a fader sized to its 8 px line is a fader with
-   an 8 px target: the thumb overhangs it and becomes the only part of the row
-   big enough to aim at, which is a control you have to CATCH before you can
-   set it. The element is therefore a finger-tall transparent band with the
-   line drawn on the runnable track inside it. */
-.knob-range {
-  width: 100%;
-  min-width: 0;
-  height: 1.2rem;
-  margin: 0;
-  appearance: none;
-  background: none;
-  cursor: pointer;
-}
-
-.knob-range::-webkit-slider-runnable-track {
-  height: 0.5rem;
-  border-radius: 0.25rem;
-  background: linear-gradient(
-    to right,
-    var(--buoy) var(--fill),
-    rgb(242 247 248 / 22%) var(--fill)
-  );
-}
-
-.knob-range::-moz-range-track {
-  height: 0.5rem;
-  border-radius: 0.25rem;
-  background: linear-gradient(
-    to right,
-    var(--buoy) var(--fill),
-    rgb(242 247 248 / 22%) var(--fill)
-  );
-}
-
-.knob-range::-webkit-slider-thumb {
-  appearance: none;
-  width: 1rem;
-  height: 1rem;
-  /* Onto the middle of the line: webkit hangs the thumb off the TRACK's top
-     edge, where Firefox centres it for you. Half the difference between the
-     line and the dot, border included — the box is content-box here. */
-  margin-top: calc((0.5rem - 1rem) / 2 - 2px);
-  border-radius: 50%;
-  background: var(--foam);
-  border: 2px solid var(--hud-shadow);
-}
-
-.knob-range::-moz-range-thumb {
-  width: 0.8rem;
-  height: 0.8rem;
-  border-radius: 50%;
-  background: var(--foam);
-  border: 2px solid var(--hud-shadow);
-}
-
-/* The reading OVER the track, on the same line every ladder's value stands
-   on, and in the same box whether it is a press or only a word — a row whose
-   readout stopped being a button must not change width for it, or the two
-   faders on a page stop lining up. */
-.knob-read {
-  min-width: 3.4em;
-  padding: 0 0.25rem;
-  border: 2px solid transparent;
-  border-radius: 0.35rem;
-  background: transparent;
-  font: inherit;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--buoy);
-  text-align: center;
-}
-
-/* Only the readout that IS a press looks like one. A word that lights under
-   the pointer is a word a rider tries to press. */
-button.knob-read {
-  cursor: pointer;
-}
-
-button.knob-read:hover,
-button.knob-read:focus-visible {
-  border-color: rgb(242 140 40 / 45%);
-  outline: none;
-}
-
-/* Standing at AUTO is standing at NOTHING, and it reads as the quiet state
-   rather than as a value: the row is deferring to the shore. */
-.knob-read-auto {
-  color: var(--hud-info);
-}
-
-/* THE PAGE'S ONE SENTENCE, AND IT DOES NOT STAND ON THE PAGE. It is fixed to
-   the foot of the WINDOW — outside the card as far as the eye is concerned,
-   even though it is still the card's own element.
-
-   IT HAS TO BE, because `.menu-card` IS THE SCROLLER. A caption parked at the
-   bottom of a column of rows is at the bottom of a column that is taller than
-   the viewport on every page worth having one: the row being read is up at the
-   top under the pointer, and the sentence explaining it is off the bottom of
-   the screen. Reading a card then meant scrolling to the sentence and losing
-   the row, or hovering the row and reading nothing — which is the caption
-   doing nothing at all on the pages that need it most.
-
-   Fixed is safe here rather than lucky: `position: fixed` inside a scroller is
-   laid out against the viewport and clipped by nothing, UNLESS an ancestor
-   carries a transform, a filter, `perspective`, `contain` or `will-change`.
-   Nothing between this and the root does — `.menu` is a plain absolute box and
-   the transforms on these pages are all on buttons. Put one on `.menu-card`
-   and the bar silently goes back to being clipped by the card.
-
-   NO POINTER EVENTS, ever. It lies over the foot of whatever card is up, and a
-   bar that swallowed a press would be a bar that ate the last row of a column
-   it exists to describe.
-
-   It carries its own ground now that it is not on the card's: the same wash
-   the card uses, so it reads as part of the same object without being inside
-   it. There is no height reservation left to get wrong — it grows UPWARD off a
-   fixed foot, so a sentence that wraps to three rows moves nothing. */
-.knob-caption {
-  --caption-line: 1.35;
-  --caption-pad: 0.45rem;
-  position: fixed;
-  left: 50%;
-  bottom: calc(var(--shell-bottom) + max(0.6rem, env(safe-area-inset-bottom)));
-  z-index: 1600;
-  transform: translateX(-50%);
-  width: min(44rem, calc(100vw - 2rem));
-  pointer-events: none;
-  font-size: 0.64rem;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  line-height: var(--caption-line);
-  text-transform: none;
-  text-align: center;
-  color: var(--hud-info);
-  opacity: 0.72;
-  padding: var(--caption-pad) 0.8rem;
-  border-radius: 0.5rem;
-  background: rgb(8 42 56 / 82%);
-  border: 1px solid rgb(242 247 248 / 18%);
-  transition: opacity 120ms ease;
-}
-
-/* THE BAR IS NEVER EMPTY — every page gives it a standing line of its own, and
-   that line is what it carries while no row is being read. So the two states
-   are quiet and lit rather than absent and present: the sentence brightens and
-   its edge takes the buoy colour the moment it is answering a row. */
-.knob-caption-on {
-  opacity: 0.95;
-  border-color: rgb(242 140 40 / 45%);
-}
-
-/* THE ROW'S OWN NAME, LEADING THE SENTENCE. A caption is read out of the
-   corner of the eye while the pointer is still on the row, and a page of rows
-   is a page of near-identical silhouettes: a sentence with nothing naming what
-   it is about has to be traced back up the column before it can be used. In
-   the buoy colour, so the eye finds the pairing without the bar becoming two
-   lines. */
-.knob-caption-name {
-  color: var(--buoy);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-
-.knob-caption-name::after {
-  content: " — ";
-  color: var(--hud-info);
-  font-weight: 500;
-  letter-spacing: 0;
-}
-
-/* ── THE PAGES THE KNOBS STAND ON ──────────────────────────────────────────
-   OPTIONS and the developer page are the same shape: a head, two columns of
-   groups, the caption, and the page's one blunt press. */
-.menu-card-options {
-  width: min(36rem, 100%);
-  gap: 0.6rem;
-}
-
-/* THE KEYBOARD PAGE — the same shape with one grid instead of two columns of
-   groups: ten rows that are all the same question do not want carving into
-   sections. */
-.menu-card-keys {
-  width: min(36rem, 100%);
-  gap: 0.6rem;
-}
-
-/* TWO ABREAST AT MOST. An action and its key are a row with a rem to spare
-   at half a card; at a third of one the NAME is what gives, and a page of
-   rows reading "TH…" and "BR…" is a page of rows nobody can use. */
-.knob-binds {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
-  gap: 0.25rem 0.6rem;
-}
-
-.knob-link,
-.knob-bind {
-  width: 100%;
-  cursor: pointer;
-}
-
-/* The one arrow of a row that opens a page, dimmer than a stepper's pair:
-   it is a direction and not a press of its own. */
-.knob-arrow-go {
-  color: rgb(242 247 248 / 55%);
-}
-
-/* A binding row has no arrows, so its value may take the room they would
-   have had — "L SHIFT / R SHIFT / UP ARROW" is what the defaults actually
-   read, and it wraps rather than pushing the name off the row. */
-.knob-bind .knob-value {
-  width: clamp(8.5rem, 26vw, 9.5rem);
-}
-
-.knob-bind .knob-name {
-  letter-spacing: 0.08em;
-}
-
-.knob-bind .knob-word {
-  font-size: 0.72rem;
-  white-space: normal;
-  text-align: center;
-}
-
-/* WAITING FOR THE KEY. The row goes to the buoy colour every press in this
-   game is drawn in and the prompt blinks, so a page of ten identical rows
-   says which one has the keyboard from across the desk. */
-.knob-bind-listening {
-  background: rgb(242 140 40 / 22%);
-  border-color: var(--buoy);
-}
-
-.knob-bind-listening .knob-word {
-  animation: knob-blink 0.9s steps(2) infinite;
-}
-
-@keyframes knob-blink {
-  to {
-    opacity: 0.3;
-  }
-}
-
-/* A key doing two jobs, said under the key itself — see menu-keys.tsx for
-   why it is allowed at all. */
-.knob-clash {
-  font-size: 0.52rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  color: var(--hud-bad);
   opacity: 0.85;
   text-align: center;
-}
-
-/* THE START CARD, WHOSE LAYOUT IS DECIDED BY THE CHART. The chart is SQUARE,
-   so every pixel of its width is a pixel of card height: stood over the rows
-   in one narrow column it was the tallest thing on the card and still only a
-   thumbnail of a coast. Beside them it costs the card no height at all — the
-   three rows are shorter than it either way — so the card takes the width
-   instead and the coast is drawn big enough to read a course off. */
-.menu-card-start {
-  gap: 0.6rem;
-}
-
-.start-cols,
-.start-col {
-  display: flex;
-  flex-direction: column;
-  gap: 0.6rem;
-}
-
-/* A phone held UPRIGHT: one column, every group stacked in it, and the chrome
-   between them given back. The ROWS keep their height — the arrows in them
-   are the thumb targets and 40px is the floor for one, so a settings page
-   that fits by making itself harder to press has not fixed anything. */
-@media (max-width: 30rem) {
-  /* The settings cards are the two longest in the game, and on a phone the
-     last thing on each (RESTORE DEFAULTS, RESET KEYS) is the one a player
-     scrolls to find when it has slid past the bottom — which `overflow-y:
-     auto` hides in every screenshot. The card's own top and bottom padding is
-     the cheapest height on it: chrome rather than anything to read or press,
-     and the side gutters keep theirs. */
-  .menu-card-options,
-  .menu-card-keys,
-  .menu-card-start {
-    padding-top: 0.7rem;
-    padding-bottom: 0.7rem;
-  }
-
-  .menu-card-options,
-  .menu-card-keys {
-    gap: 0.35rem;
-  }
-
-  .knob-groups,
-  .knob-col {
-    gap: 0.3rem;
-  }
-
-  .knob-group {
-    gap: 0.15rem;
-  }
-
-  /* THE HEADINGS PAY FOR THEMSELVES HERE. A phone stacks every group in one
-     column, so each heading is height the rows do not get — five of them at
-     the width the desktop draws them put the card's last row past the bottom
-     of the viewport, which is invisible in a screenshot and reads as a bug in
-     the hand. The MARK is what the group is found by, so it is the last thing
-     to give: it holds at the size the contact sheet's small tile draws it
-     (14 px, `make glyphs`) and everything around it is what tightens. */
-  .knob-group-title {
-    gap: 0.35rem;
-    font-size: 0.6rem;
-    padding-bottom: 0.12rem;
-  }
-
-  .knob-group-glyph {
-    width: 1.45em;
-    height: 1.45em;
-  }
-
-  .knob-rows {
-    gap: 0.15rem;
-  }
-
-  .knob {
-    padding-left: 0.5rem;
-  }
-
-  /* Tighter on a phone, where the bar wraps the longest sentences to three and
-     four rows and every one of them is over the card rather than in it. */
-  .knob-caption {
-    padding: 0.35rem 0.6rem;
-  }
-}
-
-/* Wide enough for two columns — a laptop, a tablet, a phone held sideways —
-   the page's two column blocks stand side by side and a 1280x720 screen holds
-   the whole card. The value column narrows with it: a row now shares half a
-   card, and RESOLUTION must not be truncated to make room. */
-@media (min-width: 48rem) {
-  .menu-card-options,
-  .menu-card-keys {
-    width: min(48rem, 100%);
-  }
-
-  .knob-groups {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    align-items: start;
-    gap: 0.4rem 1rem;
-  }
-
-  .menu-card-options .knob-value {
-    width: 6.8rem;
-  }
-
-  /* The start card's two columns, and the chart taking the room they buy it.
-     `align-items: start` so the SHORE column is not stretched to the height of
-     nothing, and the chart column is the wider of the two: a coast is read,
-     and three rows of a ladder are glanced at. */
-  .menu-card-start {
-    width: min(46rem, 100%);
-  }
-
-  .start-cols {
-    display: grid;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-    align-items: start;
-    gap: 0.4rem 1.1rem;
-  }
-
-  /* A MEASURED run's card has no day column — the shore rides the day it was
-     dealt — so it stays the one column it is on a phone, at the width that
-     column needs, rather than a wide card with an empty right half. */
-  .menu-card-start-shore {
-    width: min(30rem, 100%);
-  }
-
-  .menu-card-start-shore .start-cols {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  /* Half again as big as the one-column card could afford it. The `vh` term is
-     still what gives way first on a short window — a 720-tall desktop keeps
-     the whole card on screen with the button under it. */
-  .menu-card-start .seed-preview-plate {
-    max-width: min(19rem, 44vh);
-  }
-
-  .menu-card-start .knob-value {
-    width: 7rem;
-  }
-}
-
-/* THE PAUSE CARD'S OPTIONS PANEL (menu-pause.tsx): the same groups the front
-   door's page carries, one column wide, on the pause card's own narrow plate
-   so the two faces of the card are the same object rather than two.
-
-   ONE COLUMN AT EVERY WIDTH. `.knob-groups` goes to a two-column grid at
-   48rem, which is a rule written for a twelve-row page; four rows split two
-   and two is a panel with a hole in the corner of it. */
-.menu-card-pause-options {
-  align-items: stretch;
-  text-align: left;
-  gap: 0.55rem;
-}
-
-/* `align-items` is restated on purpose: the two-column rule at 48rem sets it
-   to `start` for a GRID, where it means "do not stretch a short group down the
-   row", and the same word in a flex COLUMN means "do not stretch a group
-   ACROSS" — which sized every group to its own longest label and left the
-   panel's rows standing at three different widths. */
-.menu-card-pause-options .knob-groups {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 0.55rem;
-}
-
-/* The head reads as the card's, not as a page's: the run behind it is still
-   the subject, and a title the weight of PAUSED would make the panel look
-   like somewhere you had navigated to. */
-.menu-card-pause-options .menu-title {
-  font-size: clamp(0.95rem, 3.4vmin, 1.15rem);
-}
-
-/* ── THE SEED'S PICTURE (seed-preview.tsx) ─────────────────────────────────
-   The whole course in a box under the row that picks it, painted out of the
-   minimap's own palette because it is the same cartoon of the same sea: deep
-   water is the plate, shallows a band over it, land a solid mass, a skerry
-   solid and a reef hollow. A rider who has read one has read the other. */
-.seed-preview {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.3rem;
-  padding: 0.4rem;
-  border: 2px solid rgb(242 247 248 / 16%);
-  border-radius: 0.5rem;
-  background: var(--sea-deep, rgb(8 42 56 / 70%));
-  justify-content: center;
-}
-
-/* THE ROOM THE CHART WILL NEED, RESERVED BEFORE IT ARRIVES. Building a level
-   takes hundreds of milliseconds, so the card is up and being pressed long
-   before the first reply — and a plate sized by its CONTENTS was a word's
-   height then and a square chart's afterwards, which grew the card by a
-   couple of hundred pixels under a cursor already aimed at a button and put
-   a different one under the press. So the square is the plate's, not the
-   picture's: the word waits inside it and the chart lands in a box that is
-   already its size. Sized here rather than on the svg for exactly that
-   reason — see `.seed-preview-map`. */
-.seed-preview-plate {
-  display: flex;
-  width: 100%;
-  max-width: min(14rem, 22vh);
-  aspect-ratio: 1;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Waiting on the worker: the LAST chart stays up, dimmed, because a box that
-   emptied on every press would strobe through a walk down the seeds and take
-   the thing being compared away at the moment of comparison. */
-.seed-preview-waiting {
-  opacity: 0.45;
-}
-
-/* THE CHART IS AS BIG AS THE CARD CAN AFFORD, which is the PLATE's size and
-   is stated there: the chart is square, so its width is a height cost, and it
-   is the only thing on the start card big enough to push RIDE — the one press
-   the card exists for — off the bottom of a short window. `14rem` is the size
-   it wants; the `vh` term is what it gives back on a 720-tall desktop or a
-   phone in portrait, where the rows under it are worth more than the last
-   forty pixels of coastline. Here the chart only fills what it was given. */
-.seed-preview-map {
-  display: block;
-  width: 100%;
-  height: 100%;
-  border-radius: 0.3rem;
-}
-
-/* What the plate says when there is no chart to show — centred in the square
-   the chart will land in rather than standing in place of it. */
-.seed-preview-word {
-  margin: 0;
-  text-align: center;
-  font-size: 0.66rem;
-  letter-spacing: 0.14em;
-  color: var(--hud-info);
-  opacity: 0.8;
-}
-
-/* THE BEST ON THIS SHORE, under the chart: the same small type as the
-   chart's own reading, in the HUD's good green when there is one to beat. */
-.start-best {
-  margin: 0;
-  font-size: 0.64rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--hud-good);
-  text-align: center;
-}
-
-.start-best-none {
-  color: var(--hud-info);
-  opacity: 0.7;
-}
-
-/* Rendered whether or not there is a reading, and holding its line when there
-   is not: the words arrive with the chart, and a line that appeared with them
-   would move everything under the box by its own height. The line-height is
-   stated so the reserved `min-height` is the SAME height the words will take
-   — inherit it and the empty line is a few pixels short, which is the whole
-   card still moving, just less. */
-.seed-preview-read {
-  margin: 0;
-  min-height: 1.4em;
-  font-size: 0.64rem;
-  line-height: 1.4;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--hud-info);
-}
-
-/* The same depth ramp the map draws, at a whole course's scale: the shelf,
-   the shallows over it, the shore over them. The hairline stroke on each
-   closes the seams between the cell polygons a band is built from, exactly
-   as it does on the map (minimap-scene.ts's `bedBands`). */
-.seed-preview-shelf,
-.seed-preview-shallows {
-  stroke-width: 0.2;
-}
-
-.seed-preview-shelf {
-  fill: var(--sea);
-  stroke: var(--sea);
-  opacity: 0.5;
-}
-
-.seed-preview-shallows {
-  fill: var(--sea-shallow);
-  stroke: var(--sea-shallow);
-  opacity: 0.52;
-}
-
-/* The shore, in the map's own two tones: the wood, and the bare ground over
-   the tree line. Flat rather than stippled — a canopy grain over a whole
-   two-kilometre coast at this size is noise, not texture. */
-.seed-preview-land {
-  fill: color-mix(in srgb, var(--pine), #b9c79a 44%);
-}
-
-/* Softer than the map's, because a whole coast at this size carries dozens
-   of bare hilltops and at full contrast they read as things standing on the
-   shore rather than as the relief of it. */
-.seed-preview-highland {
-  fill: color-mix(in srgb, var(--granite), #e2ddcc 30%);
-  opacity: 0.55;
-}
-
-.seed-preview-surf {
-  stroke: rgb(226 244 250 / 52%);
-  stroke-width: 1.4;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.seed-preview-shore {
-  stroke: rgb(12 44 58 / 78%);
-  stroke-width: 0.5;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.seed-preview-rocks {
-  fill: rgb(12 44 58 / 88%);
-}
-
-.seed-preview-reefs {
-  fill: rgb(12 44 58 / 22%);
-  stroke: rgb(12 44 58 / 70%);
-  stroke-width: 0.3;
-}
-
-.seed-preview-route {
-  stroke: rgb(242 247 248 / 78%);
-  stroke-width: 1;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-
-.seed-preview-gate {
-  fill: rgb(242 247 248 / 62%);
-}
-
-/* The start line, given the buoy's own orange: the one point on the chart a
-   rider is looking for, which is where the run begins. */
-.seed-preview-start {
-  fill: var(--buoy);
-  stroke: rgb(6 30 42 / 70%);
-  stroke-width: 0.6;
-}
-
-/* The page's one blunt press — RESTORE DEFAULTS, COPY REPRO LINK, LOCK. */
-.opt-reset {
-  margin-top: 0.2rem;
-  padding: 0.55rem 0.7rem;
-  border: 2px dashed rgb(242 247 248 / 26%);
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--hud-info);
-  font: inherit;
-  font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  cursor: pointer;
-}
-
-.opt-reset:hover,
-.opt-reset:focus-visible,
-.opt-reset.nav-cursor {
-  border-color: var(--buoy);
-  color: var(--hud-ink);
-  outline: none;
-}
-
-.opt-reset-quiet {
-  opacity: 0.65;
-  font-size: 0.66rem;
-}
-
-/* ── THE CRAFT CARD (menu-craft.tsx, craft-picker.tsx) ────────────────────
-   THE CRAFT IS THE PAGE. It is the only thing on this card that cannot be
-   said in words, and the one the whole screen exists to choose — so it takes
-   the room, and everything else is sized to be READ rather than to fill.
-   What is left beside it is two figures and four bars (craft-stats.ts).
-
-   Built the way OPTIONS is: a head row, a body that is one column or two,
-   and the card's one sentence — the craft's own billing — standing IN the
-   picture rather than on a row of its own, because a line of prose under
-   every control is height, and height on a phone is the craft getting
-   smaller. */
-
-.menu-card-craft {
-  width: min(52rem, 100%);
-}
-
-.craft-pick-body {
-  display: grid;
-  gap: clamp(0.6rem, 2.4vmin, 1.1rem);
-}
-
-.craft-stage-col {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-/* THE NAME AND THE COUNT stand IN the picture, on one line across the head
-   of the stage: the craft and what it is called are one thing, and a caption
-   on a line of its own below the frame is a line of the card's height spent
-   saying so. At the TOP because that is where the craft is not — the shot
-   sits the hull low with air over the deck (craft-turntable.ts), so the
-   plate goes in the air rather than across the bow. The whole row becomes
-   the stage with both of them out of the flow. */
-.craft-pick-row {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-}
-
-/* The arrows come OFF the row and stand over the water. Flanking it they
-   would be two thumb-widths of the card's width spent on chrome at exactly
-   the moment the card is trying to hand the craft everything it has; over
-   the corners of the picture they cost nothing and read the way the arrows
-   either side of a showroom photograph do. */
-.craft-pick {
-  position: relative;
-  display: flex;
-  flex: 1;
-  align-items: stretch;
-}
-
-/* The pane the hull floats in: the sea's own two tones, so the disc under
-   the craft reads as water rather than as a plinth. Held to roughly four by
-   three on a narrow card — the stand frames the craft to whichever of the
-   pane's two dimensions runs out first (craft-turntable.ts), and on a pane
-   much taller than it is wide that is the WIDTH, so every further pixel of
-   height is scrim under the hull rather than more hull.
-
-   IT IS ALSO HELD, for seven seconds, to let the developer menu out
-   (craft-picker.tsx) — and it needs nothing of its own for that. A finger
-   left on a picture that long is a finger a phone would otherwise offer a
-   loupe, a selection or a callout, each of which takes the pointer stream
-   the hold is counted on away; the page-wide `touch-action: none` and the
-   `*` rule at the head of this sheet already refuse all three. */
-.craft-pick-stage {
-  position: relative;
-  flex: 1;
-  height: clamp(9rem, 30vh, 15rem);
-  border-radius: 0.7rem;
-  border: 2px solid rgb(242 247 248 / 18%);
-  background: linear-gradient(rgb(63 167 184 / 26%), rgb(11 61 79 / 55%));
-  overflow: hidden;
-}
-
-/* THE CANVAS IS TAKEN OUT OF THE FLOW, and that is load-bearing rather than
-   tidy. A canvas is a REPLACED element: given `height: 100%` against a
-   parent whose own height is indefinite — which is exactly what this stage
-   is on the two-column shape, sized by the grid row — the percentage cannot
-   resolve, so it falls back to the BUFFER's aspect ratio and the picture
-   starts sizing the frame it is supposed to be filling.
-
-   That closes a loop, because the buffer is cut to the frame every frame
-   (craft-turntable.ts): pane height ← buffer ratio ← pane height. Every
-   ratio is a fixed point of it, so the pane keeps whatever shape it had when
-   its height was last definite and no later screen can talk it down. In the
-   flow, a phone turned from upright to sideways carries its PORTRAIT ratio
-   into a landscape pane — which is TAKE IT pushed under the fold.
-
-   Absolute against the stage's own box, the canvas contributes no height to
-   anything: the pane is sized by the stylesheet and the grid, the buffer
-   follows the pane, and the arrow of causation only points one way. */
-.craft-pick-canvas {
-  position: absolute;
-  inset: 0;
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
-.craft-pick-step {
-  position: absolute;
-  top: 50%;
-  z-index: 1;
-  min-width: 2.4rem;
-  padding: 0.45rem 0.5rem;
-  border: 2px solid rgb(242 247 248 / 30%);
-  border-radius: 0.5rem;
-  background: rgb(8 42 56 / 60%);
-  color: var(--hud-ink);
-  font: inherit;
-  font-size: clamp(1.1rem, 4vmin, 1.6rem);
-  line-height: 1;
-  cursor: pointer;
-  touch-action: manipulation;
-  transform: translateY(-50%);
-}
-
-.craft-pick-step:hover,
-.craft-pick-step:focus-visible {
-  border-color: var(--buoy);
-  outline: none;
-}
-
-.craft-pick-step[data-nav-step="left"] {
-  left: 0.45rem;
-}
-
-.craft-pick-step[data-nav-step="right"] {
-  right: 0.45rem;
-}
-
-.craft-pick-id {
-  position: absolute;
-  top: 0.55rem;
-  left: 50%;
-  z-index: 1;
-  display: flex;
-  align-items: baseline;
-  gap: 0.55rem;
-  padding: 0.2rem 0.85rem 0.25rem;
-  border-radius: 0.5rem;
-  background: rgb(8 42 56 / 55%);
-  transform: translateX(-50%);
-}
-
-.craft-pick-name {
-  font-size: clamp(0.9rem, 3.2vmin, 1.3rem);
-  font-weight: 700;
-  letter-spacing: 0.16em;
-  color: var(--buoy);
-}
-
-.craft-pick-count {
-  font-size: clamp(0.55rem, 2vmin, 0.72rem);
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.18em;
-  color: var(--hud-info);
-}
-
-/* The card's ONE sentence, IN the picture: across the foot of the stage,
-   inside its border, over the water the craft is floating on. Centred,
-   because there is nothing to tie it to but the hull it is sitting under. */
-/* THE CLASS ROW — one line of chips under the hull, between the picture and
-   the press that rides. It reads as a row of words rather than a slider
-   because the rungs are NAMED classes out of the sport's own paddock, not
-   points on a scale, and because the one that is on has to be legible at a
-   glance on a phone held at arm's length. */
-.craft-class {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.3rem;
-  align-items: center;
-  justify-content: center;
-  margin: 0.35rem 0 0;
-}
-
-.craft-class-label {
-  margin-right: 0.2rem;
-  font-size: clamp(0.5rem, 1.9vmin, 0.62rem);
-  letter-spacing: 0.12em;
-  color: var(--hud-info);
-}
-
-.craft-class-chip {
-  padding: 0.2rem 0.6rem;
-  border: 1px solid rgb(255 255 255 / 18%);
-  border-radius: 999px;
-  background: rgb(8 42 56 / 45%);
-  font: inherit;
-  font-size: clamp(0.5rem, 1.9vmin, 0.62rem);
-  letter-spacing: 0.1em;
-  color: var(--hud-info);
-  cursor: pointer;
-}
-
-.craft-class-chip.is-on {
-  border-color: var(--sea);
-  background: var(--sea);
-  color: #fff;
-}
-
-.craft-blurb {
-  position: absolute;
-  right: 0.55rem;
-  bottom: 0.5rem;
-  left: 0.55rem;
-  z-index: 1;
-  margin: 0;
-  padding: 0.28rem 0.7rem;
-  border-radius: 0.45rem;
-  background: rgb(8 42 56 / 55%);
-  font-size: clamp(0.56rem, 2vmin, 0.7rem);
-  letter-spacing: 0.04em;
-  text-align: center;
-  text-transform: none;
-  text-wrap: balance;
-  color: var(--hud-info);
-}
-
-/* Beside the craft, TWO BLOCKS HELD TOGETHER in the middle of the column.
-   The column is as tall as the picture is and will always have height to
-   spare — the readings are six short lines by design — and there are only
-   two things to spend it between, so pushing them to the ends opens one
-   hole in the middle of the card instead of giving either block anything.
-   Kept together they read as one sheet beside the craft, which is what they
-   are: two figures and what those figures are worth against the roster. */
-.craft-spec {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: clamp(0.45rem, 2vmin, 0.8rem);
-  min-width: 0;
-}
-
-/* THE TWO FIGURES, big — they are what the arrows under them move, and a
-   choice whose consequence is printed in six-point type is a choice nobody
-   notices they have made. */
-.craft-figures {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.4rem;
-}
-
-.craft-figure {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.5rem 0.7rem 0.6rem;
-  border-radius: 0.6rem;
-  background: rgb(242 247 248 / 7%);
-}
-
-.craft-figure-label {
-  font-size: clamp(0.5rem, 1.7vmin, 0.64rem);
-  letter-spacing: 0.16em;
-  color: var(--hud-info);
-}
-
-/* Tabular figures are not a nicety here: the number COUNTS to its new value
-   (menu-craft.tsx), and proportional digits would have the whole readout
-   shuffling sideways all the way there. */
-.craft-figure-value {
-  font-size: clamp(1.05rem, 3.8vmin, 1.6rem);
-  font-weight: 700;
-  font-variant-numeric: tabular-nums;
-  line-height: 1.05;
-  color: var(--buoy);
-}
-
-.craft-figure-unit {
-  margin-left: 0.35em;
-  font-size: 0.6em;
-  letter-spacing: 0.1em;
-  opacity: 0.8;
-}
-
-/* FOUR BARS IN ONE BOX, kept small. They are a comparison, not a readout —
-   what is worth reading off them is which of four hulls is longest, and that
-   is legible at any height. One panel rather than four: they are read
-   TOGETHER, and four boxes is four things to look at where there is one. */
-.craft-bars {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-  padding: 0.55rem 0.7rem;
-  border-radius: 0.6rem;
-  background: rgb(242 247 248 / 7%);
-}
-
-.craft-bar {
-  display: flex;
-  align-items: center;
-  gap: 0.55rem;
-}
-
-/* Fixed, so the tracks start on the same x down the block — which is what
-   makes four bars read as one comparison instead of four. */
-.craft-bar-label {
-  flex: none;
-  width: 6.1rem;
-  font-size: clamp(0.44rem, 1.5vmin, 0.56rem);
-  letter-spacing: 0.1em;
-  white-space: nowrap;
-  color: var(--hud-info);
-}
-
-.craft-bar-track {
-  flex: 1;
-  min-width: 0;
-  height: 0.45rem;
-  border-radius: 0.23rem;
-  background: rgb(242 247 248 / 14%);
-  overflow: hidden;
-}
-
-/* The bar TRAVELS to its new length, over the same 420 ms and the same cubic
-   ease-out the figures count over (`lib/count.ts`): press an arrow and the
-   whole sheet moves as one thing, instead of two numbers rolling while four
-   bars jump. */
-.craft-bar-fill {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--buoy);
-  transition: width 420ms cubic-bezier(0.22, 0.61, 0.36, 1);
-}
-
-.craft-done {
-  margin-top: 0.2rem;
-  text-align: center;
-}
-
-/* Two columns, the moment the card is wide enough to read the sheet beside
-   the craft — which on a phone held sideways is every time.
-
-   THE STAGE ABSORBS THE SLACK. The row is as tall as its taller column, and
-   with the pane stretched to fill what it is given, that slack becomes CRAFT
-   rather than a rectangle of empty water under one column or the other. The
-   clamp above stops being a height and becomes the floor under it. */
-@media (min-width: 40rem) {
-  .craft-pick-body {
-    grid-template-columns: minmax(0, 1.4fr) minmax(14rem, 1fr);
-    align-items: stretch;
-  }
-
-  .craft-pick-stage {
-    height: auto;
-    min-height: clamp(9rem, 30vh, 15rem);
-  }
-}
-
-/* A desktop. The extra width goes to the CRAFT — a wider card, a bigger
-   share of it for the stand, and a stand tall enough to use it: a picture of
-   a hull in a 3:1 letterbox is a smaller hull than the same one in a window
-   half the width. */
-@media (min-width: 64rem) {
-  .menu-card-craft {
-    width: min(60rem, 100%);
-  }
-
-  .craft-pick-body {
-    grid-template-columns: minmax(0, 1.7fr) minmax(15rem, 1fr);
-  }
-
-  .craft-pick-stage {
-    min-height: clamp(13rem, 46vh, 24rem);
-  }
-}
-
-/* A phone held sideways — the shape with the least height and the most of it
-   already spoken for. The columns even up (the sheet has no more to say than
-   it does on a laptop, and the craft has everything left over), and the
-   stand takes nearly half the screen's height: the budget is the head, the
-   billing and TAKE IT, and the rest of the card is the craft. */
-@media (orientation: landscape) and (max-height: 34rem) {
-  .craft-pick-body {
-    gap: 0.6rem;
-    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
-  }
-
-  .craft-spec {
-    gap: 0.4rem;
-  }
-
-  .craft-pick-stage {
-    min-height: clamp(6rem, 34vh, 11rem);
-  }
-}
-
-/* THE CURSOR'S RING (menu-nav.ts). A class this module owns rather than
-   `:focus-visible`: browsers decide that one from how the last press ARRIVED,
-   and a controller arrives as nothing at all — the ring would come and go by
-   heuristic on the one input that has nowhere else to look. */
-.nav-cursor {
-  outline: none;
-  box-shadow: 0 0 0 3px rgb(242 140 40 / 55%);
-}
-
-/* ── THE GALLERY (menu-gallery.tsx) ────────────────────────────────────────
-   The pictures the player took, under the front door's GALLERY row. A VIEWER
-   rather than a grid: one picture fills the frame, an arrow either side of
-   it, the roll running as a filmstrip underneath.
-
-   THE FRAME IS THE PICTURE'S OWN SHAPE, bounded. A fixed landscape frame
-   would be the wrong shape for every picture in the roll on the one device
-   most of them are taken on: a phone held upright photographs a tall frame,
-   and letterboxing it into 16:9 throws away most of the card's width to draw
-   it small. So the frame hugs whatever is in it and the picture is bounded
-   instead — never wider than the card, never taller than half
-   the window, which is what keeps the caption, the buttons and the filmstrip
-   under it on screen. The cost is a card that changes height when the roll
-   is flipped between shapes; on any one device every picture in the roll has
-   the same shape, so it is a cost almost nobody pays. */
-.menu-card-gallery {
-  width: min(52rem, 100%);
-  gap: 0.7rem;
-}
-
-.gallery {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  min-height: 0;
-}
-
-.gallery-empty {
-  padding: 1.6rem 0.4rem;
-  text-align: center;
-  font-size: 0.85rem;
-  letter-spacing: 0.1em;
-  line-height: 1.7;
-  opacity: 0.8;
-}
-
-.gallery-stage {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  min-height: 0;
-}
-
-/* The two arrows are a STEPPER (`data-nav-steps`), so they wear the knob
-   rows' own arrows rather than a shape of their own: the same press on the
-   same silhouette picks a value everywhere else on every other card. */
-.gallery-step {
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.2rem;
-  height: 3.4rem;
-  font: inherit;
-  font-size: 1.6rem;
-  line-height: 1;
-  color: var(--buoy);
-  background: transparent;
-  border: 0;
-  border-radius: 0.45rem;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.gallery-step:hover,
-.gallery-step:focus-visible {
-  background: rgb(242 247 248 / 14%);
-  outline: none;
-}
-
-.gallery-step:active {
-  background: var(--buoy);
-  color: var(--hud-shadow);
-  transform: translateY(1px);
-}
-
-.gallery-step:disabled {
-  opacity: 0.25;
-  cursor: default;
-}
-
-.gallery-frame {
-  flex: 0 1 auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 0;
-  /* Enough to be a frame before anything has decoded in it, so the card does
-     not jump as the picture arrives. */
-  min-height: 8rem;
-  background: rgb(8 42 56 / 55%);
-  border: 2px solid rgb(242 247 248 / 18%);
-  border-radius: 0.5rem;
-  overflow: hidden;
-}
-
-/* NEVER CROPPED, and never blown up past the pixels that were captured: a
-   gallery that cropped to fit would quietly cut the very thing the picture
-   was taken for. */
-.gallery-img {
-  max-width: 100%;
-  max-height: 52vh;
-  object-fit: contain;
-  display: block;
-}
-
-.gallery-caption {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 0.6rem;
-  font-size: 0.78rem;
-  letter-spacing: 0.12em;
-}
-
-.gallery-label {
-  font-weight: 700;
-}
-
-.gallery-stamp {
-  opacity: 0.7;
-  /* The date is the one thing on this card that is not the game's own
-     vocabulary, so it does not shout. */
-  text-transform: none;
-  letter-spacing: 0.06em;
-}
-
-.gallery-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.gallery-btn {
-  padding: 0.5rem 0.9rem;
-  font: inherit;
-  font-size: 0.8rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--hud-ink);
-  background: rgb(27 111 138 / 55%);
-  border: 2px solid rgb(242 247 248 / 26%);
-  border-radius: 0.5rem;
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.gallery-btn:hover,
-.gallery-btn:focus-visible {
-  background: rgb(27 111 138 / 80%);
-  outline: none;
-}
-
-.gallery-btn:active {
-  transform: translateY(1px);
-}
-
-/* DELETE is quiet until it has been asked once, and then it is the loudest
-   thing on the card — the two-step is the whole safety, and a player has to
-   be able to see which step they are on without reading the word. */
-.gallery-btn-quiet {
-  margin-left: auto;
-  background: transparent;
-  opacity: 0.75;
-}
-
-.gallery-btn-arm {
-  background: var(--hud-bad);
-  border-color: var(--hud-bad);
-  color: var(--hud-shadow);
-  opacity: 1;
-}
-
-.gallery-notice {
-  flex-basis: 100%;
-  min-height: 1.1em;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  color: var(--hud-good);
-}
-
-/* The filmstrip scrolls on its own, so a full roll never grows the card past
-   the viewport — the card is the scroller everywhere else, and forty tiles
-   wrapped into rows would push the picture itself off the top. */
-.gallery-strip {
-  display: flex;
-  gap: 0.35rem;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding-bottom: 0.2rem;
-  -webkit-overflow-scrolling: touch;
-}
-
-.gallery-thumb {
-  flex: none;
-  padding: 0;
-  background: rgb(8 42 56 / 55%);
-  border: 2px solid rgb(242 247 248 / 18%);
-  border-radius: 0.35rem;
-  cursor: pointer;
-  overflow: hidden;
-  touch-action: manipulation;
-}
-
-.gallery-thumb-on {
-  border-color: var(--buoy);
-}
-
-.gallery-thumb-slot {
-  display: block;
-  width: 5rem;
-  height: 2.9rem;
-}
-
-.gallery-thumb-img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* A PHONE HELD UPRIGHT has no width to spare beside the picture, so the
-   arrows shrink to what a thumb still hits and the strip's tiles with them.
-   Nothing is dropped: a gallery that hid its own way of flipping on the one
-   device with no arrow keys would be a gallery with one picture in it. */
-@media (max-width: 30rem) {
-  .gallery-step {
-    width: 1.7rem;
-    font-size: 1.3rem;
-  }
-
-  .gallery-thumb-slot {
-    width: 4rem;
-    height: 2.3rem;
-  }
 }
 
 /* ── THE LOADING CARD ──────────────────────────────────────────────────────
@@ -5392,7 +2319,7 @@ button.knob-read:focus-visible {
    every shader in it compiled — all of which would otherwise be paid for with
    a frozen page and then a stuttering first minute.
 
-   The same water as the attract card, for the same reason: this is the app's
+   The same snow as the attract card, for the same reason: this is the app's
    own cover coming down over the game, not a screen change. */
 .loading {
   position: absolute;
@@ -5401,7 +2328,7 @@ button.knob-read:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, var(--sea-deep) 0%, var(--sea) 100%);
+  background: linear-gradient(180deg, var(--night) 0%, var(--sky-high) 100%);
   opacity: 1;
   transition: opacity 260ms ease-out;
 }
@@ -5455,7 +2382,7 @@ button.knob-read:focus-visible {
   height: 0.5rem;
   overflow: hidden;
   border-radius: 999px;
-  background: rgb(8 42 56 / 60%);
+  background: rgb(13 34 51 / 60%);
 }
 
 /* EVERY FILL IS A TRANSFORM. The phases that need a bar most are single
@@ -5466,7 +2393,7 @@ button.knob-read:focus-visible {
   width: 100%;
   height: 100%;
   border-radius: 999px;
-  background: var(--buoy);
+  background: var(--flag);
   transform-origin: left center;
   will-change: transform;
 }
@@ -5529,13 +2456,13 @@ button.knob-read:focus-visible {
      shape under it — the last frame of the wipe, not the first.
 
      It is stated at the same weight as the two lays it is overruling
-     (`.mark-wave-once .mark-wave-wipe` and the loop beside it) and after
+     (`.mark-trails-once .mark-trails-wipe` and the loop beside it) and after
      them. A lighter selector loses to those on SPECIFICITY however late it
      comes, and what that looks like is not a mark that keeps moving: it is a
      mark parked on the wipe's FIRST frame, drawn as nothing but its own faint
      ghost. */
-  .mark-wave .mark-wave-wipe,
-  .mark-wave .mark-wave-slide {
+  .mark-trails .mark-trails-wipe,
+  .mark-trails .mark-trails-slide {
     animation: none;
     transform: none;
   }
@@ -5568,1026 +2495,4 @@ button.knob-read:focus-visible {
       0 1px 0 var(--hud-shadow),
       0 0 0.45em var(--hud-good);
   }
-}
-
-/* ── THE BENCHMARK (menu-bench.tsx) ────────────────────────────────────────
-   Three surfaces in one look: the card over the race being timed, the same
-   graph given the whole screen, and the list of every run this machine has
-   scored. They wear the front door's chrome — a card, a head, rows — because
-   they are the same program asking a different kind of question, and the one
-   thing they add is a GRAPH, which is the only thing here that cannot be said
-   in a row.
-
-   THE TWO LINES ARE THE PALETTE'S OWN and are never anything else: the score
-   is the buoy's orange, which is the colour this game marks the thing worth
-   looking at with, and the rate is the shallows' blue. They share one box and
-   one ceiling because they are one quantity in two units
-   (benchmark-index.ts). */
-
-.bench-layer {
-  /* The race underneath is the thing being measured and is worth seeing: less
-     wash than a menu over an attract sea, because nobody is reading a page
-     here, they are watching a number settle over a race. */
-  background: rgb(8 42 56 / 24%);
-  align-items: flex-start;
-}
-
-.bench {
-  width: min(28rem, 100%);
-}
-
-/* The copy press, standing in a head rather than under a card. `.opt-reset`
-   is a full-width dashed row; this gives back everything that made it one and
-   keeps only its colour and its dashes — this is a corner, not a banner. */
-.bench-copy {
-  align-self: start;
-  width: auto;
-  margin-top: 0;
-  padding: 0.3rem 0.55rem;
-  font-size: 0.62rem;
-  white-space: nowrap;
-}
-
-/* THE SCORE, once there is one. Bigger than anything else on the card by a
-   long way, because it is the whole answer and the graph under it is only the
-   working. */
-.bench-score {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.1rem;
-  font-size: clamp(2.6rem, 11vmin, 3.8rem);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0.04em;
-  color: var(--buoy);
-}
-
-.bench-score-label {
-  font-size: 0.66rem;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  color: var(--hud-info);
-}
-
-/* The same measurement in the unit anybody has a feel for. Quiet, because it
-   is a translation of the figure above it and not a second reading. */
-.bench-score-rate {
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 0.14em;
-  color: var(--hud-info);
-}
-
-/* The card's one sentence: what it needs from the person watching, or what
-   the empty history needs from them. */
-.bench-note {
-  font-size: 0.68rem;
-  letter-spacing: 0.06em;
-  line-height: 1.5;
-  text-transform: none;
-  text-align: center;
-  color: var(--hud-info);
-}
-
-.bench-plot {
-  display: block;
-  width: 100%;
-  height: auto;
-}
-
-/* The graph as a PRESS, once the run is over: a hundred and twenty readings
-   on a card are two millimetres apart, and the kink worth seeing is smaller
-   than that. It carries no chrome of its own — the panel inside the SVG is
-   the button's face. */
-.bench-plot-open {
-  display: block;
-  width: 100%;
-  padding: 0;
-  border: none;
-  background: transparent;
-  font: inherit;
-  color: inherit;
-  cursor: pointer;
-}
-
-.bench-plot-more {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.6rem;
-  letter-spacing: 0.18em;
-  color: var(--hud-info);
-}
-
-.bench-plot-open:hover .bench-plot-more,
-.bench-plot-open:focus-visible .bench-plot-more,
-.bench-plot-open.nav-cursor .bench-plot-more {
-  color: var(--buoy);
-  outline: none;
-}
-
-/* THE GRAPH, GIVEN THE SCREEN. It REPLACES the card rather than sitting over
-   it: a graph that is the whole point of the view has no business fighting
-   for room with the card it came from. */
-.bench-full {
-  display: flex;
-  flex-direction: column;
-  gap: 0.8rem;
-  width: min(64rem, 100%);
-  padding: clamp(1rem, 3.5vmin, 1.6rem);
-  border-radius: 0.9rem;
-  background: rgb(11 61 79 / 92%);
-  border: 2px solid rgb(242 247 248 / 22%);
-  box-shadow: 0 10px 0 rgb(8 42 56 / 45%);
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-}
-
-/* Inside the history page the graph is already in a card, so it gives its own
-   chrome back rather than drawing a second frame inside the first. */
-.menu-card-bench .bench-full {
-  width: 100%;
-  padding: 0;
-  border: none;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.bench-plot-full {
-  /* The lines are the page here, so the box takes what the viewport will give
-     it and keeps its own aspect. */
-  max-height: 70vh;
-}
-
-/* Bigger box, same viewBox — so every stroke would be drawn four times as
-   thick as it was authored. Each is given back what the scale takes. */
-.bench-plot-full .bench-plot-panel {
-  stroke-width: 0.4;
-}
-
-.bench-plot-full .bench-plot-line {
-  stroke-width: 1.1;
-}
-
-.bench-plot-full .bench-plot-rate {
-  stroke-width: 0.5;
-}
-
-.bench-plot-full .bench-plot-head {
-  r: 2.2;
-}
-
-/* ITS OWN GROUND. The card is see-through and what is behind it is a race at
-   speed — a line drawn straight onto that is a line read against moving
-   scenery. */
-.bench-plot-panel {
-  fill: rgb(8 42 56 / 62%);
-  stroke: rgb(242 247 248 / 14%);
-  stroke-width: 1;
-}
-
-.bench-plot-axis,
-.bench-plot-grid {
-  stroke: rgb(242 247 248 / 26%);
-  stroke-width: 0.6;
-}
-
-.bench-plot-grid {
-  stroke-dasharray: 2 3;
-  opacity: 0.6;
-}
-
-/* Real time: the one gradation on this scale that means something without a
-   second machine to compare against. A mark on BOTH axes, so it wears
-   neither line's colour. */
-.bench-plot-real {
-  stroke: rgb(242 247 248 / 45%);
-  stroke-width: 0.6;
-  stroke-dasharray: 4 3;
-}
-
-.bench-plot-tick {
-  font-size: 7px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  fill: var(--hud-info);
-}
-
-/* The unit under the number at the top of each axis — the whole legend the
-   card needs, because each is tinted like the line read against it. */
-.bench-plot-unit {
-  font-size: 5.5px;
-  font-weight: 700;
-  letter-spacing: 0.16em;
-}
-
-.bench-plot-tick-index {
-  fill: var(--buoy);
-}
-
-.bench-plot-tick-rate {
-  fill: var(--sea-shallow);
-}
-
-.bench-plot-tick-real {
-  fill: rgb(242 247 248 / 72%);
-}
-
-.bench-plot-wash-top {
-  stop-color: var(--buoy);
-  stop-opacity: 0.34;
-}
-
-.bench-plot-wash-foot {
-  stop-color: var(--buoy);
-  stop-opacity: 0;
-}
-
-.bench-plot-area {
-  fill: url("#bench-plot-wash");
-}
-
-.bench-plot-line {
-  fill: none;
-  stroke: var(--buoy);
-  stroke-width: 1.8;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-}
-
-/* The busier of the two by far, and a hairline for it: a run is read as a
-   score with a rate around it rather than the other way round. */
-.bench-plot-rate {
-  fill: none;
-  stroke: var(--sea-shallow);
-  stroke-width: 0.8;
-  stroke-linejoin: round;
-  opacity: 0.85;
-}
-
-.bench-plot-head {
-  fill: var(--buoy);
-  stroke: rgb(8 42 56 / 70%);
-  stroke-width: 1;
-}
-
-.bench-plot-score {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  fill: var(--hud-ink);
-  paint-order: stroke;
-  stroke: rgb(8 42 56 / 80%);
-  stroke-width: 2.5;
-  stroke-linejoin: round;
-}
-
-/* WHAT THE PICTURE WAS SET TO, under the score: the six rows the run
-   deliberately did not pin, which are the whole reason a second run exists. */
-.bench-video {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr));
-  gap: 0.35rem;
-}
-
-.bench-video-cell {
-  display: flex;
-  flex-direction: column;
-  gap: 0.05rem;
-  padding: 0.3rem 0.4rem;
-  border-radius: 0.35rem;
-  background: rgb(8 42 56 / 45%);
-}
-
-.bench-video-label {
-  font-size: 0.56rem;
-  letter-spacing: 0.14em;
-  color: var(--hud-info);
-}
-
-.bench-video-value {
-  font-size: 0.74rem;
-  font-weight: 700;
-  letter-spacing: 0.1em;
-}
-
-/* ── THE HISTORY (menu-bench.tsx) ──────────────────────────────────────────
-   Every run this machine has scored, one row each. The SETTINGS ARE ON THE
-   ROW, as a glyph a row, because that is the comparison: a list of scores
-   with the conditions somewhere else is a list nobody can read. */
-
-.menu-card-bench {
-  width: min(44rem, 100%);
-}
-
-.bench-runs {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.bench-run {
-  display: grid;
-  grid-template-columns: auto auto 1fr auto;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-  padding: 0.45rem 0.6rem;
-  border: 2px solid rgb(242 247 248 / 18%);
-  border-radius: 0.5rem;
-  background: rgb(8 42 56 / 45%);
-  color: var(--hud-ink);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.bench-run:hover,
-.bench-run:focus-visible,
-.bench-run.nav-cursor {
-  border-color: var(--buoy);
-  outline: none;
-}
-
-.bench-run-score {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 3.6rem;
-}
-
-.bench-run-index {
-  font-size: 1.25rem;
-  font-weight: 700;
-  line-height: 1;
-  color: var(--buoy);
-}
-
-.bench-run-fps {
-  font-size: 0.56rem;
-  letter-spacing: 0.1em;
-  color: var(--hud-info);
-}
-
-/* THE CODE. Monospaced, because six bars only read as a shape when they are
-   six equal columns — the same six characters the pasted sheet carries, so
-   the screen and the paste are one artefact. */
-.bench-run-code,
-.bench-legend .bench-rung {
-  font-family: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
-}
-
-.bench-run-code {
-  display: flex;
-  font-size: 1.05rem;
-  line-height: 1;
-  letter-spacing: 0.02em;
-}
-
-/* THE TINT IS A SECOND READING AND NEVER A FIRST: every rung is already a
-   different height, so the row survives a colour-blind reader, a greyscale
-   screenshot and the trip through a text field. What the colour adds is the
-   direction — cheap is the sea's own blue, dear is the buoy's orange. */
-.bench-rung {
-  display: inline-block;
-}
-
-.bench-rung-0,
-.bench-rung-1,
-.bench-rung-2 {
-  color: var(--sea-shallow);
-}
-
-.bench-rung-3,
-.bench-rung-4,
-.bench-rung-5 {
-  color: var(--sky);
-}
-
-.bench-rung-6,
-.bench-rung-7 {
-  color: var(--buoy);
-}
-
-/* A stop no ladder in this build has — a renamed setting, or a store somebody
-   edited. Marked as a question rather than coloured as a height. */
-.bench-rung-x {
-  color: var(--hud-bad);
-}
-
-.bench-run-cost {
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  color: var(--hud-info);
-}
-
-.bench-run-when {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 0.58rem;
-  letter-spacing: 0.06em;
-  text-transform: none;
-  color: var(--hud-info);
-}
-
-.bench-run-buffer {
-  opacity: 0.75;
-}
-
-/* WHAT THE GLYPHS MEAN — the same legend the copied sheet prints at its
-   bottom, off the same tables, tinted because a screen can afford it. */
-.bench-legend {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  padding-top: 0.5rem;
-  border-top: 2px solid rgb(242 247 248 / 14%);
-  font-size: 0.56rem;
-  letter-spacing: 0.08em;
-  color: var(--hud-info);
-}
-
-.bench-legend-head {
-  margin-bottom: 0.15rem;
-  opacity: 0.8;
-}
-
-.bench-legend-row {
-  display: grid;
-  grid-template-columns: 8rem 1fr;
-  gap: 0.4rem;
-  align-items: baseline;
-}
-
-.bench-legend-label {
-  opacity: 0.85;
-}
-
-.bench-legend-stops {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem 0.7rem;
-}
-
-.bench-legend-stop {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 0.2rem;
-}
-
-/* A ROW ON A CARD THAT LEADS SOMEWHERE, with a sentence under its name. The
-   front door's rows are one word each; these two carry a line of billing,
-   because HISTORY and RUN AGAIN mean nothing until somebody has been told
-   what they cost. */
-.menu-item-sub {
-  display: block;
-  margin-top: 0.25rem;
-  font-size: 0.6rem;
-  font-weight: 400;
-  line-height: 1.45;
-  letter-spacing: 0.04em;
-  text-indent: 0;
-  text-transform: none;
-  color: var(--hud-info);
-}
-
-/* A row that is a TOOL rather than part of the game — the developer tile's
-   own chrome, on a full-width row. */
-.menu-item-dev {
-  background: rgb(8 42 56 / 70%);
-  border-style: dashed;
-  font-size: 0.88rem;
-}
-
-/* THE UNLOCKS PAGE's shore rows: a name and how far it has got on the left,
-   then the two presses. The presses are sized off their WORDS rather than
-   shared out, so UNLOCK and LOCK stand the same width on every row however
-   long the shore's name is. */
-.dev-locks {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.dev-lock {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.dev-lock-text {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-  letter-spacing: 0.06em;
-}
-
-.dev-lock-act {
-  width: 6.5rem;
-  justify-content: center;
-  text-align: center;
-}
-
-/* SPENT, either way: a press with nothing left to do stays on the row and
-   goes quiet, because a row that vanished would move the shore under the
-   thumb reaching for the other one. */
-.dev-lock-act:disabled,
-.menu-item-dev:disabled {
-  opacity: 0.4;
-  cursor: default;
-}
-
-/* A phone in portrait: the presses drop under the name rather than squeezing
-   it to two letters. */
-@media (width <= 30rem) {
-  .dev-lock {
-    grid-template-columns: 1fr 1fr;
-  }
-
-  .dev-lock-text {
-    grid-column: 1 / -1;
-  }
-
-  .dev-lock-act {
-    width: 100%;
-  }
-}
-
-/* A phone in portrait: the run rows stop being four columns and become two,
-   with the code and the date sitting under the score rather than beside it. */
-@media (width <= 30rem) {
-  .bench-run {
-    grid-template-columns: auto 1fr;
-    gap: 0.35rem 0.6rem;
-  }
-
-  .bench-run-when {
-    grid-column: 2;
-    align-items: flex-start;
-  }
-
-  .bench-run-cost {
-    grid-column: 1 / -1;
-  }
-
-  .bench-legend-row {
-    grid-template-columns: 1fr;
-  }
-}
-
-/* The card's copy press is a `.menu-item` row rather than a head corner (see
-   `menu-bench.tsx`), so it gives back the row's shouting weight and keeps only
-   its box: this is a tool, not the way on. */
-.bench-copy-row {
-  font-size: 0.74rem;
-  letter-spacing: 0.14em;
-}
-
-/* ── THE CAMPAIGN CARD (menu-campaign.tsx) ────────────────────────────────
-   Two shore banners across the top, nine level boxes in a grid under the one
-   being looked at, and the shore's table under those. The BOX'S BORDER
-   carries its state — lit and open, grey and shut, ringed where the campaign
-   would pick next — because at a glance across nine boxes the frame is what
-   the eye counts; what is inside is only what is specific to the level. */
-.menu-card-campaign,
-.menu-card-levels {
-  width: min(40rem, 100%);
-  text-align: left;
-}
-
-/* Where a card has nothing to offer yet — the level card with every shore
-   still shut. It says what opens one rather than leaving a hole. */
-.menu-empty {
-  margin: 0;
-  padding: 1.2rem 0.8rem;
-  border: 2px dashed rgb(242 247 248 / 26%);
-  border-radius: 0.55rem;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-align: center;
-  text-transform: uppercase;
-  opacity: 0.7;
-}
-
-/* THE COAST STEP — one row a shore, each the full width of the card with a
-   render of the place behind it (`menu-shores.tsx`). Every row is the
-   tallest row's height (`grid-auto-rows: 1fr`), and that is not tidiness:
-   the banner behind a row is cropped to it by `object-fit: cover`, so it is
-   the ROW'S HEIGHT that decides how much coast a row shows, and rows of two
-   heights are two banners at two zooms. */
-.menu-shores {
-  display: grid;
-  grid-auto-rows: 1fr;
-  gap: 0.5rem;
-}
-
-/* A PHONE ON ITS SIDE lays the shores out the other way round, the way the
-   front door does — and here it is the BANNER that needs it rather than the
-   thumb. A row's height is capped by the viewport (there are only 390 px of
-   it) while its width is the card's, so full-width rows come out nearer 6:1
-   on a shape the card is widest at: `object-fit: cover` then takes a thin
-   band across the middle of the shot and the shore is cropped clean out of
-   it, which leaves the picture saying "water" where it has to say "coast".
-   Side by side, each row is back to about 3:1 and shows what the other two
-   viewports show. Matched on being SHORT and WIDE rather than on
-   orientation, because that is the condition the framing actually has. */
-@media (max-height: 30rem) and (min-width: 34rem) {
-  .menu-shores {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-/* The row itself. Its height is held at about three times its width at every
-   viewport either card is read at — see `.menu-shore-shot` for why the ratio
-   is load-bearing rather than taste. */
-.menu-shore {
-  position: relative;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.2rem;
-  min-height: clamp(5rem, 26vmin, 11rem);
-  padding: 0.7rem 1rem;
-  border: 2px solid rgb(242 247 248 / 22%);
-  border-left: 6px solid var(--buoy);
-  border-radius: 0.55rem;
-  background: rgb(8 42 56 / 55%);
-  color: var(--hud-ink);
-  font: inherit;
-  text-align: left;
-  text-transform: uppercase;
-  cursor: pointer;
-  touch-action: manipulation;
-  /* The row's words sit on a photograph now rather than on a flat panel, so
-     they get back the edge the rest of the menu does without: over sunlit
-     turquoise, white text with no shadow disappears. */
-  text-shadow: 0 1px 3px rgb(0 0 0 / 70%);
-}
-
-/* THE COAST behind a shore row — `make coasts`, 2.4:1, shot by the game.
-
-   IT IS WIDER THAN THE ROW ON PURPOSE, and the 30% that hangs off the edge IS
-   the travel: a picture cut to the shape of the hole it sits in has nowhere
-   to slide to. The two numbers are a pair with the shot's own shape. The row
-   is about 3:1; a box 130% of its width is about 4.3:1; the banner is shot at
-   2.4:1, so `object-fit: cover` fills that box by WIDTH and chooses a BAND of
-   the picture's height — which is why `object-position` below is the rule
-   that decides what a row shows, and why widening this without reshooting
-   simply takes a thinner slice. */
-.menu-shore-shot {
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  z-index: 0;
-  width: 130%;
-  max-width: none;
-  height: 100%;
-  object-fit: cover;
-  /* The band: the horizon, the shore standing on it and the near water under
-     it. Above centre because the sky is the same wash on both coasts and the
-     WATER is what tells them apart — and because the top corners of a 100°
-     frame are looking past where even the top DISTANCE stop draws. */
-  object-position: 50% 52%;
-  filter: brightness(0.72) saturate(1.05);
-  pointer-events: none;
-  /* Slow enough to be scenery rather than an animation — a menu row that
-     visibly moves while you read it is a menu row you cannot read. A full
-     sweep takes most of a minute, and `alternate` walks it back instead of
-     snapping to the start, which would be the one frame the eye does catch.
-     Both rows are on the same clock with no per-row delay: `ease-in-out` is
-     near-still at the ends and quickest through the middle, so two rows
-     offset in the cycle are moving at visibly different speeds at every
-     instant, and the card reads as one coast panning past another. */
-  animation: coast-pan 54s ease-in-out infinite alternate;
-}
-
-/* The travel: the whole overhang, 30% of the ROW's width — stated against the
-   IMAGE's own width, because that is what a percentage in `translate`
-   resolves against (30/130 of it). */
-@keyframes coast-pan {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(-23.08%);
-  }
-}
-
-/* Motion is decoration here: the banner says which coast this is whether or
-   not it moves, so a reader who has asked for less of it loses nothing. Said
-   at the same weight as the rule it overrules — a bare class loses to a
-   two-class animator silently, and being later in the file does not save it. */
-@media (prefers-reduced-motion: reduce) {
-  .menu-shore-shot {
-    animation: none;
-    /* Parked halfway, so the still frame is the middle of the pan rather than
-       the edge nobody composed for. */
-    transform: translateX(-11.54%);
-  }
-}
-
-/* THE SCRIM. The row's words all sit down its left-hand side, and that is the
-   half a landscape cannot be trusted in: sunlit sand and a white name are the
-   same colour. So the picture is darkened where the text is and left alone
-   where it is not, which buys the coast a brightness a flat wash over the
-   whole row could never be given. */
-.menu-shore::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  z-index: 0;
-  background: linear-gradient(
-    90deg,
-    rgb(8 42 56 / 88%) 0%,
-    rgb(8 42 56 / 70%) 38%,
-    rgb(8 42 56 / 18%) 78%,
-    rgb(8 42 56 / 6%) 100%
-  );
-  pointer-events: none;
-}
-
-/* Everything the row says stands over the picture and its scrim. */
-.menu-shore > :not(.menu-shore-shot) {
-  position: relative;
-  z-index: 1;
-}
-
-.menu-shore:hover,
-.menu-shore:focus-visible,
-.menu-shore.nav-cursor {
-  border-color: var(--buoy);
-  background: rgb(27 111 138 / 40%);
-  outline: none;
-}
-
-.menu-shore:hover .menu-shore-shot,
-.menu-shore:focus-visible .menu-shore-shot,
-.menu-shore.nav-cursor .menu-shore-shot {
-  filter: brightness(0.88) saturate(1.1);
-}
-
-/* A shore still behind the one before it: the row is a wall with the reason
-   written on it, not a button — shown all the same, because what is on the
-   other side of the padlock is the reason to go through it. */
-.menu-shore-locked {
-  border-left-color: rgb(242 247 248 / 30%);
-  color: rgb(242 247 248 / 62%);
-  cursor: default;
-}
-
-.menu-shore-locked .menu-shore-shot {
-  filter: brightness(0.4) saturate(0.45);
-}
-
-/* What a shut row asks for is a WALL, not a way on — so its third line drops
-   the buoy's yellow, which on every other row means "press this". */
-.menu-shore-locked .menu-shore-line {
-  color: inherit;
-  opacity: 0.85;
-}
-
-.menu-shore-name {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  font-size: clamp(1rem, 4vmin, 1.4rem);
-  font-weight: 700;
-  letter-spacing: 0.14em;
-}
-
-/* What the coast is like, in the shore's own words. Sentence case in the
-   data, so it is left alone rather than shouted at. */
-.menu-shore-blurb-row {
-  font-size: clamp(0.62rem, 2vmin, 0.78rem);
-  letter-spacing: 0.08em;
-  text-transform: none;
-  opacity: 0.85;
-  text-wrap: balance;
-}
-
-.menu-shore-line {
-  font-size: clamp(0.6rem, 1.9vmin, 0.72rem);
-  letter-spacing: 0.12em;
-  color: var(--buoy);
-  opacity: 0.95;
-}
-
-.menu-shore-blurb {
-  margin: 0;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-  opacity: 0.75;
-}
-
-.menu-levels {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.5rem;
-}
-
-@media (max-width: 40rem) {
-  .menu-levels {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-.menu-level {
-  position: relative;
-  /* The layout drawn behind the box bleeds off its right edge on purpose
-     (`.menu-level-route`), so the box has to be the thing that clips it —
-     without this a line long in one axis runs out across the card. */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.3rem;
-  min-height: 5.5rem;
-  padding: 0.6rem 0.65rem;
-  border: 2px solid rgb(242 247 248 / 26%);
-  border-radius: 0.55rem;
-  background: rgb(27 111 138 / 55%);
-  color: var(--hud-ink);
-  font: inherit;
-  font-size: 0.72rem;
-  letter-spacing: 0.1em;
-  text-align: left;
-  text-transform: uppercase;
-}
-
-/* THE LEVEL'S OWN WATER, drawn behind what the box says about it — the whole
-   racing line, so a shore's nine boxes read as nine different rides before
-   a word on any of them has been read (`menu-shores.tsx`'s `CourseMap`).
-
-   It hangs to the RIGHT and is allowed to run off that edge. Centred, the
-   line sits squarely under the level's name and fights it; pushed out, the
-   text keeps a clean left column and the ride still reads as a ride. The
-   colour is `currentColor` from the box, so the open box's ink and the shut
-   box's grey both arrive without a second palette — and it costs the grid no
-   height at all, because it is underneath rather than beside. */
-.menu-level-route {
-  position: absolute;
-  top: 8%;
-  right: -6%;
-  bottom: 8%;
-  width: 58%;
-  z-index: 0;
-  opacity: 0.17;
-  pointer-events: none;
-}
-
-.menu-level-open:hover .menu-level-route,
-.menu-level-open:focus-visible .menu-level-route,
-.menu-level-open.nav-cursor .menu-level-route {
-  opacity: 0.34;
-}
-
-/* A shut level still shows its water — the shape of what is behind the
-   padlock — but fainter, and the padlock keeps the middle of the box. */
-.menu-level-locked .menu-level-route {
-  opacity: 0.13;
-}
-
-/* Everything the box says stands over the line. */
-.menu-level > :not(.menu-level-route) {
-  position: relative;
-  z-index: 1;
-}
-
-.menu-level-open {
-  cursor: pointer;
-  touch-action: manipulation;
-}
-
-.menu-level-open:hover,
-.menu-level-open:focus-visible,
-.menu-level-open.nav-cursor {
-  border-color: var(--buoy);
-  background: rgb(27 111 138 / 78%);
-  outline: none;
-}
-
-/* The box the campaign would pick next: ringed in the way-on's orange. */
-.menu-level-next {
-  border-color: rgb(242 140 40 / 90%);
-  box-shadow: 0 0 0 2px rgb(242 140 40 / 40%);
-}
-
-.menu-level-locked {
-  align-items: center;
-  justify-content: center;
-  border-style: dashed;
-  background: rgb(8 42 56 / 45%);
-  color: rgb(242 247 248 / 45%);
-}
-
-.menu-level-lock {
-  width: 1.6em;
-  height: 1.6em;
-}
-
-.menu-level-head {
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  width: 100%;
-  font-size: 0.66rem;
-  opacity: 0.85;
-}
-
-.menu-level-no {
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.menu-level-mode {
-  width: 1.2em;
-  height: 1.2em;
-}
-
-.menu-level-name {
-  font-size: 0.92rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-wrap: balance;
-}
-
-.menu-level-day {
-  font-size: 0.6rem;
-  letter-spacing: 0.08em;
-  opacity: 0.7;
-}
-
-.menu-level-medals,
-.menu-level-marks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.5rem;
-  font-size: 0.62rem;
-}
-
-.menu-level-medal {
-  opacity: 0.55;
-}
-
-.menu-level-medal-won {
-  opacity: 1;
-  font-weight: 700;
-}
-
-.menu-level-medal-won.menu-level-medal-bronze {
-  color: #d9915a;
-}
-
-.menu-level-medal-won.menu-level-medal-silver {
-  color: #d6dde2;
-}
-
-.menu-level-medal-won.menu-level-medal-gold {
-  color: var(--buoy);
-}
-
-.menu-level-mark-lit {
-  color: var(--buoy);
-  font-weight: 700;
-}
-
-/* THE TABLE: one row a rider, the player's lit. Twelve rows is a phone's
-   height, so the card scrolls past it rather than the rows shrinking. */
-.menu-table {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  font-size: 0.7rem;
-  letter-spacing: 0.1em;
-}
-
-.menu-table-row {
-  display: grid;
-  grid-template-columns: 2rem 1fr auto auto;
-  gap: 0.6rem;
-  padding: 0.25rem 0.6rem;
-  border-radius: 0.35rem;
-  background: rgb(8 42 56 / 40%);
-}
-
-.menu-table-you {
-  background: rgb(27 111 138 / 78%);
-  color: var(--buoy);
-  font-weight: 700;
-}
-
-.menu-table-place {
-  font-weight: 700;
-}
-
-.menu-table-wins,
-.menu-table-points {
-  text-align: right;
 }
