@@ -65,6 +65,10 @@ export type LevelAnalysis = {
     attempt: number;
     /** Share of the loop lying under a drift's core (R17). */
     drifted: number;
+    /** The lowest a berm's crest stands over the track's edge anywhere
+     * round the loop, and the steepest its faces get (R18). */
+    bermLow: number;
+    bermSteep: number;
   };
 };
 
@@ -72,6 +76,11 @@ export type LevelAnalysis = {
  * throws a sled. A kicker's own ramp and landing break at least 2/11 + 2/20
  * at the lip itself; read over three metres either side, a little less. */
 const KICK = 0.15;
+
+/** R18 — the share of the lowest crest the two-metre grid is allowed to
+ * lose: a bilinear sample between two cells either side of the crest reads
+ * a half-sine six metres wide at about three quarters of its height. */
+const BERM_LOW = 0.6;
 
 const fmt = (v: number, digits = 1): string => v.toFixed(digits);
 const bandText = (b: Band, unit = ""): string => `${b.min}–${b.max}${unit}`;
@@ -414,6 +423,50 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     add("R17", "warn", `${fmt((100 * driftLength) / L, 0)} % of the loop is drifted`);
   }
 
+  // R18 — the berms: a ridge on both sides the whole way round, read off
+  // the ground across the bench it stands on. The crest is taken as the
+  // highest of a few samples across it, because the grid is two metres a
+  // cell and a bilinear sample off the crest's line reads it low; the face
+  // as the steepest rise between neighbouring samples.
+  const toe = R.track.shoulder.flat;
+  const across = 10;
+  let bermLow = Infinity;
+  let bermSteep = 0;
+  let worstBerm = 0;
+  for (let i = 0; i < n; i += 3) {
+    const p = pts[i];
+    const hw = p.width / 2;
+    const rx = Math.cos(p.heading);
+    const rz = -Math.sin(p.heading);
+    for (const side of [-1, 1]) {
+      const at = (d: number): number => level.groundAt(p.x + rx * d * side, p.z + rz * d * side);
+      const edge = at(hw);
+      let crest = -Infinity;
+      let prev = at(hw + toe);
+      for (let j = 1; j <= across; j++) {
+        const u = (j / across) * R.berm.width;
+        const y = at(hw + toe + u);
+        crest = Math.max(crest, y - edge);
+        bermSteep = Math.max(bermSteep, Math.abs(y - prev) / (R.berm.width / across));
+        prev = y;
+      }
+      if (crest < bermLow) {
+        bermLow = crest;
+        worstBerm = p.s;
+      }
+    }
+  }
+  if (n > 0 && bermLow < BERM_LOW * R.berm.height.min) {
+    add(
+      "R18",
+      "error",
+      `the berm stands only ${fmt(bermLow, 2)} m over the edge at s ${fmt(worstBerm, 0)} m`,
+    );
+  }
+  if (bermSteep > R.berm.maxSlope + 0.05) {
+    add("R18", "error", `a berm's face climbs at ${fmt(bermSteep, 2)} (most ${R.berm.maxSlope})`);
+  }
+
   let lo = Infinity;
   let hi = -Infinity;
   for (const p of pts) {
@@ -445,6 +498,8 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       sunElevation: elevation,
       attempt: level.attempt ?? 0,
       drifted: driftLength / L,
+      bermLow,
+      bermSteep,
     },
   };
 }
