@@ -133,6 +133,9 @@ export type SledState = {
   trench: number;
   trenchFor: number;
   boggedFor: number;
+  /** Seconds lying over on the snow (`crash.ts`) — the rollover wipeout's
+   * clock; turning over in the air does not run it. */
+  rolledFor: number;
   /** THE RIDER OFF THE SLED, or null while he is on it (`crash.ts`). */
   thrown: Thrown | null;
   /** What the machine has taken (`damage.ts`). */

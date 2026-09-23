@@ -272,13 +272,21 @@ export const TUNING = {
      * the sled stops and he does not. */
     treeSpeed: 8,
     /** A landing taken this far nose-down against the slope, rad (29°),
-     * at this speed into it or more, m/s, goes over the bars. */
+     * at this speed into it or more, m/s, goes over the bars — the landing
+     * that ends a real flight of `noseAir` s or more. The hop a sled makes
+     * rebounding off its own touchdown (0.15–0.22 s up) is the springs
+     * handing back that landing, not a second one: a stock kicker overshot
+     * lands tail-first and slaps down onto its nose 37° down a hop later,
+     * and an arcade racer forgives that. */
     noseAngle: 0.5,
     noseImpact: 5,
+    noseAir: 0.3,
     /** A sled going over (`reset.overUp`) at this speed or more, m/s, puts
      * him off; slower, he hangs on and the reset's own clock stands it up. */
     rollSpeed: 8,
-    /** ...once it has been over (`SledState.overFor`) this long, s. */
+    /** ...once it has lain over ON THE SNOW (`SledState.rolledFor`) this long,
+     * s: a sled turning over in the air, or clipping a side on the way round
+     * and coming back onto its skis, has not rolled. */
     rollHold: 0.2,
     /** What he leaves with: this share of the sled's velocity before the
      * blow, and a climb, m/s — the pitch of a body off a seat. */

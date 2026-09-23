@@ -90,10 +90,21 @@ shoulders riders into the woods and a wipeout there is honest.
   the corpus on every machine and print the distribution of what it meets
   (nose angle and impact at every landing, the worst attitude, every trunk).
   The margin between that and the threshold is the point of the number.
-- **OVER IS OVER AGAINST THE SNOW, AND HELD.** A sled climbing a face stands
-  far off vertical while perfectly upright on the slope: read the sled's up
-  against the ground's normal, never against the sky, and only once it has
-  been over `crash.rollHold` — a sled going light over a crest is not a crash.
+- **OVER IS OVER AGAINST THE SNOW, ON THE SNOW, AND HELD.** A sled climbing a
+  face stands far off vertical while perfectly upright on the slope: read the
+  sled's up against the ground's normal, never against the sky, and only
+  while it is ON the snow (`rolledFor`, not `overFor`) for `crash.rollHold`.
+  A sled turning over in the air has not rolled — the landing decides — and
+  one that clips a side on the way round and comes back onto its skis is
+  ridden away.
+- **JUDGE THE LANDING THAT ENDS A FLIGHT, NEVER ITS REBOUND.** A hard
+  touchdown hands the sled back up for 0.15–0.22 s and the `land` event fires
+  again when it comes down; that second contact is the same landing, and its
+  nose angle is the slap of the springs, not a dive. `crash.noseAir` keeps
+  the nose-in to flights that were flights. Before shipping a threshold, ride
+  the stock `kicker` on every machine (`make ride SCENARIO=kicker ARGS="--sled
+  all"`, `crash_test`'s kicker case): an ordinary jump overshot must be
+  ridden out.
 - **THE RIDER CARRIES THE WAY THE SLED HAD BEFORE THE BLOW.** A trunk stops
   the machine in one step; the velocity the rider leaves with is the one from
   before that step (`run.ts` keeps it), times `keep`. Read after the trunk,
@@ -125,7 +136,7 @@ shoulders riders into the woods and a wipeout there is honest.
 ## Workflow
 
 1. **Take the baseline first.** `make ride` on the crash and trench scenarios
-   (and `kicker`, `climb`, `wall`, which end in wipeouts of their own), and
+   and `kicker --sled all` (an ordinary overshot jump must be ridden out), and
    `make sim`, before the first edit.
 2. **Find WHICH STEP decided it.** Print every step's cause candidate —
    impact, nose angle against the snow, up against the normal, `overFor`,

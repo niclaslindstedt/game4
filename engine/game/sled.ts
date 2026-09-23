@@ -126,6 +126,7 @@ export function freshSled(spec: SledSpec): SledState {
     trench: 0,
     trenchFor: 0,
     boggedFor: 0,
+    rolledFor: 0,
     thrown: null,
     damage: { ski: [0, 0], suspension: 0 },
     hitCooldown: 0,

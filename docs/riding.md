@@ -98,8 +98,8 @@ The map's edge pushes a rider back toward the middle over its last `bounds.soft`
 Three ways off, each a threshold on something the step has already measured, and each well past anything a clean ride meets — the bot, over every seed of the sim on every machine, lands at most about 6° nose-down and 9 m/s into the slope, never goes past half over and meets no trunk:
 
 - **a trunk met hard** — a `hit` at `crash.treeSpeed` = 8 m/s (29 km/h) closing or more. The trunk stops the sled; the rider goes on at `keep` = 85 % of the way the sled had before the blow, until the snow or the trunk itself stops him;
-- **a nose-in landing** — a `land` at `noseImpact` = 5 m/s into the slope or more with the nose `noseAngle` = 0.5 rad (29°) or more down against it. The skis dig, he goes over the bars, and the sled is given `sledKick` = 0.35 rad/s of nose-over per m/s of the impact (at most 5);
-- **a rollover at speed** — the sled over against the SNOW (its up axis under `reset.overUp` of the ground's normal, not the sky's — a sled climbing a face stands well off vertical) for `rollHold` = 0.2 s at `rollSpeed` = 8 m/s or more. A slow roll he hangs on through, and the reset's own clock stands it up as before.
+- **a nose-in landing** — a `land` ending a flight of `noseAir` = 0.3 s or more, at `noseImpact` = 5 m/s into the slope or more with the nose `noseAngle` = 0.5 rad (29°) or more down against it. The skis dig, he goes over the bars, and the sled is given `sledKick` = 0.35 rad/s of nose-over per m/s of the impact (at most 5). The rebound hop off a touchdown (0.15–0.22 s up) is that landing handing itself back, not a second landing, and is never judged: a kicker overshot at race speed lands tail-first and slaps down onto its nose 37° down a hop later, and is ridden out;
+- **a rollover at speed** — the sled lying over on the SNOW (its up axis under `reset.overUp` of the ground's normal, not the sky's — a sled climbing a face stands well off vertical) for `rollHold` = 0.2 s (`SledState.rolledFor`) at `rollSpeed` = 8 m/s or more. Turning over in the AIR is not a roll — a sled that somersaults off a kicker and comes down on its skis is ridden away, and it is the landing that decides — and a slow roll he hangs on through, the reset's own clock standing it up as before.
 
 THE RIDER THROWN is a body of his own (`SledState.thrown`): a point of `radius` = 0.3 m leaving at the sled's way plus a climb of `throwUp` = 2.4 m/s, under gravity, pushed out of any trunk he meets, settling `sink` = 0.12 m into powder, the speed into the snow taken away with `restitution` = 0.25 back from a real arrival, and Coulomb friction on the slide — `frictionPacked` = 0.5 on the groomer, `frictionPowder` = 0.8 in fresh snow, which a sprawled body ploughs. Over it a TUMBLE, head over heels at his speed over `tumbleRadius` = 0.5 m (no faster than 12 rad/s), chasing the slide on the snow and settling flat once he has stopped. None of it draws from the stream: a crash is a pure function of the moment it started, and a run replays wipeout for wipeout.
 
@@ -125,32 +125,32 @@ A rider's own (`SledInput.reset`) or the engine's: a sled whose up axis has been
 
 `npm run ride` rides each scenario (`scripts/lib/ride-scenarios.mjs`) on the synthetic maps and draws it to `previews/ride-<scenario>.png`; `--sled all` rides every scenario on every machine. At the tuning in this tree, the crossover:
 
-| Scenario                      | What came back                                                                                                                              |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| rest (packed)                 | CoG 0.530 m over the snow, skis 0.088 m and tread 0.083 m of sag, 0.02 m of sink, level                                                     |
-| rest (powder)                 | CoG 0.317 m over the untouched surface, 0.26 m of sink, 2° nose up (the skis sink less)                                                     |
-| accel (packed)                | 0–50 km/h 1.97 s, 0–100 km/h 4.07 s in 58 m, top 160 km/h                                                                                   |
-| accel (powder)                | 0–50 km/h 8.9 s, planed at 38 km/h, top 90 km/h with the tread spinning over the snow                                                       |
-| brake                         | 100–0 km/h in 5.2 s and 69 m (0.54 g)                                                                                                       |
-| turn, 100 km/h full lock      | radius 123 m, 0.68 g                                                                                                                        |
-| brake into a turn             | worst slide 33°, stopped in 51 m, no spin                                                                                                   |
-| the stadium kicker at 75 km/h | launched at 112 km/h, 2.2 s of air, 62 m carry, a tail-first landing at 11 m/s costing 25 % that bounces onto the nose 37° down — a wipeout |
-| 30° powder slope at 70 km/h   | climbs 19 m, loops out backwards at the stall and throws the rider                                                                          |
-| a trunk at 50 km/h            | 55 km/h into it, 20 km/h out, turned 17°; the rider thrown, 5 m on round the trunk, stood up 1.8 s later                                    |
-| a trunk clipped at 25 km/h    | a 16 km/h hit, held on through                                                                                                              |
-| nose-in, 40° down at 60 km/h  | a 5.8 m/s impact: over the bars, 21 m of slide, stood up at 2.5 s                                                                           |
-| onto its side at 70 km/h      | over and thrown in 0.2 s, 26 m of slide, 4 turns of tumble                                                                                  |
-| nosed into a powder bank      | trenched 0.15 m deep in 4 s at full throttle; rocked out and away by 7 s. Pinned instead, 0.30 m deep and reset after the trench's 8 s      |
+| Scenario                      | What came back                                                                                                                                                         |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| rest (packed)                 | CoG 0.530 m over the snow, skis 0.088 m and tread 0.083 m of sag, 0.02 m of sink, level                                                                                |
+| rest (powder)                 | CoG 0.317 m over the untouched surface, 0.26 m of sink, 2° nose up (the skis sink less)                                                                                |
+| accel (packed)                | 0–50 km/h 1.97 s, 0–100 km/h 4.07 s in 58 m, top 160 km/h                                                                                                              |
+| accel (powder)                | 0–50 km/h 8.9 s, planed at 38 km/h, top 90 km/h with the tread spinning over the snow                                                                                  |
+| brake                         | 100–0 km/h in 5.2 s and 69 m (0.54 g)                                                                                                                                  |
+| turn, 100 km/h full lock      | radius 123 m, 0.68 g                                                                                                                                                   |
+| brake into a turn             | worst slide 33°, stopped in 51 m, no spin                                                                                                                              |
+| the stadium kicker at 75 km/h | launched at 112 km/h, 2.2 s of air, 62 m carry, a tail-first landing at 11 m/s costing 25 %, slapped onto the nose a hop later — ridden out, no wipeout on any machine |
+| 30° powder slope at 70 km/h   | climbs 20 m before it stalls                                                                                                                                           |
+| a trunk at 50 km/h            | 55 km/h into it, 20 km/h out, turned 17°; the rider thrown, 5 m on round the trunk, stood up 1.8 s later                                                               |
+| a trunk clipped at 25 km/h    | a 16 km/h hit, held on through                                                                                                                                         |
+| nose-in, 40° down at 60 km/h  | a 5.8 m/s impact: over the bars, 21 m of slide, stood up at 2.5 s                                                                                                      |
+| onto its side at 70 km/h      | lands on its side, thrown once it has lain over 0.2 s; 17 m of slide, 3 turns of tumble                                                                                |
+| nosed into a powder bank      | trenched 0.15 m deep in 4 s at full throttle; rocked out and away by 7 s. Pinned instead, 0.30 m deep and reset after the trench's 8 s                                 |
 
 And where the roster parts:
 
-| Scenario                       | Trail             | Crossover         | Mountain       | Cross             |
-| ------------------------------ | ----------------- | ----------------- | -------------- | ----------------- |
-| top on packed snow             | 168 km/h          | 160               | 151            | 146               |
-| 0–100 km/h on packed           | 3.5 s             | 4.1               | 4.3            | 3.5               |
-| rest sink in powder            | 0.32 m            | 0.26              | 0.21           | 0.30              |
-| 0–50 km/h in powder, top there | 23 s, 55 km/h     | 8.9 s, 90         | 5.1 s, 106     | 16 s, 75          |
-| 30° powder slope at 70 km/h    | loops out at 16 m | loops out at 19 m | tops it (28 m) | loops out at 16 m |
-| the kicker at 75 km/h, landing | −30 %             | −25 %             | −24 %          | −18 %             |
+| Scenario                       | Trail                                                           | Crossover      | Mountain       | Cross          |
+| ------------------------------ | --------------------------------------------------------------- | -------------- | -------------- | -------------- |
+| top on packed snow             | 168 km/h                                                        | 160            | 151            | 146            |
+| 0–100 km/h on packed           | 3.5 s                                                           | 4.1            | 4.3            | 3.5            |
+| rest sink in powder            | 0.32 m                                                          | 0.26           | 0.21           | 0.30           |
+| 0–50 km/h in powder, top there | 23 s, 55 km/h                                                   | 8.9 s, 90      | 5.1 s, 106     | 16 s, 75       |
+| 30° powder slope at 70 km/h    | stalls at 16 m, loops off it and dives in nose-first: a wipeout | stalls at 20 m | tops it (28 m) | stalls at 16 m |
+| the kicker at 75 km/h, landing | −30 %                                                           | −25 %          | −24 %          | −18 %          |
 
 What the bot makes of it on generated maps is `npm run sim`'s (`--sled all` for the roster), and `docs/simulation.md` says how to read it.

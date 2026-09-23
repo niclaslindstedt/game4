@@ -12,6 +12,7 @@ import {
   NEUTRAL_INPUT,
   placeRun,
   skiPull,
+  SLEDS,
   step,
   trenchGrip,
   TUNING,
@@ -20,7 +21,7 @@ import {
   type RunMoment,
   type SledInput,
 } from "@engine";
-import { flatLevel, LONE_TREE, syntheticLevel } from "./support/synthetic.ts";
+import { flatLevel, LONE_TREE, STADIUM, syntheticLevel } from "./support/synthetic.ts";
 
 const FULL: SledInput = { ...NEUTRAL_INPUT, throttle: 1 };
 
@@ -126,6 +127,33 @@ describe("the wipeout", () => {
     const flat = drop(0);
     expect(flat.some((e) => e.kind === "land")).toBe(true);
     expect(wipeouts(flat)).toHaveLength(0);
+  });
+
+  it("a stock kicker overshot at race speed is ridden out, the rebound hop and all", () => {
+    // Launched at 112 km/h, down tail-first 64° nose-up, and a hop later
+    // slapped onto the nose 37° down: the springs handing the landing back,
+    // not a second landing — no machine in the catalog throws its rider.
+    for (const spec of SLEDS) {
+      const state = createGame({
+        level: syntheticLevel(),
+        rivals: 0,
+        countdown: 0,
+        spec,
+        quiet: true,
+      });
+      placeRun(state, {
+        x: STADIUM.kickerX + 70,
+        z: STADIUM.zMid + STADIUM.radius,
+        heading: -Math.PI / 2,
+        speed: 75 / 3.6,
+      });
+      const events = ride(state, 6, FULL);
+      expect(
+        events.some((e) => e.kind === "land" && e.airTime > 1.5),
+        spec.id,
+      ).toBe(true);
+      expect(wipeouts(events), spec.id).toHaveLength(0);
+    }
   });
 
   it("a rollover at speed puts him off; the same roll at a crawl does not", () => {

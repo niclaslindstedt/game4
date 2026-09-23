@@ -215,6 +215,7 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
   c.trench = 0;
   c.trenchFor = 0;
   c.boggedFor = 0;
+  c.rolledFor = 0;
   c.thrown = null;
   c.hitCooldown = 0;
   c.bumpCooldown = 0;

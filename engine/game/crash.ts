@@ -7,12 +7,16 @@
 //   - a TRUNK met hard — the `hit` event's closing speed past `treeSpeed`:
 //     the trunk stops the sled, and the man on it goes on at the way it had
 //     until the snow or the trunk itself stops him;
-//   - a NOSE-IN LANDING — a `land` past `noseImpact` m/s into the slope with
-//     the nose more than `noseAngle` down against it: the skis dig and he
-//     goes over the bars;
-//   - a ROLLOVER AT SPEED — the sled past `reset.overUp` while still going
-//     `rollSpeed` or more. A slow roll he hangs on through, and the reset's
-//     own clock (`reset.overFor`) stands it up as before.
+//   - a NOSE-IN LANDING — a `land` ending a flight of `noseAir` s or more,
+//     past `noseImpact` m/s into the slope with the nose more than
+//     `noseAngle` down against it: the skis dig and he goes over the bars.
+//     The rebound hop after a touchdown is not judged — a sled that lands
+//     tail-first and slaps down onto its nose is riding its own landing;
+//   - a ROLLOVER AT SPEED — the sled lying over on the SNOW (its up under
+//     `reset.overUp` of the snow's normal) for `rollHold` s, still going
+//     `rollSpeed` or more. Turning over in the air is not yet a roll — the
+//     landing decides — and a slow roll he hangs on through, the reset's
+//     own clock (`reset.overFor`) standing it up as before.
 //
 // THE RIDER THROWN is a body of his own (`Thrown`): a point with a radius
 // leaving at `keep` of the sled's velocity before the blow plus a climb,
@@ -62,18 +66,34 @@ export function wipeoutCause(
 ): CrashCause | null {
   for (const e of events) {
     if (e.kind === "hit" && e.speed >= K.treeSpeed) return "tree";
-    if (e.kind === "land" && e.impact >= K.noseImpact && noseDown(state) >= K.noseAngle) {
+    // Only the touchdown that ends a real flight: the rebound hop off a
+    // landing is that landing's own, however the nose comes down on it.
+    if (
+      e.kind === "land" &&
+      e.airTime >= K.noseAir &&
+      e.impact >= K.noseImpact &&
+      noseDown(state) >= K.noseAngle
+    ) {
       return "nose";
     }
   }
   // Over is over against the SNOW, not the sky — a sled climbing a face
-  // stands well off vertical — and held a moment, so a sled that goes
-  // light over a crest and comes back is not a crash.
+  // stands well off vertical — and ON the snow: a sled turning over in the
+  // air has not rolled until it comes down, and one that clips a side on
+  // the way round and comes back onto its skis is ridden away. So the
+  // clock is `rolledFor`, time lying over on the snow, held `rollHold`.
   const c = state.sled;
-  if (c.overFor < K.rollHold || speed0 < K.rollSpeed) return null;
+  const over = !c.airborne && overSnow(state);
+  c.rolledFor = over ? c.rolledFor + dt : 0;
+  return c.rolledFor >= K.rollHold && speed0 >= K.rollSpeed ? "roll" : null;
+}
+
+/** Whether the sled's up axis is under `reset.overUp` of the snow's own. */
+function overSnow(state: GameState): boolean {
+  const c = state.sled;
   state.level.normalAt(c.x, c.z, n);
   const up = rotate(c.q, { x: 0, y: 1, z: 0 });
-  return up.x * n.x + up.y * n.y + up.z * n.z < TUNING.reset.overUp ? "roll" : null;
+  return up.x * n.x + up.y * n.y + up.z * n.z < TUNING.reset.overUp;
 }
 
 /** Put the rider off the sled: `v0` is the sled's velocity before the
@@ -207,4 +227,5 @@ export function quietClocks(c: SledState): void {
   c.stuckFor = 0;
   c.trenchFor = 0;
   c.boggedFor = 0;
+  c.rolledFor = 0;
 }
