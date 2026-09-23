@@ -884,7 +884,6 @@ export function App() {
           snap={snap}
           sound={settings.sound}
           onResume={() => pressRef.current.resume()}
-          onPicture={() => pressRef.current.shot()}
           onRestart={() => pressRef.current.restart()}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onMainMenu={() => pressRef.current.toMenu()}
