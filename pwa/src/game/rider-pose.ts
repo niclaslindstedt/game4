@@ -17,12 +17,16 @@
 //   * `lean` (+1 back) pitches the torso back and drops the hips toward the
 //     seat, -1 throws it forward over the bars;
 //   * the bars turn with `steer`, and the hands stay on the grips;
-//   * in the air he stands taller, and a hard landing folds the knees.
+//   * in the air he stands taller, and a hard landing folds the knees;
+//   * on a tricks run a POSE held in the air takes a foot off the boards
+//     (`RiderInput.trick`).
 //
 // The limbs are two bones each, solved analytically (`solveLimb`) toward a
 // pole — the knees go forward and out, the elbows out and down — so a hand
 // that has to reach the far grip in a turn straightens the arm rather than
 // stretching it.
+
+import type { TrickPose } from "@engine";
 
 export type V3 = { x: number; y: number; z: number };
 
@@ -61,6 +65,8 @@ export type RiderInput = {
   airborne: boolean;
   /** Seconds since the last landing — a fresh landing folds the knees. */
   landing: number;
+  /** A TRICKS run's pose held in the air (`strokes.ts`), or none. */
+  trick?: TrickPose | null;
 };
 
 export type RiderPose = {
@@ -216,6 +222,14 @@ export function riderPose(input: RiderInput): RiderPose {
     y: MOUNTS.foot.y,
     z: MOUNTS.foot.z,
   })) as [V3, V3];
+  // THE POSES, the hands still on the grips: a foot off the right-hand
+  // board and kicked out to the side; the right leg swung over the seat to
+  // the left; or both knees drawn up to the bars.
+  if (input.trick === "oneFoot") feet[1] = { x: 0.8, y: MOUNTS.foot.y + 0.3, z: -0.35 };
+  else if (input.trick === "canCan") feet[1] = { x: -0.62, y: MOUNTS.foot.y + 0.42, z: 0.12 };
+  else if (input.trick === "tuck") {
+    for (let i = 0; i < 2; i++) feet[i] = { x: feet[i].x * 0.7, y: hips.y - 0.18, z: 0.22 };
+  }
   const knees = [-1, 1].map((side, i) =>
     solveLimb(add(hips, scale(across, side * BODY.hip)), feet[i], BODY.thigh, BODY.shin, {
       x: side * 0.35,

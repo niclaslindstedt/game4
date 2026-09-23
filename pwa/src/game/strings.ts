@@ -6,9 +6,54 @@
 // functions of their parameters — never concatenations at the call site
 // (§39.2). Developer diagnostics are deliberately not here.
 
+import type { TrickKind, TrickPart } from "@engine";
+
 import { formatTime, ordinal } from "../lib/util.ts";
+import { CAMPAIGN_STRINGS } from "./strings-campaign.ts";
+import { GALLERY_STRINGS } from "./strings-gallery.ts";
+
+/** THE TRICK VOCABULARY: what each element the engine names (`TrickKind`)
+ * is CALLED. The engine names the thing and never the word. */
+export const TRICK_WORDS: Readonly<Record<TrickKind, string>> = {
+  air: "BIG AIR",
+  backflip: "BACKFLIP",
+  frontflip: "FRONT FLIP",
+  spin: "360",
+  twist: "TWIST",
+  oneFoot: "ONE-FOOTER",
+  canCan: "CAN-CAN",
+  tuck: "TUCK",
+};
+
+/** How a revolution's count reads in front of a flip. */
+const TIMES = ["", "", "DOUBLE ", "TRIPLE "];
+
+/** One element as read: a flip by its count, a spin by its degrees. */
+function trickWord(kind: TrickKind, spins: number): string {
+  if (kind === "spin") return String(360 * spins);
+  if (kind === "backflip" || kind === "frontflip") {
+    return `${TIMES[spins] ?? `${spins}× `}${TRICK_WORDS[kind]}`;
+  }
+  return TRICK_WORDS[kind];
+}
+
+/** THE COMBO AS ONE LINE: its elements in the order they were won, a
+ * revolution's later index read INTO its first (a backflip that came round
+ * twice in one flight is one DOUBLE BACKFLIP, not two words). */
+export function comboLine(parts: readonly TrickPart[]): string {
+  const merged: { kind: TrickKind; spins: number; flight: number }[] = [];
+  for (const p of parts) {
+    const same = p.spins > 1 && merged.find((m) => m.kind === p.kind && m.flight === p.flight);
+    if (same) same.spins = Math.max(same.spins, p.spins);
+    else merged.push({ ...p });
+  }
+  return merged.map((m) => trickWord(m.kind, m.spins)).join(" + ");
+}
 
 export const STRINGS = {
+  /* ── THE SHUTTER AND THE GALLERY — stated in strings-gallery.ts ─────── */
+  ...GALLERY_STRINGS,
+
   /* ── THE HUD (hud.tsx) ─────────────────────────────────────────────── */
   speedUnit: "km/h",
   revs: "RPM",
@@ -118,6 +163,26 @@ export const STRINGS = {
   menuRacePinned: "PINNED BY THE LINK",
   menuFree: "FREE RIDE",
   menuFreeLine: "THE WHOLE MAP · NO CLOCK TO BEAT",
+  /* ── THE TRICKS RUN (menu-main.tsx, hud-combo.tsx, hud-result.tsx) ── */
+  menuTricks: "TRICKS",
+  menuTricksLine: (seed: number, seconds: number): string =>
+    `SEED ${seed} · THE TRICK FIELD · ${Math.round(seconds / 60)} MIN`,
+  /** The run's banked score, the buzzer, and the combo in hand. */
+  score: (points: number): string => points.toLocaleString("en-US"),
+  scoreLabel: "SCORE",
+  timeLeftLabel: "LEFT",
+  comboPoints: (base: number, mult: number): string =>
+    `${Math.round(base).toLocaleString("en-US")} × ${mult}`,
+  comboBanked: (points: number): string => `+${points.toLocaleString("en-US")}`,
+  comboSketchy: "SKETCHY",
+  comboBailed: (points: number): string => `BAILED −${points.toLocaleString("en-US")}`,
+  /** The touch press held for a pose. */
+  trickPress: "TRICK",
+  keyTrick: "TRICK",
+  newsTricksFinish: (points: number): string => `TIME! ${points.toLocaleString("en-US")} PTS`,
+  resultTricksTitle: "TRICKS",
+  pauseSubTricks: (seed: number, points: number): string =>
+    `SEED ${seed} · TRICKS · ${points.toLocaleString("en-US")} PTS`,
   menuSound: (on: boolean): string => (on ? "SOUND ON" : "SOUND OFF"),
   /** The front door's line of keys, off the bindings the rider has: each
    * part is a key's cap and what it does. */
@@ -373,4 +438,29 @@ export const STRINGS = {
   resultTrialAgain: "RIDE AGAIN",
   /** The news line at the flag of a run with nobody else on it. */
   newsFinishAlone: (seconds: number): string => `FINISH  ${formatTime(seconds)}`,
+
+  /* ── THE REPLAY (hud-replay.tsx, hud-result.tsx, menu-pause.tsx) ─────── */
+  replayWatch: "WATCH REPLAY",
+  /** Under the pause card's row: taken mid-race, the race is over. */
+  replayWatchNote: "ends this race",
+  replayLabel: "REPLAY",
+  /** Said while the picture runs slow, so it is not read as dropped frames. */
+  replaySlow: "SLOW",
+  replayTitle: (seed: number, mode: string): string =>
+    `SEED ${seed} · ${mode === "timeTrial" ? "TIME TRIAL" : "RACE"}`,
+  replayLine: (sled: string, time: number | null, place: number | null): string =>
+    `${sled.toUpperCase()} · ${
+      time === null
+        ? "UNFINISHED"
+        : place === null
+          ? formatTime(time)
+          : `${ordinal(place)} · ${formatTime(time)}`
+    }`,
+  /** The rung the recording is watched from. */
+  replayCamera: (rung: string): string => (rung === "tv" ? "BROADCAST" : rung.toUpperCase()),
+  replayExit: "EXIT",
+  replayNote: "C for the camera · ESC to leave",
+
+  /* ── THE CAMPAIGN (strings-campaign.ts, spread in) ─────────────────── */
+  ...CAMPAIGN_STRINGS,
 } as const;

@@ -12,7 +12,13 @@
 // WHAT THE SURFACE DOES TO A PRESS is the whole of this module: every one of
 // these is about a RACE BEING RIDDEN, so over a card none of them does
 // anything — except PAUSE over the pause card, which is RESUME, because the
-// key that opened the card is the key a hand reaches for to close it. (Over
+// key that opened the card is the key a hand reaches for to close it; and
+// over a REPLAY, where nobody is riding, the camera walks the watching
+// ladder and PAUSE leaves the recording, the way Escape does. The SHUTTER
+// and the HUD's switch are about the PICTURE and answer wherever a race is
+// on screen (`hudOver`): the held frame under the pause card — a menu-bar
+// row pressed there photographs the frozen race — and a replay, whose
+// broadcast camera is the best seat a rider ever gets of his own run. (Over
 // a card, Escape is usually taken upstream by `menu-nav.ts`'s capture-phase
 // walk and pressed as the card's own way back; the shell's menu row arrives
 // here instead, and has to mean the same thing.)
@@ -22,7 +28,7 @@
 
 import type { ShellCommand } from "../shell-host.ts";
 import type { InputAction } from "./settings-input.ts";
-import type { Shell } from "./shell.ts";
+import { hudOver, type Shell } from "./shell.ts";
 
 export type RunActionWorld = {
   shell: () => Shell;
@@ -35,15 +41,32 @@ export type RunActionWorld = {
   camera: () => void;
   /** Put the sled back at the last checkpoint — the R key's edge. */
   reset: () => void;
+  /** Leave a recording being watched (`replay-run.ts`). */
+  leave?: () => void;
+  /** The shutter (`shot-request.ts`). */
+  shoot: () => void;
+  /** The readouts on or off — the same switch as OPTIONS ▸ HUD. */
+  toggleHud: () => void;
 };
 
 /** Everything that can be pressed: the app's own actions and the shell's
- * words, which are the same four spelled the same way. */
+ * words, which are the same presses spelled the same way. */
 export type RunPress = InputAction | ShellCommand;
 
 export function createRunActions(world: RunActionWorld): (press: RunPress) => void {
   return (press) => {
     const shell = world.shell();
+    if (press === "shot" || press === "hud") {
+      if (!hudOver(shell)) return;
+      if (press === "shot") world.shoot();
+      else world.toggleHud();
+      return;
+    }
+    if (shell === "replay") {
+      if (press === "camera") world.camera();
+      else if (press === "pause") world.leave?.();
+      return;
+    }
     if (press === "pause") {
       if (shell === "run") world.pause();
       else if (shell === "pause") world.resume();

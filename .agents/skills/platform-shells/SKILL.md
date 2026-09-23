@@ -79,7 +79,10 @@ enforces:
   lives. The words travel on `SHELL_COMMAND` and are spelled again in
   `pwa/src/shell-host.ts`; `tests/tauri_test.ts` holds the two lists
   together, so a word added on one side alone fails rather than silently
-  doing nothing.
+  doing nothing. `shot` (View ▸ Take Screenshot) is also the one word the
+  STORE app sends: `SHOT_COMMAND` in `native/src/injected.ts`, injected
+  when `native/src/screen-capture.ts` hears the phone's own screenshot, held
+  by `tests/shell_test.ts` by running it.
 - **RACE, not File.** There are no files — a race is not a document. Naming
   the second menu File and leaving it empty is the tell of a port.
 - **Every accelerator carries ⌘.** A menu accelerator is served BEFORE the

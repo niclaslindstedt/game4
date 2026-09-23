@@ -5,27 +5,30 @@
 // turns slowly round the sled. A menu that stopped the snow would be a menu
 // that announces the game is not running.
 //
-// ONE WAY ONTO THE SNOW, and it is the lit tile: RACE, three laps against
-// three riders on a map dealt fresh from a seed. The seed is ON the tile —
-// the map is the thing the press is about to build, and a number a player
-// can read off it is a number they can hand to somebody else (`?seed=`).
-// A link that pinned the seed says so, because a RACE press that rode the
-// same map every time with nothing on the card to say why would read as a
-// broken dealer.
+// THE CAMPAIGN IS THE LIT TILE: three shelves of six pinned maps, ridden
+// for points against the field (`menu-campaign.tsx`). Its face is the one
+// on the card that CHANGES between visits — how far up the ladder the player
+// has got, and the rung it would pick next — which is what stops a front
+// door being furniture.
 //
-// THE TIME TRIAL beside it: the same loop alone, against the clock, the
-// record book's row for this map, sled and length, and the ghost of the run
-// that set it (`ghost-run.ts`). Its seed is the map the menu is standing
-// over — the one just ridden, or the one a link pinned — because a trial is
-// ridden again and again on ONE map, and a tile that dealt a fresh one
-// every press would be a stopwatch with nothing to beat. Its length is the
-// chip along the foot.
+// THE RACE AND THE TIME TRIAL under it ride a PINNED map too, picked on the
+// level card (`menu-levels.tsx`) out of the shelves the campaign has opened,
+// so a time in the record book is a time round a loop somebody else can
+// ride. The map is ON the tile — the name the level card last picked. A link
+// that pinned a seed says so instead, because that visit rides the seed.
+// The race is three laps against three riders; the trial is the same loop
+// alone against the clock, the record book's row for that map, sled and
+// length, and the ghost of the run that set it (`ghost-run.ts`). Its length
+// is the chip along the foot.
+// TRICKS beside them: two minutes on the map's trick field (R20), alone, the
+// score the run — on the map the menu stands over.
 // THE FREE RIDE beside it, unlit: the whole map and nobody on it, set up on
 // its own start card (`menu-start.tsx`) — a second way onto the snow, so a
 // tile, but never a second red one.
 //
 // EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, OPTIONS
-// (`menu-options.tsx`), the keys on a machine that has them — read off the
+// (`menu-options.tsx`), the GALLERY of pictures kept (`menu-gallery.tsx`),
+// the keys on a machine that has them — read off the
 // bindings the rider actually has — and the build. Low, and not tile-shaped at
 // all, because a thing that does not start a race should not wear the shape
 // of one.
@@ -58,6 +61,10 @@ function VersionStamp() {
 }
 
 export function MainMenu({
+  campaign,
+  onCampaign,
+  raceMap,
+  trialMap,
   seed,
   pinned,
   laps,
@@ -71,7 +78,17 @@ export function MainMenu({
   onTrialLaps,
   onSound,
   onOptions,
+  onGallery,
+  tricks,
+  onTricks,
 }: {
+  /** THE CAMPAIGN tile's face: how far up the ladder, and the rung next. */
+  campaign: { cleared: number; of: number; next: string | null };
+  onCampaign: () => void;
+  /** The pinned map the RACE and the TIME TRIAL ride, by name — null where
+   * a link pinned a seed instead. */
+  raceMap: string | null;
+  trialMap: string | null;
   /** The seed RACE will build. */
   seed: number;
   /** Whether a link pinned it. */
@@ -90,6 +107,10 @@ export function MainMenu({
   onFree: () => void;
   onSound: () => void;
   onOptions: () => void;
+  onGallery: () => void;
+  /** The TRICKS tile: its seed and how long the run lasts, s. */
+  tricks?: { seed: number; seconds: number };
+  onTricks?: () => void;
 }) {
   return (
     <div class="menu">
@@ -104,19 +125,37 @@ export function MainMenu({
           <button
             type="button"
             class="menu-tile menu-tile-hero"
-            data-menu="race"
+            data-menu="campaign"
             data-nav-next
             data-nav-focus
-            onClick={onRace}
+            onClick={onCampaign}
           >
             {/* The sheen: a slow bar of light travelling the tile, the one
                 moving thing on the card. A transform, and off under
                 `prefers-reduced-motion`. */}
             <span class="menu-tile-sheen" aria-hidden="true" />
+            <Glyph name="peaks" />
+            <span class="menu-tile-words">
+              <span class="menu-tile-name">{STRINGS.campaign}</span>
+              <span class="menu-tile-line">
+                {STRINGS.menuCampaignLine(campaign.cleared, campaign.of)}
+              </span>
+              <span class="menu-tile-line">
+                {campaign.next === null
+                  ? STRINGS.menuCampaignDone
+                  : STRINGS.menuCampaignNext(campaign.next)}
+              </span>
+            </span>
+          </button>
+          <button type="button" class="menu-tile menu-tile-wide" data-menu="race" onClick={onRace}>
             <Glyph name="flag" />
             <span class="menu-tile-words">
               <span class="menu-tile-name">{STRINGS.menuRace}</span>
-              <span class="menu-tile-line">{STRINGS.menuRaceLine(seed, laps, riders)}</span>
+              <span class="menu-tile-line">
+                {raceMap === null
+                  ? STRINGS.menuRaceLine(seed, laps, riders)
+                  : STRINGS.menuPinnedLine(raceMap, laps)}
+              </span>
               {pinned && <span class="menu-tile-line">{STRINGS.menuRacePinned}</span>}
             </span>
           </button>
@@ -129,7 +168,11 @@ export function MainMenu({
             <Glyph name="clock" />
             <span class="menu-tile-words">
               <span class="menu-tile-name">{STRINGS.menuTrial}</span>
-              <span class="menu-tile-line">{STRINGS.menuTrialLine(trial.seed, trial.laps)}</span>
+              <span class="menu-tile-line">
+                {trialMap === null
+                  ? STRINGS.menuTrialLine(trial.seed, trial.laps)
+                  : STRINGS.menuPinnedLine(trialMap, trial.laps)}
+              </span>
               <span class="menu-tile-line">
                 {trial.best
                   ? STRINGS.menuTrialBest(trial.best.time, trial.best.sled)
@@ -137,6 +180,22 @@ export function MainMenu({
               </span>
             </span>
           </button>
+          {tricks && (
+            <button
+              type="button"
+              class="menu-tile menu-tile-wide"
+              data-menu="tricks"
+              onClick={onTricks}
+            >
+              <Glyph name="flip" />
+              <span class="menu-tile-words">
+                <span class="menu-tile-name">{STRINGS.menuTricks}</span>
+                <span class="menu-tile-line">
+                  {STRINGS.menuTricksLine(tricks.seed, tricks.seconds)}
+                </span>
+              </span>
+            </button>
+          )}
           <button type="button" class="menu-tile menu-tile-wide" data-menu="free" onClick={onFree}>
             <Glyph name="kicker" />
             <span class="menu-tile-words">
@@ -163,6 +222,10 @@ export function MainMenu({
           <button type="button" class="menu-chip" data-menu="options" onClick={onOptions}>
             <Glyph name="sliders" />
             <span class="menu-tile-name">{STRINGS.menuOptions}</span>
+          </button>
+          <button type="button" class="menu-chip" data-menu="gallery" onClick={onGallery}>
+            <Glyph name="camera" />
+            <span class="menu-tile-name">{STRINGS.menuGallery}</span>
           </button>
           {keys !== null && <span class="menu-keys">{keys}</span>}
           <VersionStamp />

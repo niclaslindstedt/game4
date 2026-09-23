@@ -4,8 +4,10 @@
 // a player has to READ to find the press they came for is a card that has
 // failed; a mark is found without reading.
 //
-// Only the marks this slice's cards use: the flag on RACE, the stopwatch on
-// the TIME TRIAL, the kicker on FREE RIDE, the speaker on the sound switch,
+// Only the marks this slice's cards use: the peaks on the CAMPAIGN and the
+// padlock on what it has not opened, the flag on RACE, the stopwatch on the
+// TIME TRIAL, the kicker on FREE RIDE, the flip on TRICKS, the shutter on the
+// GALLERY chip, the speaker on the sound switch,
 // the three the pause card is read by — carry on, start again, leave — the
 // sliders on the OPTIONS chip, and the three more its groups are headed with
 // (the keys, the dial, the screen; SOUND takes the speaker). Each group mark
@@ -27,6 +29,10 @@ export const GLYPH_NAMES = [
   "display",
   "kicker",
   "clock",
+  "peaks",
+  "lock",
+  "camera",
+  "flip",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -126,6 +132,16 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <circle cx="20.4" cy="12.4" r="1.2" fill="currentColor" stroke="none" />
     </>
   ),
+  // A LIP AND A LOOP OFF IT: the tricks run — the same wedge as the free
+  // ride's, and what is turned over it rather than how far it throws.
+  flip: (
+    <>
+      <path d="M2.5 20h8L10.5 16Z" fill="currentColor" stroke="none" />
+      <path d="M2.5 20h19" />
+      <path d="M12.6 14.6a4.6 4.6 0 1 1 5.6 2" />
+      <path d="M19.6 13.4l-1.4 3.2-3.2-1.2" />
+    </>
+  ),
   // A STOPWATCH: the time trial — the loop alone, against the clock. The
   // crown on top is what keeps it from reading as the dial.
   clock: (
@@ -134,6 +150,33 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <path d="M10 2.8h4M12 2.8v3" />
       <path d="M12 13.4V9.2" />
       <path d="M18.2 6.4l1.4-1.4" />
+    </>
+  ),
+  // TWO PEAKS AND A PENNANT on the higher: the campaign — a ladder of maps
+  // climbed shelf by shelf. The pennant is what keeps it from reading as
+  // the kicker's slope.
+  peaks: (
+    <>
+      <path d="M2.5 20.5l6.5-10 3.4 5.2 3.6-8.2 5.5 13z" />
+      <path d="M16 7.5V2.8" />
+      <path d="M16 2.8h4l-1.2 1.6 1.2 1.6h-4" fill="currentColor" />
+    </>
+  ),
+  // A PADLOCK: a map or a shelf the campaign has not opened yet.
+  lock: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="1.8" />
+      <path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9" />
+      <path d="M12 14.4v2.4" />
+    </>
+  ),
+  // THE SHUTTER: the pictures a rider took, and the press that takes one — a
+  // stills camera, never the HUD's movie camera, which walks the ladder.
+  camera: (
+    <>
+      <rect x="2.6" y="7.4" width="18.8" height="12.4" rx="2.4" />
+      <path d="M8.4 7.4 9.9 5h4.2l1.5 2.4" />
+      <circle cx="12" cy="13.6" r="3.6" />
     </>
   ),
 };

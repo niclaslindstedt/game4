@@ -56,12 +56,14 @@ export {
   RACE,
   SNOW_DIAL,
   TIME_TRIAL,
+  TRICKS_RUN,
   clampSnowDepth,
   freeRules,
   isGameMode,
   openRules,
   raceRules,
   timeTrialRules,
+  tricksRules,
   type Assist,
   type GameMode,
   type RunRules,
@@ -96,6 +98,11 @@ export {
   type SledInput,
   type SledState,
   type SnowContact,
+  type BailCause,
+  type TrickKind,
+  type TrickPart,
+  type TrickPose,
+  type TrickState,
 } from "./game/state.ts";
 export { freshSled, skiLockAt, derive } from "./game/sled.ts";
 export { probesOf, hullOf, type Probe, type HullPoint } from "./game/suspension.ts";
@@ -128,6 +135,13 @@ export {
   stepRivals,
 } from "./game/rivals.ts";
 export { stepRun } from "./game/run.ts";
+export {
+  airPointsPerSecond,
+  freshTricks,
+  lengthPointsPerMetre,
+  stepTricks,
+} from "./game/tricks.ts";
+export { poseInput, poseOf, stepStrokes } from "./game/strokes.ts";
 export { placeRun, type RunMoment } from "./game/place.ts";
 export { SUN_SECONDS_PER_HOUR, moonAgeOn, moonAtRun, sunAtRun, sunHourAt } from "./game/clock.ts";
 export { windAt, type Wind } from "./game/wind.ts";
@@ -141,6 +155,24 @@ export {
   tipLimit,
   treadCeiling,
 } from "./game/limits.ts";
+
+// How hard a map is, and what kind of hard (engine/rating/).
+export {
+  LADDER,
+  RATING,
+  RATING_AXES,
+  WALL_REACH,
+  characterDistance,
+  cornerRadius,
+  leadingAxis,
+  rateLadder,
+  rateLevel,
+  skyWeight,
+  type LadderReport,
+  type MapRating,
+  type RateOptions,
+  type RatingAxes,
+} from "./rating/index.ts";
 
 // The bot rider and the headless simulator.
 export { botInput, RIDER_BOT, type BotProfile } from "./sim/bot.ts";

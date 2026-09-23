@@ -14,6 +14,7 @@
 //   npm run level -- --seed 38 --scale 1     # one pixel a metre
 //   npm run level -- --seed 38 --json        # the listing as data, too
 //   npm run level -- --seed 38 --out plan    # previews/plan.png
+//   npm run level -- --seed 38 --tricks      # the trick field laid (R20)
 //
 // Writes previews/level-<seed>.png and previews/level-<seed>.txt (the same
 // table the run prints).
@@ -39,13 +40,14 @@ const args = parseArgs(
     scale: { kind: "number", default: 0.6, help: "pixels per metre" },
     out: { kind: "string", help: "file name under previews/ (no extension)" },
     json: { kind: "flag", help: "also print the listing as JSON" },
+    tricks: { kind: "flag", help: "build the map a tricks run rides: its trick field laid (R20)" },
   },
-  "usage: npm run level -- --seed n [--scale px/m] [--out name] [--json]",
+  "usage: npm run level -- --seed n [--scale px/m] [--out name] [--json] [--tricks]",
 );
 
 // ── Build it ────────────────────────────────────────────────────────────
 const t0 = performance.now();
-const level = generateLevel(args.seed);
+const level = generateLevel(args.seed, { tricks: args.tricks });
 const built = performance.now() - t0;
 const analysis = analyzeLevel(level);
 const st = analysis.stats;
@@ -139,7 +141,7 @@ const canvas = renderLevelMap({
 });
 const dir = join(root, "previews");
 mkdirSync(dir, { recursive: true });
-const name = args.out ?? `level-${level.seed}`;
+const name = args.out ?? `level-${level.seed}${args.tricks ? "-tricks" : ""}`;
 writeFileSync(join(dir, `${name}.png`), canvas.toPng());
 writeFileSync(join(dir, `${name}.txt`), text + "\n");
 console.log(`\nwrote previews/${name}.png and previews/${name}.txt`);

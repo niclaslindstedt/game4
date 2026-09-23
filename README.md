@@ -16,7 +16,7 @@ Every map is **generated from a seed** by a rules engine: a basin of rolling hil
 
 Four sleds ship — a trail sled, a crossover, a mountain sled and a cross sled, each an answer to a kind of snow and none with a real brand behind it — with their rider on the seat. Every hill, every tree and every sled is written in code; the game ships no asset files, and every sound is synthesized.
 
-**What exists today is the first vertical slice**: one generated map, four sleds to choose between on a sled card, a RACE (you and three bot rivals, three laps) and a TIME TRIAL (the same map alone, three laps or one, against a record book kept per map, sled and length, and the translucent ghost of the run that set the record) and a FREE RIDE (the whole map to yourself, on a date, an hour and a depth of snow you pick on a start card, starting anywhere you tap on its chart), under one of six weathers — clear, fair, high cloud, the flat light of an overcast, falling snow up to a blizzard, a valley fog — and on a quarter of the maps into dusk and night under the moon and the stars, the sleds' headlamps on the snow, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock, your place and a heading-up minimap, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). More modes are planned, not built.
+**What exists today is the first vertical slice**: one generated map, four sleds to choose between on a sled card, a CAMPAIGN (three shelves of six pinned maps, ridden for points and medals against the field, each map opening the next), a RACE (you and three bot rivals, three laps) and a TIME TRIAL (the same map alone, three laps or one, against a record book kept per map, sled and length, and the translucent ghost of the run that set the record) and a FREE RIDE (the whole map to yourself, on a date, an hour and a depth of snow you pick on a start card, starting anywhere you tap on its chart) and TRICKS (two minutes alone on the map with a field of graded kickers laid on its loop, scored for the air, the backflips, front flips and 360s, and the rider's poses, combo by combo), under one of six weathers — clear, fair, high cloud, the flat light of an overcast, falling snow up to a blizzard, a valley fog — and on a quarter of the maps into dusk and night under the moon and the stars, the sleds' headlamps on the snow, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock, your place and a heading-up minimap, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). More modes are planned, not built.
 
 ## Why
 
@@ -51,42 +51,45 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 
 ## Usage
 
-| Command                 | What it does                                                                                                                           |
-| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
-| `make build`            | Typecheck both programs (the engine and the app) and build the site into `pwa/dist/`                                                   |
-| `make test`             | The vitest suite; `SHARD=i/N` runs one slice of it (CI runs two)                                                                       |
-| `make lint`             | eslint and the typecheck, zero warnings                                                                                                |
-| `make fmt`              | prettier in place; `make fmt-check` is what CI runs                                                                                    |
-| `make hooks`            | Install the pre-commit and commit-msg git hooks                                                                                        |
-| `make icons`            | Regenerate the install icons and the favicon from the app mark                                                                         |
-| `make sim`              | The headless balance sweep: the bot races generated maps through the real engine (`SEEDS=3,7`)                                         |
-| `make level`            | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`)                            |
-| `make analyze`          | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                                            |
-| `make ride`             | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`)                                                           |
-| `make world`            | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)                               |
-| `make sky`              | Every weather against every three hours, day and night, on one map from one place, as one contact sheet (`SEED=38`, `ARGS=--hours=`)   |
-| `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                                               |
-| `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)                                       |
-| `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first; `ARGS="--video all"` meters every picture preset) |
-| `make tauri`            | Build the site into the desktop app and launch it (needs Rust)                                                                         |
-| `make tauri-test`       | The desktop app's decision layer, on a bare Rust toolchain                                                                             |
-| `make tauri-lint`       | clippy over both desktop crates at zero warnings (needs the webview libraries); `make tauri-fmt` formats                               |
-| `make desktop`          | Package this machine's desktop downloads into `tauri/release/`                                                                         |
-| `make native-install`   | The store app's own dependency tree                                                                                                    |
-| `make native-bundle`    | Pack the built site into the store app — before every native build                                                                     |
-| `make native-typecheck` | tsc over the store app's shell                                                                                                         |
-| `make native-ios`       | The store app on an iOS simulator (`native-android` for Android, `native-iphone` for a real iPhone)                                    |
-| `make shellcheck`       | shellcheck over the scripts and the git hooks; `make actionlint` lints the workflows                                                   |
-| `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                                                  |
-| `make bump`             | Print the semver bump the release would derive from the changeset fragments                                                            |
+| Command                 | What it does                                                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `make build`            | Typecheck both programs (the engine and the app) and build the site into `pwa/dist/`                                                               |
+| `make test`             | The vitest suite; `SHARD=i/N` runs one slice of it (CI runs two)                                                                                   |
+| `make lint`             | eslint and the typecheck, zero warnings                                                                                                            |
+| `make fmt`              | prettier in place; `make fmt-check` is what CI runs                                                                                                |
+| `make hooks`            | Install the pre-commit and commit-msg git hooks                                                                                                    |
+| `make icons`            | Regenerate the install icons and the favicon from the app mark                                                                                     |
+| `make sim`              | The headless balance sweep: the bot races generated maps through the real engine (`SEEDS=3,7`; `ARGS=--tricks` on the trick-field maps)            |
+| `make level`            | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`; `ARGS=--tricks` lays the trick field)  |
+| `make analyze`          | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                                                        |
+| `make rate`             | Rate generated maps: how hard and what kind of hard (`COUNT=96 ARGS=--stats`; `CAMPAIGN=1` audits the committed ladder)                            |
+| `make difficulty`       | One map from above with what makes it hard drawn over it (`SEED=38`; `CAMPAIGN=1` a sheet per campaign map)                                        |
+| `make routes`           | Regenerate the loop drawn behind each campaign box (`pwa/src/game/campaign-routes.ts`)                                                             |
+| `make ride`             | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`; `backflip`, `frontflip`, `spin`, `pose`, `kicker-flip` score a trick) |
+| `make world`            | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)                                           |
+| `make sky`              | Every weather against every three hours, day and night, on one map from one place, as one contact sheet (`SEED=38`, `ARGS=--hours=`)               |
+| `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                                                           |
+| `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)                                                   |
+| `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first; `ARGS="--video all"` meters every picture preset)             |
+| `make tauri`            | Build the site into the desktop app and launch it (needs Rust)                                                                                     |
+| `make tauri-test`       | The desktop app's decision layer, on a bare Rust toolchain                                                                                         |
+| `make tauri-lint`       | clippy over both desktop crates at zero warnings (needs the webview libraries); `make tauri-fmt` formats                                           |
+| `make desktop`          | Package this machine's desktop downloads into `tauri/release/`                                                                                     |
+| `make native-install`   | The store app's own dependency tree                                                                                                                |
+| `make native-bundle`    | Pack the built site into the store app — before every native build                                                                                 |
+| `make native-typecheck` | tsc over the store app's shell                                                                                                                     |
+| `make native-ios`       | The store app on an iOS simulator (`native-android` for Android, `native-iphone` for a real iPhone)                                                |
+| `make shellcheck`       | shellcheck over the scripts and the git hooks; `make actionlint` lints the workflows                                                               |
+| `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                                                              |
+| `make bump`             | Print the semver bump the release would derive from the changeset fragments                                                                        |
 
 The browser-driven labs (`screenshots`, `profile`, `world`, `sky`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
 
 ## Controls
 
-**Keyboard:** W / ↑ throttle, S / ↓ / Space brake, A D / ← → steer, E / Shift lean back and Q / Z lean forward (in the air they pitch the sled), R back onto the track at the last checkpoint you passed, B restart the race from the grid, C camera, Escape pause — every one of them rebindable on OPTIONS ▸ KEYS. In the air the throttle spins the tread and lifts the nose; the brake stops it and drops the nose.
+**Keyboard:** W / ↑ throttle, S / ↓ / Space brake, A D / ← → steer, E / Shift lean back and Q / Z lean forward (in the air they pitch the sled; carried all the way on a tricks run, they throw a flip, and the bars thrown all the way over a 360), F / X held in the air on a tricks run for a pose, R back onto the track at the last checkpoint you passed, B restart the race from the grid, C camera, H HUD on / off, Enter take a picture (kept in the front door's GALLERY, forty to a roll, to share, copy or save), Escape pause — every one of them rebindable on OPTIONS ▸ KEYS. In the air the throttle spins the tread and lifts the nose; the brake stops it and drops the nose.
 
-**Touch:** the lower-left of the screen is the handlebar — touch anywhere and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the lever — it is wide open the moment your thumb lands: slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera. OPTIONS swaps the lever and the bar for a left hand, sets the thumbs' travel, and inverts the lean. Works in portrait and landscape; the HUD re-flows to fit.
+**Touch:** the lower-left of the screen is the handlebar — touch anywhere and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the lever — it is wide open the moment your thumb lands: slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera. A screenshot taken with the phone's own buttons in the store app is kept in the GALLERY. OPTIONS swaps the lever and the bar for a left hand, sets the thumbs' travel, and inverts the lean. Works in portrait and landscape; the HUD re-flows to fit.
 
 **On the phone:** the game is an installable PWA — open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/), then "Add to Home Screen" (iOS Safari: Share → Add to Home Screen; Android Chrome: menu → Install app). It launches fullscreen, works offline and prompts in-app when a new build ships.
 

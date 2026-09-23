@@ -22,6 +22,9 @@
 //   5. the kickers off the track (R4), stamped where the corridor is not
 //   6. the start line (R12), the loop re-indexed to begin there, the
 //      checkpoints from it (R11) and the grid behind it on the track (R13)
+//   6a the trick field (R20), stamped onto the finished loop — only on a
+//      map asked for one, and drawing nothing, so every other map is
+//      exactly what it was
 //   6b the drifts across the finished loop (R17) — off a stream of their
 //      own, so they thin the packed field and move nothing else
 //   7. the forest (R14), which keeps clear of everything above
@@ -38,6 +41,7 @@ import { dealDrifts, stampDrifts } from "./drift.ts";
 import { growForest } from "./forest.ts";
 import { layOffKickers, layTrackKickers, publishTrackKickers } from "./kickers.ts";
 import { LEVEL_RULES as R } from "./rules.ts";
+import { layTrickField } from "./trick-field.ts";
 import { chooseStart, gridOnTrack, layCheckpoints } from "./spawn.ts";
 import { dealSun } from "./sun.ts";
 import { bakeCountry, planTerrain } from "./terrain.ts";
@@ -52,6 +56,7 @@ import {
   type Loop,
 } from "./track.ts";
 import type { GenerateOptions, GeneratedLevel } from "./types.ts";
+import { generatorTraits, type GeneratorVersion } from "./versions.ts";
 
 /** How many loops an attempt draws before it gives up on its country. */
 const DRAWS = 40;
@@ -63,7 +68,13 @@ export function subSeed(seed: number, attempt: number): number {
 }
 
 /** One attempt: a level, or the reason this sub-seed could not make one. */
-function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLevel | string {
+function attemptLevel(
+  seed: number,
+  attempt: number,
+  laps: number,
+  version: GeneratorVersion,
+  tricks: boolean,
+): GeneratedLevel | string {
   const rng = createRng(subSeed(seed, attempt));
   const plan = planTerrain(rng);
   const ground = bakeCountry(plan);
@@ -96,8 +107,14 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
   // Publish the heights the ground actually carries, so a reader of a track
   // point and a reader of `groundAt` under it read the same number.
   for (const p of loop.points) p.y = sampleField(ground, p.x, p.z);
-  const kickers = publishTrackKickers(loop, trackKickers, start).concat(offKickers);
+  let kickers = publishTrackKickers(loop, trackKickers, start).concat(offKickers);
   for (const k of kickers) k.y = sampleField(ground, k.x, k.z);
+  if (tricks) {
+    const field = layTrickField(loop, ground, kickers);
+    if (typeof field === "string") return field;
+    kickers = kickers.concat(field);
+    for (const p of loop.points) p.y = sampleField(ground, p.x, p.z);
+  }
   const checkpoints = layCheckpoints(trackOf(loop));
   const { spawn, grid } = gridOnTrack(trackOf(loop));
   const drifts = dealDrifts(subSeed(seed, attempt), loop.length, kickers);
@@ -127,6 +144,7 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
     attempt,
     drifts,
     weather,
+    version,
   });
 }
 
@@ -134,9 +152,12 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
 export function generateLevel(seed: number, opts: GenerateOptions = {}): GeneratedLevel {
   const attempts = opts.attempts ?? 16;
   const laps = opts.laps ?? R.race.laps;
+  // Every row of `versions.ts` builds by these rules today; a legacy row's
+  // traits are read at the one place its behaviour differs.
+  const { version } = generatorTraits(opts.version);
   const reasons: string[] = [];
   for (let a = 0; a < attempts; a++) {
-    const built = attemptLevel(seed, a, laps);
+    const built = attemptLevel(seed, a, laps, version, opts.tricks === true);
     if (typeof built === "string") {
       reasons.push(`#${a}: ${built}`);
       continue;

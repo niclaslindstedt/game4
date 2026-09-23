@@ -89,9 +89,10 @@ never has to guess. Both event names are spelled again in
 The website has no such row today; the conversation is here for the day it
 grows one, and F11 works either way.
 
-**The menu bar presses the game's own keys.** Four words cross —
-`restart`, `reset`, `pause`, `camera` — and each is a key the player can
-already press (B, R, Escape, C), under a RACE menu and a VIEW menu. `App.tsx` lands every one of them on the very handler the key
+**The menu bar presses the game's own keys.** Five words cross —
+`restart`, `reset`, `pause`, `camera`, `shot` — and each is a key the player
+can already press (B, R, Escape, C, Enter), under a RACE menu and a VIEW menu
+(View ▸ Take Screenshot, ⇧⌘S, files a picture in the game's gallery). `App.tsx` lands every one of them on the very handler the key
 lands on, so a menu row can never become a second button; the words are listed
 in `pwa/src/shell-host.ts` and `tests/tauri_test.ts` holds the two lists
 together.

@@ -1198,6 +1198,91 @@ canvas {
   padding: 0.45rem 0.9rem;
 }
 
+/* THE REPLAY BAR (hud-replay.tsx): bottom centre, where the thumbs would be
+   on a race somebody is riding. Over the HUD, and clear of the chips along
+   the top; it gives up its key note before it gives up the ways out. */
+.hud-replay-layer {
+  z-index: 2;
+}
+
+.hud-replay {
+  position: absolute;
+  left: 50%;
+  bottom: max(0.8rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(30rem, calc(100% - 2rem));
+  box-sizing: border-box;
+  padding: 0.6rem 1rem;
+  gap: 0.4rem;
+}
+
+.hud-replay-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+}
+
+.hud-replay-label {
+  font-size: clamp(0.65rem, 1.8vmin, 0.85rem);
+  letter-spacing: 0.3em;
+  color: var(--hud-info);
+}
+
+.hud-replay-slow {
+  margin-left: 0.8em;
+  padding: 0 0.4em;
+  border-radius: 0.25rem;
+  background: rgb(255 255 255 / 85%);
+  color: rgb(var(--hud-plate));
+  letter-spacing: 0.15em;
+}
+
+.hud-replay-title {
+  font-size: clamp(0.9rem, 2.8vmin, 1.25rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hud-replay-line {
+  font-size: clamp(0.7rem, 2vmin, 0.95rem);
+  color: var(--hud-info);
+}
+
+/* The gauge is a TRANSFORM, so the fill never lays the page out again. */
+.hud-replay-bar {
+  width: 100%;
+  height: 0.25rem;
+  margin-top: 0.25rem;
+  border-radius: 0.2rem;
+  background: rgb(255 255 255 / 20%);
+  overflow: hidden;
+}
+
+.hud-replay-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--hud-track);
+  transform-origin: left center;
+}
+
+.hud-replay-acts {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.hud-replay-act {
+  font-size: clamp(0.72rem, 2.2vmin, 1rem);
+  padding: 0.4rem 0.9rem;
+}
+
+@media (max-height: 30rem) {
+  .hud-replay-note {
+    display: none;
+  }
+}
+
 /* THE SPLIT: the clock at the checkpoint just taken, landing with the
    place chip's own thump, in the flag's colour so it reads as news. */
 .hud-split {
@@ -2037,6 +2122,17 @@ canvas {
   flex: 1 1 auto;
 }
 
+.menu-card-pause .menu-item-name:has(+ .menu-item-note) {
+  white-space: nowrap;
+}
+
+.menu-card-pause .menu-item-note {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  white-space: nowrap;
+}
+
 /* The way out of the run, held apart from the three above it and given the
    least of the card's weight — the front door's foot strip, as a row. */
 .menu-card-pause .menu-item-leave {
@@ -2489,6 +2585,14 @@ canvas {
 
   .menu-brand-name {
     font-size: 1.6rem;
+  }
+
+  /* Four chips along the foot on one row, so none of them — the GALLERY is
+     the last — is below the card's fold. */
+  .menu-card-root .menu-chip {
+    padding: 0.45rem 0.55rem;
+    gap: 0.35rem;
+    letter-spacing: 0.1em;
   }
 }
 
@@ -3377,6 +3481,284 @@ canvas {
   }
 }
 
+/* ── THE GALLERY (menu-gallery.tsx) ────────────────────────────────────────
+   The pictures the player took, under the front door's GALLERY chip. A VIEWER
+   rather than a grid: one picture fills the frame, an arrow either side of
+   it, the roll running as a filmstrip underneath.
+
+   THE FRAME IS THE PICTURE'S OWN SHAPE, bounded. A fixed landscape frame
+   would be the wrong shape for every picture in the roll on the one device
+   most of them are taken on: a phone held upright photographs a tall frame,
+   and letterboxing it into 16:9 throws away most of the card's width to draw
+   it small. So the frame hugs whatever is in it and the picture is bounded
+   instead — never wider than the card, never taller than half
+   the window, which is what keeps the caption, the buttons and the filmstrip
+   under it on screen. The cost is a card that changes height when the roll
+   is flipped between shapes; on any one device every picture in the roll has
+   the same shape, so it is a cost almost nobody pays. */
+.menu-card-gallery {
+  width: min(52rem, 100%);
+  gap: 0.7rem;
+}
+
+/* The count against the cap, under the head. */
+.gallery-sub {
+  margin-top: -0.4rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  opacity: 0.75;
+}
+
+.gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-height: 0;
+}
+
+.gallery-empty {
+  padding: 1.6rem 0.4rem;
+  text-align: center;
+  font-size: 0.85rem;
+  letter-spacing: 0.1em;
+  line-height: 1.7;
+  opacity: 0.8;
+}
+
+.gallery-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 0;
+}
+
+/* The two arrows are a STEPPER (`data-nav-steps`), so they wear the knob
+   rows' own arrows rather than a shape of their own: the same press on the
+   same silhouette picks a value everywhere else on every other card. */
+.gallery-step {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 3.4rem;
+  font: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--flag);
+  background: transparent;
+  border: 0;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.gallery-step:hover,
+.gallery-step:focus-visible {
+  background: rgb(244 248 251 / 14%);
+  outline: none;
+}
+
+.gallery-step:active {
+  background: var(--flag);
+  color: var(--hud-shadow);
+  transform: translateY(1px);
+}
+
+.gallery-step:disabled {
+  opacity: 0.25;
+  cursor: default;
+}
+
+.gallery-frame {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  /* Enough to be a frame before anything has decoded in it, so the card does
+     not jump as the picture arrives. */
+  min-height: 8rem;
+  background: rgb(13 34 51 / 55%);
+  border: 2px solid rgb(244 248 251 / 18%);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* NEVER CROPPED, and never blown up past the pixels that were captured: a
+   gallery that cropped to fit would quietly cut the very thing the picture
+   was taken for. */
+.gallery-img {
+  max-width: 100%;
+  max-height: 52vh;
+  object-fit: contain;
+  display: block;
+}
+
+.gallery-caption {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.12em;
+}
+
+.gallery-label {
+  font-weight: 700;
+}
+
+.gallery-stamp {
+  opacity: 0.7;
+  /* A date broken across two lines reads as two facts. */
+  white-space: nowrap;
+  /* The date is the one thing on this card that is not the game's own
+     vocabulary, so it does not shout. */
+  text-transform: none;
+  letter-spacing: 0.06em;
+}
+
+.gallery-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.gallery-btn {
+  padding: 0.5rem 0.9rem;
+  font: inherit;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--hud-ink);
+  background: rgb(20 46 74 / 70%);
+  border: 2px solid rgb(244 248 251 / 26%);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.gallery-btn:hover,
+.gallery-btn:focus-visible {
+  background: rgb(40 78 118 / 90%);
+  outline: none;
+}
+
+.gallery-btn:active {
+  transform: translateY(1px);
+}
+
+/* DELETE is quiet until it has been asked once, and then it is the loudest
+   thing on the card — the two-step is the whole safety, and a player has to
+   be able to see which step they are on without reading the word. */
+.gallery-btn-quiet {
+  margin-left: auto;
+  background: transparent;
+  opacity: 0.75;
+}
+
+.gallery-btn-arm {
+  background: var(--hud-bad);
+  border-color: var(--hud-bad);
+  color: var(--hud-shadow);
+  opacity: 1;
+}
+
+.gallery-notice {
+  flex-basis: 100%;
+  min-height: 1.1em;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  color: var(--hud-info);
+}
+
+/* The filmstrip scrolls on its own, so a full roll never grows the card past
+   the viewport — the card is the scroller everywhere else, and forty tiles
+   wrapped into rows would push the picture itself off the top. */
+.gallery-strip {
+  display: flex;
+  gap: 0.35rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.2rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.gallery-thumb {
+  flex: none;
+  padding: 0;
+  background: rgb(13 34 51 / 55%);
+  border: 2px solid rgb(244 248 251 / 18%);
+  border-radius: 0.35rem;
+  cursor: pointer;
+  overflow: hidden;
+  touch-action: manipulation;
+}
+
+.gallery-thumb-on {
+  border-color: var(--flag);
+}
+
+.gallery-thumb-slot {
+  display: block;
+  width: 5rem;
+  height: 2.9rem;
+}
+
+.gallery-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* A PHONE HELD UPRIGHT has no width to spare beside the picture, so the
+   arrows shrink to what a thumb still hits and the strip's tiles with them.
+   Nothing is dropped: a gallery that hid its own way of flipping on the one
+   device with no arrow keys would be a gallery with one picture in it. */
+@media (max-width: 30rem) {
+  .gallery-step {
+    width: 1.7rem;
+    font-size: 1.3rem;
+  }
+
+  .gallery-thumb-slot {
+    width: 4rem;
+    height: 2.3rem;
+  }
+}
+
+/* A PHONE ON ITS SIDE has the width and none of the height: the picture gives
+   way first, so the buttons and the filmstrip under it stay on the screen
+   rather than below the card's fold. */
+@media (max-height: 30rem) {
+  .menu-card-gallery,
+  .gallery {
+    gap: 0.45rem;
+  }
+
+  .gallery-img {
+    max-height: 34vh;
+  }
+
+  .gallery-frame {
+    min-height: 5rem;
+  }
+
+  .gallery-btn {
+    padding: 0.35rem 0.8rem;
+  }
+
+  .gallery-thumb-slot {
+    width: 3.6rem;
+    height: 2rem;
+  }
+}
+
 /* ── THE LOADING CARD ──────────────────────────────────────────────────────
    Over a run being stood up (`loading-screen.tsx`, `run-loader.ts`): the level
    searched and compiled, two heightfields baked, the scene built off them and
@@ -3792,4 +4174,89 @@ canvas {
    place chip's thump, in the flag's colour so it reads as news. */
 .hud-best-air {
   animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* ── THE TRICKS RUN (hud-combo.tsx) ──────────────────────────────────────
+   THE COMBO OVER THE NOSE: a column on the centreline, a little under the
+   air clock, so the seconds, what was turned in them and what they are
+   worth read down one line. Its figure is keyed on the multiplier, so every
+   element won lands with a beat. */
+.hud-combo {
+  position: absolute;
+  z-index: 1;
+  top: 22%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  line-height: 1.05;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  max-width: min(90vw, 40rem);
+}
+
+.hud-combo-line {
+  font-size: clamp(0.85rem, 2.6vmin, 1.3rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.hud-combo-points {
+  font-size: clamp(1.2rem, 4.4vmin, 2.2rem);
+  font-weight: 700;
+  color: var(--hud-good);
+  font-variant-numeric: tabular-nums;
+  animation: hud-combo-beat 260ms ease-out;
+}
+
+.hud-combo-closed .hud-combo-points {
+  color: var(--hud-info);
+}
+
+.hud-combo-bailed,
+.hud-combo-bailed .hud-combo-points {
+  color: var(--hud-bad);
+}
+
+@keyframes hud-combo-beat {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* The buzzer's last ten seconds. */
+.hud-score-late {
+  color: var(--hud-bad);
+}
+
+/* THE TRICK PRESS for a thumb: bottom centre over the speed panel, between
+   the two thumbs, where either can reach it without leaving its zone. */
+.hud-trick-press {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 5.5rem);
+  transform: translateX(-50%);
+  font: inherit;
+  font-size: clamp(0.8rem, 2.4vmin, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--hud-ink);
+  background: rgb(var(--hud-plate) / 70%);
+  border: 2px solid var(--hud-edge);
+  border-radius: 999px;
+  padding: 0.7rem 1.4rem;
+  touch-action: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-combo-points {
+    animation: none;
+  }
 }

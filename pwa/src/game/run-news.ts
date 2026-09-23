@@ -12,6 +12,7 @@
 
 import type { GameEvent, GameState } from "@engine";
 
+import { lapOf } from "./snapshot.ts";
 import { STRINGS } from "./strings.ts";
 
 /** A line in the news column: what it says, its colour, and an id the list
@@ -49,8 +50,16 @@ export function newsFor(e: GameEvent, state: GameState): NewsLine | null {
       return { text: STRINGS.newsStuck, tone: "bad" };
     case "damage":
       return { text: STRINGS.newsDamage(e.part), tone: "bad" };
+    case "combo":
+      return e.sketchy
+        ? { text: `${STRINGS.comboSketchy} ${STRINGS.comboBanked(e.points)}`, tone: "info" }
+        : { text: STRINGS.comboBanked(e.points), tone: "good" };
+    case "bail":
+      return { text: STRINGS.comboBailed(e.lost), tone: "bad" };
     case "finish":
-      // A run alone has no place to report, only a time.
+      // A tricks run is its score; a run alone has no place, only a time.
+      if (state.rules.tricks)
+        return { text: STRINGS.newsTricksFinish(state.tricks.score), tone: "good" };
       if (state.rivals.length === 0) return { text: STRINGS.newsFinishAlone(e.time), tone: "good" };
       return {
         text: STRINGS.newsFinish(e.place, state.rivals.length + 1, e.time),
@@ -59,4 +68,19 @@ export function newsFor(e: GameEvent, state: GameState): NewsLine | null {
     default:
       return null;
   }
+}
+
+/** WHAT A PICTURE IS CALLED: the map it was taken on, where in the race —
+ * the lap, or the free ride that has none — how fast, and on which machine.
+ * It is the gallery's caption and most of the file's name
+ * (`screenshots.ts`), read at the SHUTTER'S press, so it is the moment the
+ * button went down rather than the frame that served it. */
+export function shotLabel(state: GameState): string {
+  return STRINGS.shotLabel({
+    seed: state.seed,
+    lap: state.rules.course ? lapOf(state.progress, state.rules.laps) : null,
+    laps: state.rules.laps,
+    kmh: state.sled.speed * 3.6,
+    sled: state.sled.spec.name,
+  });
 }

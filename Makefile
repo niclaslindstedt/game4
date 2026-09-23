@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -151,6 +151,28 @@ level:
 # `make analyze SEED=7` · `make analyze COUNT=24`
 analyze:
 	npm run analyze -- $(if $(SEED),--seed $(SEED),) $(if $(COUNT),--count $(COUNT),) $(ARGS)
+
+# RATE generated maps — how HARD each one is and what KIND of hard, on the
+# eight axes of engine/rating/ folded into one index. `--stats` is the
+# population per axis; CAMPAIGN=1 audits the committed ladder (every map on
+# its own version and held to its digest, the bot's time, the climb).
+# `make rate` · `make rate COUNT=96 ARGS=--stats` · `make rate CAMPAIGN=1`
+rate:
+	npm run rate -- $(if $(SEED),--seed $(SEED),) $(if $(SEEDS),--seeds $(SEEDS),) $(if $(COUNT),--count $(COUNT),) $(if $(CAMPAIGN),--campaign,) $(ARGS)
+
+# THE DIFFICULTY SCHEMATIC: one map from above with what makes it hard drawn
+# over it — the corners, the climbs, the drifts, the walled woods — and the
+# eight axes beside it, to previews/difficulty-<seed>.png. CAMPAIGN=1 draws
+# one sheet per committed map.
+# `make difficulty SEED=38` · `make difficulty CAMPAIGN=1`
+difficulty:
+	npm run difficulty -- $(if $(SEED),--seed $(SEED),) $(if $(CAMPAIGN),--campaign,) $(ARGS)
+
+# THE CAMPAIGN'S ROUTES: every pinned map's loop written down as the line its
+# box on the card draws (pwa/src/game/campaign-routes.ts, generated).
+# `make routes` · `make routes ARGS=--check`
+routes:
+	npm run routes -- $(ARGS)
 
 # THE RIDE LAB — the sled on the snow, drawn in profile over the ground it
 # crossed, with the numbers that decide the next step beside each cell. One

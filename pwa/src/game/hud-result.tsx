@@ -23,12 +23,21 @@
 // is the one that stood when the run began (`HudSnapshot.best`), so the
 // plate can say the run beat it after the book has been rewritten.
 //
+// ON A CAMPAIGN RUNG the plate adds three lines — the rung, what it paid
+// (points on a race, a medal on a trial) and what the finish did to the
+// ladder — and NEXT MAP takes NEW MAP's place, riding the rung the ladder
+// opened (`campaign-run.ts` writes the lines; this only draws them).
+// A TRICKS RUN'S PLATE is the score where the time was, and no book under
+// it: the record book is a book of times (`records.ts`).
+//
 // ITS OWN LAYER, drawn by App.tsx outside the HUD, and gated here: it is up
 // over a finished race and down under the pause card, which offers its own.
 
 import { isSledId, sledById } from "@engine";
 
 import { formatTime } from "../lib/util.ts";
+import type { CampaignLevel } from "./campaign.ts";
+import type { CampaignPlate } from "./campaign-run.ts";
 import type { HudSnapshot } from "./snapshot.ts";
 import { STRINGS } from "./strings.ts";
 
@@ -38,6 +47,9 @@ export function ResultPlate({
   onAgain,
   onNew,
   onMenu,
+  campaign = null,
+  onNext,
+  onReplay = null,
 }: {
   /** The race, or null while the plate is not the player's to press. */
   snap: HudSnapshot | null;
@@ -47,21 +59,35 @@ export function ResultPlate({
   onAgain: () => void;
   onNew: () => void;
   onMenu: () => void;
+  /** A CAMPAIGN RUNG's lines (`campaign-run.ts`): what it paid and what it
+   * did to the ladder — and the NEXT press in place of NEW MAP where the
+   * ladder has a map open after it. */
+  campaign?: CampaignPlate | null;
+  onNext?: (next: CampaignLevel) => void;
+  /** The race watched back (`replay-run.ts`), or null where there is no
+   * recording of it. */
+  onReplay?: (() => void) | null;
 }) {
   if (!snap?.result || !snap.standings) return null;
   const { result, standings, best } = snap;
   const trial = snap.mode === "timeTrial";
   const record = best === null || result.time < best.time;
-  const gold = trial ? record : result.place === 1;
+  const gold = snap.tricks ? false : trial ? record : result.place === 1;
   const sledName = (id: string): string => (isSledId(id) ? sledById(id).name : id);
   return (
     <div class="hud hud-result-layer">
       <div class="hud-center">
         <div class={`hud-card hud-result${gold ? " hud-result-record" : ""}`}>
           <span class="hud-card-note hud-result-label">
-            {trial ? STRINGS.resultTrialTitle : STRINGS.resultTitle}
+            {snap.tricks
+              ? STRINGS.resultTricksTitle
+              : trial
+                ? STRINGS.resultTrialTitle
+                : STRINGS.resultTitle}
           </span>
-          {trial ? (
+          {snap.tricks ? (
+            <span class="hud-card-title">{STRINGS.score(snap.tricks.score)}</span>
+          ) : trial ? (
             <span class="hud-card-title">{STRINGS.resultTime(result.time)}</span>
           ) : (
             <>
@@ -71,11 +97,27 @@ export function ResultPlate({
           )}
           {/* THE RECORD BOOK's line: the row this run set, or the one that
               stood and how far off it the run was. */}
-          <span class="hud-card-note hud-result-book" data-record={record ? "1" : undefined}>
-            {record || best === null
-              ? STRINGS.resultRecord
-              : `${STRINGS.resultBest(best.time, sledName(best.sled), best.at)} · ${STRINGS.resultOff(result.time - best.time)}`}
-          </span>
+          {!snap.tricks && (
+            <span class="hud-card-note hud-result-book" data-record={record ? "1" : undefined}>
+              {record || best === null
+                ? STRINGS.resultRecord
+                : `${STRINGS.resultBest(best.time, sledName(best.sled), best.at)} · ${STRINGS.resultOff(result.time - best.time)}`}
+            </span>
+          )}
+          {/* THE CAMPAIGN'S lines on a rung: the rung, what it paid, and
+              what the finish did to the ladder. */}
+          {campaign && <span class="hud-card-note hud-result-rung">{campaign.title}</span>}
+          {campaign && (
+            <span
+              class="hud-card-note hud-result-award"
+              data-cleared={campaign.cleared ? "1" : undefined}
+            >
+              {campaign.award}
+            </span>
+          )}
+          {campaign?.ladder && (
+            <span class="hud-card-note hud-result-ladder">{campaign.ladder}</span>
+          )}
           {/* THE FIELD, best first. A rider still out is billed by the lap
               they are on, so the table fills in as they come home. */}
           {standings.length > 1 && (
@@ -97,11 +139,29 @@ export function ResultPlate({
               of the time and the only one with a key behind it. */}
           <div class="hud-result-acts">
             <button type="button" class="hud-mini hud-result-act" data-nav-next onClick={onAgain}>
-              {trial ? STRINGS.resultTrialAgain : STRINGS.resultAgain}
+              {trial || snap.tricks ? STRINGS.resultTrialAgain : STRINGS.resultAgain}
             </button>
-            <button type="button" class="hud-mini hud-result-act" onClick={onNew}>
-              {STRINGS.resultNew}
-            </button>
+            {campaign ? (
+              campaign.next &&
+              onNext && (
+                <button
+                  type="button"
+                  class="hud-mini hud-result-act"
+                  onClick={() => campaign.next && onNext(campaign.next)}
+                >
+                  {STRINGS.plateNext}
+                </button>
+              )
+            ) : (
+              <button type="button" class="hud-mini hud-result-act" onClick={onNew}>
+                {STRINGS.resultNew}
+              </button>
+            )}
+            {onReplay && (
+              <button type="button" class="hud-mini hud-result-act" onClick={onReplay}>
+                {STRINGS.replayWatch}
+              </button>
+            )}
             <button type="button" class="hud-mini hud-result-act" onClick={onMenu}>
               {STRINGS.pauseMainMenu}
             </button>

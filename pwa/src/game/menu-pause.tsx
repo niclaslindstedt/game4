@@ -11,6 +11,8 @@
 //   RESTART RACE  the race again from the grid, on the same map — the B
 //                 key's own line. Over a free ride, START AGAIN: the same
 //                 ride from where it started.
+//   WATCH REPLAY  the race so far, from the outside (`replay-run.ts`) —
+//                 which ENDS it, and the row says so.
 //   MAIN MENU     out of the race and back to the front door. Nothing is
 //                 torn down: the same sled carries on under the bot.
 //
@@ -109,6 +111,7 @@ export function PauseMenu({
   onResume,
   onRestart,
   onMainMenu,
+  onReplay = null,
 }: {
   /** THE HELD RACE, as the HUD behind this card reads it — which is what the
    * card bills it by, the figures chosen from it by rule (`pause-stats.ts`). */
@@ -121,6 +124,8 @@ export function PauseMenu({
   onResume: () => void;
   onRestart: () => void;
   onMainMenu: () => void;
+  /** Watch the race so far, or null where there is no recording of it. */
+  onReplay?: (() => void) | null;
 }) {
   // Which of the card's two faces is up. Local, and dropped the moment the
   // card is: coming back to a held race costs the same one press every time.
@@ -150,9 +155,11 @@ export function PauseMenu({
           <div class="menu-pause-head">
             <div class="menu-title">{STRINGS.pauseHead}</div>
             <div class="menu-sub">
-              {snap.free
-                ? STRINGS.pauseSubFree(snap.seed)
-                : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
+              {snap.tricks
+                ? STRINGS.pauseSubTricks(snap.seed, snap.tricks.score)
+                : snap.free
+                  ? STRINGS.pauseSubFree(snap.seed)
+                  : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
             </div>
           </div>
           {/* HOW THE RACE HAS GONE, in one row across: the figure over its
@@ -190,6 +197,13 @@ export function PauseMenu({
                 {snap.free ? STRINGS.pauseRestartFree : STRINGS.pauseRestart}
               </span>
             </button>
+            {onReplay && (
+              <button type="button" class="menu-item" onClick={onReplay}>
+                <Glyph name="play" />
+                <span class="menu-item-name">{STRINGS.replayWatch}</span>
+                <span class="menu-item-note">{STRINGS.replayWatchNote}</span>
+              </button>
+            )}
             <button type="button" class="menu-item menu-item-leave" onClick={onMainMenu}>
               <Glyph name="exit" />
               <span class="menu-item-name">{STRINGS.pauseMainMenu}</span>

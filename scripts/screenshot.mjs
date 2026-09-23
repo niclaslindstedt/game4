@@ -16,6 +16,7 @@
 //   ?paused=1        ...held under the pause card instead.
 //   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
 //   ?mode=trial      the run is a TIME TRIAL rather than a race (--trial).
+//   ?mode=tricks     ...or a TRICKS run on the seed's trick field (--tricks).
 //   ?splash=1 / ?menu=root   the attract card / the front door;
 //   ?menu=options|keys       OPTIONS, and its KEYS page.
 //   ?menu=sled[&sled=id]     the sled card RACE opens, on a machine.
@@ -76,7 +77,9 @@ const SCENES = {
  * so these do not wait on `__SH_READY__` — what says a card is up is the
  * card being in the DOM. `settle` is the beat after it the card's arrival
  * animation needs. `press` is a button pressed on the way in, for the one
- * surface reached by a press rather than by a URL. */
+ * surface reached by a press rather than by a URL; `prime` is a race stood
+ * up and a key pressed on it FIRST, in the same tab, for a card that shows
+ * what a run left behind (the gallery's roll). */
 const SURFACES = {
   // The title and the invitation, which wait for the first map to be built.
   splash: { params: { splash: "1" }, wait: ".splash-prompt", settle: 900 },
@@ -84,13 +87,17 @@ const SURFACES = {
   // The loading card is up for as long as a map takes to build and no
   // longer, so it is photographed on the first frame it is in the DOM.
   loading: {
-    params: { menu: "root" },
-    press: ".menu-tile-hero",
+    params: { menu: "sled" },
+    press: ".sled-done",
     pressAfter: 1500,
     wait: ".loading-card",
     settle: 60,
   },
   pause: { params: { paused: "1", t: "14" }, wait: ".menu-card-pause", settle: 700 },
+  // THE CAMPAIGN CARD and the LEVEL CARD a RACE picks its pinned map on,
+  // straight off the URL (`?menu=campaign|levels`).
+  campaign: { params: { menu: "campaign" }, wait: ".menu-card-campaign", settle: 900 },
+  levels: { params: { menu: "levels" }, wait: ".menu-card-levels", settle: 900 },
   // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
   options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
   keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },
@@ -111,6 +118,20 @@ const SURFACES = {
     params: { start: "free", t: "20", shot: "1" },
     wait: ".hud-best-air",
     settle: 1500,
+  },
+  // THE GALLERY as a fresh visit finds it: the roll lives in IndexedDB and a
+  // new browser context has none, so what this photographs is the empty
+  // state — which is the surface most players see first.
+  gallery: { params: { menu: "gallery" }, wait: ".menu-card-gallery", settle: 700 },
+  // ...and with a picture in it: a race ridden fourteen seconds, ENTER pressed
+  // (the whole shutter — the grab, the HUD layer, the stamp, the encode, the
+  // roll), and the gallery opened in the same tab, so the store is the one
+  // the picture was filed in.
+  "gallery-roll": {
+    prime: { params: { start: "race", t: "14", shot: "1" }, key: "Enter" },
+    params: { menu: "gallery" },
+    wait: ".gallery-img",
+    settle: 900,
   },
 };
 
@@ -143,6 +164,7 @@ const args = parseArgs(
     weather: { kind: "string", help: `ride under this sky (${WEATHERS.join(", ")}, all)` },
     hour: { kind: "number", help: "the race's solar start hour, 0–24" },
     trial: { kind: "flag", help: "a time trial rather than a race (?mode=trial)" },
+    tricks: { kind: "flag", help: "a tricks run on the trick field (?mode=tricks)" },
     viewport: {
       kind: "string",
       default: "all",
@@ -151,7 +173,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
   },
   "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
-    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--trial] [--viewport v] [--timeout s]",
+    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--trial] [--tricks] [--viewport v] [--timeout s]",
 );
 const viewports =
   args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
@@ -196,6 +218,23 @@ async function capture(name, params, viewportName, surface) {
   const url = `${site.url}?${new URLSearchParams(params)}`;
   const file = join(outDir, `shot-${name}-${viewportName}.png`);
   try {
+    if (surface?.prime) {
+      // A surface that needs something done in the game first: a race stood
+      // up, a key pressed on it, and the receipt waited for.
+      const base = Object.fromEntries(Object.entries(params).filter(([k]) => k !== "menu"));
+      const primed = new URLSearchParams({ ...base, ...surface.prime.params });
+      await page.goto(`${site.url}?${primed}`, { waitUntil: "load" });
+      await page.waitForFunction("window.__SH_READY__ === true", null, {
+        timeout: args.timeout * 1000,
+      });
+      await page.keyboard.press(surface.prime.key);
+      // The receipt says the picture is in the roll (or that it failed).
+      await page.waitForFunction(
+        "[...document.querySelectorAll('.hud-flash')].some((f) => /PICTURE/.test(f.textContent))",
+        null,
+        { timeout: args.timeout * 1000 },
+      );
+    }
     await page.goto(url, { waitUntil: "load" });
     if (surface) {
       if (surface.press) {
@@ -227,7 +266,9 @@ async function capture(name, params, viewportName, surface) {
       // One more beat for the HUD's first snapshot to be drawn.
       await page.waitForTimeout(250);
     }
-    await page.screenshot({ path: file });
+    // The same patience as the waits: a card over a software-rendered race at
+    // twice the pixels can take longer than the default to hand a frame over.
+    await page.screenshot({ path: file, timeout: args.timeout * 1000 });
     console.log(`previews/shot-${name}-${viewportName}.png  ← ${url}`);
   } catch (err) {
     failures += 1;
@@ -292,8 +333,9 @@ if (args.surface) {
       if (sky !== undefined) params.weather = sky;
       if (args.hour !== undefined) params.hour = String(args.hour);
       if (args.trial) params.mode = "trial";
+      if (args.tricks) params.mode = "tricks";
       const name =
-        `${scene}${args.trial ? "-trial" : ""}${sky !== undefined ? `-${sky}` : ""}` +
+        `${scene}${args.trial ? "-trial" : ""}${args.tricks ? "-tricks" : ""}${sky !== undefined ? `-${sky}` : ""}` +
         `${args.hour !== undefined ? `-h${args.hour}` : ""}` +
         `${args.t !== undefined ? `-t${args.t}` : ""}` +
         `${args.camera !== undefined ? `-${args.camera}` : ""}` +

@@ -4,9 +4,9 @@
 // makes a frame somebody found handable to somebody else — and it is the
 // contract `scripts/screenshot.mjs` drives the built site through.
 //
-//   ?seed=<n>       pin the map: the front door's RACE rides this seed every
-//                   time instead of dealing a fresh one, and the race the
-//                   menu stands over is built on it too.
+//   ?seed=<n>       pin the map: the front door's RACE and TIME TRIAL ride
+//                   this seed rather than a campaign map off the level card,
+//                   and the race the menu stands over is built on it too.
 //   ?start=race     boot straight into a race on the grid (the splash and
 //                   the front door skipped). `start=1` is the same.
 //   ?start=free     ...or into a FREE RIDE on the start card's stored map,
@@ -22,14 +22,18 @@
 //                   back — how a lab photographs a sled it did not pick.
 //   ?mode=trial     the run a link boots into (or the next one pressed) is
 //                   a TIME TRIAL — alone, against the record and the ghost —
-//                   rather than a race.
+//                   rather than a race; ?mode=tricks, a TRICKS run on the
+//                   seed's trick field.
 //   ?bot=1          the player's own sled ridden by the bot for the whole
 //                   run, not just the pre-roll — a race watched from the
 //                   saddle to its finish plate with nobody's hands on it.
 //   ?menu=root      open on the front door rather than the attract card;
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
 //                   the sled card RACE opens; `start` on the free ride's
-//                   start card.
+//                   start card; `campaign` on the campaign card; `levels` on
+//                   the level card a RACE (or, with `mode=trial`, a TIME
+//                   TRIAL) picks its pinned map on; `gallery` on the pictures
+//                   kept.
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -62,8 +66,18 @@ import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "sled" | "options" | "keys" | "start";
-const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys", "start"];
+export type MenuPage =
+  "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels" | "gallery";
+const MENU_PAGES: readonly MenuPage[] = [
+  "root",
+  "sled",
+  "options",
+  "keys",
+  "start",
+  "campaign",
+  "levels",
+  "gallery",
+];
 
 export type UrlParams = {
   seed: number | null;
@@ -131,7 +145,14 @@ export function readParams(search: string): UrlParams {
     camera:
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
     sled: sled !== null && isSledId(sled) ? sled : null,
-    mode: start === "free" ? "free" : q.get("mode") === "trial" ? "timeTrial" : "race",
+    mode:
+      start === "free"
+        ? "free"
+        : q.get("mode") === "trial"
+          ? "timeTrial"
+          : q.get("mode") === "tricks"
+            ? "tricks"
+            : "race",
     bot: q.get("bot") === "1",
 
     menu: q.get("menu") !== null,

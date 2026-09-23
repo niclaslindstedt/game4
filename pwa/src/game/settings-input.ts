@@ -21,7 +21,7 @@ export type HeldAction = keyof KeysHeld;
  * edge that is not here: it reaches the engine as an input flag on the step
  * it arrives in, which is the whole difference between putting the sled
  * back and changing the camera. */
-export type InputAction = "restart" | "camera" | "pause";
+export type InputAction = "restart" | "camera" | "pause" | "shot" | "hud";
 
 /** An action taken on the PRESS, not held. */
 export type EdgeAction = "reset" | InputAction;
@@ -41,9 +41,12 @@ export const KEY_ACTIONS: readonly { id: KeyAction; label: string }[] = [
   { id: "right", label: STRINGS.keyRight },
   { id: "leanBack", label: STRINGS.keyLeanBack },
   { id: "leanForward", label: STRINGS.keyLeanForward },
+  { id: "trick", label: STRINGS.keyTrick },
   { id: "reset", label: STRINGS.keyReset },
   { id: "restart", label: STRINGS.keyRestart },
   { id: "camera", label: STRINGS.keyCamera },
+  { id: "hud", label: STRINGS.keyHud },
+  { id: "shot", label: STRINGS.keyShot },
   { id: "pause", label: STRINGS.keyPause },
 ];
 
@@ -57,6 +60,7 @@ const HELD: Record<HeldAction, true> = {
   right: true,
   leanBack: true,
   leanForward: true,
+  trick: true,
 };
 
 export function isHeldAction(action: KeyAction): action is HeldAction {
@@ -78,6 +82,10 @@ export function isHeldAction(action: KeyAction): action is HeldAction {
  * an arrow player; Q and E either side of W for the WASD hand. Never Ctrl:
  * Ctrl held beside W is a closed tab.
  *
+ * THE TRICK BUTTON, held in the air on a tricks run, takes the rider's
+ * body off the controls and into a pose: F beside the WASD hand's lean
+ * keys, X beside the arrow hand's Z.
+ *
  * R puts the sled back on the track at the last checkpoint it took — the
  * press a rider makes with a sled upside down in a tree well. Standing the
  * WHOLE race back up on the grid is the rarer press and far more expensive
@@ -91,9 +99,18 @@ export const DEFAULT_KEYS: KeyBindings = {
   right: ["KeyD", "ArrowRight"],
   leanBack: ["KeyE", "ShiftLeft", "ShiftRight"],
   leanForward: ["KeyQ", "KeyZ"],
+  trick: ["KeyF", "KeyX"],
   reset: ["KeyR"],
   restart: ["KeyB"],
   camera: ["KeyC"],
+  // H FOR THE READOUTS, beside C for what the camera looks at: the two
+  // presses about the PICTURE rather than the sled. The same switch as
+  // OPTIONS ▸ HUD, so the snow can be cleared for a photograph mid-race.
+  hud: ["KeyH"],
+  // ENTER IS THE SHUTTER (`screenshots.ts`): a picture is the press a rider
+  // makes while everything is still going well, on the key the hand beside
+  // the arrows is already resting near.
+  shot: ["Enter"],
   pause: ["Escape"],
 };
 

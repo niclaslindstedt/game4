@@ -23,6 +23,11 @@
 //                 the DAMAGE instrument beside it (hud-damage.tsx)
 //   bottom right  the news column — a checkpoint's clock, a lap, a tree
 //
+// WITH THE READOUTS OFF (H, OPTIONS ▸ HUD) it is `data-bare`: the thumbs and
+// the corner presses stay — a rider still has to steer and still has to get
+// out — and everything that READS goes, so the snow is clear for a look or
+// a picture (`shot-hud.ts` then leaves the chrome out of the frame).
+//
 // The thumb zones it hangs under all that are next door in hud-touch.tsx:
 // they are the one part of this screen that does NOT run off the snapshot
 // (they write into the input manager at pointer rate). Every word here comes
@@ -31,6 +36,7 @@
 import { REPO_URL } from "../identity.ts";
 import { formatTime } from "../lib/util.ts";
 import { HudActions } from "./hud-actions.tsx";
+import { ComboTile, TrickPress, TricksChips } from "./hud-combo.tsx";
 import { DamageGauge } from "./hud-damage.tsx";
 import { RevBar } from "./hud-dial.tsx";
 import { BarZone, LeverZone, type ZoneSide } from "./hud-touch.tsx";
@@ -77,6 +83,7 @@ export function Hud({
   onReset,
   onCamera,
   onPause,
+  bare = false,
 }: {
   snap: HudSnapshot;
   flashes: HudFlash[];
@@ -94,7 +101,34 @@ export function Hud({
   onReset: () => void;
   onCamera: () => void;
   onPause: () => void;
+  /** The readouts are off: the presses and the thumbs alone. */
+  bare?: boolean;
 }) {
+  const actions = (
+    <HudActions
+      onPause={onPause}
+      onReset={onReset}
+      onCamera={onCamera}
+      missed={snap.missed !== null}
+    />
+  );
+  const thumbs = touch && (
+    <div class="hud-touch">
+      {/* In reading order, so the zone on the left is the first child
+          whichever of the two it is. */}
+      {lever === "left" && <LeverZone touch={input.touch} feel={feel} side="left" />}
+      <BarZone touch={input.touch} feel={feel} side={lever === "left" ? "right" : "left"} />
+      {lever === "right" && <LeverZone touch={input.touch} feel={feel} side="right" />}
+    </div>
+  );
+  if (bare) {
+    return (
+      <div class="hud" data-bare="1" data-touch={touch ? "1" : undefined}>
+        <div class="hud-topright">{actions}</div>
+        {thumbs}
+      </div>
+    );
+  }
   return (
     <div
       class="hud"
@@ -110,13 +144,15 @@ export function Hud({
           </div>
           {/* THE FREE RIDE'S TWO: the longest flight so far — keyed on it,
               so a new best lands with its own beat — and the odometer. */}
-          {snap.free && (
+          {/* A TRICKS RUN'S TWO in their place: the score and the buzzer. */}
+          {snap.tricks && <TricksChips tile={snap.tricks} />}
+          {snap.free && !snap.tricks && (
             <div class="hud-chip hud-best-air" key={snap.bestAir}>
               <span>{STRINGS.air(snap.bestAir)}</span>
               <span class="hud-chip-sub">{STRINGS.bestAirLabel}</span>
             </div>
           )}
-          {snap.free && (
+          {snap.free && !snap.tricks && (
             <div class="hud-chip">
               <span>{STRINGS.distance(snap.distance)}</span>
               <span class="hud-chip-sub">{STRINGS.distanceLabel}</span>
@@ -174,12 +210,7 @@ export function Hud({
           reach lower, nearer the hands. */}
       <div class="hud-topright">
         <Minimap map={snap.minimap} />
-        <HudActions
-          onPause={onPause}
-          onReset={onReset}
-          onCamera={onCamera}
-          missed={snap.missed !== null}
-        />
+        {actions}
       </div>
 
       {/* THE MISSED CHECKPOINT, centred in the upper quarter where the eye
@@ -248,6 +279,9 @@ export function Hud({
         </div>
       )}
 
+      {/* THE COMBO, over the nose (`hud-combo.tsx`). */}
+      {snap.tricks && <ComboTile tile={snap.tricks} />}
+
       <div class="hud-right">
         <div class="hud-flashes">
           {flashes.map((f) => (
@@ -280,15 +314,8 @@ export function Hud({
         </div>
       )}
 
-      {touch && (
-        <div class="hud-touch">
-          {/* In reading order, so the zone on the left is the first child
-              whichever of the two it is. */}
-          {lever === "left" && <LeverZone touch={input.touch} feel={feel} side="left" />}
-          <BarZone touch={input.touch} feel={feel} side={lever === "left" ? "right" : "left"} />
-          {lever === "right" && <LeverZone touch={input.touch} feel={feel} side="right" />}
-        </div>
-      )}
+      {thumbs}
+      {touch && snap.tricks && <TrickPress input={input} />}
     </div>
   );
 }
