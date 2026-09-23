@@ -339,6 +339,18 @@ describe("the keys page (settings-input.ts)", () => {
   });
 
   it("merges stored keys against the actions this build has", () => {
+    // A row still exactly as an earlier build shipped it moves with the
+    // shipped layout; a rebound one is the rider's.
+    const old = mergeKeys({
+      throttle: ["KeyW", "ArrowUp"],
+      brake: ["KeyS", "ArrowDown", "Space"],
+      leanForward: ["KeyQ", "KeyZ"],
+      leanBack: ["KeyP"],
+    });
+    expect(old.throttle).toEqual(freshKeys().throttle);
+    expect(old.brake).toEqual(freshKeys().brake);
+    expect(old.leanForward).toEqual(freshKeys().leanForward);
+    expect(old.leanBack).toEqual(["KeyP"]);
     expect(mergeKeys(null)).toEqual(freshKeys());
     const merged = mergeKeys({ throttle: ["KeyI", 4, "KeyI"], hover: ["KeyH"], brake: "KeyK" });
     expect(merged.throttle).toEqual(["KeyI"]);

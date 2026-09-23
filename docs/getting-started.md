@@ -72,11 +72,11 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 
 | Key                | Does                                             |
 | ------------------ | ------------------------------------------------ |
-| W / ↑              | Throttle                                         |
-| S / ↓ / Space      | Brake                                            |
+| W                  | Throttle — pressed in the air, lean forward      |
+| S / Space          | Brake — S pressed in the air, lean back          |
 | A D / ← →          | Steer                                            |
-| E / Shift          | Lean back — in the air, nose up                  |
-| Q / Z              | Lean forward — in the air, nose down             |
+| ↓ / E / Shift      | Lean back — in the air, nose up                  |
+| ↑ / Q / Z          | Lean forward — in the air, nose down             |
 | F / X              | Hold in the air on a tricks run: a pose          |
 | R                  | Back onto the track at the last checkpoint taken |
 | B                  | Restart the race from the grid                   |
@@ -85,6 +85,8 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 | Enter              | Take a picture (filed in the GALLERY)            |
 | Escape             | Pause                                            |
 | Arrows, Enter, Esc | Walk a card, press a row, go back                |
+
+W and S lean only when they go down while the sled is IN THE AIR (a throttle held off the lip stays a throttle, or every jump would land on its nose), S leaning does not brake, and a lean key held over them wins.
 
 **Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it is WIDE OPEN the moment your thumb lands; slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera. On a tricks run a **TRICK** press over the speed is held for a pose.
 

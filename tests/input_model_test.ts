@@ -184,9 +184,11 @@ describe("the key table (settings-input.ts)", () => {
     }
   });
 
-  it("puts WASD and the arrows on the same machine, and nothing on Ctrl", () => {
-    expect(DEFAULT_KEYS.throttle).toEqual(expect.arrayContaining(["KeyW", "ArrowUp"]));
-    expect(DEFAULT_KEYS.brake).toEqual(expect.arrayContaining(["KeyS", "ArrowDown"]));
+  it("drives on W / S, leans on the arrows, and puts nothing on Ctrl", () => {
+    expect(DEFAULT_KEYS.throttle).toEqual(["KeyW"]);
+    expect(DEFAULT_KEYS.brake).toEqual(["KeyS", "Space"]);
+    expect(DEFAULT_KEYS.leanForward[0]).toBe("ArrowUp");
+    expect(DEFAULT_KEYS.leanBack[0]).toBe("ArrowDown");
     expect(DEFAULT_KEYS.left).toEqual(expect.arrayContaining(["KeyA", "ArrowLeft"]));
     expect(DEFAULT_KEYS.right).toEqual(expect.arrayContaining(["KeyD", "ArrowRight"]));
     expect(DEFAULT_KEYS.reset).toEqual(["KeyR"]);
@@ -206,5 +208,57 @@ describe("the key table (settings-input.ts)", () => {
         seen.set(code, action);
       }
     }
+  });
+});
+
+describe("the throttle and the brake keys in the air", () => {
+  /** Step `keys` for `steps` steps, `airborne` or not, on `model`. */
+  function ride(
+    model: ReturnType<typeof createInputModel>,
+    keys: Partial<KeysHeld>,
+    airborne: boolean,
+    steps = 60,
+  ) {
+    const held = { ...NO_KEYS, ...keys };
+    let input = sampleInput(model, held, neutralTouch(), DT, false, airborne);
+    for (let i = 1; i < steps; i++)
+      input = sampleInput(model, held, neutralTouch(), DT, false, airborne);
+    return input;
+  }
+
+  it("never lean on the snow", () => {
+    const model = createInputModel();
+    expect(ride(model, { throttle: true }, false).lean).toBe(0);
+    expect(ride(model, { brake: true }, false).lean).toBe(0);
+  });
+
+  it("lean forward on W and back on S pressed in the air, S then not braking", () => {
+    const model = createInputModel();
+    ride(model, {}, true, 1);
+    const w = ride(model, { throttle: true }, true, 240);
+    expect(w.lean).toBeLessThan(-0.9);
+    expect(w.throttle).toBeGreaterThan(0.9);
+    ride(model, {}, true, 1);
+    const s = ride(model, { brake: true }, true);
+    expect(s.lean).toBeGreaterThan(0.9);
+    expect(s.brake).toBe(0);
+  });
+
+  it("leave a throttle held off the lip a throttle, until it is pressed again", () => {
+    const model = createInputModel();
+    ride(model, { throttle: true }, false);
+    expect(ride(model, { throttle: true }, true).lean).toBe(0);
+    ride(model, {}, true, 1);
+    expect(ride(model, { throttle: true }, true).lean).toBeLessThan(-0.9);
+    // A landing hands it back to the engine alone.
+    expect(ride(model, { throttle: true }, false).lean).toBe(0);
+  });
+
+  it("give way to a lean key held over them", () => {
+    const model = createInputModel();
+    ride(model, {}, true, 1);
+    expect(ride(model, { throttle: true, leanBack: true }, true).lean).toBeGreaterThan(0.9);
+    ride(model, {}, true, 1);
+    expect(ride(model, { brake: true, leanForward: true }, true).lean).toBeLessThan(-0.9);
   });
 });

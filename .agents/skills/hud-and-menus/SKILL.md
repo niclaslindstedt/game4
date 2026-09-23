@@ -57,7 +57,7 @@ the layout the manager rides (`setBindings`) and how the thumbs read
 | Surface | Where |
 | --- | --- |
 | What a key or a touch MEANS, as maths | `pwa/src/game/input-model.ts` — DOM-free: the key ramps, the lever's drag → throttle/brake, the handlebar's travel → steer/lean, and the ONE sign flip between screen and engine; `tests/input_model_test.ts` |
-| WHICH KEY DOES WHAT | `pwa/src/game/settings-input.ts` — rebound on OPTIONS ▸ KEYS and handed to the manager through `setBindings`; as it SHIPS, `DEFAULT_KEYS` (W/↑ throttle, S/↓/Space brake, A D/← → steer, E/Shift lean back, Q/Z lean forward, R reset, B restart, C camera, Escape pause) and why each key is where it is; `HeldAction` is `keyof KeysHeld`, so a new held key does not compile until it is named |
+| WHICH KEY DOES WHAT | `pwa/src/game/settings-input.ts` — rebound on OPTIONS ▸ KEYS and handed to the manager through `setBindings`; as it SHIPS, `DEFAULT_KEYS` (W throttle, S/Space brake, A D/← → steer, ↓/E/Shift lean back, ↑/Q/Z lean forward — and W/S pressed in the air lean too, `input-model.ts`'s `airLean` — R reset, B restart, C camera, Escape pause) and why each key is where it is; `HeldAction` is `keyof KeysHeld`, so a new held key does not compile until it is named |
 | Listening to the DOM | `pwa/src/game/input.ts` — keys and the thumb zones into one `SledInput`, sampled once per STEP; the reset edge banked between steps |
 | Touch: the HANDLEBAR | `pwa/src/game/hud-touch.tsx`, lower LEFT — sideways travel steers, vertical travel leans |
 | Touch: the LEVER | `hud-touch.tsx`, lower RIGHT — anchored WIDE OPEN where the thumb lands; slid UP eases it to shut, further UP is the brake |
