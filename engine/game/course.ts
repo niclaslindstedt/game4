@@ -74,17 +74,18 @@ export function crossedLine(
 }
 
 /** Whether the move went THROUGH the checkpoint — inside its width and the
- * grace — returning the offset, or null. */
+ * grace, and `extra` metres more — returning the offset, or null. */
 export function crossedCheckpoint(
   cp: Checkpoint,
   x0: number,
   z0: number,
   x1: number,
   z1: number,
+  extra = 0,
 ): number | null {
   const lateral = crossedLine(cp, x0, z0, x1, z1);
   if (lateral === null) return null;
-  return Math.abs(lateral) <= cp.width / 2 + K.grace ? lateral : null;
+  return Math.abs(lateral) <= cp.width / 2 + K.grace + extra ? lateral : null;
 }
 
 /** How many crossings a whole race is: the start line, then every
@@ -102,7 +103,8 @@ export function stepCourse(state: GameState, x0: number, z0: number, events: Gam
   const n = cps.length;
   const c = state.sled;
   const owed = p.nextCheckpoint;
-  if (crossedCheckpoint(cps[owed], x0, z0, c.x, c.z) !== null) {
+  const extra = p.started ? 0 : K.startGrace;
+  if (crossedCheckpoint(cps[owed], x0, z0, c.x, c.z, extra) !== null) {
     p.passed += 1;
     p.lastCheckpoint = owed;
     p.splits[owed] = p.time;
@@ -214,6 +216,7 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
     contact.touching = false;
     contact.load = 0;
   }
+  c.comps.fill(0);
   derive(c);
 }
 

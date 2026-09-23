@@ -22,18 +22,21 @@
 //     side;
 //   - the AIR, against the whole machine's drag area; and in flight the
 //     rider's levers (`flight.ts`);
-//   - the HULL: unsprung points that meet the snow when the suspension has
-//     run out, which is how a sled lies on its side and how it rolls over;
+//   - the CHASSIS: unsprung points that meet the snow when the suspension
+//     has run out, which is how a sled lies on its side and how it rolls
+//     over — resolved as impulses after the forces (`chassis.ts`);
 //   - GRAVITY.
 // The trees and the map's edge are `collision.ts`'s and are applied after.
 
-import { approach, clamp } from "../lib/math.ts";
+import { angleDiff, approach, clamp } from "../lib/math.ts";
 import { fromEuler, integrate, rotate, toEuler, unrotate, type Vec3 } from "../lib/quat.ts";
 import { inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingLoss } from "./flight.ts";
-import { gripAt, powderFloor, sinkTarget, snowDrag, type Grip } from "./snow.ts";
-import { hullOf, probesOf } from "./suspension.ts";
+import { chassisContacts } from "./chassis.ts";
+import { gripAt, sinkTarget, snowDrag, type Grip } from "./snow.ts";
+import { cornerGrip } from "./limits.ts";
+import { probesOf } from "./suspension.ts";
 import { stepRpm, stepTread } from "./traction.ts";
 import type { GameEvent, GameState, SledInput, SledState, SnowContact } from "./state.ts";
 
@@ -41,15 +44,28 @@ const dt = TUNING.dt;
 const G = TUNING.grip;
 const R = TUNING.rider;
 
-/** The bump stop's rate and damping as multiples of the spring's own. */
-const STOP_RATE = 25;
+/** The bump stop's rate and damping as multiples of the spring's own, and
+ * the most any one probe may ever push, as a multiple of the load it
+ * carries at rest. The cap is the physics' fuse rather than a model: a strut
+ * bottomed on a steep face sees its compression grow with every centimetre
+ * the sled slides, and a spring that followed it would fire the machine off
+ * the slope. Fifteen of its rest load is fifteen g on that corner. */
+const STOP_RATE = 12;
 const STOP_DAMP = 4;
+const MAX_LOAD = 15;
+/** The fastest the body may turn about any axis, rad/s — a second fuse,
+ * over the explicit gyroscopic term, which a tumble would otherwise feed. */
+const MAX_SPIN = 25;
 /** The body's down axis must point at least this far toward the ground for
  * a probe to be read at all — a sled on its side has no suspension. */
 const PROBE_MIN_DOWN = 0.25;
 /** Below this speed along its line a probe's resistance fades out, m/s, so
  * a sled at rest is not pushed back and forth through zero. */
 const DRAG_FADE = 0.3;
+/** Newton steps along a probe's ray, and how steeply it must meet the snow
+ * (the vertical closing per metre of ray) to count as meeting it. */
+const RAY_STEPS = 3;
+const RAY_GRAZE = 0.15;
 
 /** A sled at rest with nothing read yet; `standSled` puts it somewhere. */
 export function freshSled(spec: SledSpec): SledState {
@@ -107,6 +123,7 @@ export function freshSled(spec: SledSpec): SledState {
     hitCooldown: 0,
     bumpCooldown: 0,
     sinks: probes.map(() => 0),
+    comps: probes.map(() => 0),
   };
 }
 
@@ -202,6 +219,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     // The ray: straight down the body's own axis from the attachment.
     const dy = -up.y;
     if (dy > -PROBE_MIN_DOWN) {
+      c.comps[i] = 0;
       if (p.kind === "ski") {
         if (p.side < 0) skiL = 0;
         else skiR = 0;
@@ -214,17 +232,34 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const target = sinkTarget(packed, speed0, p.sinkScale);
     c.sinks[i] += (target - c.sinks[i]) * Math.min(1, dt / TUNING.snow.sinkLag);
     const sink = c.sinks[i];
-    // Where the ray meets the support: one guess off the ground under the
-    // attachment, one correction off the ground where that guess landed.
+    // Where the ray meets the support: Newton's method along the ray, off
+    // the slope of the snow wherever the last guess landed — a ray at a
+    // grazing angle to a face converges where a vertical guess would
+    // overshoot it. A ray running along the snow meets nothing.
     let t = (ay - (level.groundAt(ax, az) - sink)) / -dy;
     let cx = ax + dx * t;
     let cz = az + dz * t;
-    t += (ay + dy * t - (level.groundAt(cx, cz) - sink)) / -dy;
-    cx = ax + dx * t;
-    cz = az + dz * t;
+    let grazing = false;
+    for (let it = 0; it < RAY_STEPS; it++) {
+      level.normalAt(cx, cz, normal);
+      const slope = dy + (normal.x * dx + normal.z * dz) / normal.y;
+      if (slope > -RAY_GRAZE) {
+        grazing = true;
+        break;
+      }
+      const gap = ay + dy * t - (level.groundAt(cx, cz) - sink);
+      t -= gap / slope;
+      cx = ax + dx * t;
+      cz = az + dz * t;
+    }
+    if (grazing) {
+      c.comps[i] = 0;
+      continue;
+    }
     const cy = ay + dy * t;
     const comp = p.susp.travel - t;
     contact.compression = Math.max(0, comp);
+    if (comp <= 0) c.comps[i] = 0;
     if (p.kind === "ski") {
       if (p.side < 0) skiL = Math.max(0, comp);
       else skiR = Math.max(0, comp);
@@ -243,16 +278,24 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const pvx = c.vx + wv.x;
     const pvy = c.vy + wv.y;
     const pvz = c.vz + wv.z;
-    const gx = -normal.x / normal.y;
-    const gz = -normal.z / normal.y;
-    const closing = -(pvy - gx * pvx - gz * pvz);
-    const rate = closing / -dy;
+    // THE DAMPER'S RATE is the compression's own change since the last step
+    // — read off the very surface the spring is, so a crease in the snow is
+    // a crease in both. A probe just arriving has no last step: its rate is
+    // the contact point's speed into the slope.
+    const was = c.comps[i];
+    const rate =
+      was > 0
+        ? (comp - was) / dt
+        : Math.max(0, -(pvx * normal.x + pvy * normal.y + pvz * normal.z)) /
+          Math.max(0.3, up.x * normal.x + up.y * normal.y + up.z * normal.z);
+    c.comps[i] = comp;
     const damp = rate > 0 ? p.susp.bump : p.susp.rebound;
     let spring = p.susp.rate * comp + damp * rate;
     if (comp > p.susp.travel) {
       spring += STOP_RATE * p.susp.rate * (comp - p.susp.travel) + STOP_DAMP * p.susp.bump * Math.max(0, rate);
     }
     if (spring <= 0) continue;
+    if (spring > MAX_LOAD * p.rest) spring = MAX_LOAD * p.rest;
     touching += 1;
     const vn = pvx * normal.x + pvy * normal.y + pvz * normal.z;
     if (-vn > impact) impact = -vn;
@@ -333,42 +376,6 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   fy -= drag * c.vy;
   fz -= drag * c.vz;
 
-  // ── The hull: the chassis where the springs have run out ─────────────
-  const H = TUNING.hull;
-  let hullTouch = false;
-  for (const h of hullOf(spec)) {
-    const r = rotate(q, h);
-    const px = c.x + r.x;
-    const py = c.y + r.y;
-    const pz = c.z + r.z;
-    const floor = level.groundAt(px, pz) - powderFloor(level.packedAt(px, pz));
-    const pen = floor - py;
-    if (pen <= 0) continue;
-    level.normalAt(px, pz, normal);
-    const wv = cross(w.x, w.y, w.z, r.x, r.y, r.z);
-    const pvx = c.vx + wv.x;
-    const pvy = c.vy + wv.y;
-    const pvz = c.vz + wv.z;
-    const vn = pvx * normal.x + pvy * normal.y + pvz * normal.z;
-    const fn = Math.max(0, H.rate * pen * normal.y - H.damp * vn);
-    if (fn <= 0) continue;
-    hullTouch = true;
-    const tvx = pvx - vn * normal.x;
-    const tvy = pvy - vn * normal.y;
-    const tvz = pvz - vn * normal.z;
-    const tv = Math.max(Math.hypot(tvx, tvy, tvz), DRAG_FADE);
-    const ff = (H.friction * fn) / tv;
-    push(
-      px,
-      py,
-      pz,
-      normal.x * fn - tvx * ff,
-      normal.y * fn - tvy * ff,
-      normal.z * fn - tvz * ff,
-    );
-    if (-vn > impact) impact = -vn;
-  }
-
   // ── Into the body frame, with the rider's own torques ─────────────────
   const tb = unrotate(q, torque);
   if (grounded) {
@@ -379,6 +386,16 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const target = c.steer * (R.rollPacked * packed + R.rollPowder * (1 - packed));
     const hold = clamp((1.3 - Math.abs(rollRel)) / 0.4, 0, 1);
     tb.z += clamp(R.rollStiff * (rollRel - target) - R.rollDamp * c.wz, -R.rollMax, R.rollMax) * hold;
+    // THE YAW HELD (`steer.yawHold`): toward the rate the skis ask for, no
+    // more than the grip can turn the way at, and the nose held to the way
+    // the sled is actually going.
+    const S = TUNING.steer;
+    const way = c.way;
+    const flat = Math.hypot(c.vx, c.vz);
+    const reach = Math.abs(way) > 1 ? (cornerGrip(packed) * S.pathShare) / Math.abs(way) : 0;
+    const asked = clamp((way * Math.tan(c.skiAngle)) / S.base, -reach, reach);
+    const slip = flat > S.slipFrom && way > 0 ? angleDiff(Math.atan2(c.vx, c.vz), c.heading) : 0;
+    tb.y += clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) * hold;
   } else {
     airTorque(c, tb);
   }
@@ -389,11 +406,20 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.wx += ((tb.x - gx) / I.x) * dt;
   c.wy += ((tb.y - gy) / I.y) * dt;
   c.wz += ((tb.z - gz) / I.z) * dt;
+  const spin = Math.hypot(c.wx, c.wy, c.wz);
+  if (spin > MAX_SPIN) {
+    c.wx *= MAX_SPIN / spin;
+    c.wy *= MAX_SPIN / spin;
+    c.wz *= MAX_SPIN / spin;
+  }
 
-  // ── Integrate ─────────────────────────────────────────────────────────
+  // ── Integrate: velocities, then the chassis's impulses, then position ─
   c.vx += (fx / m) * dt;
   c.vy += (fy / m) * dt;
   c.vz += (fz / m) * dt;
+  const chassis = chassisContacts(c, level);
+  const hullTouch = chassis > 0;
+  if (chassis > impact) impact = chassis;
   c.x += c.vx * dt;
   c.y += c.vy * dt;
   c.z += c.vz * dt;

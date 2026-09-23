@@ -225,6 +225,24 @@ export function syntheticLevel(options: SyntheticOptions = {}): Level {
   const spawn: Spawn = { x: S.x0 + 50, z: S.zMid - S.radius - 50, heading: 0 };
   const level = levelFrom(1, S.size, S.cell, height, packed, points, length, 160, 50, spawn, trees);
   if (options.laps !== undefined) level.laps = options.laps;
+  if (!options.noKicker) {
+    const zn = S.zMid + S.radius;
+    level.kickers = [
+      {
+        id: "K1",
+        x: S.kickerX,
+        z: zn,
+        y: level.groundAt(S.kickerX, zn),
+        heading: -Math.PI / 2,
+        height: S.kickerRise,
+        ramp: S.kickerRamp,
+        landing: S.kickerDrop,
+        width: S.width + 4,
+        onTrack: true,
+        s: S.x1 - S.x0 + Math.PI * S.radius + (S.x1 - S.kickerX),
+      },
+    ];
+  }
   return level;
 }
 

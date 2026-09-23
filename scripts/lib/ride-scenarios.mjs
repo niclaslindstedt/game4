@@ -186,6 +186,35 @@ export const SCENARIOS = [
     measure: turn,
   },
   {
+    id: "brake-turn",
+    title: "braking hard into a turn from 100 km/h",
+    level: (S) => S.flatLevel({ packed: 1 }),
+    place: () => ({ x: 1500, z: 400, heading: 0, speed: 100 / 3.6 }),
+    seconds: 5,
+    view: "plan",
+    input: (t) => ({ ...IDLE, brake: 1, steer: t > 0.3 ? 0.6 : 0 }),
+    measure: (run) => {
+      // THE SLIP ANGLE: how far the nose has come round off the way the sled
+      // is actually going, while it is still going anywhere.
+      let slip = 0;
+      for (let i = 1; i < run.frames.length; i++) {
+        const a = run.frames[i - 1];
+        const b = run.frames[i];
+        if (b.speed < 3) continue;
+        const way = Math.atan2(b.x - a.x, b.z - a.z);
+        let d = Math.abs(b.heading - way) % (2 * Math.PI);
+        if (d > Math.PI) d = 2 * Math.PI - d;
+        if (d > slip) slip = d;
+      }
+      const stop = run.frames.find((f) => f.speed < 0.3);
+      return [
+        ["worst slip deg", fmt(slip * 57.3, 0)],
+        ["spun", slip > Math.PI / 3 ? "YES" : "no"],
+        ["stop m", stop ? fmt(stop.dist, 1) : "—"],
+      ];
+    },
+  },
+  {
     id: "turn-powder",
     title: "full lock at 50 km/h in powder",
     level: (S) => S.flatLevel({ packed: 0 }),
@@ -249,6 +278,40 @@ export const SCENARIOS = [
         ["highest m", fmt(top.ground, 1)],
         ["stalled at s", fmt(run.frames.find((f) => f.t > 1 && f.speed < 1)?.t ?? null)],
         ["resets", run.events.filter((e) => e.kind === "reset").length],
+      ];
+    },
+  },
+  {
+    id: "wall",
+    title: "a 45-degree powder face taken at 90 km/h",
+    level: (S) => S.flatLevel({ packed: 0, grade: 1, slopeFrom: 400 }),
+    place: () => ({ x: 1500, z: 250, heading: 0, speed: 90 / 3.6 }),
+    seconds: 10,
+    view: "profile",
+    input: () => FULL,
+    measure: (run) => {
+      const top = run.frames.reduce((b, f) => (f.y > b.y ? f : b));
+      return [
+        ["highest m", fmt(top.ground, 1)],
+        ["stalled at s", fmt(run.frames.find((f) => f.t > 1 && f.speed < 1)?.t ?? null)],
+        ["resets", run.events.filter((e) => e.kind === "reset").length],
+      ];
+    },
+  },
+  {
+    id: "sidehill",
+    title: "across a 40-degree slope at 40 km/h",
+    level: (S) => S.flatLevel({ packed: 1, grade: 0.84, slopeFrom: 400 }),
+    place: () => ({ x: 1400, z: 440, heading: Math.PI / 2, speed: 40 / 3.6 }),
+    seconds: 6,
+    view: "plan",
+    input: () => ({ ...FULL, throttle: 0.5 }),
+    measure: (run) => {
+      const worst = run.frames.reduce((m, f) => Math.max(m, Math.abs(f.roll)), 0);
+      return [
+        ["worst roll deg", fmt(worst * 57.3, 0)],
+        ["over", worst > 1.4 ? "yes" : "no"],
+        ["slid down m", fmt(440 - run.frames[run.frames.length - 1].z, 1)],
       ];
     },
   },

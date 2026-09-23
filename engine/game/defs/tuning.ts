@@ -69,11 +69,11 @@ export const TUNING = {
     treadPacked: 1.0,
     treadPowder: 0.6,
     /** ...and holding sideways. */
-    treadSidePacked: 0.7,
+    treadSidePacked: 1.0,
     treadSidePowder: 0.45,
     /** The skis holding sideways: the carbide keel on a groomed track is
      * what a sled turns on, and in powder the ski only pushes snow. */
-    skiPacked: 1.2,
+    skiPacked: 0.95,
     skiPowder: 0.45,
     /** Slip speed at which the drive grip is 76 % developed, m/s, and the
      * same for the sideways grip. */
@@ -114,6 +114,25 @@ export const TUNING = {
     fadeSpeed: 17,
     /** How fast the skis can be swung, rad/s. */
     rate: 2.6,
+    /** THE ARCADE'S HAND ON THE YAW — which models nothing. The skis stand
+     * a long way ahead of the centre of gravity and the tread's centroid a
+     * short way behind it, so a sled whose weight is thrown onto its skis —
+     * braked hard with the bars over — has more turning moment at the front
+     * than holding moment at the back and swaps ends; a racer should not
+     * have to catch that. On the snow the yaw rate is held toward the one the
+     * skis' own geometry asks for (the way, times the tangent of the ski
+     * angle, over the ski-to-tread base) but no faster than `pathShare` of
+     * the corner grip can turn the way itself, with `yawHold` N·m per rad/s;
+     * and the nose is held to the way the sled is going, `slipHold` N·m per
+     * rad of slide once it is going faster than `slipFrom` m/s; the two
+     * together no more than `yawHoldMax` N·m. Zero is the bare physics. */
+    yawHold: 1500,
+    slipHold: 2500,
+    yawHoldMax: 3000,
+    pathShare: 1,
+    slipFrom: 3,
+    /** The base the skis steer about, m: ski line to the tread's centroid. */
+    base: 1.7,
   },
 
   /** THE RIDER — the man on the saddle is a quarter of the moving mass,
@@ -155,6 +174,14 @@ export const TUNING = {
     steerTorque: 90,
     /** Rotational damping in the air, N·m·s per rad/s about each axis. */
     damping: 60,
+    /** THE RIDER'S BODY ENGLISH ON THE ROLL: nothing in the controls rolls
+     * a sled in the air, so the rider levels it himself, N·m per rad of
+     * roll off level, with a damping on the roll rate, N·m·s — what keeps a
+     * flight kicked a few degrees over off a lip from landing on one ski. */
+    rollLevel: 900,
+    rollDamp: 160,
+    /** ...up to this roll off level, rad, fading out over the last 0.3. */
+    rollGiveUp: 1.1,
     /** How long off the snow before it counts as air, s — anything shorter
      * is a sled skipping over a bump. */
     counts: 0.15,
@@ -166,15 +193,19 @@ export const TUNING = {
     harshMax: 0.35,
   },
 
-  /** THE HULL: points on the chassis, the bumpers and the rider's helmet
-   * that meet the snow when the suspension is not what is touching it — a
-   * belly on a crest, a sled on its side, one upside down. */
+  /** THE CHASSIS: points on the belly, the cowl, the bumper and the
+   * rider's helmet that meet the snow when the suspension is not what is
+   * touching it — a belly on a crest, a sled on its side, one upside down.
+   * Resolved as impulses (`chassis.ts`). */
   hull: {
-    /** Penalty stiffness, N/m, and damping, N·s/m, per point. */
-    rate: 30000,
-    damp: 2600,
+    /** Share of the speed into the snow a chassis point gets back. */
+    restitution: 0.1,
     /** Friction of a chassis sliding on snow. */
     friction: 0.35,
+    /** How fast a point already under the snow is pushed back out, 1/s of
+     * its depth, and the most that push may be worth, m/s. */
+    pushRate: 10,
+    pushOut: 1.5,
   },
 
   /** THE TREES — trunks are cylinders (`collision.ts`). */
@@ -203,6 +234,11 @@ export const TUNING = {
     /** Metres either side of a checkpoint's visible width that still count
      * — the benefit of the doubt at gate range. */
     grace: 2,
+    /** ...and the START LINE's first crossing, m more still: the field comes
+     * onto the track out of the powder, off the grid's lane, and a rider who
+     * swings wide turning onto the loop has still started the race. Every
+     * later crossing of the line is judged like any other checkpoint. */
+    startGrace: 10,
     /** A reset stands the sled this far PAST the last checkpoint it took,
      * m (or this far short of the start line before it has taken one). */
     resetAhead: 3,

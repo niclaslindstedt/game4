@@ -9,7 +9,8 @@
 // "gasses it" off a lip that is pitching him forward) and the BRAKE
 // (stopping twenty kilos of belt dead throws that angular momentum into the
 // chassis and drops the nose — the correction for a sled going over
-// backwards). The bars have a little yaw, and the air damps every rate.
+// backwards). The bars have a little yaw, the rider's body keeps the roll
+// level (no control rolls a sled in the air), and the air damps every rate.
 // All of it in the BODY frame; nose up is a NEGATIVE torque about x.
 //
 // A LANDING is the suspension's job and the springs take it — the model of a
@@ -29,6 +30,11 @@ const A = TUNING.air;
 export function airTorque(c: SledState, out: { x: number; y: number; z: number }): void {
   out.x += -A.leanTorque * c.lean - A.throttleTorque * c.throttle + A.brakeTorque * c.brake;
   out.y += A.steerTorque * c.steer;
+  // Roll right-side-down is a negative rotation about the forward axis, so
+  // a positive torque takes it back. Past a steep roll the rider has lost
+  // it: a sled thrown onto its side comes down on its side.
+  const reach = clamp((A.rollGiveUp - Math.abs(c.roll)) / 0.3, 0, 1);
+  out.z += (A.rollLevel * c.roll - A.rollDamp * c.wz) * reach;
   out.x -= A.damping * c.wx;
   out.y -= A.damping * c.wy;
   out.z -= A.damping * c.wz;

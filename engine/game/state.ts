@@ -132,6 +132,9 @@ export type SledState = {
   /** The support depth each probe has settled to, m — the snow's own lag
    * (`snow.ts`), one per `contacts` entry. */
   sinks: number[];
+  /** Each probe's compression at the last step, m (0 when it was not
+   * touching) — what the damper's rate is read off (`sled.ts`). */
+  comps: number[];
 };
 
 /** The engine's name for the ridden machine, kept for the vocabulary the

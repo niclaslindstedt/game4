@@ -17,7 +17,8 @@
 import { angleDiff, clamp } from "../lib/math.ts";
 import { rotate } from "../lib/quat.ts";
 import { arcAhead, nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
-import type { Level, TrackHit, TrackPoint } from "../mapgen/types.ts";
+import type { Kicker, Level, TrackHit, TrackPoint } from "../mapgen/types.ts";
+import { TUNING } from "../game/defs/tuning.ts";
 import { treesNear } from "../game/collision.ts";
 import { brakeDecel, cornerGrip } from "../game/limits.ts";
 import { NEUTRAL_INPUT, type GameState, type SledInput } from "../game/state.ts";
@@ -32,6 +33,10 @@ export type BotProfile = {
    * heading the sled will have carried itself to. */
   steerGain: number;
   yawLead: number;
+  /** In powder: how much further ahead the yaw is read (a share more of
+   * `yawLead`), and how much of the gain is given up. */
+  powderLead: number;
+  powderEase: number;
   /** The share of the corner grip (`limits.ts`) the bot rides a bend at,
    * and of the braking grip it plans its braking on. */
   cornerShare: number;
@@ -58,26 +63,36 @@ export type BotProfile = {
   /** The least speed any turn is planned at, m/s — a sled slower than this
    * steers poorly and bogs in powder. */
   crawl: number;
+  /** The share of the harsh-landing speed (`air.harshSpeed`) a kicker is
+   * planned to be landed under. */
+  kickerMargin: number;
+  /** The turn onto the track out of the grid's lane is planned at this
+   * radius, m. */
+  entryRadius: number;
 };
 
 export const RIDER_BOT: BotProfile = {
   lookBase: 7,
   lookPerSpeed: 0.45,
-  steerGain: 2.4,
-  yawLead: 0.3,
+  steerGain: 1.8,
+  yawLead: 0.5,
+  powderLead: 1,
+  powderEase: 0.45,
   cornerShare: 0.65,
   brakeShare: 0.7,
   bendSpan: 8,
   airGain: 2.2,
   airDamp: 0.6,
-  entryShare: 0.5,
-  entryMin: 22,
-  entryMax: 45,
+  entryShare: 0.15,
+  entryMin: 8,
+  entryMax: 14,
   treeLook: 28,
   treeCorridor: 1.6,
   dodge: 4,
   giveUpAfter: 35,
   crawl: 7,
+  kickerMargin: 0.85,
+  entryRadius: 12,
 };
 
 const hit: TrackHit = { index: 0, s: 0, distance: 0, lateral: 0, x: 0, z: 0 };
@@ -124,8 +139,51 @@ function bendAt(level: Level, s: number, span: number): number {
   return Math.abs(angleDiff(pa.heading, pb.heading)) / (2 * span);
 }
 
-/** The fastest the rider may be going NOW for every bend within braking
- * reach to be taken at its own speed, m/s. */
+/** THE SPEED A KICKER WANTS, m/s: the fastest a sled can leave its lip and
+ * still come down on its landing rather than past it — found by flying a
+ * point off the lip at the ramp's own angle over the real snow, at each
+ * speed in turn, until the impact into the slope would bottom the
+ * suspension. A rider learns this on his first lap; the bot is handed it.
+ * Worked out once per kicker. */
+const kickerSpeeds = new WeakMap<Kicker, number>();
+function kickerSpeed(level: Level, k: Kicker, profile: BotProfile): number {
+  const known = kickerSpeeds.get(k);
+  if (known !== undefined) return known;
+  const fx = Math.sin(k.heading);
+  const fz = Math.cos(k.heading);
+  const lip = level.groundAt(k.x, k.z);
+  const angle = Math.atan((lip - level.groundAt(k.x - fx * 2, k.z - fz * 2)) / 2);
+  const floor = 0.55;
+  const limit = TUNING.air.harshSpeed * profile.kickerMargin;
+  const n = { x: 0, y: 1, z: 0 };
+  let best = 8;
+  for (let v = 8; v <= 40; v += 1) {
+    let x = k.x;
+    let z = k.z;
+    let y = lip + floor;
+    const h = v * Math.cos(angle);
+    let vy = v * Math.sin(angle);
+    let impact = 0;
+    for (let t = 0; t < 5; t += 0.02) {
+      x += fx * h * 0.02;
+      z += fz * h * 0.02;
+      vy -= TUNING.g * 0.02;
+      y += vy * 0.02;
+      if (y <= level.groundAt(x, z) + floor) {
+        level.normalAt(x, z, n);
+        impact = -(fx * h * n.x + vy * n.y + fz * h * n.z);
+        break;
+      }
+    }
+    if (impact > limit) break;
+    best = v;
+  }
+  kickerSpeeds.set(k, best);
+  return best;
+}
+
+/** The fastest the rider may be going NOW for every bend and kicker within
+ * braking reach to be taken at its own speed, m/s. */
 function speedAllowed(state: GameState, s: number, speed: number, profile: BotProfile): number {
   const level = state.level;
   const aLat = cornerGrip(1) * profile.cornerShare;
@@ -137,6 +195,14 @@ function speedAllowed(state: GameState, s: number, speed: number, profile: BotPr
     if (k < 1e-4) continue;
     const corner = Math.sqrt(aLat / k);
     const now = Math.sqrt(corner * corner + 2 * decel * Math.max(0, d - 6));
+    if (now < allowed) allowed = now;
+  }
+  for (const k of level.kickers ?? []) {
+    if (!k.onTrack || k.s === undefined) continue;
+    const d = arcAhead(level, s, k.s);
+    if (d > reach) continue;
+    const v = kickerSpeed(level, k, profile);
+    const now = Math.sqrt(v * v + 2 * decel * d);
     if (now < allowed) allowed = now;
   }
   return allowed;
@@ -219,9 +285,13 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
 
   // STEER at the aim, against the heading the yaw rate is carrying it to.
   const bearing = Math.atan2(tx - c.x, tz - c.z);
+  // In powder the sled turns off its roll — the carve — which lags the bars
+  // by the time it takes to lay the machine over, so the bot looks further
+  // ahead along its own yaw and asks for less.
+  const powder = 1 - c.packed;
   const yaw = rotate(c.q, { x: c.wx, y: c.wy, z: c.wz }).y;
-  const error = angleDiff(c.heading + yaw * profile.yawLead, bearing);
-  input.steer = clamp(profile.steerGain * error, -1, 1);
+  const error = angleDiff(c.heading + yaw * profile.yawLead * (1 + powder * profile.powderLead), bearing);
+  input.steer = clamp(profile.steerGain * (1 - powder * profile.powderEase) * error, -1, 1);
 
   // THE THROTTLE AND THE BRAKE, off the bends within reach — on the track;
   // out in the powder there is nothing to brake for but the track itself.
@@ -231,15 +301,23 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   // 2·sin(error) over the distance to the aim, taken at the grip of the
   // snow the sled is on — which is what slows it for the turn onto the
   // track out of the powder, and back onto it after running wide.
+  // ...and the turn onto the track at the end of the grid's lane, braked
+  // for before the lane runs out.
+  if (!p.started && on.distance > halfWidth) {
+    const grip = cornerGrip(c.packed) * profile.cornerShare;
+    const turn = Math.sqrt(grip * profile.entryRadius);
+    const left = on.distance - halfWidth;
+    allowed = Math.min(allowed, Math.sqrt(turn * turn + 2 * brakeDecel(c.packed) * profile.brakeShare * left));
+  }
   const reach = Math.hypot(tx - c.x, tz - c.z);
-  const bend = (2 * Math.abs(Math.sin(error))) / Math.max(reach, 1);
+  const bend = (2 * Math.abs(Math.sin(angleDiff(c.heading, bearing)))) / Math.max(reach, 1);
   if (bend > 1e-3) {
     const grip = cornerGrip(c.packed) * profile.cornerShare;
     allowed = Math.min(allowed, Math.max(profile.crawl, Math.sqrt(grip / bend)));
   }
   if (speed > allowed + 1) {
     input.throttle = 0;
-    input.brake = clamp((speed - allowed) / 5, 0.2, 1);
+    input.brake = clamp((speed - allowed) / 2.5, 0.25, 1);
   } else if (speed > allowed - 1) {
     input.throttle = 0.4;
   }
