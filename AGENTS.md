@@ -14,6 +14,8 @@ This repository conforms to [`OSS_GAME_SPEC.md`](OSS_GAME_SPEC.md) — the commi
 
 **Tricks are built too:** a fourth mode, TRICKS — two minutes alone on the map with its TRICK FIELD laid (R20: graded kickers stamped on the loop, only on a map asked for one) — where the lean or the bars carried to the top of their axis in the air are STROKES that throw a backflip, a front flip or a 360, a held trick button is a rider's POSE (a one-footer, a can-can, a tuck), and the air, the turns and the poses are scored combo by combo, banked on a clean landing and lost to a wipeout; the HUD's combo line rides over the nose (`engine-system`).
 
+**Wildlife is built too:** ravens over the woods, crossbills in the spruce tops, an eagle over the ridge, coveys of ptarmigan (and the rare capercaillie) that burst off the snow when a sled comes close, swans and geese going north over the basin in March; hares, foxes, reindeer herds at the wood's edge, a moose, a lynx — each on a rarity ladder, walking a round that is a pure function of the clock, running from an engine, and leaving PRINTS in the same trail map as the furrows; the birds' cries on the synth. Presentation only, dealt off the map's seed on generators of their own, so no digest can see it (`nature`, `make birds`).
+
 ## Build and test commands
 
 ```sh
@@ -50,6 +52,7 @@ This project is tuned by measuring and LOOKING, not guessing. Each lab below is 
 | A campaign map: a seed pinned, a rung moved, a medal set | `rate CAMPAIGN=1`, `difficulty CAMPAIGN=1`, `routes` | `campaign`, `level-rating` |
 | The rating's axes and bands, the ladder scorer | `rate COUNT=96 ARGS=--stats` | `level-rating` |
 | The woods, the country as it reads | `level`, `world`, `profile` | `nature` |
+| The wildlife: a bird or an animal, its look, where it lives, how it moves, its prints, its cry | `birds`, `world ARGS=--views=herd,birds,prints`, `profile`, `audition` | `nature`, `sound-effects` |
 | The sky, the sun, the haze, the shadows | `world` (an early and a late hour), `screenshots` | `atmosphere` |
 | The weather, the night, the clouds, the falling snow, the lamps | `sky`, `screenshots ARGS="--weather all"`, `profile` | `atmosphere` |
 | The snow as DRAWN: the shader, the groomed track, the trail map | `world`, `screenshots`, `profile` | `snow-look` |
@@ -67,7 +70,7 @@ This project is tuned by measuring and LOOKING, not guessing. Each lab below is 
 | Does it LOOK and READ right at speed | `world`, `screenshots` | `playtest` |
 | The strokes, the poses, the score, the trick field (R20) | `ride` (`backflip`, `frontflip`, `spin`, `pose`, `kicker-flip`), `sim ARGS=--tricks`, `level ARGS=--tricks` | `engine-system`, `sled-physics`, `mapgen-improvement` |
 
-`sim`, `ride`, `level`, `analyze`, `rate`, `difficulty` and `routes` are pure Node — no build, no browser, seconds. `audition` writes a page in pure Node; its `--meter` drives that page in Chromium. `screenshots` and `profile` drive the BUILT SITE, so **`make build` first, every time**: a stale dist photographs the last change rather than this one. `world` and `sky` build their own one-off bundles from harness pages (`pwa/world-preview.html`, `pwa/sky-preview.html`) and need no `make build`. The browser-driven ones need `npm i --no-save playwright-core`; in Claude web sessions Chromium is preinstalled — prefix them with `CHROMIUM_PATH=/opt/pw-browsers/chromium`.
+`sim`, `ride`, `level`, `analyze`, `rate`, `difficulty` and `routes` are pure Node — no build, no browser, seconds. `audition` writes a page in pure Node; its `--meter` drives that page in Chromium. `screenshots` and `profile` drive the BUILT SITE, so **`make build` first, every time**: a stale dist photographs the last change rather than this one. `world`, `sky` and `birds` build their own one-off bundles from harness pages (`pwa/world-preview.html`, `pwa/sky-preview.html`, `pwa/birds-preview.html`) and need no `make build`. The browser-driven ones need `npm i --no-save playwright-core`; in Claude web sessions Chromium is preinstalled — prefix them with `CHROMIUM_PATH=/opt/pw-browsers/chromium`.
 
 Four of these are worth knowing about even when they are not your subject:
 
@@ -173,6 +176,8 @@ By area first. Each row's skill owns the file-by-file map inside that area — g
 | The snow as DRAWN: the shader, the glitter, the groomed track | `pwa/src/game/snow-glsl.ts` | `snow-look` |
 | THE TRAILS: what a contact stamps, and the maps that keep it | `pwa/src/game/trail-stamp.ts` (three-free), `trail-map.ts` | `snow-look`, `visual-effects` |
 | The woods as drawn | `pwa/src/game/forest.ts` | `nature` |
+| THE BIRDS: the roster, where a flock lives, where a bird is at a moment (the flush, the crossings), the look | `pwa/src/game/bird-defs.ts`, `bird-roost.ts`, `bird-plan.ts` (three-free), `bird-shapes.ts`, `birds.ts` | `nature` |
+| THE ANIMALS IN THE SNOW: the roster, where a group lives, its round and its fright, its prints, the look; the rarity ladder and what both placers ask of a map | `pwa/src/game/beast-defs.ts`, `beast-plan.ts`, `beast-tracks.ts` (three-free), `beast-shapes.ts`, `beasts.ts`, `wildlife.ts`; `rarity.ts`, `wild-ground.ts` | `nature` |
 | The checkpoints as drawn: the poles, the flags, the start banner | `pwa/src/game/gates.ts` | `collision` |
 | The sky: the sun's place and colour, the dome, the haze, the lights, the shadow box | `pwa/src/game/sky.ts` (three-free), `haze.ts`, `sky-dome.ts`, `environment.ts` | `atmosphere` |
 | WHERE THE SHADOW STANDS and which trees cast into it: the circle ahead of the lens, its fade, the casters | `pwa/src/game/shadow-box.ts` (three-free), `SHADOW_LOOK` in `settings-video.ts`; the caster set is `forest.ts`'s | `atmosphere`, `nature` |
@@ -209,6 +214,7 @@ By area first. Each row's skill owns the file-by-file map inside that area — g
 | WHAT THE PICTURE COSTS: the eight ladders and the presets; the probe that picks a first visit's rung | `pwa/src/game/settings-video.ts`, `video-probe.ts` (both DOM-free); `renderer.setVideo` applies them | `menu-system`, `write-code` |
 | A SOUND: a one-shot and its route | `pwa/src/game/audio/bank.ts`, `route.ts` | `sound-effects` |
 | A BED: the engine, the belt, the snow, the wind — and where the ear is | `pwa/src/game/audio/engine-voice.ts`, `snow-voice.ts`, `ride-bed.ts`, `listener.ts` | `sound-effects` |
+| What the BIRDS say: who cries, how often, how far off; the cries themselves | `pwa/src/game/audio/bird-voice.ts` (plan-free), `bird-bank.ts`, `bird-bed.ts` (the cries off the plan) | `sound-effects`, `nature` |
 | The instrument | `pwa/src/lib/voice.ts` (the vocabulary), `lib/synth.ts` (the only WebAudio) | `sound-effects` |
 | The desktop app | `tauri/` — `shell/` decides, `src-tauri/` acts; `make tauri*` | `platform-shells` |
 | The store app | `native/` — `App.tsx`, `src/*.ts`; `make native-*` | `platform-shells` |
@@ -263,6 +269,7 @@ Each of these is the one place an answer is written down. Anything that needs it
 - **WHAT A REPLAY CUTS TO, AND HOW SLOWLY IT RUNS** — `pwa/src/game/replay-shots.ts`. The collector watches the player's own `state.events` and files a flight BACK-DATED to its take-off, a pass, a trunk, a rival, a wipeout and the flag; `planShots` ranks and spaces them; `directAt(plan, step)` is the whole edit, a pure function of how far into the tape the picture is — the moment holding the frame and the TIME RATE. Slow motion is fewer steps per frame and nothing else. A replay is the ghost's `ControlTape` (never a second encoder) plus the afternoon read off the run at its first step (`recipeOf` in `replay.ts`); `camera-tv.ts` decides where the lens stands and restates none of it.
 - **The record book** — `pwa/src/game/records.ts`: what names a row (`recordId` — seed, sled, mode, laps), what beats one (`beats` — lower, never a tie), the gap at a crossing (`splitGap`). The front door's tile, the HUD's VS BEST and the finish plate all read it; `ghost-run.ts` is the one place a run is filed.
 - **Every word the player reads** — `pwa/src/game/strings.ts`; no component carries a literal.
+- **Where a bird or an animal is** — `birdPose` in `pwa/src/game/bird-plan.ts` and `beastPose` in `beast-plan.ts`: pure functions of the plan and the engine's clock, never stepped, never stored. The only memories are the caller's, each decided by one rule: `flushAt` (a covey put up by any sled — `birds.ts` and `audio/bird-bed.ts` both keep it) and `spookAt` (a group run off by an engine — `beasts.ts`). Both plans are dealt off `level.seed` on generators of their own and read the map without writing it, so the wildlife moves no digest and draws nothing from `state.rng`.
 - **Where the ear is** — `LISTENERS` in `pwa/src/game/audio/listener.ts`, one row per camera rung; nothing else branches on the camera to decide how loud something is.
 - **What is felt** — `pwa/src/game/rumble.ts` (which moment is worth a pulse, how big), and `haptics.ts` the one motor.
 - **App identity** — `pwa/src/identity.ts` (`APP_NAME`, `SITE_URL`, `REPO_URL`, `PALETTE`, `BRAND_COLOR`).
@@ -271,7 +278,7 @@ Each of these is the one place an answer is written down. Anything that needs it
 ## Test conventions
 
 - Tests live in the root `tests/` directory, one file per topic, named `<topic>_test.ts` (OSS_GAME_SPEC §20.2).
-- Runner: vitest via `make test`; config in `vitest.config.ts` (alias `@engine` → `engine/index.ts`). No DOM, no browser — engine tests, plus the DOM-free app modules (`input-model.ts`, `sled-stats.ts`, `snapshot.ts`, `run-news.ts`, `minimap-bake.ts`, `minimap-view.ts`, `shell.ts`, `url-params.ts`, `settings.ts`, `settings-video.ts`, `video-probe.ts`, `camera-rigs.ts`, `rider-pose.ts`, `sky.ts`, `shadow-box.ts`, `trail-stamp.ts`, `records.ts`, `ghost.ts`, `ghost-run.ts`, `replay.ts`, `replay-shots.ts`, `camera-tv.ts`, `shot-plan.ts`, `lib/shot-roll.ts`, `trick-tile.ts`, the audio's vocabulary, bank, route and beds under a recording synth).
+- Runner: vitest via `make test`; config in `vitest.config.ts` (alias `@engine` → `engine/index.ts`). No DOM, no browser — engine tests, plus the DOM-free app modules (`input-model.ts`, `sled-stats.ts`, `snapshot.ts`, `run-news.ts`, `minimap-bake.ts`, `minimap-view.ts`, `shell.ts`, `url-params.ts`, `settings.ts`, `settings-video.ts`, `video-probe.ts`, `camera-rigs.ts`, `rider-pose.ts`, `sky.ts`, `shadow-box.ts`, `trail-stamp.ts`, `records.ts`, `ghost.ts`, `ghost-run.ts`, `replay.ts`, `replay-shots.ts`, `camera-tv.ts`, `shot-plan.ts`, `lib/shot-roll.ts`, `trick-tile.ts`, the wildlife's plans and prints (`bird-plan.ts`, `beast-plan.ts`, `beast-tracks.ts`), the audio's vocabulary, bank, route and beds under a recording synth).
 - **Physics tests stage the sled on the SYNTHETIC maps** in `tests/support/synthetic.ts` — `syntheticLevel()` (the stadium: a packed loop, a kicker, hills, a lone tree) and `flatLevel()` (a drag strip, all packed or all powder), nothing the generator built — and stand it at a moment with `placeRun` (`engine/game/place.ts`), then script inputs step by step. That is the §23.8 sequel test kept honest: the rule suite passes with the generator deleted. The `test-scenario` skill owns staging an exact situation.
 - **A file that asserts a dozen rules over the same spread of seeds takes its maps from `tests/support/levels.ts`** (`LEVEL_SEEDS`, `levelFor`, `analysisFor`) rather than generating them per `it`. Generating a map is the most expensive thing the engine does and it is deterministic, so the second build can only return the first one's answer. What comes back is SHARED and read-only.
 - **Sharding splits at FILE granularity, so the slowest single file is the floor under `make test` on CI.** Keep a file under a minute: share the corpus, and split a file whose subject is really two.

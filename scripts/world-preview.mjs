@@ -23,7 +23,10 @@
 // walked in toward the wood — a shadow that appears between two of them was
 // switched on by the lens coming nearer), orbit, and last, staged rather
 // than ridden to: wipeout and wipeout-lie (the player put into the nearest
-// trunk flat out, then where the rider came to rest).
+// trunk flat out, then where the rider came to rest); then the wildlife:
+// herd (the biggest animal the map holds, from beside it), birds (the flock
+// most in the air, from the snow under it) and prints (last night's prints
+// on a fox's round, the player stood off it so the fine trail map is over it).
 
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -60,6 +63,9 @@ const VIEWS = [
   "orbit",
   "wipeout",
   "wipeout-lie",
+  "herd",
+  "birds",
+  "prints",
 ];
 
 const args = parseArgs(

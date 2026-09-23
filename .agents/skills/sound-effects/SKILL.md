@@ -39,6 +39,7 @@ SWALLOWS TRANSIENTS. Four things in the instrument exist to reach that:
 | `pwa/src/game/audio/snow-voice.ts` | The sled on the snow and the air as FIVE LAYERS (hiss, powder, carve, tread, wind): `snowTargets`, a pure function crossfading on ONE number — `SledState.packed`. |
 | `pwa/src/game/audio/listener.ts` | **WHERE THE EAR IS.** `LISTENERS`, one row per camera rung: what each seat does to the engine, the snow, the wind and the one-shots. The beds and the router both read it. |
 | `pwa/src/game/audio/ride-bed.ts` | The scheduler: reads the player's `SledState` once a frame and turns it into every layer's target, through the seat's listener row. The field has no bed of its own yet. |
+| `pwa/src/game/audio/bird-voice.ts`, `bird-bank.ts`, `bird-bed.ts` | **THE WOOD'S VOICES.** Who cries and how often (`BIRD_CALLS`, plan-free), the cries themselves (`BIRD_BANK`, spread into `RUN_BANK`), and the scheduler that raises them off the birds' own plan (`birdPlanFor`) — a CUE drawn off each flock's scatter (`criesIn`), never an event and never `state.rng`. The grouse's whirr is the one cry a sled causes (`flushAt`). `tests/birds_test.ts` holds every call to a bank id. |
 | `pwa/src/game/audio/rack.ts` | The plumbing every bed shares: build a layer, rebuild one whose context died, steer it on its glide. |
 | `pwa/src/game/audio/play.ts`, `types.ts` | Firing one def through a shape; what a def and a shape ARE. |
 | `pwa/src/game/audio/bus.ts` | One synth, the volume-scaled view the SOUND switch moves, and the unlock. |

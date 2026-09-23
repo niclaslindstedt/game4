@@ -41,6 +41,7 @@ export {
   type Quat,
 } from "./lib/quat.ts";
 export { angleDiff, clamp, lerp, TAU } from "./lib/math.ts";
+export { hash2 } from "./lib/noise.ts";
 export { moonAt, sunAt, SOUTH, type MoonPlace, type SunPlace } from "./lib/solar.ts";
 
 // THE WORLD (engine/mapgen/): the generator, the Level contract, the track

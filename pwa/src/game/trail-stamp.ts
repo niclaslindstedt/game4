@@ -25,6 +25,11 @@
 
 import type { SnowContact } from "@engine";
 
+/** How far loose powder stands over the groomed track, m: the drawn snow is
+ * the ground plus this on virgin powder, fading to none on the groomer
+ * (`snow-glsl.ts` lifts it; anything standing on the snow stands on it). */
+export const LOOSE = 0.1;
+
 export const TRAIL = {
   /** The deepest trough the map can hold, m — the encoding's full scale. */
   maxDepth: 0.5,

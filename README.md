@@ -68,6 +68,7 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 | `make ride`             | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`; `backflip`, `frontflip`, `spin`, `pose`, `kicker-flip` score a trick) |
 | `make world`            | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)                                           |
 | `make sky`              | Every weather against every three hours, day and night, on one map from one place, as one contact sheet (`SEED=38`, `ARGS=--hours=`)               |
+| `make birds`            | Every bird and every animal of the wildlife side by side, three poses each, as one contact sheet (`ARGS=--rows=raven,reindeer`)                    |
 | `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                                                           |
 | `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)                                                   |
 | `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first; `ARGS="--video all"` meters every picture preset)             |
@@ -83,7 +84,7 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 | `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                                                              |
 | `make bump`             | Print the semver bump the release would derive from the changeset fragments                                                                        |
 
-The browser-driven labs (`screenshots`, `profile`, `world`, `sky`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
+The browser-driven labs (`screenshots`, `profile`, `world`, `sky`, `birds`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
 
 ## Controls
 

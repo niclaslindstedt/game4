@@ -42,12 +42,15 @@
 
 import { LAMP_SLOTS } from "./haze.ts";
 import { TRAIL_GLSL } from "./trail-map.ts";
+import { LOOSE } from "./trail-stamp.ts";
 
 /** How much brighter than white snow's albedo is painted. */
 export const GLARE = 1.12;
 
-/** How far loose powder stands over the groomed track, m. */
-export const LOOSE = 0.1;
+// How far loose powder stands over the groomed track: stated three-free in
+// `trail-stamp.ts`, so what stands ON the snow (the wildlife's feet) reads
+// the same surface this shader lifts.
+export { LOOSE };
 
 /** The vertex half's declarations: the height field, the clipmap level, the
  * rim of mountains past the map. */
