@@ -15,7 +15,11 @@
 //     by the bot, held still once drawn so nothing moves under the shutter.
 //   ?paused=1        ...held under the pause card instead.
 //   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
-//   ?splash=1 / ?menu=root   the attract card / the front door.
+//   ?splash=1 / ?menu=root   the attract card / the front door;
+//   ?menu=options|keys       OPTIONS, and its KEYS page.
+//   ?video=<tier>    ride at a picture preset (low, medium, high) this visit.
+//   ?probe=0         always sent: the first-visit probe must not move the
+//                    picture under the shutter.
 //   ?update=1        the new-build button, as if a build were waiting.
 //   window.__SH_READY__ === true
 //     set by the app once a race's frame has been drawn. This tool waits for
@@ -76,6 +80,9 @@ const SURFACES = {
     settle: 60,
   },
   pause: { params: { paused: "1", t: "14" }, wait: ".menu-card-pause", settle: 700 },
+  // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
+  options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
+  keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },
 };
 
 /** The reference viewports — and the phone is a TOUCHSCREEN, not a narrow
@@ -102,6 +109,7 @@ const args = parseArgs(
     seed: { kind: "number", default: 38, help: "map seed" },
     t: { kind: "number", help: "seconds into the race (overrides the scene's own)" },
     camera: { kind: "string", help: "hood, bars, chase, far, high" },
+    video: { kind: "string", help: "picture preset for the visit (low, medium, high)" },
     update: { kind: "flag", help: "draw the new-build button (?update=1)" },
     viewport: {
       kind: "string",
@@ -111,7 +119,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
   },
   "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
-    "[--camera rung] [--update] [--viewport v] [--timeout s]",
+    "[--camera rung] [--video tier] [--update] [--viewport v] [--timeout s]",
 );
 const viewports =
   args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
@@ -202,7 +210,8 @@ if (args.surface) {
       failures += 1;
       continue;
     }
-    const params = { seed: String(args.seed), ...surface.params };
+    const params = { seed: String(args.seed), probe: "0", ...surface.params };
+    if (args.video !== undefined) params.video = String(args.video);
     if (args.update) params.update = "1";
     if (args.camera !== undefined) params.camera = String(args.camera);
     for (const v of viewports)
@@ -223,10 +232,12 @@ if (args.surface) {
       shot: "1",
     };
     if (args.camera !== undefined) params.camera = String(args.camera);
+    if (args.video !== undefined) params.video = String(args.video);
     if (args.update) params.update = "1";
     const name =
       `${scene}${args.t !== undefined ? `-t${args.t}` : ""}` +
-      `${args.camera !== undefined ? `-${args.camera}` : ""}${args.update ? "-update" : ""}`;
+      `${args.camera !== undefined ? `-${args.camera}` : ""}` +
+      `${args.video !== undefined ? `-${args.video}` : ""}${args.update ? "-update" : ""}`;
     for (const v of viewports) await capture(name, params, v);
   }
 }

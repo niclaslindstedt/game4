@@ -20,7 +20,7 @@
 import type { GameEvent, GameState } from "@engine";
 
 import { RUN_BANK } from "./bank.ts";
-import { sfx } from "./bus.ts";
+import { engineSfx, sfx } from "./bus.ts";
 import { listenerFor, type Listener } from "./listener.ts";
 import { playSound } from "./play.ts";
 import { createRideBed, type RideBed } from "./ride-bed.ts";
@@ -49,7 +49,7 @@ export type RunAudio = {
 };
 
 export function createRunAudio(): RunAudio {
-  const bed: RideBed = createRideBed(sfx);
+  const bed: RideBed = createRideBed(sfx, engineSfx);
   let ear: Listener = listenerFor("chase");
 
   return {

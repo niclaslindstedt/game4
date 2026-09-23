@@ -354,6 +354,14 @@ describe("the ride bed (ride-bed.ts)", () => {
     expect(bed.live()).toBe(LAYERS);
   });
 
+  it("plays the engine through its own fader's view and the snow through the other", () => {
+    const effects = recorder();
+    const voice = recorder();
+    createRideBed(effects, voice).update(going(20), 1 / 60);
+    expect(voice.layers.length).toBe(Object.keys(ENGINE_LAYERS).length);
+    expect(effects.layers.length).toBe(Object.keys(SNOW_LAYERS).length);
+  });
+
   it("scales the whole bed by the duck under a card", () => {
     const loud = recorder();
     const quiet = recorder();

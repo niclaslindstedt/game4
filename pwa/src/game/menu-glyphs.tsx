@@ -5,12 +5,27 @@
 // failed; a mark is found without reading.
 //
 // Only the marks this slice's cards use: the flag on RACE, the speaker on
-// the sound switch, and the three the pause card is read by — carry on,
-// start again, leave.
+// the sound switch, the three the pause card is read by — carry on, start
+// again, leave — the sliders on the OPTIONS chip, and the three more its
+// groups are headed with (the keys, the dial, the screen; SOUND takes the
+// speaker). Each group mark is chosen for what it is NOT: a wide box with a
+// spacebar in it is not a screen on a stand, and a dial shares no
+// silhouette with either.
 
 import type { JSX } from "preact";
 
-export const GLYPH_NAMES = ["flag", "speaker", "mute", "play", "restart", "exit"] as const;
+export const GLYPH_NAMES = [
+  "flag",
+  "speaker",
+  "mute",
+  "play",
+  "restart",
+  "exit",
+  "sliders",
+  "keyboard",
+  "gauge",
+  "display",
+] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
 
@@ -61,6 +76,42 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <path d="M13.2 3.4H5.6a2 2 0 0 0-2 2v13.2a2 2 0 0 0 2 2h7.6" />
       <path d="M9.8 12h10.6" />
       <path d="M16.9 8.5 20.4 12l-3.5 3.5" />
+    </>
+  ),
+  // THREE FADERS AT THREE LEVELS: the options — every knob the game has.
+  sliders: (
+    <>
+      <path d="M3 6.5h4M13 6.5h8" />
+      <circle cx="10" cy="6.5" r="2.4" />
+      <path d="M3 12h9M18 12h3" />
+      <circle cx="15" cy="12" r="2.4" />
+      <path d="M3 17.5h2M11 17.5h10" />
+      <circle cx="8" cy="17.5" r="2.4" />
+    </>
+  ),
+  // A KEYBOARD: a wide box, three keys and a spacebar — the controls.
+  keyboard: (
+    <>
+      <rect x="1.6" y="6.4" width="20.8" height="11.2" rx="2.2" />
+      <path d="M6.2 10.4h1.3M11.35 10.4h1.3M16.5 10.4h1.3" />
+      <path d="M8 14.2h8" />
+    </>
+  ),
+  // A DIAL AND ITS NEEDLE: the help the sled gives. The needle stops well
+  // short of the arc and is thick at the hub, so the two never merge at the
+  // small end, where a group heading is read.
+  gauge: (
+    <>
+      <path d="M2.9 18.4a9.1 9.1 0 1 1 18.2 0" />
+      <path d="M12 18 15.9 12.6" />
+      <circle cx="12" cy="18.4" r="1.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // A SCREEN ON A STAND: the picture.
+  display: (
+    <>
+      <rect x="2.4" y="4" width="19.2" height="13" rx="2.2" />
+      <path d="M12 17v3.4M8.4 20.4h7.2" />
     </>
   ),
 };

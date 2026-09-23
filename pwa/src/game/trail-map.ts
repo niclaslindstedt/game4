@@ -29,17 +29,13 @@ import * as THREE from "three";
 
 import { recentre, TRAIL, type Stamp } from "./trail-stamp.ts";
 
+/** The maps' sizes — a TRAILS stop, `TRAIL_LOOK` in `settings-video.ts`. */
 export type TrailOptions = {
   /** Fine window: texels a side, and metres a side. */
   fineSize: number;
   fineSpan: number;
   /** Coarse map texels a side (it spans the whole map). */
   coarseSize: number;
-};
-
-export const TRAIL_QUALITY: Record<"high" | "low", TrailOptions> = {
-  high: { fineSize: 2048, fineSpan: 160, coarseSize: 2048 },
-  low: { fineSize: 1024, fineSpan: 96, coarseSize: 1024 },
 };
 
 /** Stamps drawn in one pass at most; more are drawn in further passes. */

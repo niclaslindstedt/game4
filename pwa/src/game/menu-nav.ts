@@ -129,6 +129,20 @@ export type MenuNav = {
   sync: () => void;
 };
 
+/**
+ * THE KEYS HANDED OVER. While OPTIONS ▸ KEYS is listening for the key to
+ * bind, the next press is the page's — the arrows and Escape included, and
+ * the arrows are exactly what a rider on that page is most likely to be
+ * rebinding. The walker below sits upstream of every card in the capture
+ * phase, so the page cannot get in front of it; instead it says so here and
+ * the walker stands aside.
+ */
+let handed = false;
+
+export function holdNav(on: boolean): void {
+  handed = on;
+}
+
 /** A card being walked on the keys, as the frame loop sees it. */
 export type CardWalk = {
   /** True once a card has actually been walked with the keys — what
@@ -167,7 +181,7 @@ export function walkCardsOnKeys(nav: MenuNav, overACard: () => boolean): CardWal
   };
   let walked = false;
   const onKey = (e: KeyboardEvent): void => {
-    if (!overACard() || !nav.active()) return;
+    if (handed || !overACard() || !nav.active()) return;
     if (e.ctrlKey || e.metaKey || e.altKey) return;
     const dir = KEYS[e.code];
     if (dir) {

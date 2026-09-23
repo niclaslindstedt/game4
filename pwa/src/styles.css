@@ -2328,6 +2328,476 @@ canvas {
   text-align: center;
 }
 
+/* ── A PAGE UNDER THE FRONT DOOR (menu-options.tsx, menu-keys.tsx) ─────────
+   A head with the way out in it, then the rows (menu-knobs.tsx). OPTIONS is
+   the longest card in the game, so the CARD scrolls — see `.menu-card`. */
+.menu-head {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 0.7rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 2px solid rgb(244 248 251 / 16%);
+}
+
+.menu-back {
+  padding: 0.3rem 0.5rem;
+  border: 2px solid rgb(244 248 251 / 24%);
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--hud-info);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.menu-back:hover,
+.menu-back:focus-visible,
+.menu-back.nav-cursor {
+  border-color: var(--flag);
+  color: var(--hud-ink);
+  outline: none;
+}
+
+.menu-head .menu-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+}
+
+/* ONE SILHOUETTE PER ROW: the name on the left, the value on the right
+   between two arrows, and under the value the pips that say where on its
+   ladder it stands. The ARROWS are the touch targets, 2.2rem square: 40px is
+   the floor for a thumb, and the row is sized by them rather than its text. */
+.knob-groups,
+.knob-col {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(0.5rem, 1.8vmin, 0.85rem);
+}
+
+.knob-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* THE HEADING IS WHAT MAKES THE PAGE SCANNABLE: the mark first, then the
+   word, over a rule the width of the group — the mark is the only thing in
+   the column that is not a word, so it is what the eye finds. */
+.knob-group-title {
+  display: flex;
+  align-items: center;
+  gap: 0.42rem;
+  margin: 0;
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  color: var(--flag);
+  padding: 0 0.2rem 0.25rem;
+  border-bottom: 2px solid rgb(232 65 44 / 42%);
+}
+
+.knob-group-glyph {
+  width: 1.5em;
+  height: 1.5em;
+  opacity: 0.95;
+}
+
+.knob-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* A transparent border rather than none, so lighting a row changes a colour
+   and never a size. */
+.knob {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  min-height: 2.6rem;
+  font: inherit;
+  color: var(--hud-ink);
+  background: rgb(244 248 251 / 8%);
+  border: 2px solid transparent;
+  border-radius: 0.55rem;
+  padding: 0.2rem 0.3rem 0.2rem 0.7rem;
+  text-align: left;
+}
+
+.knob:hover,
+.knob:focus-within,
+.knob.nav-cursor {
+  background: rgb(232 65 44 / 14%);
+  border-color: rgb(232 65 44 / 45%);
+}
+
+.knob-label {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--hud-info);
+}
+
+.knob-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.knob-ctl {
+  display: flex;
+  align-items: center;
+  gap: 0.15rem;
+  flex: none;
+}
+
+.knob-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  font: inherit;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--flag);
+  background: transparent;
+  border: 0;
+  border-radius: 0.45rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.knob-arrow:hover,
+.knob-arrow:focus-visible {
+  background: rgb(244 248 251 / 14%);
+  outline: none;
+}
+
+.knob-arrow:active {
+  background: var(--flag);
+  color: var(--hud-shadow);
+  transform: translateY(1px);
+}
+
+/* The value column is a FIXED width so the arrows stand on the same two x's
+   down the whole page — a page whose arrows wander is one the eye hunts. */
+.knob-value {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  width: clamp(6.5rem, 22vw, 9rem);
+}
+
+.knob-word {
+  position: relative;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--snow);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.knob-pips {
+  display: flex;
+  gap: 0.26rem;
+}
+
+.knob-pip {
+  width: 0.36rem;
+  height: 0.36rem;
+  border-radius: 50%;
+  background: rgb(244 248 251 / 28%);
+}
+
+.knob-pip-on {
+  background: var(--flag);
+  box-shadow: 0 0 0.35rem rgb(232 65 44 / 70%);
+}
+
+/* A fader: the ladder drawn as a track filled to the level (`--fill` is
+   written by the row), the reading standing over it where a ladder's value
+   stands — one value line down a column that mixes the two. */
+.knob-fade {
+  gap: 0.05rem;
+}
+
+.knob-faded {
+  min-height: 2.8rem;
+}
+
+/* THE WHOLE BAND IS THE PRESS, not the line drawn inside it: a range input
+   is hit-tested on its own box, so it is a finger-tall transparent band with
+   the line drawn on the runnable track inside. */
+.knob-range {
+  width: 100%;
+  min-width: 0;
+  height: 1.2rem;
+  margin: 0;
+  appearance: none;
+  background: none;
+  cursor: pointer;
+}
+
+.knob-range::-webkit-slider-runnable-track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: linear-gradient(
+    to right,
+    var(--flag) var(--fill),
+    rgb(244 248 251 / 22%) var(--fill)
+  );
+}
+
+.knob-range::-moz-range-track {
+  height: 0.5rem;
+  border-radius: 0.25rem;
+  background: linear-gradient(
+    to right,
+    var(--flag) var(--fill),
+    rgb(244 248 251 / 22%) var(--fill)
+  );
+}
+
+.knob-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 1rem;
+  height: 1rem;
+  /* Onto the middle of the line: webkit hangs the thumb off the TRACK's top
+     edge, where Firefox centres it. */
+  margin-top: calc((0.5rem - 1rem) / 2 - 2px);
+  border-radius: 50%;
+  background: var(--snow);
+  border: 2px solid var(--hud-shadow);
+}
+
+.knob-range::-moz-range-thumb {
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: var(--snow);
+  border: 2px solid var(--hud-shadow);
+}
+
+.knob-read {
+  min-width: 3.4em;
+  padding: 0 0.25rem;
+  font-size: 0.76rem;
+  text-align: center;
+}
+
+/* THE PAGE'S ONE SENTENCE, fixed to the foot of the WINDOW — the card is the
+   scroller, and a caption at the bottom of a column taller than the viewport
+   is a caption nobody reading a row at the top can see. Fixed is safe only
+   while nothing between this and the root carries a transform, a filter,
+   `contain` or `will-change`: put one on `.menu-card` and the bar is clipped
+   by the card again. No pointer events, ever: it lies over the foot of
+   whatever card is up. */
+.knob-caption {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--shell-bottom) + max(0.6rem, env(safe-area-inset-bottom)));
+  z-index: 1600;
+  transform: translateX(-50%);
+  width: min(44rem, calc(100vw - 2rem));
+  pointer-events: none;
+  font-size: 0.64rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1.35;
+  text-transform: none;
+  text-align: center;
+  color: var(--hud-info);
+  opacity: 0.72;
+  padding: 0.45rem 0.8rem;
+  border-radius: 0.5rem;
+  background: rgb(13 34 51 / 82%);
+  border: 1px solid rgb(244 248 251 / 18%);
+  transition: opacity 120ms ease;
+}
+
+.knob-caption-on {
+  opacity: 0.95;
+  border-color: rgb(232 65 44 / 45%);
+}
+
+.knob-caption-name {
+  color: var(--flag);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+}
+
+.knob-caption-name::after {
+  content: " — ";
+  color: var(--hud-info);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* A CARD WITH A CAPTION STOPS ABOVE IT, or its last row sits under the one
+   element that exists to explain a row. */
+.menu:has(.knob-caption) {
+  padding-bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 3.2rem);
+}
+
+.menu-card-options,
+.menu-card-keys {
+  width: min(36rem, 100%);
+  gap: 0.6rem;
+  text-align: left;
+}
+
+/* TWO ABREAST AT MOST: at a third of a card the NAME is what gives. */
+.knob-binds {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr));
+  gap: 0.25rem 0.6rem;
+}
+
+.knob-link,
+.knob-bind {
+  width: 100%;
+  cursor: pointer;
+}
+
+.knob-arrow-go {
+  color: rgb(244 248 251 / 55%);
+}
+
+/* A binding row has no arrows, so its value may take their room: "L SHIFT /
+   R SHIFT / E" is what the defaults actually read. */
+.knob-bind .knob-value {
+  width: clamp(8.5rem, 26vw, 9.5rem);
+}
+
+.knob-bind .knob-word {
+  font-size: 0.72rem;
+  white-space: normal;
+  text-align: center;
+}
+
+/* WAITING FOR THE KEY: the row goes to the flag's colour and the prompt
+   blinks, so a page of ten identical rows says which one has the keyboard. */
+.knob-bind-listening {
+  background: rgb(232 65 44 / 22%);
+  border-color: var(--flag);
+}
+
+.knob-bind-listening .knob-word {
+  animation: knob-blink 0.9s steps(2) infinite;
+}
+
+@keyframes knob-blink {
+  to {
+    opacity: 0.3;
+  }
+}
+
+.knob-clash {
+  font-size: 0.52rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--hud-bad);
+  opacity: 0.85;
+  text-align: center;
+}
+
+.opt-reset {
+  margin-top: 0.2rem;
+  padding: 0.55rem 0.7rem;
+  border: 2px dashed rgb(244 248 251 / 26%);
+  border-radius: 0.5rem;
+  background: transparent;
+  color: var(--hud-info);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.opt-reset:hover,
+.opt-reset:focus-visible,
+.opt-reset.nav-cursor {
+  border-color: var(--flag);
+  color: var(--hud-ink);
+  outline: none;
+}
+
+/* A phone held UPRIGHT: one column, and the chrome between the groups given
+   back. The ROWS keep their height — the arrows are the thumb targets. */
+@media (max-width: 30rem) {
+  .menu-card-options,
+  .menu-card-keys {
+    padding-top: 0.7rem;
+    padding-bottom: 0.7rem;
+    gap: 0.35rem;
+  }
+
+  .knob-groups,
+  .knob-col {
+    gap: 0.3rem;
+  }
+
+  .knob-group {
+    gap: 0.15rem;
+  }
+
+  .knob-group-title {
+    gap: 0.35rem;
+    font-size: 0.6rem;
+    padding-bottom: 0.12rem;
+  }
+
+  .knob-rows {
+    gap: 0.15rem;
+  }
+
+  .knob {
+    padding-left: 0.5rem;
+  }
+
+  .knob-caption {
+    padding: 0.35rem 0.6rem;
+  }
+}
+
+/* Wide enough for two columns — a laptop, a tablet, a phone on its side —
+   the game's groups on the left and the picture on the right. */
+@media (min-width: 48rem) {
+  .menu-card-options,
+  .menu-card-keys {
+    width: min(48rem, 100%);
+  }
+
+  .knob-groups {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 0.4rem 1rem;
+  }
+
+  .menu-card-options .knob-value {
+    width: 6.8rem;
+  }
+}
+
 /* ── THE LOADING CARD ──────────────────────────────────────────────────────
    Over a run being stood up (`loading-screen.tsx`, `run-loader.ts`): the level
    searched and compiled, two heightfields baked, the scene built off them and

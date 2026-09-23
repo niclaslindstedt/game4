@@ -19,6 +19,7 @@ import {
   NO_KEYS,
   SCREEN_TO_ENGINE,
   barLean,
+  barReachPx,
   barSteer,
   createInputModel,
   leverBrake,
@@ -143,6 +144,25 @@ describe("the handlebar", () => {
     );
     expect(braking.throttle).toBe(0);
     expect(braking.brake).toBeCloseTo(0.6);
+  });
+});
+
+describe("the thumbs' feel (OPTIONS ▸ CONTROLS)", () => {
+  it("shortens every throw by the sensitivity, and the ring with it", () => {
+    const quick = { sensitivity: 1.5, invertLean: false };
+    expect(barSteer(BAR_REACH_PX / 1.5, quick)).toBeCloseTo(1);
+    expect(barSteer(BAR_REACH_PX / 1.5)).toBeLessThan(1);
+    expect(barReachPx(quick)).toBeCloseTo(BAR_REACH_PX / 1.5);
+    expect(leverThrottle(LEVER_FULL_PX / 1.5, quick)).toBeCloseTo(1);
+    expect(leverBrake(-(LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX) / 1.5, quick)).toBeCloseTo(1);
+  });
+
+  it("turns the lean round when inverted, and nothing else", () => {
+    const flipped = { sensitivity: 1, invertLean: true };
+    expect(barLean(BAR_REACH_PX, flipped)).toBeCloseTo(-barLean(BAR_REACH_PX));
+    expect(barLean(-BAR_REACH_PX, flipped)).toBeGreaterThan(0);
+    expect(barSteer(40, flipped)).toBe(barSteer(40));
+    expect(leverThrottle(45, flipped)).toBe(leverThrottle(45));
   });
 });
 

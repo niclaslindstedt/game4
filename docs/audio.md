@@ -54,6 +54,7 @@ One row per camera rung. On the HOOD the engine is under you and the snow an arm
 ## The mix
 
 - The landings and the trunk are the loudest things in the bank; the course's chimes sit under the snow — heard over a race, never instead of one. `tests/audio_test.ts` holds a ceiling on every voice.
+- **The faders** (OPTIONS ▸ SOUND): MASTER, ENGINE and EFFECTS, under the SOUND switch. `bus.ts` keeps two volume-scaled views of the one synth — the engine's layers play through one (`engineSfx`), the snow, the wind and every one-shot through the other (`sfx`) — and `mixOf` in `settings.ts` folds the master and the switch into both. A layer reads its view every frame, so a fader moved over the front door is heard at once.
 - Under a card the whole bed is ducked (`CARD_DUCK` in `App.tsx`), and the race's events make no sound at all unless the player is riding (`soundsLive` in `shell.ts`) — a checkpoint the bot takes behind the front door is not news.
 - Nothing plays before the player has touched something: `unlockAudio()` hangs off document-wide `pointerdown` and `keydown`, because a context built outside a real gesture is one iOS Safari never resumes.
 

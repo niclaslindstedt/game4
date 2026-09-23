@@ -49,7 +49,14 @@ export * from "./mapgen/index.ts";
 
 // The run.
 export { createGame, rulesFor, step, FIELD_SIZE, type CreateGameOptions } from "./game/step.ts";
-export { RACE, openRules, raceRules, type RunRules } from "./game/defs/modes.ts";
+export {
+  FULL_ASSIST,
+  RACE,
+  openRules,
+  raceRules,
+  type Assist,
+  type RunRules,
+} from "./game/defs/modes.ts";
 export {
   SLED,
   inertiaOf,

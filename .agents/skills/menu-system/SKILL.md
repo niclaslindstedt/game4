@@ -1,6 +1,6 @@
 ---
 name: menu-system
-description: "Use when changing the SHELL the game lives inside — the attract card the app opens on, the front door and its one RACE tile (with the seed on it) and the sound switch, the loading card over a race being stood up, the pause card that holds a race mid-ride (RESUME, RESTART RACE, SOUND, leave), the finish plate's way on, how a card is walked on the keys, one of the game's own buttons wherever the press came from (`run-actions.ts`), the URL a surface is reached by (`url-params.ts`), or anything the game REMEMBERS between visits (`settings.ts`: the camera and the sound). Owns the five-surface state machine in `shell.ts` and `App.tsx`, the DOM-free-payload split every card is built on, the rule that the snow never stops behind a card and the one card it does not hold for, and the `make screenshots --surface` loop. Not the readouts over a race — that is `hud-and-menus`."
+description: "Use when changing the SHELL the game lives inside — the attract card the app opens on, the front door and its one RACE tile (with the seed on it), the sound switch and the OPTIONS chip, OPTIONS and its KEYS page (the picture ladder, the faders, the thumbs, the assist, rebinding a key), the first-visit probe that picks a picture, the loading card over a race being stood up, the pause card that holds a race mid-ride (RESUME, RESTART RACE, SOUND, leave), the finish plate's way on, how a card is walked on the keys, one of the game's own buttons wherever the press came from (`run-actions.ts`), the URL a surface is reached by (`url-params.ts`), or anything the game REMEMBERS between visits (`settings.ts`: the camera, the sound, and every OPTIONS row). Owns the five-surface state machine in `shell.ts` and `App.tsx`, the DOM-free-payload split every card is built on, the rule that the snow never stops behind a card and the one card it does not hold for, and the `make screenshots --surface` loop. Not the readouts over a race — that is `hud-and-menus`."
 ---
 
 # The menu system: the shell the game lives inside
@@ -29,18 +29,19 @@ menu-system --list`. Load **`skill-reflection`** at both ends,
 **`write-code`** beside this one, **`hud-and-menus`** for anything drawn over
 a RACE, and **`ui-review`** for the sweep at the reference viewports.
 
-**Not built:** an options page, a developer page (and the hold that lets it
-out), a campaign, other modes, a start card, a sled picker, a gallery, a
-replay, a benchmark. The sibling `game3` has every one of them, and its
-`menu-system` skill the rules they were built under; port from there, and
-never add a row whose setting nothing reads (below).
+**Not built:** a developer page (and the hold that lets it out), a campaign,
+other modes, a start card, a sled picker, a gallery, a replay, a benchmark.
+The sibling `game3` has every one of them, and its `menu-system` skill the
+rules they were built under; port from there, and never add a row whose
+setting nothing reads (below). OPTIONS is built — ported from game3's, and
+the rows are its `menu-knobs.tsx` trimmed to what this page uses.
 
 ## The five surfaces
 
 | Surface | Covers | Where |
 | --- | --- | --- |
 | `splash` | The publisher's name while the first map is built, then the title, the trails laying themselves, and an invitation | `splash-screen.tsx` over the policy in `splash.ts`; the mark from `app-mark.ts` via `mark-trails.tsx` |
-| `menu` | The front door over a bot-ridden race: RACE (three laps against three riders on a map dealt from a seed, the seed ON the tile), the sound switch | `menu-main.tsx` |
+| `menu` | The front door over a bot-ridden race: RACE (three laps against three riders on a map dealt from a seed, the seed ON the tile), the sound switch, OPTIONS — and its two pages, which are the SAME surface over the same live race (`App.tsx`'s `page`: `root`, `options`, `keys`) | `menu-main.tsx`, `menu-options.tsx`, `menu-keys.tsx` |
 | `loading` | A race being stood up, paid for in slices | `loading-screen.tsx` over `run-loader.ts`, whose steps are `app-load.ts`'s |
 | `pause` | The race HELD: RESUME, RESTART RACE, SOUND, and the way out | `menu-pause.tsx` |
 | `run` | The player's hands on the bars, the HUD over the top; the finish plate once the flag is down | `hud.tsx`, `hud-result.tsx` (`hud-and-menus`) |
@@ -56,13 +57,17 @@ all.
 
 | Piece | Where |
 | --- | --- |
-| What the game REMEMBERS: the camera rung and the sound switch, versioned, merged field by field | `pwa/src/game/settings.ts` (`mergeSettings`, `RUN_CAMERAS`, `nextCamera`) |
+| What the game REMEMBERS: the camera rung, the sound switch, the three faders, the picture, the keys, the thumbs and the assist — versioned, merged field by field | `pwa/src/game/settings.ts` (`mergeSettings`, `mixOf`, `assistOf`, `RUN_CAMERAS`, `nextCamera`) |
+| WHAT THE PICTURE COSTS: eight rows, each a ladder cheapest first, the presets, `presetOf` | `pwa/src/game/settings-video.ts` — DOM-free, three-free; `tests/video_test.ts` holds the whole ladder. `renderer.setVideo` is the ONE place a row becomes a draw call |
+| The first visit's picture: time MEDIUM under the front door, then promote to HIGH or demote to LOW — only a picture nobody touched | `pwa/src/game/video-probe.ts` (`judgeTier`, DOM-free), fed from `App.tsx`'s loop; off under `?probe=0`, `?video=` and any race a link boots |
+| The rows every settings page is built from (a ladder, a fader, a link, a binding), the page head and the ONE caption | `pwa/src/game/menu-knobs.tsx` |
+| Which key does what, and the page that changes it | `settings-input.ts` (`KEY_ACTIONS`, `bindKey`, `clashesWith`, `mergeKeys`, `keysLine`) + `menu-keys.tsx`; the manager takes the answer through `setBindings` |
 | Every parameter the app reads off its URL | `pwa/src/game/url-params.ts` — DOM-free |
 | ONE handler for a press, from a key, a HUD thumb or a desktop menu-bar row | `pwa/src/game/run-actions.ts` |
 | Standing a race up: the steps and what they are | `pwa/src/game/run-loader.ts` (the sequencing, a frame budget, DOM-free) + `app-load.ts` (the steps, a factory over `App.tsx`'s closures) |
 | The fixed-step clock under all of it | `pwa/src/game/run-loop.ts` (§37: the accumulator, the clamp, a hidden tab) |
 | Walking a card on the keys | `pwa/src/game/menu-nav.ts` (the DOM half) over `menu-cursor.ts` (the geometry, DOM-free) |
-| The marks the cards are read by | `pwa/src/game/menu-glyphs.tsx` — the flag on RACE, the speaker, the pause card's three |
+| The marks the cards are read by | `pwa/src/game/menu-glyphs.tsx` — the flag on RACE, the speaker, the pause card's three, the sliders on OPTIONS and its groups' keyboard, dial and screen |
 | The new-build button | `pwa/src/game/update-button.tsx` over `pwa/src/lib/pwa-update.ts` |
 | Every word | `pwa/src/game/strings.ts` (§39.1) — no card carries a literal |
 | The chrome | `pwa/src/styles.css` |
@@ -79,9 +84,27 @@ all.
 - **RESUME IS THE WAY BACK, AND COSTS ONE PRESS.** Escape, the backdrop and the
   cursor's first landing all go back to the snow.
 - **A SETTING THE APP IGNORES IS WORSE THAN NO SETTING.** The player moves it,
-  nothing happens, and nothing else on the page can be trusted either. This
-  slice remembers two things because it offers two presses (C and the sound
-  switch); a third row lands the day the thing behind it exists.
+  nothing happens, and nothing else on the page can be trusted either. Every
+  OPTIONS row is read by something (the renderer, the bus, the manager, the
+  thumb zones, `createGame`'s `assist`); there is no MUSIC fader because there
+  is no score. A row lands the day the thing behind it exists. A row a
+  machine cannot use is not OFFERED to it (the keys without a keyboard, the
+  thumbs without a touchscreen) — and is still stored.
+- **THE PICTURE APPLIES AT ONCE, OVER THE LIVE RACE** — that is why it is on
+  the front door and not the pause card, which freezes the very thing it is
+  judged against. TERRAIN and TRAILS REBUILD the ground (a grid's pitch is
+  what its buffer was allocated at) and lose the trails cut so far; ANTIALIAS
+  is the one row a running context cannot take, and its caption says "next
+  time". ASSIST is dealt to a race when it is stood up, so its caption says
+  "from the next race".
+- **A LAB'S PICTURE IS NEVER STORED.** `?video=<tier>` is this visit's, and
+  `?probe=0` holds the probe off; `make screenshots` and `make profile` send
+  the second always and the first on `--video`.
+- **A LISTENER A PRESS ARMS IS A LAYOUT EFFECT.** OPTIONS ▸ KEYS arms its
+  capture in `useLayoutEffect`: an ordinary effect waits for the next paint,
+  and a key pressed in between went to the manager as a press of whatever it
+  was bound to. Under a software rasterizer that gap is seconds, which is how
+  it was found.
 - **The stored blob is merged FIELD BY FIELD and every value CHECKED**
   against what this build offers. A value off a ladder is one no press can
   walk the player back to; `Object.assign` over the whole thing is the bug.
@@ -103,16 +126,17 @@ all.
   and Space already press it; `menu-nav.ts` is wired for directions and back
   only, or a row is pressed twice.
 - **Anything reachable from a card is reachable as a URL** (`?splash=1`,
-  `?menu=root`, `?start=race`, `?paused=1`, `?seed=`) — which is what makes a
+  `?menu=root|options|keys`, `?start=race`, `?paused=1`, `?seed=`) — which is what makes a
   frame handable to somebody else, and how `make screenshots` reaches it.
 
 ## The loop
 
 ```sh
 make build
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots ARGS="--surface all"   # splash, menu, loading, pause
+CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots ARGS="--surface all"   # splash, menu, loading, pause, options, keys
+CHROMIUM_PATH=/opt/pw-browsers/chromium make profile ARGS="--video all"          # a picture row: every rung, draws and triangles
 make screenshots SCENE=race                                                      # the race behind them
-npx vitest run tests/menu_system_test.ts
+npx vitest run tests/menu_system_test.ts tests/video_test.ts
 ```
 
 `--surface` waits on the card being in the DOM rather than on

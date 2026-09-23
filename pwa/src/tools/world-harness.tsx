@@ -15,6 +15,7 @@ import { botInput, createGame, step, type GameState } from "@engine";
 
 import type { LensPose } from "../game/camera-rigs.ts";
 import { createWorldRenderer } from "../game/renderer.ts";
+import { DEFAULT_VIDEO, TIERS, withPreset, type Tier } from "../game/settings-video.ts";
 
 type Shot = { name: string; note: string };
 
@@ -30,7 +31,10 @@ declare global {
 
 const params = new URLSearchParams(location.search);
 const seed = Number(params.get("seed") ?? 38);
-const quality = params.get("quality") === "low" ? "low" : "high";
+/** The picture, a preset at a time (`settings-video.ts`); HIGH unless named. */
+const tier = (TIERS as readonly string[]).includes(params.get("quality") ?? "")
+  ? (params.get("quality") as Tier)
+  : "high";
 const width = Number(params.get("w") ?? 1280);
 const height = Number(params.get("h") ?? 720);
 
@@ -39,7 +43,10 @@ canvas.style.width = `${width}px`;
 canvas.style.height = `${height}px`;
 const label = document.getElementById("label") as HTMLDivElement;
 
-const renderer = createWorldRenderer(canvas, { quality, preserveDrawingBuffer: true });
+const renderer = createWorldRenderer(canvas, {
+  video: withPreset(DEFAULT_VIDEO, tier),
+  preserveDrawingBuffer: true,
+});
 renderer.resize(width, height, 1);
 const state: GameState = createGame({ seed });
 

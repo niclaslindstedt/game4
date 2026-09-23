@@ -60,7 +60,11 @@ const args = parseArgs(
       default: "",
       help: `only these views, comma-separated (${VIEWS.join(",")})`,
     },
-    quality: { kind: "string", default: "high", help: "renderer quality (high, low)" },
+    quality: {
+      kind: "string",
+      default: "high",
+      help: "the picture preset (low, medium, high — settings-video.ts)",
+    },
     width: { kind: "number", default: 1280, help: "picture width, px" },
     height: { kind: "number", default: 720, help: "picture height, px" },
     frames: {

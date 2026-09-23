@@ -19,6 +19,22 @@ export type RunRules = {
   contact: boolean;
 };
 
+/** HOW MUCH HELP THE RIDER IS GIVEN — the arcade's two hands on the sled,
+ * each 0..1 and read, never written, during a run. `yaw` scales the hold
+ * that keeps the nose on the line the skis ask for (`TUNING.steer.yawHold`
+ * and its kin); `air` scales the rider's body levelling the roll in flight
+ * (`TUNING.air.rollLevel`). Neither draws from the stream, so a run replays
+ * the same at any setting, and `{ yaw: 0, air: 0 }` is the bare physics. A
+ * difficulty setting moves these two numbers and nothing else. */
+export type Assist = {
+  yaw: number;
+  air: number;
+};
+
+/** Every hand on: what the field rides, what the sim and the labs ride, and
+ * what a run asks for when it names nothing. */
+export const FULL_ASSIST: Readonly<Assist> = { yaw: 1, air: 1 };
+
 /** THE RACE'S NUMBERS. */
 export const RACE = {
   /** Three rivals: four on the grid with the player. */

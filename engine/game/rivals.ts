@@ -23,7 +23,7 @@
 import { botInput } from "../sim/bot.ts";
 import type { Spawn } from "../mapgen/types.ts";
 import { freshProgress, standSled } from "./course.ts";
-import { RACE } from "./defs/modes.ts";
+import { FULL_ASSIST, RACE } from "./defs/modes.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledState } from "./state.ts";
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
@@ -53,6 +53,9 @@ export function createRivals(state: GameState, count: number): void {
       ...state,
       sled: freshSled(state.sled.spec),
       input: { ...NEUTRAL_INPUT },
+      // The player's help is the player's: the bot rides every rival with
+      // every hand on, so a harder setting is a harder sled, not a slower field.
+      assist: { ...FULL_ASSIST },
       progress: freshProgress(state.level),
       rivals: [],
       events: [],

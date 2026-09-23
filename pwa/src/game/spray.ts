@@ -47,6 +47,9 @@ export type Spray = {
   update(dt: number, look: SkyLook, level: Level): void;
   /** Pixels per metre at one metre from the lens (the projection's scale). */
   setScale(pixelsPerMetre: number): void;
+  /** The SPRAY row: the share, 0..1, of every emission rate and of the pool
+   * the particles are flown from. */
+  setBudget(share: number): void;
   clear(): void;
   dispose(): void;
 };
@@ -60,6 +63,9 @@ export function createSpray(haze: HazeUniforms): Spray {
   const size = new Float32Array(CAPACITY);
   const alpha = new Float32Array(CAPACITY);
   let head = 0;
+  /** The share of every rate thrown, and the slots in use (`setBudget`). */
+  let share = 1;
+  let cap = CAPACITY;
   const random = makeRandom(0x5eed);
 
   const geometry = new THREE.BufferGeometry();
@@ -136,7 +142,7 @@ export function createSpray(haze: HazeUniforms): Spray {
     s: number,
   ) {
     const i = head;
-    head = (head + 1) % CAPACITY;
+    head = (head + 1) % cap;
     pos[i * 3] = x;
     pos[i * 3 + 1] = y;
     pos[i * 3 + 2] = z;
@@ -164,7 +170,7 @@ export function createSpray(haze: HazeUniforms): Spray {
       // THE ROOST.
       if (treadDown && sled.treadSpeed > 1) {
         const drive = sled.throttle * (0.35 + Math.min(1, sled.slip / 4));
-        const rate = drive * Math.min(1, sled.treadSpeed / 12) * (90 + 520 * powder);
+        const rate = drive * Math.min(1, sled.treadSpeed / 12) * (90 + 520 * powder) * share;
         owed[0] += rate * dt;
         while (owed[0] >= 1) {
           owed[0] -= 1;
@@ -192,7 +198,7 @@ export function createSpray(haze: HazeUniforms): Spray {
       for (let k = 0; k < 2; k++) {
         const c = sled.contacts[k];
         if (!c || !c.touching) continue;
-        const rate = (carve * 14 + sled.speed * 1.5) * (0.15 + powder);
+        const rate = (carve * 14 + sled.speed * 1.5) * (0.15 + powder) * share;
         owed[1 + k] += rate * dt;
         const side = c.side;
         while (owed[1 + k] >= 1) {
@@ -217,7 +223,7 @@ export function createSpray(haze: HazeUniforms): Spray {
       }
       // THE LANDING PUFF.
       if (landed > 0) {
-        const n = Math.min(160, Math.round(24 + landed * 16 * (0.3 + powder)));
+        const n = Math.round(Math.min(160, 24 + landed * 16 * (0.3 + powder)) * share);
         const ground = level.groundAt(sled.x, sled.z);
         for (let i = 0; i < n; i++) {
           const a = random() * Math.PI * 2;
@@ -253,7 +259,7 @@ export function createSpray(haze: HazeUniforms): Spray {
         look.skyLight[2] * sky * 1.25,
       );
       const drag = Math.exp(-2.4 * dt);
-      for (let i = 0; i < CAPACITY; i++) {
+      for (let i = 0; i < cap; i++) {
         if (life[i] <= 0) {
           alpha[i] = 0;
           size[i] = 0;
@@ -292,6 +298,21 @@ export function createSpray(haze: HazeUniforms): Spray {
     },
     setScale(v) {
       material.uniforms.uScale.value = v;
+    },
+    setBudget(next) {
+      share = Math.max(0, Math.min(1, next));
+      cap = Math.max(1, Math.round(CAPACITY * share));
+      head %= cap;
+      // Whatever flew in the slots past the new pool is let go of at once,
+      // and the draw stops at the pool's end.
+      for (let i = cap; i < CAPACITY; i++) {
+        life[i] = 0;
+        alpha[i] = 0;
+        size[i] = 0;
+      }
+      geometry.setDrawRange(0, cap);
+      alphaAttr.needsUpdate = true;
+      sizeAttr.needsUpdate = true;
     },
     clear() {
       life.fill(0);

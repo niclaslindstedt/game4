@@ -93,7 +93,122 @@ export const STRINGS = {
     `SEED ${seed} · ${laps} LAPS · ${riders} RIDERS`,
   menuRacePinned: "PINNED BY THE LINK",
   menuSound: (on: boolean): string => (on ? "SOUND ON" : "SOUND OFF"),
-  menuKeys: "W/↑ throttle · S/↓ brake · A D/← → steer · Q/E lean · R reset · C camera",
+  /** The front door's line of keys, off the bindings the rider has: each
+   * part is a key's cap and what it does. */
+  menuKeys: (parts: readonly { cap: string; does: string }[]): string =>
+    parts.map((p) => `${p.cap} ${p.does}`).join(" · "),
+  menuKeyWords: {
+    throttle: "throttle",
+    brake: "brake",
+    steer: "steer",
+    lean: "lean",
+    reset: "reset",
+    camera: "camera",
+  },
+
+  menuOptions: "OPTIONS",
+  menuBack: "BACK",
+
+  /* ── OPTIONS (menu-options.tsx) and its rows (menu-knobs.tsx) ──────── */
+  optCaption: "Point at a row to read what it does",
+  optRestore: "RESTORE DEFAULTS",
+  optOff: "OFF",
+  optOn: "ON",
+  optLow: "LOW",
+  optMedium: "MEDIUM",
+  optHigh: "HIGH",
+  optCustom: "CUSTOM",
+  optUnset: "—",
+  optPrev: "previous",
+  optNext: "next",
+  optLess: "less",
+  optMore: "more",
+  percent: (share: number): string => `${Math.round(share * 100)}%`,
+  times: (factor: number): string => `×${factor.toFixed(1)}`,
+
+  optControlsGroup: "CONTROLS",
+  optKeys: "KEYS",
+  optKeysHint: "Put any action on any key.",
+  optKeysCount: (n: number): string => `${n} ACTIONS`,
+  optLever: "LEVER SIDE",
+  optLeverHint:
+    "Which thumb the throttle lever is under on a touchscreen; the handlebar takes the other.",
+  optLeverRight: "RIGHT",
+  optLeverLeft: "LEFT",
+  optSensitivity: "TRAVEL",
+  optSensitivityHint:
+    "How far a thumb travels for full lock and full throttle. Higher is a shorter throw.",
+  optInvertLean: "INVERT LEAN",
+  optInvertLeanHint:
+    "Off: pull the touch handlebar toward you to lean back. On: push it away to lean back.",
+
+  optAssistGroup: "ASSIST",
+  optAssistSteer: "STEER HOLD",
+  optAssistSteerHint:
+    "Holds the nose on the line the skis ask for and catches a slide. Off is the bare machine.",
+  optAssistAir: "AIR LEVEL",
+  optAssistAirHint:
+    "The rider's body keeps the sled level side to side in the air. Off, a jump taken leaning lands leaning.",
+  assistOff: "OFF",
+  assistHalf: "HALF",
+  assistFull: "FULL",
+  optAssistNote: "Applies from the next race.",
+
+  optSoundGroup: "SOUND",
+  optSound: "SOUND",
+  optSoundHint: "Every sound the game makes, on or off. The same switch as on the front door.",
+  optMaster: "MASTER",
+  optMasterHint: "Everything, under the three rows below it.",
+  optEngine: "ENGINE",
+  optEngineHint: "The machine's own voice: the engine and the belt.",
+  optEffects: "EFFECTS",
+  optEffectsHint: "The snow, the wind, every landing, every checkpoint and every tree.",
+  optSoundOff: "OFF",
+
+  optPicture: "PICTURE",
+  optPreset: "PRESET",
+  optPresetHint:
+    "Every row below at once. CUSTOM means a row has been moved off the preset it was on.",
+  optResolution: "RESOLUTION",
+  optResolutionHint: "How many pixels are drawn, as a share of the screen's own.",
+  optDistance: "DISTANCE",
+  optDistanceHint:
+    "How far out the woods are drawn as trees. Shorter is cheaper, and a hazier day hides the edge.",
+  optTerrain: "TERRAIN",
+  optTerrainHint: "How fine the ground's mesh is under the sled. Every setting reaches the rim.",
+  optTrails: "TRAILS",
+  optTrailsHint:
+    "How finely the snow keeps every furrow ridden, and how far round the sled. Off leaves the snow untouched.",
+  optForest: "FOREST",
+  optForestHint:
+    "How close trees are drawn in full and cast shadows, and how thick the far woods stand.",
+  optShadows: "SHADOWS",
+  optShadowsHint: "The sun's shadows: the sled's, the riders' and the trees'.",
+  optSpray: "SPRAY",
+  optSprayHint: "How much snow the sleds throw.",
+  optAntialias: "SMOOTH EDGES",
+  optAntialiasHint: "Antialiasing. Takes effect the next time the game is opened.",
+
+  /* ── OPTIONS ▸ KEYS (menu-keys.tsx) ────────────────────────────────── */
+  keysTitle: "KEYS",
+  keysCaption: "Press a row, then the key to put on it. Escape leaves it as it was.",
+  keysRestore: "RESET KEYS",
+  keysPrompt: "PRESS A KEY…",
+  keysUnbound: "NONE",
+  keysClash: "ALSO",
+  keysRowHint: (action: string): string => `Press, then the key for ${action.toLowerCase()}.`,
+  keysClashHint: (action: string, others: string): string =>
+    `The key on ${action.toLowerCase()} also does ${others.toLowerCase()} — pressing it does both.`,
+  keyThrottle: "THROTTLE",
+  keyBrake: "BRAKE",
+  keyLeft: "STEER LEFT",
+  keyRight: "STEER RIGHT",
+  keyLeanBack: "LEAN BACK",
+  keyLeanForward: "LEAN FORWARD",
+  keyReset: "RESET",
+  keyRestart: "RESTART RACE",
+  keyCamera: "NEXT CAMERA",
+  keyPause: "PAUSE",
 
   /* ── THE LOADING CARD (loading-screen.tsx) ─────────────────────────── */
   /** The phases of a load, in order; steps sharing a label are one PHASE

@@ -5,6 +5,8 @@
 // writes a `GameState`.
 import type { GameState } from "@engine";
 
+import type { VideoSettings } from "./settings-video.ts";
+
 /** The camera ladder, nearest first. */
 export type CameraRung = "hood" | "bars" | "chase" | "far" | "high" | "orbit";
 
@@ -18,6 +20,14 @@ export interface WorldRenderer {
   /** Which camera a RUN is seen through; menus use "orbit". */
   setCamera(rung: CameraRung): void;
   camera(): CameraRung;
+  /** The canvas's box in CSS px and the device's pixel ratio; the RESOLUTION
+   * row's share is the renderer's to apply on top. */
   resize(width: number, height: number, pixelRatio: number): void;
+  /** The picture (OPTIONS ▸ PICTURE), applied at once — all but ANTIALIAS,
+   * which a canvas takes only when it is made. */
+  setVideo(video: VideoSettings): void;
+  /** Wait for the GPU to finish everything asked of it, and say how long
+   * that took, ms — what the first-visit probe times a frame with. */
+  drain(): number;
   dispose(): void;
 }

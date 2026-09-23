@@ -23,9 +23,11 @@ the loading card, the pause card and what the game remembers. `input.ts` sits
 on the seam — the keys that ride a sled are here, the keys that walk a card
 are there.
 
-**Not built:** a minimap, an options page, a key-binding page, a replay bar,
-a screenshot shutter. The sibling `game3` has all of them; port from there
-when one is asked for.
+**Not built:** a minimap, a replay bar, a screenshot shutter. The sibling
+`game3` has all of them; port from there when one is asked for. OPTIONS and
+its KEYS page are built and are `menu-system`'s; what they change HERE is
+the layout the manager rides (`setBindings`) and how the thumbs read
+(`TouchFeel`, the lever's side).
 
 ## The HUD
 
@@ -46,10 +48,11 @@ when one is asked for.
 | Surface | Where |
 | --- | --- |
 | What a key or a touch MEANS, as maths | `pwa/src/game/input-model.ts` — DOM-free: the key ramps, the lever's drag → throttle/brake, the handlebar's travel → steer/lean, and the ONE sign flip between screen and engine; `tests/input_model_test.ts` |
-| WHICH KEY DOES WHAT | `pwa/src/game/settings-input.ts` — `DEFAULT_KEYS` (W/↑ throttle, S/↓/Space brake, A D/← → steer, E/Shift lean back, Q/Z lean forward, R reset, B restart, C camera, Escape pause) and why each key is where it is; `HeldAction` is `keyof KeysHeld`, so a new held key does not compile until it is named |
+| WHICH KEY DOES WHAT | `pwa/src/game/settings-input.ts` — rebound on OPTIONS ▸ KEYS and handed to the manager through `setBindings`; as it SHIPS, `DEFAULT_KEYS` (W/↑ throttle, S/↓/Space brake, A D/← → steer, E/Shift lean back, Q/Z lean forward, R reset, B restart, C camera, Escape pause) and why each key is where it is; `HeldAction` is `keyof KeysHeld`, so a new held key does not compile until it is named |
 | Listening to the DOM | `pwa/src/game/input.ts` — keys and the thumb zones into one `SledInput`, sampled once per STEP; the reset edge banked between steps |
 | Touch: the HANDLEBAR | `pwa/src/game/hud-touch.tsx`, lower LEFT — sideways travel steers, vertical travel leans |
 | Touch: the LEVER | `hud-touch.tsx`, lower RIGHT — anchored where the thumb lands; dragged DOWN opens the throttle, pushed UP is the brake |
+| HOW THE THUMBS READ (OPTIONS ▸ CONTROLS): the lever's side, the travel, the inverted lean | `TouchFeel` in `input-model.ts` — every thumb function takes it, `barReachPx` draws the ring at the travel it asks for; the side is `Settings.touch.lever`, and the bar takes the other. The keys never pass through it |
 | A zone's grip on a finger, and every way it has to END | `pwa/src/game/thumb-guard.ts` (DOM-free, injected window) |
 | A BUTTON pressed while a zone is held | `pwa/src/game/hud-press.ts` — `click` comes only from the PRIMARY pointer, and a ridden sled has that finger spoken for, so every press over a race fires from `pointerup` |
 | The `reset` edge | `SledInput.reset` is true for one step; `input-model.ts` is where a held key becomes one |

@@ -14,7 +14,9 @@ The running game reads its situation off the URL, which is what makes a map a li
 | `shot=1`      | ...held still once drawn, so nothing moves under a screenshot's shutter.                                                                                             |
 | `paused=1`    | ...or held under the pause card.                                                                                                                                     |
 | `camera`      | The race's camera rung: `hood`, `bars`, `chase`, `far`, `high`.                                                                                                      |
-| `menu=root`   | Open on the front door rather than the attract card.                                                                                                                 |
+| `menu=root`   | Open on the front door rather than the attract card; `menu=options` opens OPTIONS, `menu=keys` its KEYS page.                                                        |
+| `video`       | Draw this visit at a picture preset — `low`, `medium`, `high` — without storing it: how a lab meters or photographs a rung.                                          |
+| `probe=0`     | Do not time the machine on this visit: the first-visit probe may move an untouched picture, and a lab wants it held still.                                           |
 | `splash=1\|0` | Force the attract card up, or off an ordinary visit.                                                                                                                 |
 | `update=1`    | Draw the new-build button as if a build were waiting.                                                                                                                |
 
@@ -22,7 +24,9 @@ The running game reads its situation off the URL, which is what makes a map a li
 
 ## What the game remembers
 
-Two things, in `localStorage` under `powderrun.settings.v1` (`pwa/src/game/settings.ts`): the camera rung the rider last chose, and whether the sound is on. A stored value this build does not offer is dropped for the default rather than trusted. Nothing else is written beyond what the service worker caches to play offline.
+One blob, in `localStorage` under `powderrun.settings.v1` (`pwa/src/game/settings.ts`): the camera rung the rider last chose, whether the sound is on, and every row of OPTIONS — the three faders (master, engine, effects), the picture (`pwa/src/game/settings-video.ts`: resolution, distance, terrain, trails, forest, shadows, spray, antialiasing), the key bindings, the thumbs (the lever's side, the travel, the inverted lean), the two assist dials — and whether the first-visit probe has had its say. It is merged field by field and a stored value this build does not offer is dropped for the default rather than trusted. Nothing else is written beyond what the service worker caches to play offline.
+
+**The first visit's picture.** A fresh visit opens on the MEDIUM picture and, under the front door, times itself drawing it for a second and a half (`pwa/src/game/video-probe.ts`): a machine with room for twice and a half the frame at the display's own rate is moved to HIGH, one already missing frames is moved to LOW, and the verdict is stored so it is asked once. It never touches a picture anybody has changed, never runs over a race, and `?probe=0` or `?video=` hold it off.
 
 ## Installing
 

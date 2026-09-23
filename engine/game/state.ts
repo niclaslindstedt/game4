@@ -14,7 +14,7 @@ import type { Rng } from "../lib/prng.ts";
 import type { Quat } from "../lib/quat.ts";
 import type { Level } from "../mapgen/types.ts";
 import type { SledSpec } from "./defs/sled.ts";
-import type { RunRules } from "./defs/modes.ts";
+import type { Assist, RunRules } from "./defs/modes.ts";
 
 export type SledInput = {
   /** -1..1; positive steers clockwise (right in map view). The rider hangs
@@ -235,6 +235,9 @@ export type GameState = {
   input: SledInput;
   progress: Progress;
   rules: RunRules;
+  /** The arcade's help (`Assist`), 0..1 per hand; the field always rides
+   * with every hand on. */
+  assist: Assist;
   /** THE FIELD: every other rider, in grid order; empty on a solo run. */
   rivals: Rival[];
   /** Seconds of the lights still to run; 0 once they are out. */

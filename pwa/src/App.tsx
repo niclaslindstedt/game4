@@ -8,7 +8,10 @@
 //
 //   splash   the attract card (`splash-screen.tsx`) — the house's name while
 //            the first map is built, then the title and an invitation.
-//   menu     the front door (`menu-main.tsx`), over a bot-ridden race.
+//   menu     the front door (`menu-main.tsx`), over a bot-ridden race — and
+//            its pages, OPTIONS (`menu-options.tsx`) and OPTIONS ▸ KEYS
+//            (`menu-keys.tsx`), which are the same surface: the race behind
+//            them is the one the picture rows are judged against.
 //   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
 //            paid for in slices so the page stays a page.
 //   pause    the race HELD (`menu-pause.tsx`), reached by Escape or the
@@ -57,15 +60,26 @@ import { Hud, hasTouch, type HudFlash } from "./game/hud.tsx";
 import { ResultPlate } from "./game/hud-result.tsx";
 import { createInputManager, type InputManager } from "./game/input.ts";
 import { LoadingScreen } from "./game/loading-screen.tsx";
+import { KeysPage } from "./game/menu-keys.tsx";
 import { MainMenu } from "./game/menu-main.tsx";
 import { createMenuNav, walkCardsOnKeys } from "./game/menu-nav.ts";
+import { OptionsPage } from "./game/menu-options.tsx";
 import { PauseMenu } from "./game/menu-pause.tsx";
 import type { WorldRenderer } from "./game/renderer-api.ts";
 import { createRunActions } from "./game/run-actions.ts";
 import type { LoadPhase } from "./game/run-loader.ts";
 import { createRunClock } from "./game/run-loop.ts";
 import { newsFor } from "./game/run-news.ts";
-import { loadSettings, nextCamera, saveSettings, type Settings } from "./game/settings.ts";
+import {
+  assistOf,
+  loadSettings,
+  mixOf,
+  nextCamera,
+  saveSettings,
+  type Settings,
+} from "./game/settings.ts";
+import { keysLine } from "./game/settings-input.ts";
+import { withPreset, type VideoSettings } from "./game/settings-video.ts";
 import {
   cameraFor,
   canPause,
@@ -78,7 +92,8 @@ import {
 import { SplashScreen } from "./game/splash-screen.tsx";
 import { splashSkipped } from "./game/splash.ts";
 import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
-import { dealSeed, readParams } from "./game/url-params.ts";
+import { dealSeed, readParams, type MenuPage } from "./game/url-params.ts";
+import { applyVerdict, createVideoProbe } from "./game/video-probe.ts";
 import { UpdateButton } from "./game/update-button.tsx";
 import { clamp } from "./lib/util.ts";
 
@@ -128,12 +143,13 @@ const NO_PRESSES: Presses = {
 
 /** A whole race on `seed` — or, where the generator refuses it, the map the
  * game falls back on, so the page ALWAYS mounts over something. */
-function raceOrFallback(seed: number): GameState {
+function raceOrFallback(seed: number, assist: Settings["assist"] | null): GameState {
+  const help = assist ? { assist: assistOf(assist) } : {};
   try {
-    return createGame({ seed });
+    return createGame({ seed, ...help });
   } catch (e) {
     error(`seed ${seed} would not build (${e instanceof Error ? e.message : String(e)})`);
-    return createGame({ seed: 1 });
+    return createGame({ seed: 1, ...help });
   }
 }
 
@@ -163,6 +179,12 @@ export function App() {
     const s = loadSettings();
     return params.camera ? { ...s, camera: params.camera } : s;
   });
+  /** Which page of the front door is up. */
+  const [page, setPage] = useState<MenuPage>(params.page);
+  /** The picture drawn: the stored one, or a lab's preset for this visit —
+   * `?video=` is never written back. */
+  const videoOf = (s: Settings): VideoSettings =>
+    params.video ? withPreset(s.video, params.video) : s.video;
   /** THE SEED RACE WILL BUILD, shown on the tile. Pinned by `?seed=`,
    * otherwise dealt fresh after every race stood up. */
   const [nextSeed, setNextSeed] = useState(() => params.seed ?? dealSeed());
@@ -190,7 +212,14 @@ export function App() {
   useEffect(() => saveSettings(settings), [settings]);
   // The switch reaches the bus the moment it moves; a layer reads the bus
   // every frame, so the engine under the card goes quiet with the press.
-  useEffect(() => setAudioVolumes({ sfx: settings.sound ? 1 : 0 }), [settings.sound]);
+  const mix = mixOf(settings);
+  useEffect(
+    () => setAudioVolumes({ engine: mix.engine, effects: mix.effects }),
+    [mix.engine, mix.effects],
+  );
+  // The keys and the picture reach the manager and the renderer the same
+  // way: the moment they are pressed, over the live race.
+  useEffect(() => input?.setBindings(settings.keys), [input, settings.keys]);
 
   // THE RENDER STACK, FETCHED RATHER THAN BUNDLED (see the header).
   const [renderKit, setRenderKit] = useState<typeof import("./game/renderer.ts") | null>(null);
@@ -208,9 +237,13 @@ export function App() {
     const canvas = canvasRef.current;
     if (!canvas || !renderKit) return;
     connectOutput();
-    const manager = createInputManager(window, () => playerRides(shellRef.current));
+    const manager = createInputManager(
+      window,
+      () => playerRides(shellRef.current),
+      settingsRef.current.keys,
+    );
     setInput(manager);
-    const renderer = renderKit.createWorldRenderer(canvas);
+    const renderer = renderKit.createWorldRenderer(canvas, { video: videoOf(settingsRef.current) });
     rendererRef.current = renderer;
     const audio = createRunAudio();
     const clock = createRunClock(TUNING.physicsHz);
@@ -242,11 +275,21 @@ export function App() {
       setCamera: (rung) => renderer.setCamera(rung),
       camera: () => renderer.camera(),
       resize: (w, h, r) => renderer.resize(w, h, r),
+      setVideo: (v) => renderer.setVideo(v),
+      drain: () => renderer.drain(),
       dispose: () => renderer.dispose(),
     };
 
     const raceSeed = params.seed ?? nextSeedRef.current;
-    let state: GameState = raceOrFallback(raceSeed);
+    // A race a link boots into is the player's, with the player's help; the
+    // one under the front door is the bot's, with every hand on.
+    let state: GameState = raceOrFallback(
+      raceSeed,
+      params.rides ? settingsRef.current.assist : null,
+    );
+    /** The race the player is about to ride, with the help they asked for. */
+    const playerGame = (level: Level, seed: number): GameState =>
+      createGame({ level, seed, assist: assistOf(settingsRef.current.assist) });
     const drawable = (): boolean => standing !== null && standing === state.level;
     let frozen = params.shot;
     let preroll = false;
@@ -354,7 +397,7 @@ export function App() {
      * trails and its spray clean — so no card, just the lights again. */
     const restart = (): void => {
       if (loader.busy()) return;
-      adopt(createGame({ level: state.level, seed: state.seed }));
+      adopt(playerGame(state.level, state.seed));
       frozen = false;
       clock.resume();
       setShellNow("run");
@@ -368,8 +411,8 @@ export function App() {
           // the race the player presses RACE over is the race they ride.
           build: () =>
             state.level.seed === seed
-              ? createGame({ level: state.level, seed })
-              : createGame({ seed }),
+              ? playerGame(state.level, seed)
+              : createGame({ seed, assist: assistOf(settingsRef.current.assist) }),
           camera: settingsRef.current.camera,
           done: lift,
         });
@@ -382,6 +425,7 @@ export function App() {
         if (shellRef.current === "pause") setShellNow("run");
       },
       toMenu: () => {
+        setPage("root");
         frozen = false;
         clock.resume();
         setShellNow("menu");
@@ -413,6 +457,15 @@ export function App() {
 
     // Walking a card on the keys is `menu-nav.ts`'s.
     const walk = walkCardsOnKeys(nav, () => shellRef.current !== "run");
+
+    // THE FIRST-VISIT PROBE (`video-probe.ts`): times the design point under
+    // the front door, once, and moves an untouched picture to the tier this
+    // machine can hold. Never over a race, a link's preset or a lab's
+    // `?probe=0`, and never twice.
+    let probe =
+      params.probe && !params.rides && !params.video && !settingsRef.current.probed
+        ? createVideoProbe()
+        : null;
 
     let raf = 0;
     let last = performance.now();
@@ -450,7 +503,16 @@ export function App() {
       }
       if (!shown) return;
       const still = frozen || held || clock.paused();
+      const timing = probe !== null && !playerRides(shellRef.current) && !loader.busy() && !still;
+      const drawAt = performance.now();
       renderer.draw(state, clock.alpha(), still ? 0 : dtFrame);
+      if (timing && probe) {
+        const verdict = probe.frame(frameMs, performance.now() - drawAt + renderer.drain());
+        if (verdict !== null) {
+          probe = null;
+          setSettings((s) => ({ ...s, probed: true, video: applyVerdict(s.video, verdict) }));
+        }
+      }
       if (!still) {
         audio.setView(renderer.camera());
         audio.frame(state, dtFrame, soundsLive(shellRef.current) ? 1 : CARD_DUCK);
@@ -533,7 +595,13 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [renderKit]);
 
+  // THE PICTURE reaches the renderer the moment a row is pressed — after the
+  // renderer's own effect above, so the first call finds it standing.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => rendererRef.current?.setVideo(videoOf(settings)), [renderKit, settings.video]);
+
   const race = (): void => {
+    setPage("root");
     pressRef.current.race(nextSeed);
     // The next press deals the next map, unless a link pinned this one.
     if (params.seed === null) setNextSeed(dealSeed());
@@ -549,6 +617,8 @@ export function App() {
           flashes={flashes}
           touch={touch}
           input={input!}
+          feel={settings.touch}
+          lever={settings.touch.lever}
           away={away}
           onReset={() => input?.requestReset()}
           onCamera={() => pressRef.current.camera()}
@@ -581,17 +651,38 @@ export function App() {
           onMainMenu={() => pressRef.current.toMenu()}
         />
       )}
-      {shell === "menu" && (
+      {shell === "menu" && page === "root" && (
         <MainMenu
           seed={nextSeed}
           pinned={params.seed !== null}
           laps={laps}
           riders={riders}
           sound={settings.sound}
-          keys={keys}
+          keys={keys ? keysLine(settings.keys) : null}
           onRace={race}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
+          onOptions={() => setPage("options")}
         />
+      )}
+      {shell === "menu" && page !== "root" && (
+        <div class="menu">
+          {page === "options" ? (
+            <OptionsPage
+              settings={settings}
+              keys={keys}
+              touch={touch}
+              onSettings={setSettings}
+              onBack={() => setPage("root")}
+              onKeys={() => setPage("keys")}
+            />
+          ) : (
+            <KeysPage
+              settings={settings}
+              onSettings={setSettings}
+              onBack={() => setPage("options")}
+            />
+          )}
+        </div>
       )}
       {(shell === "loading" || loadLeaving) && (
         <LoadingScreen

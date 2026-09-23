@@ -47,20 +47,12 @@ import {
   SNOW_VERTEX_PARS,
   SNOW_VERTEX_PLACE,
 } from "./snow-glsl.ts";
+import type { TerrainLook } from "./settings-video.ts";
 import type { TrailUniforms } from "./trail-map.ts";
 
-export type TerrainOptions = {
-  /** Cells a side per level (a multiple of 4). */
-  n: number;
-  /** Level 0's vertex spacing, m. */
-  spacing: number;
-  levels: number;
-};
-
-export const TERRAIN_QUALITY: Record<"high" | "low", TerrainOptions> = {
-  high: { n: 192, spacing: 0.25, levels: 8 },
-  low: { n: 128, spacing: 0.35, levels: 8 },
-};
+/** The grid's size, pitch and depth — a TERRAIN stop, `terrainLook` in
+ * `settings-video.ts`. */
+export type TerrainOptions = TerrainLook;
 
 export type Terrain = {
   group: THREE.Group;

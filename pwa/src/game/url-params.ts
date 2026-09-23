@@ -18,7 +18,14 @@
 //   ?bot=1          the player's own sled ridden by the bot for the whole
 //                   run, not just the pre-roll — a race watched from the
 //                   saddle to its finish plate with nobody's hands on it.
-//   ?menu=root      open on the front door rather than the attract card.
+//   ?menu=root      open on the front door rather than the attract card;
+//   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS.
+//   ?video=<tier>   ride this visit at a picture preset (low, medium, high —
+//                   `settings-video.ts`) without storing it: how a lab
+//                   meters or photographs a rung.
+//   ?probe=0        do not time the machine on this visit: the first-visit
+//                   probe (`video-probe.ts`) may move the picture, and a lab
+//                   wants it held still.
 //   ?splash=1|0     force the attract card up, or off an ordinary visit.
 //   ?update=1       draw the new-build button as if a build were waiting
 //                   (read by `update-button.tsx` itself).
@@ -28,6 +35,11 @@
 
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
+import { TIERS, type Tier } from "./settings-video.ts";
+
+/** The cards a link may open on. */
+export type MenuPage = "root" | "options" | "keys";
+const MENU_PAGES: readonly MenuPage[] = ["root", "options", "keys"];
 
 export type UrlParams = {
   seed: number | null;
@@ -42,6 +54,12 @@ export type UrlParams = {
   bot: boolean;
   /** The URL names the front door. */
   menu: boolean;
+  /** ...and which page of it. */
+  page: MenuPage;
+  /** A picture preset for this visit only. */
+  video: Tier | null;
+  /** Whether the first-visit probe may run. */
+  probe: boolean;
 };
 
 /** A seed a link may name: a whole number the generator's stream takes. */
@@ -67,6 +85,9 @@ export function readParams(search: string): UrlParams {
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
     bot: q.get("bot") === "1",
     menu: q.get("menu") !== null,
+    page: MENU_PAGES.includes(q.get("menu") as MenuPage) ? (q.get("menu") as MenuPage) : "root",
+    video: TIERS.includes(q.get("video") as Tier) ? (q.get("video") as Tier) : null,
+    probe: q.get("probe") !== "0",
   };
 }
 
