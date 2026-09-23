@@ -71,7 +71,7 @@ commit.
 | --- | --- |
 | `identity.ts` name/title/description | The manifest picks it up at build; the `<title>` in `pwa/index.html` is hand-written and must be re-synced. There is no other copy to sync — that is deliberate |
 | `identity.ts` `SITE_URL` | `CNAME`, and the deploy-slot config in `pwa/pwa-plugin.ts` / `pages.yml` must still agree. No sitemap and no canonical URLs to move |
-| `identity.ts` PALETTE (the northern-sea set: teal water, granite, pine, sand, foam, buoy orange) | `make icons` — the icons render from it |
+| `identity.ts` PALETTE (the winter set: snow, snow shadow, sky, high sky, pine, track, the flag's red) or `BRAND_COLOR` | `make icons` — the icons render from it; and the desktop shell's restatement (`tauri/shell/src/config.rs`, `tauri.conf.json`), held by `tests/tauri_test.ts` |
 | `pwa/public/icons/icon.svg` or `app-mark.ts` | `make icons`, and check `scripts/generate-icons.mjs` still encodes the same mark geometry |
 | README / docs feature claims | Nothing on the site restates them any more, so there is no drift to chase — check only that nothing has re-added a description of the game to `pwa/index.html` |
 | `engine/version.ts` / `package.json` version | Move only via the release workflow (`scripts/update-versions.sh`); never hand-edit either |

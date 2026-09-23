@@ -217,7 +217,7 @@ export function createSpray(haze: HazeUniforms): Spray {
       }
       // THE LANDING PUFF.
       if (landed > 0) {
-        const n = Math.min(240, Math.round(30 + landed * 22 * (0.3 + powder)));
+        const n = Math.min(160, Math.round(24 + landed * 16 * (0.3 + powder)));
         const ground = level.groundAt(sled.x, sled.z);
         for (let i = 0; i < n; i++) {
           const a = random() * Math.PI * 2;
@@ -229,8 +229,10 @@ export function createSpray(haze: HazeUniforms): Spray {
             Math.cos(a) * sp + sled.vx * 0.4,
             1 + random() * (1.5 + landed * 0.3),
             Math.sin(a) * sp + sled.vz * 0.4,
-            0.6 + random() * 0.9,
-            0.22 + random() * 0.3,
+            // Short: a puff is a burst that falls back into the snow, and
+            // one that hangs for a second and a half reads as fog.
+            0.3 + random() * 0.45,
+            0.18 + random() * 0.22,
           );
         }
       }

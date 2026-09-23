@@ -85,6 +85,7 @@ export function Hud({
       class="hud"
       data-air={snap.airTime > 0 ? "1" : undefined}
       data-finished={snap.finished ? "1" : undefined}
+      data-touch={touch ? "1" : undefined}
     >
       <div class="hud-top">
         <div class="hud-top-row">

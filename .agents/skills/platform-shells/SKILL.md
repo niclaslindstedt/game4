@@ -23,7 +23,7 @@ beside it.
 **Read this skill's lessons first** — `node scripts/skill-lessons.mjs
 platform-shells --list`. Load **`skill-reflection`** at both ends and
 **`write-code`** beside this one. What is FELT (the vibration table) is
-`visual-effects`'; the options row that switches it is `menu-system`'s.
+`visual-effects`'; the switch that silences it is `haptics.ts`'s.
 `docs/platforms.md` is where the two shells sit beside the web.
 
 ## `tauri/` — the desktop app (Windows, macOS, Linux)
@@ -80,11 +80,11 @@ enforces:
   `pwa/src/shell-host.ts`; `tests/tauri_test.ts` holds the two lists
   together, so a word added on one side alone fails rather than silently
   doing nothing.
-- **RIDE, not File.** There are no files — a run is not a document. Naming
+- **RACE, not File.** There are no files — a race is not a document. Naming
   the second menu File and leaving it empty is the tell of a port.
 - **Every accelerator carries ⌘.** A menu accelerator is served BEFORE the
   page sees the key, so a row bound to a bare key takes that key away from
-  the craft for the life of the window — silently, and only on macOS.
+  the sled for the life of the window — silently, and only on macOS.
 - **macOS only, and the check is a runtime `if` inside `install` rather
   than a `#[cfg]` around the module** — `make tauri-lint` runs on Linux, so a
   `cfg` would mean the file was only ever typechecked on a machine CI does
@@ -134,7 +134,7 @@ or `pwa/` beyond `shell-host.ts`. The haptics bridge is the shape every later
 one takes, and it is worth following end to end:
 
 ```
-engine event / CraftState.slam
+engine event / SledState.skiCompression
   → pwa/src/game/rumble.ts      what is felt, and how big: { ms, strength }
   → pwa/src/game/haptics.ts     the one motor, the ledger, the player's switch
   → pwa/src/shell-host.ts       dispatches `sh-shell-rumble` (a no-op in a browser)
@@ -160,10 +160,11 @@ the same split as the Rust crates, held by the same kind of test.
   `parseRumble` cannot import each other; `tests/rumble_test.ts` holds all
   three. A rename in one is a phone that silently stops buzzing.
 - **The names.** `productName` and `longDescription` in `tauri.conf.json`,
-  `WINDOW_TITLE` and `SITE_URL` in `config.rs`, and `PALETTE.sea` as the
-  brand background are `identity.ts` spelled again; `tests/tauri_test.ts`
+  `WINDOW_TITLE` and `SITE_URL` in `config.rs`, and `BRAND_COLOR` (the
+  palette's `skyHigh`) as the brand background are `identity.ts` spelled again; `tests/tauri_test.ts`
   holds all of them. `native/app.config.js` is the exception: it READS its
-  name and sky off `identity.ts` and restates nothing.
+  name and palette off `identity.ts` (by regex — the shape
+  `tests/identity_test.ts` holds) and restates nothing.
 - **`tauri/` is outside eslint and inside prettier**, so every generated file
   under it is named in `.prettierignore` by hand — a nested `.gitignore`
   does not save it.

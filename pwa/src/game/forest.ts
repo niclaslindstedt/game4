@@ -31,7 +31,7 @@ export type ForestOptions = {
 };
 
 export const FOREST_QUALITY: Record<"high" | "low", ForestOptions> = {
-  high: { near: 45, mid: 260, far: 1100 },
+  high: { near: 45, mid: 160, far: 1100 },
   low: { near: 30, mid: 160, far: 700 },
 };
 
@@ -158,6 +158,20 @@ function hash(x: number, z: number): number {
   return s - Math.floor(s);
 }
 
+/** How close the lens may come to a drawn crown before the tree is taken
+ * out of the picture, m. */
+export const LENS_CLEAR = 2.4;
+
+/** Whether the lens, `d` m from the trunk in plan at height `y`, is within
+ * `LENS_CLEAR` of the tree as drawn — a cone of boughs from a tenth of its
+ * height to its tip. */
+function atLens(t: Level["trees"][number], d: number, y: number): boolean {
+  const f = (y - t.y) / t.height;
+  if (f > 1.05) return false;
+  const crown = f < 0.08 ? t.radius : t.crown * 0.95 * Math.max(0, 1 - (f - 0.08) / 0.92);
+  return d - Math.max(t.radius, crown) < LENS_CLEAR;
+}
+
 export type Forest = {
   group: THREE.Group;
   update(camera: THREE.PerspectiveCamera): void;
@@ -243,6 +257,17 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
   const near = makeBand(detailed, true);
   const mid = makeBand(detailed, false);
   const far = makeBand(sketch, false);
+  // THE TREES AT THE LENS: a crown a metre or two off the lens is not a tree
+  // but a wall of green across a third of the frame, so a tree the lens
+  // stands that close to is taken out of the picture — and kept in the
+  // shadow map, through a band whose material writes nothing, so the snow
+  // under it does not light up as the lens goes by.
+  const ghostMaterial = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+  const ghost = makeBand(detailed, true);
+  for (const im of ghost.meshes) {
+    im.material = ghostMaterial;
+    im.receiveShadow = false;
+  }
 
   const frustum = new THREE.Frustum();
   const box = new THREE.Box3();
@@ -278,8 +303,9 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
       pv.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
       frustum.setFromProjectionMatrix(pv);
       const cx = camera.position.x;
+      const cy = camera.position.y;
       const cz = camera.position.z;
-      for (const b of [near, mid, far]) b.fill = [0, 0];
+      for (const b of [near, mid, far, ghost]) b.fill = [0, 0];
       const reach = Math.ceil(options.far / CELL) + 1;
       const c0 = Math.floor(cx / CELL);
       const r0 = Math.floor(cz / CELL);
@@ -302,14 +328,14 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
           for (const i of bins[b]) {
             const t = trees[i];
             const e2 = (t.x - cx) ** 2 + (t.z - cz) ** 2;
-            if (e2 < near2) place(near, i);
+            if (e2 < near2) place(atLens(t, Math.sqrt(e2), cy) ? ghost : near, i);
             else if (!seen) continue;
             else if (e2 < mid2) place(mid, i);
             else if (e2 < far2) place(far, i);
           }
         }
       }
-      for (const b of [near, mid, far]) {
+      for (const b of [near, mid, far, ghost]) {
         b.meshes.forEach((im, k) => {
           const n = b.fill[k];
           im.count = n;
@@ -329,6 +355,7 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
     dispose() {
       for (const g of [...detailed, ...sketch]) g.dispose();
       material.dispose();
+      ghostMaterial.dispose();
     },
   };
 }

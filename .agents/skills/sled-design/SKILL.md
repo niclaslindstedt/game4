@@ -22,6 +22,7 @@ at both ends, and `write-code` beside this skill for any code change.
 | Piece | Role |
 | --- | --- |
 | `pwa/src/game/sled-body.ts` | The builder (`createSledModel`): two SKIS a stance apart on SPINDLES under A-arms, turning with the engine's `skiAngle` and riding up and down with each ski's compression; the TREAD under the TUNNEL from `treadFront` to `treadRear`, climbing to the drive under the cowl, with a SNOW FLAP moving with the rear's compression; the COWL and its headlight, the WINDSHIELD, the BARS on their riser, the SEAT, the RUNNING BOARDS; and the rider hung on top. `SLED_STYLES` — four colour schemes, one per grid slot |
+| `pwa/src/game/posed-merge.ts` | ONE DRAW PER POSED FIGURE: the sled and its rider are posed as a tree of small meshes (a group a ski, a capsule a limb), but every part is taken off the picture and what is drawn is one vertex-coloured mesh per machine, its vertices re-laid each frame through each part's matrix — forty parts in four riders were most of a frame's draws. A new part goes into the tree and is merged like the rest, never drawn on its own |
 | `pwa/src/game/rider.ts`, `rider-pose.ts` | The rider — the `rider` skill's. His hands and feet are fixed to this builder's grips and boards through `MOUNTS` in `rider-pose.ts`, so moving the bars, the seat or the boards moves him |
 | `engine/game/defs/sled.ts` | NOT this skill's file — the physics' spec. The builder READS `skiStance`, `skiForward`, `skiWidth`, `treadLength`/`Width`/`Front`/`Rear`, `length`, `width`, `height`, `cogHeight`, the suspensions' travel; a style never restates them |
 | `pwa/src/game/renderer.ts` | Places each model off its `SledState` (interpolated in `interp.ts`) — the mesh's origin is the CoG, so it pitches and rolls about the point the physics does |
@@ -84,8 +85,9 @@ at both ends, and `write-code` beside this skill for any code change.
 - **Build once, move per frame.** Geometry and materials are built once per
   model; the renderer only moves them. An allocation in the frame loop is a
   leak that shows as a stutter minutes in.
-- **Few materials, merged geometry.** One body is a handful of draw calls at
-  most; `make profile` holds the count.
+- **One draw per machine.** `posed-merge.ts` draws the whole posed tree as
+  one mesh; a part added outside it is a draw call times four riders times
+  the shadow pass. `make profile` holds the count.
 - **The rider reaches what is drawn.** Moving the bars, the seat or the
   running boards moves `MOUNTS` with them, or his arms stretch to grips that
   are not there — `tests/world_render_test.ts` reads the pose.

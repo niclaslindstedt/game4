@@ -1,139 +1,114 @@
 ---
 name: engine-system
-description: "Use when adding or changing a gameplay system (a sea-state rule, a craft capability, a gate kind, a scoring rule, run phases, the reset rule, a new event…). Walks the engine-first workflow: tune defs, extend state/events, implement in the fixed-timestep step pipeline, test headlessly, measure with the sim, then wire rendering and HUD in the app layer."
+description: "Use when adding or changing a gameplay system (a snow rule, a sled capability, a checkpoint rule, the race's phases, the reset rule, the field, a new event, a mode…). Walks the engine-first workflow: tune defs, extend state/events, implement in the fixed-timestep step pipeline, test headlessly, measure with the sim, then wire rendering, audio and HUD in the app layer."
 ---
 
 # Adding a Gameplay System
 
 Gameplay lives in the **engine** (`engine/`, framework-free TypeScript); the
 **app** (`pwa/`) only draws state and reacts to events. Keep that direction:
-the engine never knows a renderer exists. This is what makes every game rule
-unit-testable in plain Node, and every run reproducible from a seed.
+the engine never knows a renderer exists. This is what makes every rule
+unit-testable in plain Node, and every race reproducible from a seed.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs engine-system --list`, then the ones this task
-touches (`--scope=…`, `--concepts=…`). Reading them here and reflecting on them
-before the commit is the **`skill-reflection`** skill's job — load it at both
-ends of the session. Load **`write-code`** beside this one on every system
-change — it owns the craft rules (comments, file caps, the edit loop).
+`node scripts/skill-lessons.mjs engine-system --list`, then the ones this
+task touches (`--scope=…`, `--concepts=…`). Load **`skill-reflection`** at
+both ends of the session, and **`write-code`** beside this one on every
+system change.
 
 ## Where the pieces go
 
 | Piece | File |
 | --- | --- |
-| Global feel tuning (buoyancy damping, planing, slamming, the jet, the lean, the air, the reset) | `engine/game/defs/tuning.ts` — units in the comments (m, m/s, s, rad, kg); never inline in the model |
-| Per-craft numbers, or a new craft | A data row in `engine/game/defs/craft.ts` — the model never branches per craft; the `craft-tuning` skill |
-| State shapes & events | `engine/game/state.ts` — `GameState`, `CraftState`, `CraftInput`, `Progress`, the `GameEvent` union |
-| The rigid body and its forces | `engine/game/craft.ts` (the body, the jet, the steering, the lean, aero), `hull.ts` (the probes: buoyancy, drag, planing, slamming), `flight.ts` (the air) — the `craft-physics` skill |
-| The sea | `engine/game/water.ts` (pure functions of `x, z, t`) + `wind.ts` — the `water-feel` skill |
-| Contacts: ground, solids, ramps, gates | `engine/game/collision.ts` — the `collision` skill |
-| Run orchestration (create, the lights, the field, event emission) | `engine/game/step.ts` — `createGame`, `rulesFor` and the fixed 120 Hz `step`; ONE rider's own step (the reset, the craft, the record, the score, the clock, the course, the buzzer) is `run.ts`'s `stepRun`, run for the player and for every rival; `course.ts` for gate order and splits |
-| What a run is PLAYING BY: a mode as a bundle of rules, the open rules a measurement rides | `engine/game/defs/modes.ts` (`RunRules`, `MODE_RULES`, `OPEN_RULES`, `RACE`) → `GameState.rules`; nothing below the app branches on a mode's name, and `createGame` with no mode is the open rules, so the sim and the tests never notice a mode landing |
-| The field: the grid, rivals as whole runs over the same world, hull against hull, the standings | `engine/game/rivals.ts` — a rival is a `GameState` sharing the level, the sea, the wind, the rules and the RNG by reference, ridden by `sim/bot.ts` |
-| Standing the craft at a moment | `engine/game/place.ts` — `placeRun(state, moment)`; the `test-scenario` skill |
-| What a craft CAN do | `engine/game/limits.ts` — read by `craft.ts` AND `sim/bot.ts`; never restate a ceiling |
-| Level generation rules / vocabulary | `engine/mapgen/rules.ts` + `generate.ts` + `compile.ts` — the `mapgen-improvement` skill |
-| Bot behavior | `engine/sim/bot.ts` — the `bot-improvement` skill |
-| Generic helpers (any game could use) | `engine/lib/` — the pool a later game keeps as-is |
-| Public surface | `engine/index.ts` — export new types/constants the app or tests need |
-| Tests | `tests/<topic>_test.ts` (vitest, `@engine` alias, synthetic levels — see the `test-scenario` skill) |
-| Anything drawn | `pwa/src/game/` (`renderer.ts`, `water-mesh.ts`, `terrain.ts`, `rocks.ts`, `gates.ts`, `craft-body.ts`, `camera.ts`) |
-| HUD / touch controls | `pwa/src/game/hud.tsx`, `hud-touch.tsx`, `hud-dial.tsx` + `pwa/src/styles.css` — the `hud-and-menus` skill |
-| Input mapping | `pwa/src/game/input-model.ts` (DOM-free) + `input.ts` (DOM) |
-| Placeholders for what is not built (damage, tricks, sound, sky, menus…) | the placeholder file named in `AGENTS.md`'s tree, with its header comment — a new system that belongs to one of them starts THERE, not beside it |
+| Global feel tuning (the snow, the grip, the tread, the steering, the rider, the air, the chassis, the trees, the course, the reset) | `engine/game/defs/tuning.ts` — units in the comments; never inline in the model |
+| The machine's numbers | `engine/game/defs/sled.ts` — the model never branches per sled; the `sled-tuning` skill |
+| State shapes & events | `engine/game/state.ts` — `GameState`, `SledState` (alias `CraftState`), `SledInput`, `SnowContact`, `Progress`, `Rival`, the `GameEvent` union |
+| The rigid body and its forces | `sled.ts` (the body), `suspension.ts` (the probes), `snow.ts` (sink, drag, grip), `traction.ts` (the drive), `flight.ts` (the air), `chassis.ts` (the unsprung points) — the `sled-physics` skill |
+| Trees and the map's edge | `engine/game/collision.ts` — the `collision` skill |
+| The course: checkpoints, laps, the flag, the reset | `engine/game/course.ts` — the `collision` skill |
+| Run orchestration | `engine/game/step.ts` — `createGame`, `rulesFor` and the fixed 120 Hz `step`: the clock, the lights, the player's run, the field, sled against sled. ONE rider's own step is `run.ts`'s `stepRun`, run for the player and for every rival |
+| What a run is PLAYING BY | `engine/game/defs/modes.ts` (`RunRules`, `RACE`, `raceRules`, `openRules`) → `GameState.rules`. Nothing branches on anything but the rules; `createGame` with no race asked for rides the open rules, so the sim and the tests never notice a mode landing |
+| The field | `engine/game/rivals.ts` — a rival is a whole `GameState` sharing the level, the rules and the RNG by reference, ridden by `sim/bot.ts`; `racePlace`, `fieldOrder`, `raceProgress` are the standings |
+| Standing the sled at a moment | `engine/game/place.ts` — `placeRun(state, moment)`; the `test-scenario` skill |
+| The sun's hour at run time | `engine/game/clock.ts` — `sunHourAt`, `sunAtRun` |
+| What a sled CAN do | `engine/game/limits.ts` — read by the physics AND `sim/bot.ts`; never restate a ceiling |
+| The map | `engine/mapgen/` — the `mapgen-improvement` skill |
+| Bot behaviour | `engine/sim/bot.ts` — the `bot-improvement` skill |
+| Generic helpers | `engine/lib/` — the pool a later game keeps as-is |
+| Public surface | `engine/index.ts` — export what the app or the tests need |
+| Tests | `tests/<topic>_test.ts` (vitest, `@engine`, synthetic maps — the `test-scenario` skill) |
+| Anything drawn | `pwa/src/game/` (`renderer.ts` and the modules it names) |
+| What an event SAYS, SOUNDS and FEELS like | `run-news.ts`, `audio/route.ts` + `audio/bank.ts`, `rumble.ts` |
+| HUD / touch / keys | `hud*.tsx`, `snapshot.ts`, `input-model.ts`, `settings-input.ts` — the `hud-and-menus` skill |
 
 ## Workflow
 
-1. **Defs first.** Add the system's numbers to `engine/game/defs/tuning.ts`
-   (global feel) or `craft.ts` (per craft), with units in the comments and
-   the model each is drawn from. If you can't express the knob there, the
-   design isn't ready. The model reads the defs; it never hard-codes a number.
-2. **Types.** Extend `engine/game/state.ts`. Anything the app must react to
-   (a launch, a landing, a dive, a gate, a hit) becomes a `GameEvent` variant
-   — events are the ONLY channel from simulation to presentation.
-   `state.events` holds the events THIS step emitted and is cleared at the
-   top of the next, so the app reads it after every `step` and never misses
-   or double-plays one.
-3. **Simulate.** Implement the rule in `craft.ts`/`hull.ts`/`flight.ts` (per-tick
-   body physics), `collision.ts` (contacts), `course.ts` (progress) or
-   `step.ts` (orchestration), inside the fixed 120 Hz timestep. Mutate state
-   in place; respect the phases (`running` / `finished`). Keep per-tick
-   allocation near zero — `step()` runs 120×/s and the sim harness runs it far
-   faster than that. Semi-implicit Euler: forces → velocity → position, in
-   that order, once.
-4. **Test headlessly** in `tests/`: build a synthetic level (a flat sea bed
-   at a chosen depth, a straight course), hand it to `createGame({ level,
-   wind })` on a calm sea unless the wave is the subject, run scripted inputs
-   step by step, assert on state + events (the `test-scenario` skill has the
-   recipes). Every rule you claim ("no thrust with the intake out of the
-   water") gets an assertion. `npx vitest run tests/<file>` to iterate.
+1. **Defs first.** Add the system's numbers to `defs/tuning.ts` (global) or
+   `defs/sled.ts` (the machine), with units and the model each is drawn from.
+   If you can't express the knob there, the design isn't ready.
+2. **Types.** Extend `state.ts`. Anything the app must react to becomes a
+   `GameEvent` variant — events are the ONLY channel from simulation to
+   presentation. `state.events` holds this step's and is cleared at the top of
+   the next, so the app reads it after every `step`.
+3. **Simulate.** Implement the rule in the module that owns it, inside the
+   fixed 120 Hz step. Mutate state in place; respect the phases
+   (`countdown` → `racing` → `finished`). Keep per-step allocation near
+   zero — `step()` runs 120×/s for four riders, and the sim far faster.
+   Semi-implicit: forces → velocity → position, once.
+4. **Test headlessly** in `tests/`: a synthetic map, `createGame({ level })`,
+   `placeRun`, scripted inputs, assertions on state and events. Every rule you
+   claim gets an assertion. `npx vitest run tests/<file>` to iterate.
 5. **Export** what the app needs from `engine/index.ts`.
-6. **Measure.** `make sim` before and after — the balance table is the
-   regression surface, and bots must keep finishing and keep hitting gates
-   (the `simulate-run` skill reads the table). A new system that changes what
-   a run looks like usually also earns a column in `RunReport` or an event
-   the report counts. If the system has a lab (`make ride`, `make waves`),
-   that too, before and after.
-7. **Present.** Wire the events and state into the renderer/HUD in
-   `pwa/src/game/` — the renderer reads `GameState`; it never steps physics
-   and never mutates state. A moment worth photographing earns a scenario in
-   `scenarios.ts` in the same change.
-8. **Playtest** with the `playtest` skill (`make screenshots SCENE=…`) — numbers
-   that look right in a test can still read wrong at speed in the real renderer.
+6. **Measure.** `make sim` before and after (the `simulate-run` skill). A
+   system that changes what a race looks like usually earns a column in
+   `RunReport` or an event it counts. If the system has a lab (`make ride`,
+   `make analyze`), that too.
+7. **Present.** Wire it into the renderer / HUD / audio / news / rumble —
+   the app reads `GameState`, never steps physics, never mutates state.
+8. **Playtest** (`make world`, `make screenshots`) — numbers that look right
+   in a test can still read wrong at speed.
 
-## A worked example: a new gate kind
+## A worked example: a boost on the track
 
-Say the course gains a SLALOM gate — a single buoy that must be passed on a
-stated side.
+Say the track gains BOOST STRIPS — freshly groomed stretches where the tread
+bites harder.
 
-1. `engine/mapgen/types.ts`: `Gate.kind` grows `"slalom"` and a `side`
-   field. (`types.ts` is shared with the generator — tell the orchestrator
-   before changing an exported shape.)
-2. `rules.ts`: where a slalom may stand (spacing, offshore band), as data;
-   `generate.ts` places it; `compile.ts` bakes it; `analysis/` checks it.
-3. `course.ts`: the pass test — the craft's path crossing the buoy's
-   abeam line on the stated side — in course order, with `missedGate` when
-   the wrong side is taken. `state.ts`: nothing new if the existing `gate` /
-   `missedGate` events carry it; a new field on the event otherwise.
-4. `tests/course_test.ts`: a synthetic level with one slalom; pass on the
-   right side → `gate`; pass on the wrong side → `missedGate`; pass wide →
-   nothing yet.
-5. `sim/bot.ts`: aim at the buoy offset to the stated side (the
-   `bot-improvement` skill) — a gate the bot cannot take is a gate the sim
-   cannot measure.
-6. `make sim` before/after; `make level SEED=` shows the buoy on the plan.
-7. `pwa/src/game/gates.ts` draws it; the HUD's `n / N` needs nothing.
-8. `docs/level-generator.md` (the rule), `docs/riding.md` (the pass test), a
-   changeset fragment.
+1. `engine/mapgen/types.ts`: `Level` grows `boosts?: { s0: number; s1: number }[]`
+   (optional, so a synthetic level need not invent one). Tell whoever owns
+   the generator before changing an exported shape.
+2. `rules.ts`: a new R-rule for where a strip may lie, as data — and its
+   prose mirrored VERBATIM in `docs/level-generator.md` (`docs_rules_test`
+   fails until it is). `track.ts` places them; `analysis/` checks them.
+3. `snow.ts` / `tuning.ts`: the grip a strip adds, as a knob.
+4. `tests/sled_test.ts`: a synthetic map with a strip; the tread's grip rises
+   on it and nowhere else.
+5. `sim/bot.ts`: nothing, if the bot already rides the centreline.
+6. `make sim` before/after; `make level SEED=` shows the strips.
+7. `pwa/src/game/terrain.ts` / `snow-glsl.ts` draw them (the `snow-look`
+   skill).
+8. `docs/riding.md`, `docs/level-generator.md`, a changeset fragment.
 
 ## Invariants to preserve
 
-- `step()` must stay deterministic for (seed, input sequence) — no wall clock,
-  no `Math.random`, no DOM. Everything random draws from the seeded RNG in the
-  state (`engine/lib/prng.ts`). The sim digests (`tests/simulation_test.ts`,
-  `determinism_test.ts`) enforce this: break determinism and they fail.
-- **The water is a pure function of `(x, z, t)`**, built once per level. A
-  system that wants the sea to REMEMBER something (a wake, a splash) keeps
-  that memory in `GameState`, never in `SeaState`, and never lets the renderer
-  and the engine read different surfaces.
-- The engine imports nothing from `pwa/` and nothing from three.js or Preact;
-  the app imports `@engine` and nothing deeper. `tests/imports_test.ts` holds
-  the direction.
-- The timestep is fixed (`TUNING.physicsHz`, 120). The app's loop
-  (`run-loop.ts`) accumulates real time into fixed steps, clamped — never make
-  a rule depend on frame rate.
-- Docs move with the code per `AGENTS.md`'s sync table: craft changes update
-  `docs/riding.md`, water changes `docs/water.md`, generator changes
-  `docs/level-generator.md`, sim/bot changes `docs/simulation.md`; a new
-  command updates the README.
-- A user-visible change ships a `.changes/unreleased/` fragment (the
-  `changelog` skill).
+- `step()` stays deterministic for (seed, input sequence) — no wall clock, no
+  `Math.random`, no DOM; randomness only from `state.rng`. The only draws a
+  race makes are the rivals' paces at the grid; a new draw anywhere in `step`
+  changes every digest — say so in the PR.
+- **The map is a pure function of its seed**, baked once. A system that wants
+  the world to REMEMBER something keeps that memory in `GameState`, never in
+  the `Level` — and the trail a sled leaves is the renderer's, stamped from
+  the engine's `contacts`, not state the engine keeps.
+- The engine imports nothing from `pwa/`, three.js or Preact; the app imports
+  `@engine` and nothing deeper. `tests/imports_test.ts` holds it.
+- The timestep is fixed (`TUNING.physicsHz`, 120). `pwa/src/game/run-loop.ts`
+  accumulates real time into fixed steps, clamped — never make a rule depend
+  on frame rate.
+- Docs move with the code per `AGENTS.md`'s sync table.
+- A user-visible change ships a `.changes/unreleased/` fragment.
 
 ## Skill self-improvement
 
-Load the **`skill-reflection`** skill at both ends of the session — it owns
-recording what a pass learned (with a `scope` and `concepts`), fixing anything
-here the pass proved WRONG, pruning the stale, merging the duplicated, and
-promoting the always-true. When a new system forces a pattern not covered here
-(a timed hazard, a scoring multiplier, a gate that moves…), record where it
-landed and why.
+Load the **`skill-reflection`** skill at both ends — it owns recording what a
+pass learned, fixing anything here the pass proved WRONG, and promoting the
+always-true. When a new system forces a pattern not covered here, record where
+it landed and why.

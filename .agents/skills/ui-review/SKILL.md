@@ -1,6 +1,6 @@
 ---
 name: ui-review
-description: "Use for a fit-and-finish pass over the game's UI — the HUD, the touch controls (the handlebar and the throttle lever), the finish card, the update toast. Drives the screenshot-audit loop: capture every surface at the reference viewports (desktop landscape, phone portrait, phone landscape), evaluate against the quality bar, fix what clips, overflows, or drifts off the shared look, and verify with re-captures."
+description: "Use for a fit-and-finish pass over the game's UI — the HUD, the touch controls (the handlebar and the lever), the three presses, the finish plate, the cards (attract, front door, loading, pause), the new-build button. Drives the screenshot-audit loop: capture every surface at the reference viewports (desktop landscape, phone portrait, phone landscape), evaluate against the quality bar, fix what clips, overflows, or drifts off the shared look, and verify with re-captures."
 ---
 
 # UI Review — audit the HUD and every overlay
@@ -10,13 +10,16 @@ that reads on desktop and vanishes on a phone, a touch control creeps under a
 thumb's blind spot, an overlay assumes landscape. This skill is the periodic
 sweep that catches all of it at once — **look at every surface, judge it, fix
 it, look again**. Never evaluate UI from code alone; the failures (clipping,
-overlap, illegibility over bright water) only show up in pixels.
+overlap, illegibility over bright snow) only show up in pixels.
 
 The UI surface today is small — `pwa/src/game/hud.tsx` (the readouts),
-`hud-dial.tsx` (the bars), `hud-touch.tsx` (the thumb zones, which are the
-phone's only controls), `pwa/src/styles.css`, and the update toast
-(`update-button.tsx` over `lib/pwa-update.ts`) — which is exactly why a sweep
-is cheap enough to run on every UI change.
+`hud-dial.tsx` (the rev bar), `hud-actions.tsx` (the three presses),
+`hud-result.tsx` (the finish plate), `hud-touch.tsx` (the thumb zones, which
+are the phone's only controls), the cards (`splash-screen.tsx`,
+`menu-main.tsx`, `loading-screen.tsx`, `menu-pause.tsx`),
+`pwa/src/styles.css`, and the new-build button (`update-button.tsx` over
+`lib/pwa-update.ts`) — which is exactly why a sweep is cheap enough to run on
+every UI change.
 
 **Before starting, read this skill's lessons** —
 `node scripts/skill-lessons.mjs ui-review --list`, then the ones this task
@@ -26,10 +29,10 @@ touches. Load **`skill-reflection`** at both ends of the session.
 
 | Piece | Role |
 | --- | --- |
-| `scripts/screenshot.mjs` | The capture harness — serves `pwa/dist`, opens `?seed=&craft=&scene=&shot=1`, waits for `window.__SH_READY__`, captures at 1280×720 (desktop landscape), 390×844 (phone portrait) and 844×390 (phone LANDSCAPE) to `previews/`; `--viewport` names one, `all` is every one |
-| `make screenshots SCENE=<name>` | Runs it for one scene against the BUILT app (`make build` first); `CHROMIUM_PATH=/opt/pw-browsers/chromium` in web sessions; no `SCENE=` is every scene |
+| `scripts/screenshot.mjs` | The capture harness — serves `pwa/dist`, opens `?start=race&seed=&t=&shot=1` (or a card's own URL with `--surface`), waits for `window.__SH_READY__` (a card waits on its DOM instead), captures at 1280×720 (desktop landscape), 390×844 (phone portrait) and 844×390 (phone LANDSCAPE) to `previews/`; `--viewport` names one, `all` is every one |
+| `make screenshots SCENE=<name>` | Runs it for one moment of a race (`grid`, `go`, `race`, `lap`, `all`) against the BUILT app (`make build` first); `ARGS="--surface all"` for every card, `ARGS=--update` for the new-build button; `CHROMIUM_PATH=/opt/pw-browsers/chromium` in web sessions |
 | Read tool on the PNGs | The evaluation itself — every judgement is made on a screenshot, not on source |
-| `npm run dev` | Headed spot-checks (the toast's timing, touch behaviour in devtools emulation) |
+| `npm run dev` | Headed spot-checks (the lights' timing, touch behaviour in devtools emulation) |
 
 **THE THIRD VIEWPORT IS THE ONE THE GAME IS HELD AT, and it is the only one
 that reaches the `@media (orientation: landscape) and (max-height: 34rem)`
@@ -47,9 +50,9 @@ tight case, since a surface tuned to exactly fit 390×844 runs out of room on
 the SE class first.
 
 **When the change is ONE instrument's placement rather than a surface, take
-one scene per viewport instead of the whole sweep.** `SCENE=rest` is the cheap
-one — it stands the craft still, so the run-up is nothing and the HUD is at
-its floor; `SCENE=cruise` is the same frame at speed.
+one scene per viewport instead of the whole sweep.** `SCENE=grid` is the cheap
+one — the field on the lights, every readout at its floor; `SCENE=race` is
+the same HUD at speed with the field strung out.
 
 ## The quality bar
 
@@ -60,36 +63,37 @@ settles (that is the `skill-reflection` promotion path).
    clear of each other and of the safe areas at every aspect ratio the scenes
    capture.
 2. **Legible over the WORLD, not over a mockup.** The scene behind the HUD is
-   a pale northern sky over teal water with white foam and spray in it — the
-   worst case for white text is the foam, and the worst case for dark text is
-   the deep water. Every readout keeps its ink/shadow treatment (`hudInk` /
+   a pale winter sky over sunlit snow with dark conifers in it — the worst
+   case for white text is the snow itself (most of every frame), and the
+   worst case for dark text is the forest. Every readout keeps its ink/shadow treatment (`hudInk` /
    `hudShadow` in `identity.ts`'s palette); a new element that skips it reads
-   fine in devtools and vanishes in the spray.
+   fine in devtools and vanishes on the snow.
 3. **Touch targets are thumb-sized and reachable.** The HUD IS the touch
    control surface on phones: the handlebar in the lower-left arc, the lever
    in the lower-right, sized for a moving thumb, and no readout a rider must
-   watch mid-turn under either. The lever's full travel (~90 px down) fits
-   inside the safe area from wherever a thumb plausibly lands.
-4. **Essential info reads at speed.** Speed, the next gate, the air time —
-   a rider glances at these mid-swell. Small captions are fine for ambient
-   info (the wind, the build label); anything decision-driving is big.
-5. **One look.** The HUD wears the northern-sea identity — the palette from
+   watch mid-turn under either. The lever's full travel (down for throttle,
+   up for the brake) fits inside the safe area from wherever a thumb
+   plausibly lands.
+4. **Essential info reads at speed.** Speed, the position, the lap, the
+   missed-checkpoint arrow, the air clock — a rider glances at these
+   mid-turn. Small captions are fine for ambient info (the news column);
+   anything decision-driving is big.
+5. **One look.** The HUD wears the winter identity — the palette from
    `pwa/src/identity.ts`, never a re-hardcoded colour. A new overlay that
    invents its own greys is drift; re-skin it.
 6. **Portrait is designed, not squeezed.** The portrait layout is its own
-   arrangement, not the landscape HUD scaled down — the water fills a tall
+   arrangement, not the landscape HUD scaled down — the snow fills a tall
    frame differently, and the horizon sits higher.
 7. **Safe areas + reduced motion.** Anything pinned to a screen edge respects
-   `env(safe-area-inset-*)`; decorative animation (the wind arrow's turn, the
-   lever's spring) has a `prefers-reduced-motion` fallback that keeps the
+   `env(safe-area-inset-*)`; decorative animation (the lights, the lever's spring) has a `prefers-reduced-motion` fallback that keeps the
    information.
-8. **The PWA surfaces count too.** The update toast and install flow are UI —
-   capture them when they change (the toast can be forced by temporarily
-   wiring a URL-param check into the update state; revert before committing).
-9. **An instrument's IDLE state never sits on its own alert ramp.** The rpm
-   bar that warms toward the redline must read cool and inert at idle; a
+8. **The PWA surfaces count too.** The new-build button and the install flow
+   are UI — capture the button with `make screenshots ARGS=--update`
+   (`?update=1`).
+9. **An instrument's IDLE state never sits on its own alert ramp.** The rev
+   bar that warms toward the limiter must read cool and inert at idle; a
    warm "neutral" lands close enough to the low end of that ramp that an
-   idling craft looks like a screaming one. Quiet when there is no news is
+   idling sled on the grid looks like a screaming one. Quiet when there is no news is
    what makes the news findable at speed.
 
 ## Process
@@ -132,7 +136,7 @@ settles (that is the `skill-reflection` promotion path).
 ## Skill self-improvement
 
 Load the **`skill-reflection`** skill before this session commits. A settled
-quality rule belongs in the bar above; a new surface earns a scene in
-`scripts/screenshot.mjs` (over a moment in `scenarios.ts`) in the same change
+quality rule belongs in the bar above; a new surface earns a `SCENES` or
+`SURFACES` entry in `scripts/screenshot.mjs` in the same change
 that ships it — a surface the harness can't reach is a surface no sweep will
 ever look at.

@@ -574,6 +574,21 @@ canvas {
   gap: 0.25rem;
 }
 
+/* ON A TOUCHSCREEN the bottom-left corner is where the left thumb lives,
+   and the handlebar drawn round it would sit on the speed. So there the
+   panel moves to the bottom centre — under the sled, between the two thumb
+   zones' natural anchors, where both hands leave the glass clear. */
+.hud[data-touch] .hud-speed {
+  left: 50%;
+  transform: translateX(-50%);
+  align-items: center;
+}
+
+.hud[data-touch] .hud-build {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .hud-revs-row {
   display: flex;
   align-items: center;

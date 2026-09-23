@@ -51,24 +51,33 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 
 ## Usage
 
-| Command            | What it does                                                                                                |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- |
-| `make build`       | Typecheck both programs (the engine and the app) and build the site into `pwa/dist/`                        |
-| `make test`        | The vitest suite; `SHARD=i/N` runs one slice of it (CI runs two)                                            |
-| `make lint`        | eslint and the typecheck, zero warnings                                                                     |
-| `make fmt`         | prettier in place; `make fmt-check` is what CI runs                                                         |
-| `make hooks`       | Install the pre-commit and commit-msg git hooks                                                             |
-| `make icons`       | Regenerate the install icons and the favicon from the app mark                                              |
-| `make sim`         | The headless balance sweep: the bot races generated maps through the real engine (`SEEDS=3,7`)              |
-| `make level`       | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`) |
-| `make analyze`     | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                 |
-| `make ride`        | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`)                                |
-| `make world`       | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)    |
-| `make audition`    | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                    |
-| `make screenshots` | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)            |
-| `make profile`     | What one frame costs the renderer: draw calls, triangles, binds (`make build` first)                        |
-| `make changelog`   | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                       |
-| `make bump`        | Print the semver bump the release would derive from the changeset fragments                                 |
+| Command                 | What it does                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `make build`            | Typecheck both programs (the engine and the app) and build the site into `pwa/dist/`                        |
+| `make test`             | The vitest suite; `SHARD=i/N` runs one slice of it (CI runs two)                                            |
+| `make lint`             | eslint and the typecheck, zero warnings                                                                     |
+| `make fmt`              | prettier in place; `make fmt-check` is what CI runs                                                         |
+| `make hooks`            | Install the pre-commit and commit-msg git hooks                                                             |
+| `make icons`            | Regenerate the install icons and the favicon from the app mark                                              |
+| `make sim`              | The headless balance sweep: the bot races generated maps through the real engine (`SEEDS=3,7`)              |
+| `make level`            | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`) |
+| `make analyze`          | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                 |
+| `make ride`             | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`)                                |
+| `make world`            | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)    |
+| `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                    |
+| `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)            |
+| `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first)                        |
+| `make tauri`            | Build the site into the desktop app and launch it (needs Rust)                                              |
+| `make tauri-test`       | The desktop app's decision layer, on a bare Rust toolchain                                                  |
+| `make tauri-lint`       | clippy over both desktop crates at zero warnings (needs the webview libraries); `make tauri-fmt` formats    |
+| `make desktop`          | Package this machine's desktop downloads into `tauri/release/`                                              |
+| `make native-install`   | The store app's own dependency tree                                                                         |
+| `make native-bundle`    | Pack the built site into the store app — before every native build                                          |
+| `make native-typecheck` | tsc over the store app's shell                                                                              |
+| `make native-ios`       | The store app on an iOS simulator (`native-android` for Android, `native-iphone` for a real iPhone)         |
+| `make shellcheck`       | shellcheck over the scripts and the git hooks; `make actionlint` lints the workflows                        |
+| `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                       |
+| `make bump`             | Print the semver bump the release would derive from the changeset fragments                                 |
 
 The browser-driven labs (`screenshots`, `profile`, `world`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
 

@@ -5,7 +5,7 @@ description: "Use when you want to bring every drift-prone artifact in the repo 
 
 # Maintenance
 
-This is the umbrella skill for Sea Haven, mandated by §21.6 of `OSS_GAME_SPEC.md`. It does no rewriting itself — it decides which sync skills are stale, runs each one, and reports a combined summary. Use it when you do not know which specific artifact is out of date, or when several have likely drifted at once (for example, after a large merge).
+This is the umbrella skill for Powder Run, mandated by §21.6 of `OSS_GAME_SPEC.md`. It does no rewriting itself — it decides which sync skills are stale, runs each one, and reports a combined summary. Use it when you do not know which specific artifact is out of date, or when several have likely drifted at once (for example, after a large merge).
 
 ## When to run
 
@@ -22,11 +22,10 @@ The registry is the single source of truth for which sync skills exist in this r
 | Skill | Fixes | Spec sections | Run order |
 | --- | --- | --- | --- |
 | `update-docs` | `docs/*.md` vs. engine/app/tooling source of truth | §11.1 | 1 |
-| `update-readme` | `README.md` vs. current commands, craft, controls, URLs | §3 | 2 |
+| `update-readme` | `README.md` vs. current commands, the sled, controls, URLs | §3 | 2 |
 | `update-website` | SEO surfaces + identity-derived shell vs. `identity.ts`/docs | §11.2–§11.3 | 3 |
-| `update-prompts` | `prompts/` templates vs. their sources of truth (dormant) | §13.2 | 4 |
 
-Run order matters: `update-docs` runs before `update-readme` because the README links into docs pages and summarizes their content — a README synced against stale docs re-imports the staleness. `update-website` runs after both because the site's SEO copy describes what the README and docs claim; `update-prompts` runs last (currently dormant — no prompts shipped yet, so it usually just refreshes its baseline).
+Run order matters: `update-docs` runs before `update-readme` because the README links into docs pages and summarizes their content — a README synced against stale docs re-imports the staleness. `update-website` runs after both because the identity-derived shell is checked against what the README and docs claim. There is no `prompts/` tree in this repo, so there is no `update-prompts` skill; the day an LLM prompt ships, port the sibling repos' and add its row here, last.
 
 After the registry, finish a full sweep with the `sync-game-spec` skill — it walks `OSS_GAME_SPEC.md` chapter by chapter, catches the residual conformance violations the per-artifact skills did not touch, and re-dates every row of `docs/spec-conformance.md`.
 

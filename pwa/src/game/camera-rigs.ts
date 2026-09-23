@@ -174,13 +174,31 @@ export function turn(a: number, b: number): number {
 }
 
 /** A boom's memory between frames: the yaw it has swung to, the height it
- * has sprung to, and the orbit's angle. `fresh` asks the next frame to
+ * has sprung to, the orbit's angle, and how far out along its arm the lens
+ * is let stand (`pull`, 1 the whole arm). `fresh` asks the next frame to
  * snap rather than ease (a new run, a reset). */
-export type BoomState = { yaw: number; y: number; orbit: number; fresh: boolean };
+export type BoomState = { yaw: number; y: number; orbit: number; pull: number; fresh: boolean };
 
 export function createBoomState(): BoomState {
-  return { yaw: 0, y: 0, orbit: 0, fresh: true };
+  return { yaw: 0, y: 0, orbit: 0, pull: 1, fresh: true };
 }
+
+/** WHAT THE LENS MAY NOT STAND INSIDE: the share (0..1) of the line from
+ * `from` to `to` that is clear before it first runs into something solid —
+ * a trunk, a crown, a banner. `camera-clear.ts` answers it for a map. */
+export type LineClear = (from: Vec3, to: Vec3) => number;
+
+/** THE ARM PULLED IN. A boom stands its lens metres behind the rider, and
+ * in a wood those metres are full of spruce; a lens inside a crown is a
+ * screen of green. So the arm is shortened to the first thing between the
+ * rider's head and the lens — at once, because a frame inside a tree is the
+ * fault — and let back out slowly, so a trunk flicking past is a dip toward
+ * the rider and not a pump in and out. Never closer than `PULL_MIN` m. */
+export const PULL_MIN = 1.6;
+/** How briskly the arm lets back out, 1/s. */
+export const PULL_RELEASE = 1.8;
+/** The pivot the arm is measured from: over the saddle, at the helmet. */
+export const PULL_PIVOT = 1.3;
 
 /** One frame of `rig` behind `pose`, `dt` s after the last. `groundAt` keeps
  * the lens out of the hill. */
@@ -190,6 +208,7 @@ export function frameRig(
   st: BoomState,
   dt: number,
   groundAt: (x: number, z: number) => number,
+  clear?: LineClear,
 ): LensPose {
   if (rig.kind === "bolted") {
     const off = rotate(pose.q, rig.eye);
@@ -227,6 +246,7 @@ export function frameRig(
     ? 1
     : 1 - Math.exp(-(pose.airborne ? rig.heightFollowAir : rig.heightFollow) * dt);
   st.y += (pose.y - st.y) * hk;
+  const snap = st.fresh;
   st.fresh = false;
   const fx = Math.sin(st.yaw);
   const fz = Math.cos(st.yaw);
@@ -234,6 +254,7 @@ export function frameRig(
   const eye = { x: pose.x - fx * dist, y: st.y + rig.height, z: pose.z - fz * dist };
   const floor = groundAt(eye.x, eye.z) + rig.clearance;
   if (eye.y < floor) eye.y = floor;
+  if (clear) pullIn(eye, pose, st, snap, dt, clear, groundAt);
   const target = {
     x: pose.x + fx * rig.aimAhead,
     y: st.y + rig.aimHeight,
@@ -241,6 +262,36 @@ export function frameRig(
   };
   const fov = Math.min(rig.fovMax, rig.fov + rig.fovPerSpeed * pose.speed);
   return { eye, target, fov, roll: 0 };
+}
+
+/** Shorten the arm from the rider's helmet to `eye` to what is clear. */
+function pullIn(
+  eye: Vec3,
+  pose: RigPose,
+  st: BoomState,
+  snap: boolean,
+  dt: number,
+  clear: LineClear,
+  groundAt: (x: number, z: number) => number,
+): void {
+  const pivot = { x: pose.x, y: pose.y + PULL_PIVOT, z: pose.z };
+  const len = Math.hypot(eye.x - pivot.x, eye.y - pivot.y, eye.z - pivot.z);
+  if (len <= PULL_MIN) {
+    st.pull = 1;
+    return;
+  }
+  const floor = PULL_MIN / len;
+  const want = Math.max(floor, Math.min(1, clear(pivot, eye)));
+  const was = st.pull;
+  if (snap || want < was) st.pull = want;
+  else st.pull = was + (want - was) * (1 - Math.exp(-PULL_RELEASE * dt));
+  if (st.pull >= 0.999) return;
+  eye.x = pivot.x + (eye.x - pivot.x) * st.pull;
+  eye.y = pivot.y + (eye.y - pivot.y) * st.pull;
+  eye.z = pivot.z + (eye.z - pivot.z) * st.pull;
+  // Drawn in along a line that may dip, the lens still keeps off the snow.
+  const ground = groundAt(eye.x, eye.z) + 0.5;
+  if (eye.y < ground) eye.y = ground;
 }
 
 /** THE FLOWN HAND-OVER between two rungs: `t` 0..1 through it, eased. */

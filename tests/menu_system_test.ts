@@ -183,6 +183,8 @@ describe("the URL (url-params.ts, splash.ts)", () => {
     expect(readParams("?camera=far").camera).toBe("far");
     expect(readParams("?camera=orbit").camera).toBe(null);
     expect(readParams("?t=-4").t).toBe(0);
+    expect(readParams("?start=race&bot=1").bot).toBe(true);
+    expect(readParams("?start=race").bot).toBe(false);
   });
 
   it("deals a seed in the generator's range", () => {

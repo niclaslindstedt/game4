@@ -7,7 +7,7 @@ description: "Use when README.md may be stale. Discovers commits since the last 
 
 **Governing spec sections:** §3 (`README.md` — required sections and content), §21.5 (this skill is mandated because `README.md` is a drift-prone artifact).
 
-`README.md` is the primary user-facing documentation for Sea Haven. Per §3 of `OSS_GAME_SPEC.md` it must keep its twelve sections (What / Why / Prerequisites / Install / Quick start / Usage / Configuration / Examples / Troubleshooting / Documentation / Contributing / License) accurate. It goes stale whenever a command, a craft, a control, a URL, or the install story changes without a matching edit.
+`README.md` is the primary user-facing documentation for Powder Run. Per §3 of `OSS_GAME_SPEC.md` it must keep its twelve sections (What / Why / Prerequisites / Install / Quick start / Usage / Configuration / Examples / Troubleshooting / Documentation / Contributing / License) accurate. It goes stale whenever a command, the sled, a control, a URL, or the install story changes without a matching edit.
 
 ## Tracking mechanism
 
@@ -41,13 +41,15 @@ description: "Use when README.md may be stale. Discovers commits since the last 
 
 | Changed files / scope | README section(s) to update |
 | --- | --- |
-| `package.json` scripts, `Makefile` targets (a lab added or renamed: `sim`, `level`, `waves`, `ride`, `analyze`, `screenshots`) | **Usage** table — and `AGENTS.md`'s labs table moves with it |
-| `engine/game/defs/craft.ts` | **What** (the four craft and what separates them) |
-| `pwa/src/game/input.ts`, `input-model.ts`, `hud.tsx`, `hud-touch.tsx` | **Quick start** (keys, the handlebar and the throttle lever) |
+| `package.json` scripts, `Makefile` targets (a lab added or renamed: `sim`, `level`, `analyze`, `ride`, `world`, `audition`, `screenshots`, `profile`, the `tauri*` and `native-*` targets) | **Usage** table — and `AGENTS.md`'s labs table moves with it |
+| `engine/game/defs/sled.ts` | **What** (the one sled and what it is) |
+| `pwa/src/game/settings-input.ts`, `input.ts`, `input-model.ts`, `hud.tsx`, `hud-touch.tsx` | **Controls** (the keys, the handlebar and the lever) |
 | `pwa/src/identity.ts`, `pwa/public/CNAME` | Links, badges, **What**, **Usage** (install) |
-| `engine/mapgen/rules.ts`, `engine/game/water.ts` | **Why** (the generator and the water claims) |
+| `engine/mapgen/rules.ts`, `engine/game/snow.ts` | **What** / **Why** (the generator and the snow claims) |
 | `.github/workflows/*` | Badge row |
 | `docs/*.md` added/renamed | **Documentation** link list |
+| `tauri/`, `native/` (a shell built or changed) | **What** (what exists today), **Why** (web-native), **Usage** |
+| `pwa/src/game/url-params.ts` | **Configuration** (the URL parameters) |
 | Dependency/auth changes (`.npmrc`, framework) | **Prerequisites**, **Configuration** |
 | `LICENSE` | **License** section, badges |
 

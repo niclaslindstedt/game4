@@ -95,6 +95,12 @@ const CARD_DUCK = 0.5;
 declare global {
   interface Window {
     __SH_READY__?: boolean;
+    /** A LAB'S WINDOW ON THE RUN: what the HUD reads, where the player's
+     * sled is and which way it points, the shell, the rung, and a tally of
+     * every event the player's run has raised — so a script driving the
+     * built app can check a key did what it says without reading pixels.
+     * Read-only; nothing in the app calls it. */
+    __SH_PROBE__?: () => Record<string, unknown>;
   }
 }
 
@@ -247,6 +253,8 @@ export function App() {
     let ready = false;
     const live: { id: number; text: string; tone: HudFlash["tone"]; until: number }[] = [];
     let flashId = 0;
+    /** Every event the player's run has raised, by kind (`__SH_PROBE__`). */
+    const tally: Record<string, number> = {};
     let hudClock = HUD_TICK;
     let wall = 0;
 
@@ -261,6 +269,7 @@ export function App() {
     const adopt = (next: GameState): void => {
       state = next;
       live.length = 0;
+      for (const k of Object.keys(tally)) delete tally[k];
       audio.reset();
       runRumble.reset();
       setLaps(next.rules.laps);
@@ -271,10 +280,26 @@ export function App() {
      * everywhere else — the race behind a card is still being raced — and
      * through a link's pre-roll, so a picture of a race is of one moving. */
     const inputFor = () =>
-      preroll || !playerRides(shellRef.current) ? botInput(state) : manager.sample(TUNING.dt);
+      preroll || params.bot || !playerRides(shellRef.current)
+        ? botInput(state)
+        : manager.sample(TUNING.dt);
+
+    window.__SH_PROBE__ = () => ({
+      ...takeSnapshot(state),
+      phase: state.phase,
+      t: state.t,
+      x: state.sled.x,
+      z: state.sled.z,
+      heading: state.sled.heading,
+      input: { ...state.input },
+      shell: shellRef.current,
+      camera: renderer.camera(),
+      events: { ...tally },
+    });
 
     const stepOnce = (): void => {
       step(state, inputFor());
+      for (const e of state.events) tally[e.kind] = (tally[e.kind] ?? 0) + 1;
       if (preroll) return;
       const rides = playerRides(shellRef.current);
       if (soundsLive(shellRef.current)) audio.events(state.events);
@@ -501,6 +526,7 @@ export function App() {
       stopShellCommands();
       manager.dispose();
       renderer.dispose();
+      delete window.__SH_PROBE__;
     };
     // Boots once: the URL is read on mount and `renderKit` is set exactly
     // once.

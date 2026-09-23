@@ -103,6 +103,7 @@ data and arithmetic, three-free so `tests/world_render_test.ts` reads it;
 | How it follows the heave, on the snow and in the air | `heightFollow`, `heightFollowAir`, `followRate` |
 | Looking through a slide | `slipWeight` — the blend between the nose and the way |
 | Never inside the snow | `clearance` |
+| Never inside a tree or a post | `camera-clear.ts` — the `LineClear` a boom pulls its arm in against: the trees AS DRAWN (a lens meets the crown, not the trunk), the checkpoint stakes and the start banner, walked from the helmet out |
 | A switch that is a move rather than a cut | `HANDOVER` seconds of `blendLens` in `camera.ts` |
 | Which rung each shell surface gets | `cameraFor` in `shell.ts` |
 
@@ -148,9 +149,11 @@ over snow read a metre away, and on a ridge that is a shot that pumps.
 ## Hard-earned constraints
 
 - **What is drawn IS what is simulated.** The terrain is the engine's own
-  heightfield, and the trail the renderer lowers the snow by is the engine's
-  own `sink` per contact. A renderer-side "make the furrow deeper" is a sled
-  floating over its own trail. Deeper powder is a `sled-physics` change.
+  heightfield and the sled stands on the engine's own contacts. The trail is
+  the one deliberate exaggeration, and it is stated in one place: the drawn
+  furrow is the physics' `sink` or the powder's own furrow, whichever is
+  deeper (`drawnDepth` in `trail-stamp.ts`) — never shallower than the
+  support the sled rides on. Deeper powder is a `sled-physics` change.
 - **Powder must cost, and speed must buy it back.** Any help that lets a slow
   sled skim powder flattens the choice between the line and the shortcut.
 - **The sled leans into the turn; it does not slide flat.** A sled that yaws

@@ -1,295 +1,110 @@
 ---
 name: nature
-description: "Use when working on the NATURE the levels run along — the shore's materials (bedrock slabs, boulder fields, sand pockets, the skerries standing offshore), the biome-as-data model behind them, what the renderer's terrain.ts paints for each, the rocks it stands up, the sea life under the water (R20), the flora above the waterline, the birds over the shore and the skeins crossing it, and the coasts beyond the taiga — the mangrove, the arctic and the karst. Owns the engine's biome row, the surface classifier's vocabulary, the terrain's paint, the placement rules that keep every solid in the engine's field, and the look-first verification loop."
+description: "Use when working on the NATURE the race runs through — the snow-loaded conifers (where the generator stands them under R14, their height and crown, the meadows and clearings between the woods, the tree line up the rim) and how `pwa/src/game/forest.ts` draws them (two shapes, the white-over-green banding, three bands of distance, the woods carried to the rim by the terrain's forest tint); the country as a LANDSCAPE (the mountain flanks as the horizon, the bare high snow, the hills and bowls as they read from the saddle); and the ground as a mesh (`terrain.ts`'s clipmap reaching past the rim). There are no biomes, no fauna, no birds and no rocks in this game. Owns the look-first loop for all of it: `make world`'s forest and vista views, `make level`'s plan, `make profile`."
 ---
 
-# The nature: the shore, its stone, and what will grow on it
+# The nature: the woods, the country, the snow on both
 
-The shore IS half the game's look — the course is a line of buoys along it.
-This skill owns everything the shore is MADE of and how it is painted: which
-biome a level is set on, what its surfaces are, where its rocks stand, what
-swims off it and what grows above the waterline. The water itself is
-`water-feel`'s and its look `water-look`'s; the course laid along the shore
-is `mapgen-improvement`'s.
+The world IS half the game's look — the race loop is a packed line through
+it. This skill owns what the country is COVERED in and how it reads: where the
+trees stand and how they are drawn, the landscape the loop runs through as a
+thing seen from the saddle, and the ground mesh that carries it to the
+horizon. The snow's own light — the glitter, the blue shadows, the groomed
+grain, the furrows — is `snow-look`'s; the rules that shape the country and
+the loop are `mapgen-improvement`'s.
+
+**ONE NATURE.** This slice has one kind of country — snowy hills, mountain
+flanks, forests of snow-covered conifers, open powder meadows. There are no
+biomes, no water, no animals, no birds and no rocks, and nothing here should
+grow a table keyed by a biome id until a second kind of country is asked for.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs nature --list`, then the ones the task
-touches. Load **`skill-reflection`** at both ends of the session, and
-**`write-code`** beside this one for any code change.
+`node scripts/skill-lessons.mjs nature --list`. Load **`skill-reflection`**
+at both ends of the session, and **`write-code`** beside this one for any
+code change.
 
 ## The files, one direction of flow
 
 | File | Owns |
 | --- | --- |
-| `engine/mapgen/biomes.ts` | Biomes AS DATA, engine side: one row per `BiomeId` — the relief and how steeply the land climbs to it (`climb`, never over 1), the RIVER (`river`: the mouth's opening, the head, the taper, the size of the loops, the discharge and the bars of a delta — every one a multiple of `R.river`, so the taiga's row is all ones), the rock densities, the boulder field, how much of the waterline is beach (`shore.sand`), the water's density and temperature band, the latitude, how big a sea the wind grows and how much swell arrives (`sea`), the skies it offers, what swims in it. `taiga` (a cold skerry coast), `mangrove` (a warm flat one), `arctic` (a wall of ice over water at the freezing point, whose winter sea is a sheet with an icebreaker's channel through it — R37) and `karst` (a high steep limestone coast on the clearest, bluest water, thick with islets and reefs, with a gorge for a river and a wind sea off the land) are built; `archipelago`, `fjord`, `atoll`, `delta` are reserved ids with no row yet. A row also dates its own year (`declination`) and says whether its sea freezes (`freezes`). A biome is a kind of coast, never a place |
-| `engine/mapgen/compile.ts`'s `materialAt` | The surface classifier behind `level.materialAt(x, z) → Surface` (`bedrock`, `rock`, `sand`, `bank`, `water`) — the vocabulary every painter reads. The BANK is the river's own shore (R16, R26), read off the bank share the basin bakes beside `offshore` (`Basin.bank`), and it comes before the coast's quilt: a river's banks are soil and grass whatever the coast either side of the mouth |
-| `engine/mapgen/geology.ts` | The ground's SHAPE: the sea bed's slope, the land's low rise and its plateau, the noise (`engine/lib/noise.ts`) that makes bedrock read as slabs rather than a ramp |
-| `engine/mapgen/compile.ts` | Bakes the ground heightfield and the solids — where every skerry, boulder and reef STANDS, because the craft can hit them (the `collision` skill owns the contact) |
-| `pwa/src/game/terrain.ts` | The terrain mesh from `level.ground`, coloured by `level.materialAt`: granite grey bedrock, darker boulders, ochre sand, with the palette from `identity.ts` |
-| `pwa/src/game/rocks.ts` | The low-poly solids drawn where `level.solids` put them — a skerry, a boulder, a reef awash |
-| `pwa/src/game/shore-paint.ts` | WHAT A COAST'S SHORE IS PAINTED, the other app-side half of a biome row: the hex for each surface the classifier names, the bed and how far out it remembers the beach, where the wood's floor starts, and the stone the standing rocks are carved in (`terrain.ts` and `rocks.ts` read it; nothing else states a shore colour) |
-| `pwa/src/game/water-optics.ts` | WHAT A COAST'S WATER IS MADE OF, the app side of a biome row: its three tones and the depths they run over, the surface's window, the flat unlit tone the bottom fades into, and `clarity` — the ONE depth scale the window, the bed's fade and the sea life's haze are all written against. A coast in `BIOMES` without a row here throws on its first level (`tests/water_optics_test.ts`). The see-through model those numbers feed is `water-look`'s |
-| `pwa/src/game/water-mesh.ts` | NOT this skill's — but its colour-by-depth reads the same `ground` and the same optics row, so a bed that changes shape changes what the water looks like over it (`water-look`) |
-| `engine/game/defs/fauna.ts` + `defs/fauna-warm.ts` + `defs/fauna-arctic.ts` + `defs/fauna-karst.ts` | THE CATALOG (R20): the fifty-six animals over four coasts — the type, the rarity ladder and the cold coast's rows here, the other three coasts' next door and concatenated in (the `defs/sea.ts` fold-in, because one file was past the cap) — and for each what it is — length, beam, cruising speed, the depth it holds at, the water it needs, its OFFSHORE BAND (the gradient: the shore's fish in the first hundred metres, the big animals starting where those stop and running to the seaward edge), its school size, how often it comes up (`breath` / `bask`) and how deep it holds when it does (`awash`), whether its bulls breach (`breach`), its temperature band — and `perKm`, how rare it is. `rarityOf` turns that one number into the word; nothing states the word |
-| `engine/mapgen/fauna.ts` | THE PLACER (R20): pods laid along the coast after the rocks, each tried a bounded number of times for a spot with the water its species needs the whole way round the loop it swims, clear of the solids. Its draws come off the END of the seed's stream, after R19's sky, so adding or retuning an animal moves no geometry |
-| `engine/game/fauna.ts` | THE SWIM MODEL: `faunaPose(pod, i, t, out, waterY)` — the loop, the formation, the weave, the rise, the breach — a pure function of the placement, the clock and the sea over the pod. Nothing about the sea life is ever stepped |
-| `pwa/src/game/fauna.ts` | THE LOOK: `STYLES` (paint, fin proportions, markings) and the parametric body, one instanced draw call a species, with the tail beat and the depth haze grafted into the vertex shader |
-| `pwa/src/game/flora-defs.ts` | THE ROSTER: the thirteen rows the shore is covered in — for each, what it IS (its form, height band, spread, bark and the two greens of its canopy) and its HABITAT (the ground and inland bands, the surfaces, the slope it holds on, its share, the bigger share it takes on a riverbank, the shelter it needs, the patch it comes in). `TREE_LINE` is stated here and `terrain.ts` paints the forest floor under it |
-| `pwa/src/game/flora-plan.ts` | THE PLACER: candidates thrown along `level.shore` — which the river's banks are part of (R26) — and each point offered to every row, one species picked weighted by share. Three-free, so `tests/flora_test.ts` holds the habitats |
-| `pwa/src/game/flora-shapes.ts` | THE BUILDERS: seven parametric low-poly forms carrying the thirteen rows, each one flat-shaded vertex-coloured geometry off the shared `lowpoly` Builder, with the facet budget that gives a 30 cm plant a bipyramid and a spruce a lump |
-| `pwa/src/game/flora.ts` | The wiring: one instanced mesh a species, the per-instance matrix and tint, and the DETAIL row's thinning |
-| `pwa/src/game/bird-defs.ts` | THE BIRDS' ROSTER: eight rows — for each what it IS (span, length, the neck's reach, the wing's chord, taper, sweep and wrist), how it FLIES (the beat, the stroke, the glide share, the dihedral, the airspeed, the altitude band, the loop's size), where it LIVES (`home`: a raft on the water, a rock, a tree's crown, the shore; the roost's spread; the rest-and-flight cycle and its flown share; a plunge, wings dried), how common it is (`perKm`, flocks per km of course), which seasons it is here, and — for the geese, the swans and the cranes — the `passage` it crosses on and the seasons it crosses |
-| `pwa/src/game/bird-roost.ts` | THE PLACER, three-free: `planBirds` lays every flock the season allows (a raft in the lee of a skerry, a colony on a rock or a buoy, the eagle on the tallest pine — read off the cover as planted at its sparsest, so the perch is always drawn — and within reach of the course), and decides what crosses. Four of the five homes are COASTAL by construction, which is why a row may carry a `sea` block: a bird of the open water rafts far out where nothing shelters it and is allowed its own distance off the racing line, and without it the sky over the outer half of a level is empty |
-| `pwa/src/game/bird-plan.ts` | THE MODEL, three-free: `birdPose` is where every bird is at a moment, a pure function of the flock and the clock (the cycle scaled by `activityAt`'s day, the loop, the formation and the weave, the wing gate, the tern's plunge, the cormorant's drying, the flush a raft answers a hull with); `crossingAt` / `crossingPose` are the skeins, pure in their index, north in spring and south in autumn |
-| `pwa/src/game/bird-shapes.ts` | THE LOOK: `BIRD_STYLES` (mantle, underside, wingtip, head, bill, an eagle's white tail, a crane's legs) and the parametric body — a spindle, the neck and head, the tail fan, and a two-faced wing with a wrist — plus the material with the FLAP and the FOLD grafted into its vertex shader per instance |
-| `pwa/src/game/birds.ts` | The wiring: one instanced mesh a species, the per-instance matrix and the two wing attributes, the reach cull from the LENS, the sea sampled once per raft, and the one memory — when each flock was last flushed |
+| `engine/mapgen/forest.ts` | WHERE EVERY TREE STANDS (R14): one candidate per `forest.spacing` cell, jittered; kept with the probability the forest noise gives its spot (woods inside the forest, `forest.meadow` of that density out in the meadows); `forest.clearings` cut out of the woods; refused by rule — near the track (`forest.corridor`), too steep (`maxSlope`), above `treeLine` of the way up the rim, on a kicker, in the spawn's clearing or its lane. Taller in the thick of a wood and down in the valleys, shorter at a wood's edge and up the slopes. Drawn off the attempt's stream in a fixed order |
+| `engine/mapgen/rules.ts` (`forest`) | The numbers: spacing, the noise's scale, the meadow share, the clearings, height (6–19 m), trunk, crown, corridor, slope, tree line |
+| `engine/mapgen/types.ts` (`TreeDef`) | `x, z, y, height, radius` (the TRUNK — what the sled meets), `crown` (drawn only) |
+| `engine/game/collision.ts` | The trunk as a cylinder the sled meets — the `collision` skill's |
+| `engine/mapgen/terrain.ts` | The country's shape (R2, R3) — the `mapgen-improvement` skill's, but every judgement about how it READS is this one's |
+| `pwa/src/game/forest.ts` | THE WOODS AS DRAWN: two shapes (a narrow spruce, a broader heavier-laden fir), each a stack of drooping skirts white on the upper face and dark green under the lip, built into vertex colours; each tree scaled to its own height and crown, turned and tinted by a hash of where it stands; instanced in THREE bands of distance (NEAR casting shadows, MID without, FAR a two-tier sketch), binned into 64 m cells and frustum-tested per frame; `FOREST_QUALITY` |
+| `pwa/src/game/terrain.ts` | THE GROUND AS A MESH: a camera-centred CLIPMAP of nested grids (a quarter metre a vertex at the lens, doubling per level, eight levels past the rim), nothing baked into the mesh — the vertex shader reads the heights from a float texture of the generator's own heightfield. Three textures per level: the heights, the GROUND map (gradient, packed, how wooded), the track direction. `TERRAIN_QUALITY` |
+| `pwa/src/game/snow-glsl.ts` | The terrain's shader — `snow-look`'s — but its FOREST TINT (the woods past the far band, read off the ground map) is where this skill's trees end and the ground's paint begins; the two must agree on where a wood is |
+| `pwa/src/identity.ts` | `PALETTE.pine`, `pineDark`, `snow`, `snowShadow` — the colours every piece of nature is drawn from |
 
-Biome → material ids are strings on purpose: `biomes.ts` imports nothing from
-the renderer, and the terrain painter throws on an unknown `Surface`, so a new
-material fails loudly on the first level build. Shared value noise lives in
-`engine/lib/noise.ts` (and `pwa/src/lib/noise.ts` for paint-only detail) —
-the shore's shaping and the terrain's paint must keep drawing from the same
-helpers or their patches stop lining up.
+## How the country should read
 
-## The sea life, and why it is drawn the way it is
+- **The mountains are the horizon.** Every shot from the basin has the rim
+  in it: bare high snow above the tree line, ridged crests, the flanks
+  climbing out of the forest. A frame with no mountains in it reads as a
+  field anywhere.
+- **Woods and meadows, not an even stubble.** The forest noise is slow on
+  purpose: a wood you ride past, a meadow you ride across, a clearing cut
+  into the wood. A density that is the same everywhere reads as a lawn of
+  trees at range and as a wall up close.
+- **Trees thin with height and exposure.** Shorter at a wood's edge and up
+  the slopes, gone above the tree line — the same ladder any real mountain
+  has, and the one thing that makes the rim read as high.
+- **A loaded conifer is its banding.** White over dark green, tier over
+  tier. A tree that is all green reads as summer; all white reads as a cone.
+  The two shapes and the per-tree tint are what stop a wood reading as one
+  tree copied.
+- **The track is cut through the woods, never planted over.** `forest.corridor`
+  keeps trunks clear of the track's edge; a trunk inside it is a generator
+  bug (`analysis` reports `treesOnCorridor`).
 
-The game only ever sees an animal from a CHASE CAMERA looking ALONG the
-water, and that one fact decides everything about the fauna's look:
+## The rules
 
-- **A silhouette from above is all there is.** The dorsal, the pectorals and
-  the tail span are what separate one species from another; a marking that
-  only shows in profile shows nowhere. The markings that survive are the
-  ones on a back — an orca's saddle, a minke's flipper bands, a perch's bars.
-- **Depth is the enemy of visibility, and the depth cue at the same time.**
-  The water's own alpha (`water-mesh.ts`) is one number for a patch of sea
-  and cannot know how far under it a thing is; the ANIMAL carries its own
-  depth, hazed toward the water's bright shallow tone, so a deep one is a
-  pale ghost and a surfacing one is crisp and dark. That is why every animal
-  in the catalog holds far shallower than the water it needs: `depth` and
-  `water` say different things and neither is the other's slack.
-- **EVERY depth cue rides the THING's depth, never the surface's**, and the
-  one scale they all use is the coast's `clarity`: the animals haze toward
-  the bright shallow tone, the sea bed fades into the coast's flat unlit
-  `bed` tone, and the surface's window merely thickens over the same reach.
-  So "you cannot see the bottom" and "you can see the fish" are one sea
-  rather than two settings — and the corollary is that the window is never
-  the lever for hiding anything, because it hides the sea life by the same
-  share.
-- **Coming up is the sighting, and it is measured against the WATER.** A
-  cetacean rolling its back through the surface is the only moment it
-  reads at range, which is why the catalog's breathing intervals are the
-  short end of the real ones — and why the porbeagle comes up too (`bask`)
-  even though it breathes water. What shows is the FIN and nothing under
-  it: `awash` is how deep the centreline holds at the top of the rise, in
-  body radii, and about one radius puts the back awash with the dorsal
-  cutting the surface. Taken against the sea over the pod rather than
-  against y = 0, because a level's sea is metres high and a fin that
-  clears the mathematical plane clears nothing. Only a BULL DOLPHIN goes
-  further, and that leap is the one time this game shows an animal
-  against the sky.
-- **Rarity is the feature.** Retuning `perKm` is retuning the whole thing:
-  run a sweep of seeds and COUNT before and after (`make level SEED=n`
-  prints a seed's roster, `make analyze` the pods and animals per level),
-  and check the ladder still reads — commonest several times a ride,
-  legendary once in dozens.
+- **The engine stands every tree; the renderer draws exactly those.** The
+  trunk drawn is `TreeDef.x/z/radius` — a tree drawn somewhere else is a
+  tree the sled passes through or hits in thin air. Decorative scatter the
+  sled cannot hit (a bush, a sapling) would be the renderer's own, placed
+  deterministically off the level, and must never stand on the track.
+- **Placement is deterministic and in a fixed order.** A tree added to the
+  middle of the draw order moves every tree after it on every seed.
+- **Instanced, banded, culled.** Tens of thousands of trees, so every change
+  is judged in `make profile`: a new shape is a new instanced mesh per band;
+  a per-tree allocation per frame is a stutter.
+- **Past the far band the terrain carries the woods.** The ground map's
+  wooded channel is what tints the snow dark where the far forest is; a
+  change to where trees stand that does not move that channel leaves a
+  painted wood with no trees in it, or trees on white snow at range.
+- **The ground mesh is the generator's heightfield, sampled.** Nothing in
+  `terrain.ts` invents a height; a ridge that is not in `Level.ground` is not
+  in the picture either.
 
-## The cover above the waterline
+## The loop
 
-Two rosters, each row saying which coast it grows on (`biomes`), and the
-placer plants only the coast's own. The taiga's has thirteen rows, and the
-reason there are thirteen is that a taiga COAST is not the taiga. The
-picture people carry inland — a wall of spruce — is
-wrong at the water, and a shore drawn from it reads as a screensaver:
-
-- **The shore is a LADDER, and the ladder is the design.** Reed in the
-  shallow water, sedge in the wet margin, alder and sallow on the bank,
-  lyme grass on the sand, birch running down to the waterline, Scots pine
-  on the dry slabs with juniper and ling between them, spruce only where
-  the ground behind holds water, bare rock over the tree line. Each rung
-  is a habitat band rather than a place, so it holds on every seed.
-- **The leaf trees are what say NORTHERN.** A white birch trunk against a
-  dark conifer is the single most legible thing on this coast at any
-  distance, and a roster of conifers alone reads as generic forest
-  wherever it is set.
-- **The river is made of its plants.** Three fields do it and not one is a
-  special case in the placer: the riparian rows take a much bigger share
-  within `riverside.within` of the river's line, reed needs a `shelter`
-  ring only a cove or a mouth gives it, and the patchy rows come in
-  patches. A mouth grows a wall of reed with alder behind it; the open
-  coast does not. Retuning `riverside.share` is retuning the delta.
-- **Nothing in the roster is a solid.** The hull rides through a reed bed.
-  That is the deal that lets the renderer place it at all, and it is why
-  the DETAIL row may thin it and may never thin a rock.
-- **A plant's facets come off its height.** A row that never exceeds a
-  metre and a half is a few pixels from the saddle and there are thousands
-  more of them than of the trees, so it gets a bipyramid where a tree gets
-  a lump. Derived rather than stated per row, so a species retuned taller
-  earns its facets on the same edit.
-- **Judge the roster on the sheet, the shore in the app.** `make flora`
-  is the ladder side by side; `make screenshots SCENE=river` is whether
-  the delta reads. And `make profile` before and after, always: the cover
-  is the biggest single block of geometry in the frame.
-
-## The birds over the shore
-
-Eight rows, renderer-side like the cover and for the same reason: nothing
-with wings is a solid. What makes them read:
-
-- **A flock is a ROUTINE, not a position.** A home, a loop, a cycle; where
-  a bird is at a moment is `birdPose`, pure in the flock and the engine's
-  clock, so a seed flies the same birds on every ride and a replay puts
-  every one of them back. A behaviour that needs memory (the flush) keeps
-  it in `birds.ts` beside the wake's, and hands the moment in.
-- **Seen from BELOW.** The water looks up at a bird, so the underside is
-  the paint that matters: a gull is white with black tips from the water,
-  and a wing painted grey on both faces is a crow. Every wing is two faces.
-- **The wing has a wrist.** A bird on a rock has its wings FOLDED — the arm
-  back at the shoulder, the hand back at the wrist — and a bird that sits
-  with its wings spread flat is a decoy. The fold is a per-instance number
-  the shader reads, so a raft settling is one attribute sliding to 1.
-- **The day is the sun's.** `activityAt` reads the same sun the sky is lit
-  by: a run ridden into the night rides under birds going to roost. Nothing
-  keys on a word for the light.
-- **The season is the point of a skein.** In spring they go north, in
-  autumn south, on `SOUTH`'s compass; in summer the geese and the swans are
-  down on the sheltered water instead, and in winter only the gulls, the
-  eider and the eagle are left.
-- **Judge the roster on the sheet, the flock in the app.** `make birds` is
-  the silhouettes side by side, gliding, beating and perched; `make
-  screenshots SCENE=birds` runs the craft at a raft and photographs it
-  getting up; `SCENE=cruise` at a few seeds is whether the sky reads alive
-  at riding pace. `make profile` before and after: it is a handful of draw
-  calls, and it should stay one.
-
-## The biome model
-
-- **A biome is data, not code, on BOTH sides of the world.** The engine's
-  row (`engine/mapgen/biomes.ts`: what the shore is made of, the relief, the
-  water, the wind) and, when the renderer grows one, the app's row (a
-  palette and later a flora roster). Which one a level is on is `level.biome`,
-  drawn from the seed's options; nothing else in the engine names a biome.
-- **The taiga shore is a cold skerry coast's: low, hard, broken.** Bedrock SLABS
-  sloping into the water (the glacier's work — smooth, low, grey), BOULDER
-  fields where the moraine was dumped, SAND POCKETS in the bays between, and
-  SKERRIES — the same bedrock standing just out of the water offshore, with
-  reefs just under it. No cliffs, no beaches that run for a kilometre. A shore
-  that reads as one material for 300 m is a shore that has lost its quilt.
-- **Materials come in PATCHES, not confetti.** A real shore is a slab, then a
-  boulder field, then a bay of sand: patches tens of metres across with
-  meandering borders, drawn from a low-frequency noise the geology and the
-  classifier share. Per-cell noise reads as static.
-- **Context beats material.** Within a metre of sea level the classifier
-  says what the WATERLINE is made of, whatever the patch behind it — sand
-  where the bay is shallow, rock where the slab runs in — because the
-  waterline is the one line of the shore the player reads at speed, and the
-  water's colour-by-depth has to agree with it.
-- **Everything solid is placed engine-side.** The renderer draws `level.solids`
-  where the compiler put them — never the reverse, and never a drawn rock
-  without a collider or a collider without a drawing. What the renderer may
-  place on its own is decoration that cannot be hit: paint, and later the
-  flora above the waterline.
-
-## Verify by LOOKING
-
-Numbers can't judge a shore. After any nature change:
-
-1. `make level SEED=7` (and a few other seeds) — the plan shows the
-   materials as shading and every solid as a mark; a shore whose quilt has
-   collapsed is obvious here first, in seconds, with no build.
-2. `make build`, then `CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots
-   SCENE=cruise` (and `carve`, `offshore`) — the shore at riding pace, from
-   the chase camera, at both viewports. Does bedrock read as slabs? Do the
-   boulders read as a field rather than a sprinkle? Does the sand sit in the
-   bays? Do the skerries stand where the plan put them, and does the water
-   over a reef read shallow?
-3. **Stand still and look**: `make screenshots SCENE=rest` is the craft at
-   rest beside the shore, and the only shot where a material's paint is
-   judged rather than glanced at.
-
-`tests/mapgen_test.ts` holds the classifier's contract over the shared corpus
-(every gate over `water`, every solid on `rock` or `bedrock` or awash, the
-materials present in the biome's stated shares).
-
-## The craft rules
-
-- **Everything is vertex-coloured low-poly under one hemisphere + directional
-  light** (the placeholder for the sky system). Per-facet brightness jitter
-  and a big soft noise band are what keep a grey slab from reading as
-  plastic; a texture is not the answer.
-- **Paint is seeded by the level seed.** Cosmetic randomness (facet jitter,
-  patch tint) goes through a PRNG derived from `level.seed` so a seed always
-  paints the same shore. It costs nothing; keep it deterministic.
-- **The waterline is a hard edge in the paint and a soft one in the mesh.**
-  The terrain's vertices straddle sea level; the colour changes at y = 0
-  (wet rock is darker), and the mesh continues under the water so the
-  colour-by-depth of `water-mesh.ts` has a bed to read.
-- **Bedrock shows where the ground is steep, boulders where it is broken.**
-  Colour by slope and by the classifier together — a slab that climbs reads
-  as rock whatever the patch says.
-- **Nothing the terrain draws is closer than the hull's margin to the course
-  path** — that is the analyzer's clearance check, not the painter's job, but
-  a painter that lifts a vertex above sea level inside the path has invented
-  a solid the engine does not know about. Paint never moves geometry.
-
-## Adding things
-
-- **A new material**: a `Surface` id in `engine/mapgen/types.ts` (tell the
-  orchestrator — it is an exported shape), its share on the biome row, its
-  patch in `shore.ts`'s classifier, its colour in `terrain.ts`, a row in
-  `tests/mapgen_test.ts`'s material shares. `make level` shades it.
-- **A new solid kind**: `Solid.kind` in `types.ts`, its placement in
-  `compile.ts` under a rule in `rules.ts`, its shape in `rocks.ts`, and its
-  contact in `collision.ts` (the `collision` skill).
-- **A new biome**: load the **`add-biome`** skill — it is the whole list in
-  order, the campaign's levels on it included, and this bullet is only the
-  nature half of it. A row in `engine/mapgen/biomes.ts` (the taiga's row stays
-  neutral so no taiga seed re-rolls — `mapgen-improvement`'s invariant), and
-  the app-side halves it cannot import: its water in `water-optics.ts`, its
-  shore in `shore-paint.ts`, its skies and seasons in `sky-looks.ts`, its
-  rows in `flora-defs.ts` and `bird-defs.ts` (each row names its coasts —
-  a fourth coast's rows go in a sibling file the parent spreads in, and a
-  sibling that needs `TREE_LINE` is handed it, never imports it back: the
-  cycle reads the constant as `undefined` and every band built from it
-  fails a test three files away), its animals in `defs/fauna.ts` and their
-  paint in `fauna-styles.ts`, its grade in `colour-grade.ts`, its word on
-  the card in `strings.ts`, and every lab's `--biome` help text.
-  `tests/biome_test.ts` holds every one of those to `BIOME_IDS`, so a coast
-  missing a half fails before its first level. Sweep its seeds through
-  `make analyze BIOME=<id> COUNT=16` before believing its `shore.sand` and
-  `boulderField` — R21's quilt refuses a coast of one material — and put
-  the pass rate in the row's comment. The reserved ids exist so the
-  campaign's level ids never change when a coast arrives.
-- **A new species**: a row in `pwa/src/game/flora-defs.ts` — what it looks
-  like and where it grows — and, only if no existing form carries it, a
-  case in `flora-shapes.ts`. Nothing else changes: the placer reads the
-  roster, the lab sheets whatever is in it, and the test asserts the row's
-  own bands. Judge it with `make flora` before you ever look at a shore.
+1. **Plan**: `make level SEED=<n>` — where the woods, meadows and clearings
+   fall, and where the trees stand against the track.
+2. **Look**: `make world SEED=<n> ARGS=--views=forest,vista,track,spawn`
+   (its own bundle; `CHROMIUM_PATH=/opt/pw-browsers/chromium` in a web
+   session). `forest` is in the woods, `vista` the country from above, `track`
+   the loop through it, `spawn` the grid in the powder. Judge with the Read
+   tool at full size AND at a quarter — the woods have to read at range.
+3. **Cost**: `make profile` before and after — draw calls and triangles per
+   band.
+4. **More than one seed.** A country that reads well on one seed has read
+   badly on the next; look at three.
+5. **The built app**: `make build`, `make screenshots` for the game's own
+   framing at the reference viewports.
+6. If a rule moved: `mapgen-improvement`'s loop (`make analyze`, the
+   verbatim mirror in `docs/level-generator.md`, `make sim`).
 
 ## What the change obliges elsewhere
 
-- **EVERY PLACER IN THIS SKILL DROPS SILENTLY, so count per kind before and
-  after — never just the totals.** The rocks, the pods, the cover and the
-  flocks are all laid by rejection with a bounded try budget, and a band
-  narrowed, a gate added or a budget read against the wrong row thins a kind
-  without failing a single test. Worse, any change to a placer reshuffles the
-  seeded stream, so identical run digests do NOT mean nothing moved: compare
-  the level's own content. The probe is twenty lines — generate forty seeds,
-  tally by kind, divide by the seed count — and it is the difference between
-  a rarity you designed and one the placer imposed.
-
-- A material or relief change → `make level` at several seeds and
-  `make analyze` over a sweep (the depth and clearance checks read the bed).
-- A flora change → `make flora`, `make screenshots SCENE=river` and
-  `SCENE=rest`, and `make profile` before and after.
-- A bird change → `make birds`, `make screenshots SCENE=birds`, and
-  `make profile` before and after; `tests/birds_test.ts` holds the roster,
-  the placer and the model.
-- A `biomes.ts` change → the corpus digest, before and after.
-- `docs/level-generator.md` for anything the rules quote; a changeset
-  fragment — the shore is what the player looks at.
+- `make world` pictures and `make profile` before and after, in the PR.
+- A placement change is a generator change: `make analyze` tally,
+  `make sim` both tables, `tests/mapgen_test.ts`.
+- A `.changes/unreleased/` fragment when a player would see it.
 
 ## Skill self-improvement
 
-Record lessons under `.agents/skills/nature/.lessons/` in the
-`skill-reflection` format; that skill decides at session end what gets
-promoted into this file. Never append lessons here directly.
+Load **`skill-reflection`** before this session commits. Worth recording: a
+density or a shape that read wrong at range and right up close, a band
+distance that popped, a tint that did not match the trees it stood for.

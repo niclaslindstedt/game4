@@ -82,7 +82,10 @@ export function createGates(level: Level, haze: HazeUniforms): Gates {
   const stakeTex = stakeTexture();
   const stake = std({ map: stakeTex, roughness: 0.6 }, "gate-stake");
   const bannerTex = bannerTexture();
-  const banner = std({ map: bannerTex, roughness: 0.7, side: THREE.DoubleSide }, "gate-banner");
+  // ONE-SIDED, and hung twice back to back: a plane drawn from behind reads
+  // its lettering mirrored, so each face carries its own copy turned to
+  // face its own side of the line.
+  const banner = std({ map: bannerTex, roughness: 0.7 }, "gate-banner");
   const post = std({ color: 0x20252b, roughness: 0.6 }, "gate-post");
   const flag = std({ color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide }, "gate-flag");
   const marker = std(
@@ -175,15 +178,20 @@ export function createGates(level: Level, haze: HazeUniforms): Gates {
       const span = reach * 2;
       const g = new THREE.PlaneGeometry(span, span / 8);
       geos.push(g);
-      const b = new THREE.Mesh(g, banner);
       const y = Math.max(
         level.groundAt(cp.x + rx * reach, cp.z + rz * reach),
         level.groundAt(cp.x - rx * reach, cp.z - rz * reach),
       );
-      b.position.set(cp.x, y + BANNER_POLE - span / 16 - 0.3, cp.z);
-      b.rotation.y = cp.heading;
-      b.castShadow = true;
-      group.add(b);
+      // A plane faces +z; turned by the heading it faces DOWN the course, so
+      // the face a rider riding up to the line reads is the one turned half
+      // a turn further — and the other is for the lens looking back.
+      for (const turn of [Math.PI, 0]) {
+        const b = new THREE.Mesh(g, banner);
+        b.position.set(cp.x, y + BANNER_POLE - span / 16 - 0.3, cp.z);
+        b.rotation.y = cp.heading + turn;
+        b.castShadow = true;
+        group.add(b);
+      }
     }
   };
   level.checkpoints.forEach(place);

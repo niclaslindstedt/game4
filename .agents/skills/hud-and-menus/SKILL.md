@@ -1,175 +1,126 @@
 ---
 name: hud-and-menus
-description: "Use when changing WHAT THE PLAYER READS AND PRESSES DURING A RUN — a HUD readout (the speed, the rpm bar, the run clock and gate count, the last split, the wind vane, the air time, the build label), the touch controls (the handlebar overlay on the left, the analogue throttle lever you drag DOWN on the right) and their bindings, the keyboard map, or the minimap. Owns the DOM-free-payload split every one of these is built on, the thumb-guard discipline, and where each surface lives. The CARDS around a run — the attract screen, the front door, options, the developer page, the loading card, the settings they read and write — are `menu-system`. Load `ui-review` beside either for the screenshot-audit sweep that judges the result."
+description: "Use when changing WHAT THE PLAYER READS AND PRESSES DURING A RACE — a HUD readout (the race clock, the position, the lap and checkpoint count, the split, the air clock, the lights and GO, the missed-checkpoint arrow, the rev bar over the speed, the news column, the finish plate), the three presses in the top right (pause, reset, camera), the touch controls (the handlebar on the lower left, the lever on the lower right — throttle dragged DOWN, brake pushed UP) and the keyboard layout. Owns the DOM-free-payload split every one of these is built on (`snapshot.ts`, `input-model.ts`, `run-news.ts`, `thumb-guard.ts`, `hud-press.ts`), the thumb-guard discipline, and where each surface lives. The CARDS around a race — the attract screen, the front door, the loading card, the pause card, the settings — are `menu-system`. Load `ui-review` beside either for the screenshot sweep."
 ---
 
 # The HUD and the controls: what the player reads and presses
 
-Everything on screen during a RUN that is not the world. Two surfaces, one
-rule: the
-**decision is DOM-free, the DOM only renders it**. A payload module works out
-what to show — the numbers, the framing, what a drag MEANS — and a `.tsx`
-component draws it. That split is why the root vitest suite can test the
-throttle lever's gesture without a browser (`tests/input_model_test.ts`), and
-it is the first thing to preserve in any change here.
+Everything on screen during a RACE that is not the world. Two surfaces, one
+rule: **the decision is DOM-free, the DOM only renders it**. A payload module
+works out what to show — the numbers, the words, what a drag MEANS — and a
+`.tsx` component draws it. That split is why the root suite can test the
+lever's gesture and the news column without a browser
+(`tests/input_model_test.ts`, `tests/hud_test.ts`), and it is the first thing
+to preserve in any change here.
 
 **Read this skill's lessons first** — `node scripts/skill-lessons.mjs
-hud-and-menus --list`. Load **`skill-reflection`** at both ends, **`write-code`**
-beside this one, and **`ui-review`** for the fit-and-finish sweep at the
-reference viewports. For what a readout MEANS (the wind vane's promise, the
-air time as a moment) load `game-feel`.
+hud-and-menus --list`. Load **`skill-reflection`** at both ends,
+**`write-code`** beside this one, and **`ui-review`** for the fit-and-finish
+sweep. For what a readout MEANS (the air clock as a moment), `game-feel`.
 
-**The CARDS are next door.** The attract screen, the front door and its
-START / OPTIONS / DEVELOPER rows, the loading card, and everything the game
-remembers between visits (`settings.ts`) are **`menu-system`** — load that
-one instead. The split is what is up: this skill owns what is drawn over a
-run in progress, that one owns the shell around it. They share the payload
-rule above, and `input.ts` sits on the seam — the keys that ride a craft are
-here, the keys that walk a card are there.
+**The CARDS are next door** (`menu-system`): the attract card, the front door,
+the loading card, the pause card and what the game remembers. `input.ts` sits
+on the seam — the keys that ride a sled are here, the keys that walk a card
+are there.
+
+**Not built:** a minimap, an options page, a key-binding page, a replay bar,
+a screenshot shutter. The sibling `game3` has all of them; port from there
+when one is asked for.
 
 ## The HUD
 
 | Surface | Where |
 | --- | --- |
-| The readouts: speed (km/h, big), the rpm bar (no gear — a PWC has none), the run clock, gate `n / N`, the last split, the air time while airborne, the build label in the corner | `pwa/src/game/hud.tsx` + `pwa/src/styles.css` |
-| A moving instrument, dial or bar, as a component | `pwa/src/game/hud-dial.tsx` — the altitude tape, wind meter and rpm bar are here; a temperature or a fuel gauge, when they come, are others |
-| The WIND METER — direction as a faceted arrow, speed as a figure | composed by `hud.tsx` beside the altimeter, reading the craft-local bearing and speed from `snapshot.ts`; it says where the sea is coming from, and the sea comes from there (`water-feel`) |
-| What the speedo READS | `CraftState.speed` — `|v|`, vertical included; stated once in `engine/game/state.ts`, never re-derived in the HUD |
-| The split against the last gate | `Progress.splits` / `lastGatePassedAt` in `engine/game/course.ts` — the HUD shows it, never computes it |
-| The run-news flashes, including `MISSED CHECKPOINT` | `pwa/src/game/run-news.ts` chooses from engine events, `strings.ts` owns the words, and `hud.tsx` draws the resulting snapshot |
-| The `__SH_READY__` flag the screenshot harness waits on | `App.tsx`, set once the first frame has drawn — a HUD change that delays it is a harness that times out |
-| The minimap | `pwa/src/game/minimap-scene.ts` (the coast cut into paths around an ANCHOR, translated to the craft every frame — one ladder of ground heights, each band's edge cut THROUGH the lattice, and `spanNow`'s smoothed window), `minimap-view.ts` (the gates, the chevron, the gauge, the scale bar, the readout), `minimap.tsx` (the glyphs, the two textures and the DOM, including the reduced-motion-safe red pulse around missed gates) — the split above, and `tests/minimap_test.ts` reads the two payload halves without a browser |
-| What the map says the shore IS | the bands' paint in `styles.css`: the wood's green and the bare stone over `TREE_LINE` are the WORLD's own (`terrain.ts`, `identity.ts`'s `pine`/`granite`), not a chart palette of their own — a map that invents a colour for the shore is a map that disagrees with what the rider can see |
-| The way OUT of a run | Escape, an `InputAction` in `input.ts` that `App.tsx` turns into the front door coming up (`menu-system`) |
+| The LAYOUT: top left the race clock, POSITION, LAP and CHECKPOINT count, the SPLIT under them while fresh; top right the three presses; top centre the AIR CLOCK while off the snow; dead centre the LIGHTS and GO; upper centre a MISSED CHECKPOINT warning with an arrow back at it and the metres to go; bottom left the rev bar over the speed; bottom right the news column | `pwa/src/game/hud.tsx` + `pwa/src/styles.css` |
+| What the HUD READS, ~12×/s | `pwa/src/game/snapshot.ts` — DOM-free; nothing in it decides, it reads the engine's `speed`, the rev share against the engine's redline, `progress`, `racePlace`, `bearingToNext` |
+| The REV BAR (a CVT has no gears and no needle) | `pwa/src/game/hud-dial.tsx` — handed a share, paints it |
+| The three presses: PAUSE, RESET, CAMERA — marks, not words, on every device | `pwa/src/game/hud-actions.tsx`; the action each one runs is `run-actions.ts`'s (`menu-system`) |
+| What an event SAYS in the news column | `pwa/src/game/run-news.ts` (pure: an event and the state in, a line out); words from `strings.ts` |
+| The FINISH PLATE: the place and the time, then the whole field's table, live, while the rest race home | `pwa/src/game/hud-result.tsx` |
+| Every word | `pwa/src/game/strings.ts` (§39.1) — templates, never concatenations at the call site |
+| What the speedo READS | `SledState.speed` — `|v|`, vertical included, written once by the engine; never re-derived here |
+| `__SH_READY__` | set in `App.tsx` once a race's frame is drawn — a HUD change that delays it is a screenshot lab that times out |
 
 ## The controls
 
 | Surface | Where |
 | --- | --- |
-| What a key or a touch MEANS, as maths | `pwa/src/game/input-model.ts` — DOM-free: the throttle ramp, the steer ramp, the lever's drag → throttle curve, the handlebar's travel → steer/lean; `tests/input_model_test.ts` reads it |
-| Listening to the DOM | `pwa/src/game/input.ts` — keyboard (W throttle, S/↓ lean back, Shift/↑ lean forward, A/D ←/→ steer, R reset to the last gate, Enter restart, C camera, Escape out to the menu) and the touch zones; nothing here decides, it only feeds the model |
-| Touch: the HANDLEBAR overlay | `pwa/src/game/hud-touch.tsx`, LEFT half — thumb travel → steer, vertical travel → lean; drawn as a bar that tilts with the thumb |
-| Touch: the THROTTLE LEVER | `hud-touch.tsx`, RIGHT half — the touch anchors at 0, dragging DOWN opens the throttle (full at ~90 px), analogue, held while the finger is down, released on lift; drawn as a lever that follows the thumb |
-| A zone's grip on a finger | the thumb-guard discipline in `hud-touch.tsx`: a touch belongs to the zone it STARTED in until it lifts, whatever it wanders over; a second finger on the same half is ignored, not merged |
-| A BUTTON pressed while a zone is held | `pwa/src/game/hud-press.ts` — `click` is synthesised from the PRIMARY pointer alone, and a ridden craft has that finger spoken for, so every press drawn over a run fires from `pointerup` and swallows the click behind it; `tests/hud_press_test.ts` reads it |
-| The `reset` edge | `CraftInput.reset` is an EDGE — true for one step — and `input-model.ts` is where a held key becomes one |
+| What a key or a touch MEANS, as maths | `pwa/src/game/input-model.ts` — DOM-free: the key ramps, the lever's drag → throttle/brake, the handlebar's travel → steer/lean, and the ONE sign flip between screen and engine; `tests/input_model_test.ts` |
+| WHICH KEY DOES WHAT | `pwa/src/game/settings-input.ts` — `DEFAULT_KEYS` (W/↑ throttle, S/↓/Space brake, A D/← → steer, E/Shift lean back, Q/Z lean forward, R reset, B restart, C camera, Escape pause) and why each key is where it is; `HeldAction` is `keyof KeysHeld`, so a new held key does not compile until it is named |
+| Listening to the DOM | `pwa/src/game/input.ts` — keys and the thumb zones into one `SledInput`, sampled once per STEP; the reset edge banked between steps |
+| Touch: the HANDLEBAR | `pwa/src/game/hud-touch.tsx`, lower LEFT — sideways travel steers, vertical travel leans |
+| Touch: the LEVER | `hud-touch.tsx`, lower RIGHT — anchored where the thumb lands; dragged DOWN opens the throttle, pushed UP is the brake |
+| A zone's grip on a finger, and every way it has to END | `pwa/src/game/thumb-guard.ts` (DOM-free, injected window) |
+| A BUTTON pressed while a zone is held | `pwa/src/game/hud-press.ts` — `click` comes only from the PRIMARY pointer, and a ridden sled has that finger spoken for, so every press over a race fires from `pointerup` |
+| The `reset` edge | `SledInput.reset` is true for one step; `input-model.ts` is where a held key becomes one |
 
 ## The traps
 
-- **The throttle lever drags DOWN, and that is a decision, not an accident.**
-  A thumb resting on the lower-right of a phone held sideways pulls toward
-  the palm; dragging down is the motion that is easy to hold at speed and
-  easy to feather. A lever that opens UPWARD fights the hand. Keep the anchor
-  at the touch point (never a fixed on-screen zero), so the lever works
-  wherever the thumb lands.
-- **Analogue means analogue.** The lever's output is a 0..1 the engine reads
-  straight into `throttle`; a keyboard's throttle is RAMPED to 1 in
-  `input-model.ts` so a key press does not read as a lever slammed open. Do
-  not quantise either.
-- **Lean has TWO thumbs.** The handlebar's vertical travel leans on touch;
-  S/Shift lean on keys. A HUD change that moves the handlebar's zone changes
-  how far a thumb can lean — check `input-model.ts`'s travel-to-lean curve
-  still reaches ±1.
+- **The lever drags DOWN, and that is a decision.** A thumb on the lower
+  right of a phone held sideways pulls toward the palm; down is easy to hold
+  and feather. Keep the anchor at the touch point, never a fixed zero.
+- **Analogue means analogue.** The lever's output goes straight into
+  `throttle`; a key is RAMPED so a press does not read as a lever slammed
+  open. Do not quantise either.
+- **Lean has two thumbs.** The handlebar's vertical travel on touch, E/Q on
+  keys; in the air it is the pitch control. A change that moves the
+  handlebar's zone changes how far a thumb can lean — check it still reaches
+  ±1.
 - **The HUD reads `GameState` and writes nothing.** No HUD-side timer, no
-  HUD-side split arithmetic, no HUD-side "airborne" guess from `y`. If a
-  readout needs a number the engine does not expose, the engine grows a
-  field (the `engine-system` skill) — never the HUD a formula. **A readout
-  that has to OUTLIVE the moment that raised it** — a record held on screen
-  after the landing, a warning that lingers — is the same rule wearing a
-  clock: the engine publishes WHEN it happened (`progress.bestAirAt` beside
-  `bestAir`) and the snapshot compares it against `state.t`. A `useEffect`
-  with a `setTimeout` in it is the wrong answer twice over — it does not
-  pause with the run and it does not rewind with a reset.
-- **The minimap draws in SCREEN space, and that is downstream of ONE flip.**
-  `input-model.ts`'s `SCREEN_TO_ENGINE` is the sign boundary; the map's
-  projection (`mx = -x`, `my = -z`) and the icon's negated heading are the
-  same decision applied to a picture, so a right-hand turn swings the icon
-  clockwise. North is up and east is LEFT — the price of agreeing with the
-  chase camera, and not a bug to be tidied.
-- **THE WHOLE TOP-RIGHT CORNER IS SIZED OFF `--hud-map`, AND THE PRESSES' OWN
-  SIZE IS `--hud-press` ON `.hud`** — the diameter and `.hud-zone`'s clearance
-  over the cluster read the one number, so a press added to or taken out of the
-  row is one edit (`--hud-press`'s divisor and its gap count, one less) and the
-  glass below follows. It was written twice before, and the trap was a press
-  REMOVED: the button survived with the divisor of the row it used to share and
-  nothing looked broken — the marks just came out small with a gap of sea under
-  the plate. `.hud-zone`'s sum is the cluster's own terms and must stay
-  complete: the inset, the map, `--hud-cluster-gap` (the gap between the map
-  and the row) and one press. A term left out of it is glass lying over a
-  button, and it is invisible — the zones draw nothing until a thumb is down,
-  so the picture shows the button in clear sky either way. Only
-  `document.elementFromPoint` down each button's CENTRELINE answers it.
-- **A PRESS DRAWN OVER A RUN IS NEVER WIRED ON `onClick` ALONE.** `click` is an
-  activation event synthesised from the PRIMARY pointer — the first finger on
-  the glass — and on a phone that finger is always the handlebar's or the
-  lever's. Every other finger is non-primary and gets `pointerdown` and
-  `pointerup` and no click at all, so an `onClick` button over a run is dead
-  to exactly the rider who needs it. `hud-press.ts` is the answer and the
-  measurement behind it; a new press joins it. Clearance and `z-index` are a
-  different question (the zone lesson) and neither one is evidence about the
-  other: here the hit test lands, the button hears the touch, and the action
-  never runs.
-- **The build label is §38's "the running build says what it is".** It reads
-  `engine/version.ts` and the build's short hash; do not drop it for room.
-- **A new colour on this screen owes the night dressing a ramp.** The HUD dips
-  with the craft's lamp — `snapshot.dark` on the root as `--hud-dark`, and the
-  block on `.hud` in `styles.css` where every dipped token is a `color-mix` or
-  a `calc` along it. Anything added in a literal white or a hard navy is a
-  lamp in the corner of a night frame; take it off `--hud-ink`, `--hud-plate`,
-  `--hud-edge` or `--hud-track` instead. What stays at full strength is the
-  SIGNAL — `--hud-bad` (every warning) and `--hud-good` (the buoy orange, which
-  has to agree with the buoys out on the water) — and that is a decision, not
-  an oversight.
-- **A menu is not a saving.** The menu's backdrop is the real game, ridden by
-  the bot — a menu that stops the sea is a bug. That rule and the cards it
-  governs are `menu-system`'s; it is restated here because a HUD change that
-  reaches into `App.tsx`'s loop can break it from this side.
+  HUD-side split, no "airborne" guessed from `y`. A readout that needs a
+  number the engine does not expose is an engine field (`engine-system`),
+  never a HUD formula — and a readout that must OUTLIVE its moment compares an
+  engine-published time against `state.t`, never a `setTimeout` (which does
+  not pause with the race).
+- **A PRESS OVER A RACE IS NEVER WIRED ON `onClick` ALONE.** A non-primary
+  finger gets `pointerdown`/`pointerup` and no click at all, so an `onClick`
+  button is dead to exactly the rider who needs it. `hud-press.ts` is the
+  answer; a new press joins it.
+- **The thumb zones draw nothing until a thumb is down.** A picture shows a
+  button in clear sky whether or not a zone lies over it; only
+  `document.elementFromPoint` down each button's centreline answers it.
+- **Every word is a key in `strings.ts`.** A literal in a component is a line
+  that cannot be fixed without a code review and a second language that is a
+  rewrite.
+- **A menu is not a saving.** The front door's backdrop is a live race ridden
+  by the bot (`menu-system`); a HUD change reaching into `App.tsx`'s loop can
+  break that from this side.
 
 ## The loop
 
 ```sh
 make build
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots SCENE=cruise     # the HUD at speed, both viewports
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots SCENE=launch     # …with the air time up
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots SCENE=rest       # …at rest, every readout at its floor
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots SCENE=missed     # …with the miss flash and map pulse
-npx vitest run tests/input_model_test.ts                                  # the gestures, headless
+CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots SCENE=grid    # the lights
+make screenshots SCENE=race                                            # racing, the field strung out
+make screenshots SCENE=lap                                             # well into lap one
+npx vitest run tests/hud_test.ts tests/input_model_test.ts             # the payloads, headless
 ```
 
-**`make screenshots` CANNOT SHOW YOU THE TOUCH CONTROLS.** The handlebar and
-the lever overlays are anchored under a thumb and only exist while a pointer
-is down (`hud-touch.tsx` sets `display: none` on release), and the lab
-presses nothing — so a phone shot proves the thumb ZONES are laid out right
-and says nothing whatever about the controls drawn in them. A change to
-either one is LOOKED at with a scratch probe over the built site instead:
-`serveDir("pwa/dist")`, a Chromium context with `hasTouch: true` at
-390×844, then `dispatchEvent` a `pointerdown` on `[data-touch="bar"]` (or
-`"lever"`) and a `pointermove` to each end of the travel, shooting between
-the two and only then sending `pointerup`. `page.touchscreen.tap` will not
-do — a tap is down-and-up, and the overlay is gone by the time the shutter
-opens. Keep the probe out of the tree when you are done unless it earns a
-place on the shelf (`lab-tooling`).
+**`make screenshots` CANNOT SHOW THE TOUCH CONTROLS.** The handlebar and the
+lever are drawn only while a pointer is down, and the lab presses nothing. A
+change to either is looked at with a scratch probe over the built site
+(`lab-tooling`): `serveDir("pwa/dist")`, a context with `hasTouch: true` at
+390×844, a `pointerdown` on the zone and a `pointermove` to each end of the
+travel, shooting BETWEEN them and only then `pointerup` — a tap is down and
+up, and the overlay is gone before the shutter opens.
 
-Then run `ui-review`'s audit at the reference viewports (desktop landscape
-1280×720, phone portrait 390×844 and phone LANDSCAPE 844×390 — rotation is
-not a case you have to remember any more, it is the third shot). A HUD
-change is not finished until it has been LOOKED at on a phone-shaped
-viewport — the failure mode here is always overlap, clipping, or a control
-under a thumb that already has a job: the throttle thumb owns the lower
-right, the handlebar thumb the lower left, and no readout that must be
-watched mid-turn goes under either.
+Then `ui-review`'s audit at the reference viewports (1280×720, 390×844 and
+844×390). The failure mode here is always overlap, clipping, or a readout
+under a thumb that already has a job: the lever thumb owns the lower right,
+the handlebar thumb the lower left.
 
 ## What the change obliges elsewhere
 
-- A key or a gesture → `docs/getting-started.md` and the README's Quick
-  start; `tests/input_model_test.ts` for the maths. A key that means
-  something to a CARD as well goes past `menu-system` too.
-- A readout → a scene that photographs it, if none does (`scenarios.ts` +
-  `scripts/screenshot.mjs`), and `docs/getting-started.md`.
+- A key or a gesture → `docs/getting-started.md` and the README's Controls;
+  `tests/input_model_test.ts`. A key that means something to a CARD goes past
+  `menu-system` too, and a key the desktop menu bar presses past
+  `platform-shells`.
+- A readout → a scene that photographs it (`SCENES` in
+  `scripts/screenshot.mjs`), `docs/getting-started.md`.
 - Anything the player sees → a `.changes/unreleased/` fragment.
 
 ## Skill self-improvement
 
-Load **`skill-reflection`** before this session commits. A settled rule of
-thumb about the thumbs — where a zone may reach, what a drag may mean —
-belongs in the traps above once it has held twice.
+Load **`skill-reflection`** before this session commits. A settled rule about
+the thumbs — where a zone may reach, what a drag may mean — belongs in the
+traps above once it has held twice.

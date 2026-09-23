@@ -9,7 +9,7 @@ tests/  scripts/(sim, the labs)            pwa/ (Preact + three.js shell)
            (framework-free TypeScript — imports nothing but itself)
 ```
 
-`tauri/` and `native/` — the desktop and store shells — stand beside these, outside the npm workspace ([platforms.md](platforms.md)). The app layer's own architecture (the renderer, the snow shader and its trail map, the HUD, the shell of cards) is written up as it lands.
+`tauri/` and `native/` — the desktop and store shells — stand beside these, outside the npm workspace ([platforms.md](platforms.md)); the one line of `pwa/` that knows either exists is `pwa/src/shell-host.ts`.
 
 ## `engine/` — the game, headless
 
@@ -57,8 +57,46 @@ A pure TypeScript module with no framework, no renderer, no DOM and no `node:` �
 - **`lib/`** — the generic pool: `prng.ts`, `math.ts`, `noise.ts`, `heightfield.ts`, `quat.ts` (the one statement of the sign conventions), `solar.ts`, `polyline.ts`.
 - **`output.ts`** — the central output module: every line the engine prints goes through it.
 
+## `pwa/` — the browser shell
+
+A Preact app over a three.js renderer, built by Vite into `pwa/dist/` with a hand-rolled service worker (`pwa/pwa-plugin.ts`, the update watch in `pwa/src/lib/pwa-update.ts`). It imports the engine as `@engine` and nothing deeper; it READS `GameState` and never writes one, and it never steps physics except through `step()`. Preact is spelled `react` (`pwa/tsconfig.json`'s `paths` alias it to `preact/compat`).
+
+### The shell (`App.tsx`, `game/shell.ts`)
+
+Five SURFACES over one canvas and ONE engine state: `splash` (the attract card), `menu` (the front door), `loading` (a race being stood up), `pause` (the race held) and `run` (the player's hands on the bars, the HUD over the top, the finish plate over that once the flag is down). `shell.ts` is DOM-free and says what each one means — who rides the state (`botInput` under a card, the input manager under a run: `playerRides`), whether the engine steps at all (`simulates` — false under the pause card alone), whether the HUD is drawn (`hudOver`), whether the race's events make a sound (`soundsLive`) and which camera a surface is seen through (`cameraFor` — the slow orbit under a card). `App.tsx` decides only WHEN one surface gives way to the next. **The snow never stops behind a card except the pause card**: the front door stands over a live race the bot is riding, and leaving a race for it hands the same sled back to the bot rather than tearing anything down.
+
+- **The clock** — `game/run-loop.ts` (§37): `requestAnimationFrame`'s time into whole fixed steps of `TUNING.dt`, the frame delta clamped and the excess dropped, a hidden tab pausing the run, and the leftover fraction handed to the renderer as `alpha` for interpolation only. Each step samples the input once (`input.ts`) and calls `step`.
+- **Standing a race up** — `game/run-loader.ts` sequences a load into phases, each spending a share of a frame (DOM-free); `game/app-load.ts` is what the phases ARE (generate the map, stand the field, build the terrain, the forest and the checkpoints, compile every shader) as a factory over `App.tsx`'s closures. The renderer is FETCHED behind the attract card (`import("./game/renderer.ts")`), so three.js is not on the first-render path.
+- **The URL** — `game/url-params.ts` states every parameter the app reads (`seed`, `start`, `t`, `shot`, `paused`, `camera`, `menu`, `splash`, `update`); [configuration.md](configuration.md) is the table.
+- **What is remembered** — `game/settings.ts`: the camera rung and the sound switch, merged field by field (`mergeSettings`).
+- **One button, wherever pressed** — `game/run-actions.ts`: a key, a HUD thumb or a desktop menu-bar row (`shell-host.ts`'s `sh-shell-command`) all land on one handler.
+
+### The picture (`game/renderer.ts`)
+
+The one thing `renderer-api.ts` promises the shell, built from modules that each own a part of the picture. Everything that depends on the map is built in `load`; `draw` only moves things. Every rider is drawn `alpha` of a step on from the step before (`interp.ts` reconstructs the previous pose the engine does not keep).
+
+- **The ground** — `terrain.ts`: a camera-centred CLIPMAP of nested grids (a quarter metre a vertex at the lens, doubling per level, eight levels past the rim), nothing baked into the mesh: the vertex shader reads the generator's heightfield out of a float texture and morphs each level's edge onto the next. A ground map (gradient, packed, wooded) and the track's direction ride beside it.
+- **The snow** — `snow-glsl.ts`, grafted into a `MeshStandardMaterial`: the slope read per pixel from the gradient texture, wrap lighting with a blue terminator, world-space GLITTER, the groomed track greyer and combed with corduroy, the forest tint past the far band, and snow painted brighter than white (`GLARE`) so a low sun does not arrive grey.
+- **The trails** — `trail-stamp.ts` (three-free) turns every rider's `SledState.contacts` into capsules from the last touch to this one, at the physics' sink or the powder's own furrow, whichever is deeper; `trail-map.ts` keeps them on the GPU in world space — a COARSE map over the whole basin for the life of the race and a FINE window round the player — with MAX blending, and the terrain lowers the snow by it and shades the trough.
+- **The woods** — `forest.ts`: every `Level.trees` trunk drawn as a snow-loaded spruce or fir, instanced in three bands of distance, binned into 64 m cells and frustum-tested per frame.
+- **The course** — `gates.ts`: each checkpoint a pair of banded poles with flags, the next one loud in the brand's red, the start/finish a banner.
+- **The machines** — `sled-body.ts` (the sled built in the engine's body frame off `defs/sled.ts`, the skis turning with `skiAngle` and riding their compression, four colour schemes) with `rider.ts` hung on the joints `rider-pose.ts` solves (three-free).
+- **The air** — `sky.ts` (three-free): the sun at the hour the race has reached (`sunAtRun` — ten minutes of riding is an hour of sun), its colour through the air mass, the dome's zenith and horizon, the blue hemisphere light that makes shade on snow read as snow; `haze.ts`: one sky function in GLSL that the dome paints and every far surface fades into along its own direction; `sky-dome.ts`; `environment.ts`: the lights, a shadow box that follows the lens. Always clear: no weather, no cloud, no night.
+- **What the sled throws** — `spray.ts`: the roost off the tread, the ski spray in powder, the landing puff — one pool of sprites lit as the snow is.
+- **The lens** — `camera-rigs.ts` (three-free: the ladder `hood`, `bars`, `chase`, `far`, `high`, and `orbit` for the cards) and `camera.ts` (the rig on a three.js camera, and a flown hand-over between rungs).
+
+### What is read and pressed over a race
+
+`hud.tsx` draws a DOM-free snapshot (`snapshot.ts`, taken ~12 times a second): the race clock, the position, the lap and checkpoint count and the split top left, the air clock top centre, the lights and GO in the middle, a missed-checkpoint arrow, the rev bar over the speed bottom left (`hud-dial.tsx`), the news column bottom right (`run-news.ts`, pure). `hud-actions.tsx` is the three presses (pause, reset, camera), fired from `pointerup` (`hud-press.ts`) because a ridden phone's primary finger is always on a control. `hud-result.tsx` is the finish plate. Input: `settings-input.ts` (which key is which action), `input-model.ts` (the ramps, the lever, the handlebar and the one sign flip between screen and engine — DOM-free), `input.ts` (the listeners), `hud-touch.tsx` + `thumb-guard.ts` (the two thumb zones and their grip). Every word is `strings.ts`'s (§39.1).
+
+### The sound and the hands
+
+`game/audio/` — every sound synthesized on one WebAudio instrument (`lib/synth.ts`) from authored parameters: the event one-shots (`bank.ts` routed by `route.ts`), the engine and the snow as steered layers (`engine-voice.ts`, `snow-voice.ts`, `ride-bed.ts`), heard from the camera's seat (`listener.ts`). [audio.md](audio.md) is the account. What is FELT is `rumble.ts` (which moments are worth a pulse, DOM-free) over `haptics.ts` (the one motor: the Vibration API, or the store app's haptics through `shell-host.ts`).
+
 ## `tests/` and `scripts/`
 
 Root vitest suites, one topic a file (`sled_test`, `flight_test`, `collision_test`, `course_test`, `rivals_test`, `determinism_test`, `simulation_test`, …). The physics is staged on the SYNTHETIC maps in `tests/support/synthetic.ts` — a stadium loop with a kicker, hills and a lone tree, and flat drag strips of packed snow or powder — so the rule suite passes with the generator deleted; `simulation_test` also rides generated maps.
 
-`scripts/` is tooling and may import anything: `npm run sim` (the balance table), `npm run ride` (the ride lab: scripted scenarios on the synthetic maps, numbers and a picture each to `previews/ride-*.png`), every flag through `scripts/lib/cli.mjs`.
+The app's DOM-free halves are tested the same way (`hud_test`, `input_model_test`, `menu_system_test`, `audio_test`, `rumble_test`, `world_render_test` — the camera rigs, the rider's pose, the sky's colour model, the trail's arithmetic).
+
+`scripts/` is tooling and may import anything, every flag through `scripts/lib/cli.mjs`: `npm run sim` (the balance table), `npm run ride` (the ride lab: scripted scenarios on the synthetic maps, numbers and a picture each to `previews/ride-*.png`), `npm run level` and `npm run analyze` (a map from above; a map scored against the rule book), `npm run world` (one seed ridden by the bot and photographed through the renderer from its own harness page), `npm run audition` (the audio review page), and `scripts/screenshot.mjs` / `profile-render.mjs` over the built site. The README's Usage table is the list.

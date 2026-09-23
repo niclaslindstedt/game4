@@ -1,138 +1,129 @@
 ---
 name: bot-improvement
-description: "Use when improving the BOT RIDER (engine/sim/bot.ts) — how the bot reads the course and rides it: aiming the next gate, or the ramp's axis for an air gate, holding the throttle, leaning back on the ramp, levelling in the air. Kept deliberately minimal and measured with `make sim`. Drives the iterate loop: reproduce the bad behaviour at a known seed, form a hypothesis from the level plan and the report's counts, edit the decision code, re-measure. The target is HUMAN capability — a competent rider, never a superhuman one and never a handicapped one."
+description: "Use when improving the BOT RIDER (engine/sim/bot.ts) — how the bot reads the loop and rides it: the aim point along the centreline, the braking for the bends and the kickers it can see coming, the run from the grid through the powder onto the track, levelling to the landing slope in the air, dodging a trunk, asking for a reset — and the RIVALS, which are the same bot under a dealt pace. Measured with `make sim`. Drives the iterate loop: reproduce the bad behaviour at a known seed, form a hypothesis from the map and the report's counts, edit the decision code, re-measure. The target is HUMAN capability — a competent rider, never a superhuman one and never a handicapped one."
 ---
 
 # Bot improvement
 
 The bot in `engine/sim/bot.ts` is one source of truth: the headless simulator
-(`engine/sim/simulate.ts`), the balance CLI (`scripts/simulate-run.mjs` /
-`make sim`), and the sim tests all ride the SAME `botInput(state) →
-CraftInput`. Improving the bot means improving that function so a botted run
-rides like a **competent human** — the yardstick for every change. The bot is
-also the balance instrument: if it stops taking ramps, launch regressions
-stop showing in the sim table, so its competence is load-bearing for the
-whole measuring workflow.
+(`engine/sim/simulate.ts`), the balance CLI (`make sim`), the sim tests, the
+front door's attract race, the world lab AND every rival in a race all ride
+the SAME `botInput(state, profile) → SledInput`. Improving the bot means
+improving that function so a botted race rides like a **competent human**.
+The bot is also the balance instrument: if it stops taking kickers, landing
+regressions stop showing in the sim table, so its competence is load-bearing
+for the whole measuring workflow — and since the field IS the bot, a bot fix
+is also a change to how hard the player's race is.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs bot-improvement --list`, then the ones this
-task touches (`--scope=…`, `--concepts=…`). Load **`skill-reflection`** at
-both ends of the session.
+`node scripts/skill-lessons.mjs bot-improvement --list`. Load
+**`skill-reflection`** at both ends of the session.
 
-## The target: human capability, no handicaps — and MINIMAL
+## The target: human capability, no handicaps
 
-Tune toward the decisions a good rider makes, not toward superhuman precision
-and not toward deliberate mistakes:
-
-- **Do** aim at the next gate, hold the throttle (that is how a PWC steers),
-  line up the ramp's axis well before it, lean back on the ramp for height,
-  level the hull in the air for a flat landing, and ease off when the nose
-  is buried.
+- **Do** read the loop ahead the way a rider does, brake for the bend it can
+  see coming at the grip a rider has, carry speed onto a kicker it can land,
+  level the machine to the slope it will land on, steer round a trunk, and
+  get off the grid onto the track riding ALONG it.
 - **Don't** add artificial imperfection (steering jitter, reaction delay,
   rubber banding). We want the bot to STOP doing dumb things, not to fake
-  being bad.
-- **Don't** let it do what a human never would: steer with the throttle shut
-  (nothing happens — the nozzle needs flow), hold full lean back on flat
-  water, aim the RING rather than the ramp (the ramp decides where the
-  craft goes; the ring is where the ramp throws it).
-
-**And keep it small.** This bot is a gate-aimer with a ramp routine, and it
-should stay that way until a measurement says otherwise. There are no
-profiles, no skill budgets, no rivals yet (Heads Up is a future mode); a
-tunable belongs on a small `BOT` constant table at the top of `bot.ts`, with
-units, not on a profile object nobody selects. When rivals come, the sibling
-game's pattern applies: profiles as data handed to `simulateStage`, one
-decision function, never a fork per bot.
+  being bad. Difficulty in the field is the dealt PACE (`Rival.pace`, the
+  throttle cap), never a worse decision.
+- **Don't** let it do what a human never would: brake with the grip a sled
+  does not have, see through a crest, steer with the belt spinning in the
+  air as though the skis still bit.
 
 If a competent rider wouldn't do it, the bot shouldn't. That is the whole
 spec.
 
 ## Determinism is non-negotiable
 
-The bot is a PURE consumer of `GameState`: it never mutates it and never draws
-from the state's RNG, so a botted run is exactly as reproducible as a human's
-would be (same seed + craft → identical digest — `tests/simulation_test.ts`
-and `determinism_test.ts` assert this). Keep it that way:
+The bot is a PURE consumer of `GameState`: it never mutates it and never
+draws from the state's RNG, so a botted race is exactly as reproducible as a
+human's (`tests/simulation_test.ts`, `determinism_test.ts`).
 
 - No `Math.random()`, no wall clock, no reads of the state's RNG.
-- `botInput` is stateless — everything the bot knows is in the `GameState`
-  (the course, the craft, `progress.nextGate`, the sea under it). If it ever
-  needs a memory, the shape to copy is a module-level `WeakMap` keyed on the
-  `GameState` object — never a field on `GameState`, and never something the
-  caller threads.
-- The bot **never reaches into physics internals** — it reads the same state
-  the HUD reads and produces the same `CraftInput` a thumb produces. What
-  the craft CAN do it asks `engine/game/limits.ts`, the same as `craft.ts`
-  does. A bot that peeks at un-exported model internals is a bot that lies
-  about rideability.
+- Everything it knows is in the `GameState` and the level. A memory it needs
+  (a kicker's flown speed) is cached per LEVEL or per state in a module-level
+  `WeakMap` — never a field on `GameState`.
+- It **never reaches into physics internals** — it reads the state the HUD
+  reads and produces the input a thumb produces; what the sled CAN do it asks
+  `engine/game/limits.ts` (`cornerGrip`, `brakeDecel`, `lockAt`,
+  `topSpeedOf`), the same numbers the physics applies. A bot planning off a
+  number that only resembles the physics' is a rider in a different machine.
+- Where it is on the loop is `nearestTrackPoint` (`mapgen/query.ts`) — the
+  one answer, never a second walk.
 
 ## The current riding model (so you don't re-derive it)
 
-1. **Aim** — the FIRST gate ahead: the walk starts at the course's next gate
-   and goes forward past every one the craft is already past, never
-   backwards (a gate's plane is infinite, and on a course with corners a
-   craft can be "past" one it has never been near). Then the gate's centre
-   for a water gate; for an air gate, a point on the RAMP's axis behind the
-   ramp, so the craft arrives square to it. Steering is proportional to the
-   heading error, clamped to ±1.
-2. **Throttle** — full, always, because the nozzle only steers with flow;
-   eased only when the bow is buried (`submergedDepth` past a bar) so a
-   dive does not become a second one.
-3. **The ramp** — lean back from the moment the probes touch the ramp
-   (`lean: +1`), for height.
-4. **The air** — level the hull: lean toward zero pitch, steer toward zero
-   roll, throttle held (it does nothing airborne, and it is ready the
-   instant the intake is wet again).
-5. **Reset** — never on its own initiative. A bot that resets is a bot
-   hiding a stuck; let the sim's `fin` column report it.
+`docs/simulation.md` ("The bot") is the long-form account; in short:
+
+1. **Where it is**: the nearest point of the loop, restricted to the stretch
+   between the last checkpoint taken and the one owed — so a hairpin's other
+   leg is never mistaken for its own.
+2. **What it steers at**: a point `lookBase` + `lookPerSpeed`·v along the
+   centreline, against the heading its yaw rate is carrying it to
+   (`yawLead`); in powder it reads further ahead and asks for less
+   (`powderLead`, `powderEase`), because a sled turns there off its roll.
+3. **Off the grid**: aims onto the track SHORT of the start line
+   (`entryShare`, `entryMin`, `entryMax`) and brakes for the turn onto it
+   (`entryRadius`).
+4. **How fast**: for every bend within braking reach, the speed its curvature
+   allows at `cornerShare` of the corner grip, less what braking at
+   `brakeShare` can take off; for every on-track kicker, the fastest it can
+   leave the lip and still land on the landing under `kickerMargin` of the
+   harsh speed (flown once per kicker over the real snow); never under
+   `crawl`. Over that it brakes; near it it eases; under it, flat out.
+5. **In the air**: levels the pitch to the slope ahead with the lean
+   (`airGain`, `airDamp`).
+6. **Trees**: moves its aim `dodge` off a trunk inside `treeCorridor` within
+   `treeLook`.
+7. **Giving up**: asks for a reset after `giveUpAfter` s without a checkpoint.
+
+Every number is a field of `BotProfile`, with its unit; `RIDER_BOT` is the
+one profile. A second profile is data handed to `botInput`, never a fork of
+the decision function.
 
 ## The iterate loop
 
-1. **Reproduce.** `make sim SEEDS=<N> CRAFT=<id>` at the failing seed — read
-   the row (misses, dives, groundings, hits, DNF).
-2. **Look at the geometry.** `make level SEED=<N>` draws the course — see
-   WHAT the bot fought (a ramp right after a tight gate? a skerry on the
-   inside of the line? a gate in the swell's trough?) before hypothesizing.
-   A bot failure on legal geometry is a bot bug; illegal geometry is the
-   generator's (`mapgen-improvement`, and its analyzer should have caught
-   it — say so).
-3. **Hypothesize, then edit** `engine/sim/bot.ts`.
-4. **Re-measure.** The failing seed first, then the full `make sim` sweep —
-   all four craft, all seeds. One lucky seed proves nothing; the sweep's
-   footer is the before/after. Watch for the coupling: a "bot fix" that
-   changes the measured balance is retuning the instrument mid-experiment.
-5. **Run the sim tests** — `npx vitest run tests/simulation_test.ts
-   tests/determinism_test.ts`.
-6. **Look at it** when the change is about style rather than survival: the
-   screenshot harness stages scenarios, not bot rides, but `make ride
-   SCENARIO=` can be pointed at the bot (the ride lab takes an input source)
-   and the strip shows whether the ramp approach is square and the landing
-   flat.
+1. **Reproduce.** `make sim SEEDS=<N>` at the failing seed — read the row
+   (fin, laps, trees, resets, missed, harsh).
+2. **Look at the geometry.** `make level SEED=<N>` — what the bot fought (a
+   kicker after a bend? a trunk near the line? a spawn lane into a bank?)
+   before hypothesising. A failure on legal geometry is a bot bug; illegal
+   geometry is the generator's (`mapgen-improvement` — and its analyzer
+   should have caught it; say so).
+3. **Watch it** when the question is style rather than survival:
+   `make world SEED=<N>` photographs the bot's own run (the world lab rides
+   the player's sled with the bot), and `simulateRun(seed, { keepEvents: true
+   })` lists every event with its time.
+4. **Hypothesise, then edit** `engine/sim/bot.ts`.
+5. **Re-measure.** The failing seed first, then the full sweep (`--count 20`),
+   and `--rivals 3` if the field is touched. One lucky seed proves nothing. A
+   "bot fix" that moves the balance is retuning the instrument mid-experiment
+   — say so in the PR.
+6. **Run the sim tests** — `npx vitest run tests/simulation_test.ts
+   tests/determinism_test.ts tests/rivals_test.ts`.
 
 ## The traps
 
-- **No flow, no steering.** The single most common bot bug: easing the
-  throttle to "line up" a gate, which is precisely when the craft stops
-  turning. The bot steers WITH the throttle open and slows by turning, not
-  by lifting.
-- **Aim the ramp, not the ring.** The ring is where the ramp throws a craft
-  arriving square at speed; aiming the ring from off-axis puts the craft up
-  the ramp crooked and into the water beside the ring.
-- **The sea moves the aim.** A gate in a trough is still a gate; the bot
-  reads gate positions from the course, never from where the buoy is drawn.
-- **A landing has a rider on it.** Levelling in the air is what keeps
-  `dive` at zero in the table; a bot that stops levelling reads as a
-  slamming-model regression that is not one.
+- **The grip it plans with is the physics' grip.** Plan a corner off a
+  friction the snow does not have and the bot overcooks every bend on the
+  groomer and crawls in powder. `cornerGrip` and `brakeDecel` blend by
+  `packed` exactly as the physics does.
+- **A kicker is planned by FLYING it, not by a formula.** The landing's
+  harshness depends on the real snow past the lip; a closed-form range
+  ignores the landing's own slope.
+- **Levelling in the air is what keeps `hrsh` near zero.** A bot that stops
+  levelling reads as a landing-model regression that is not one.
+- **The field is the bot.** A change here changes how every rival rides the
+  player's race; the pace band is the dial for how hard they are.
 
 ## After a change
 
-- `make lint` and the sim tests green; the `make sim` table in the PR
-  (before/after).
-- A bot change is a changelog call, not a `no-changelog` reflex: today the
-  bot rides only the sim, so the label is right — but the moment it rides a
-  rival the player can see, a decision change a player would notice gets a
-  fragment.
-- `docs/simulation.md` describes the riding model; keep it in step.
-- Load **`skill-reflection`** before committing: record what this pass
-  learned, prune the stale, promote the always-true into the model
-  description above.
+- The sim tests green; the `make sim` table in the PR (before/after).
+- A bot change is a changelog call, not a `no-changelog` reflex: the bot
+  rides every rival the player races, so a change a player would notice in
+  the field gets a fragment.
+- `docs/simulation.md`'s bot section; keep it in step.
+- Load **`skill-reflection`** before committing.

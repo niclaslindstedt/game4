@@ -13,6 +13,7 @@ import {
   HANDOVER,
   RIGS,
   type LensPose,
+  type LineClear,
   type RigPose,
   type Rung,
 } from "./camera-rigs.ts";
@@ -24,7 +25,13 @@ export type Lens = {
   set(rung: Rung, cut?: boolean): void;
   /** Snap the booms onto the rider on the next frame (a new run, a reset). */
   snap(): void;
-  frame(pose: RigPose, dt: number, groundAt: (x: number, z: number) => number): LensPose;
+  /** `clear` keeps the booms out of the trees and the course's posts. */
+  frame(
+    pose: RigPose,
+    dt: number,
+    groundAt: (x: number, z: number) => number,
+    clear?: LineClear,
+  ): LensPose;
 };
 
 export function createLens(near: number, far: number): Lens {
@@ -58,13 +65,13 @@ export function createLens(near: number, far: number): Lens {
       since = HANDOVER;
       previous = null;
     },
-    frame(pose, dt, groundAt) {
+    frame(pose, dt, groundAt, clear) {
       const st = stateOf(current);
       // A rung that has not been framed for a while starts from the rider.
-      let lens = frameRig(RIGS[current], pose, st, dt, groundAt);
+      let lens = frameRig(RIGS[current], pose, st, dt, groundAt, clear);
       since += dt;
       if (previous && since < HANDOVER) {
-        const from = frameRig(RIGS[previous], pose, stateOf(previous), dt, groundAt);
+        const from = frameRig(RIGS[previous], pose, stateOf(previous), dt, groundAt, clear);
         lens = blendLens(from, lens, since / HANDOVER);
       } else {
         previous = null;
@@ -72,7 +79,7 @@ export function createLens(near: number, far: number): Lens {
       // Every other boom keeps swinging behind the scenes, so a switch to it
       // starts from where it would be rather than from a stale frame.
       for (const r of ["chase", "far", "high"] as const) {
-        if (r !== current && r !== previous) frameRig(RIGS[r], pose, stateOf(r), dt, groundAt);
+        if (r !== current && r !== previous) frameRig(RIGS[r], pose, stateOf(r), dt, groundAt, clear);
       }
       camera.position.set(lens.eye.x, lens.eye.y, lens.eye.z);
       camera.up.set(0, 1, 0);

@@ -7,8 +7,8 @@ description: "Use when the repository may have drifted from OSS_GAME_SPEC.md —
 
 This repository conforms to `OSS_GAME_SPEC.md`, and the committed copy at the
 repository root **is** the spec — there is no upstream document to fetch and
-no validator to call. It is a verbatim copy of the sibling rally game's, and
-that is deliberate: one spec governs both games, so an amendment here is a
+no validator to call. It is a verbatim copy of the one the sibling games (`game2`, the rally game;
+`game3`, the jet-ski game) carry, and that is deliberate: one spec governs all of them, so an amendment here is a
 reviewed pull request like any other governing file, and §21.5 requires that
 the same pull request propagates the new mandate into the tree or records why
 it does not yet apply.
@@ -26,12 +26,11 @@ the code still updates the ledger, because a verdict with no date behind it
 is an opinion.
 
 **This repository is a vertical slice**, and the ledger should say so
-honestly rather than round every unbuilt chapter up. Sound, the sky, damage,
-menus, the campaign, replays, the shells, fauna: each is a placeholder file
-with a header comment saying what will live there. A chapter whose subject is
-a placeholder is **"not yet built"**, with the placeholder path as the
-evidence — not N/A (the condition WILL apply) and not conformant (nothing is
-there to conform).
+honestly rather than round every unbuilt chapter up. Options, the campaign,
+weather and night, the minimap, replays and screenshots are not built (the
+router's intro is the list). A chapter whose subject is not built is **"not
+yet built"**, with what stands in its place as the evidence — not N/A (the
+condition WILL apply) and not conformant (nothing is there to conform).
 
 ## Tracking mechanism
 
@@ -61,37 +60,37 @@ because the game half leans on the baseline half:
 | --- | --- |
 | §3 | README structure (What/Why/Usage tables in sync with reality — overlap with `update-readme`) |
 | §7.1 | `CLAUDE.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules`, `.github/copilot-instructions.md` are SYMLINKS to `AGENTS.md`; `tests/symlinks_test.ts` holds it |
-| §7.2 | `AGENTS.md` carries the four game sections: role map, content pipeline, the rules that bite, craft index |
+| §7.2 | `AGENTS.md` carries the four game sections: role map, content pipeline, the rules that bite, the index of where each subject lives |
 | §8.5 | Every PR settles a fragment or the `no-changelog` label; `tests/changeset_test.ts` holds the vocabulary |
-| §9.1 | One documented command per capability — content (`make level`, `make analyze`), sim (`make sim`), playtest (`make screenshots`), the labs (`make waves`, `make ride`) |
+| §9.1 | One documented command per capability — content (`make level`, `make analyze`), sim (`make sim`), playtest (`make screenshots`, `make world`), the labs (`make ride`, `make audition`, `make profile`) |
 | §11 | `docs/` coverage, the page-is-the-product rules, SEO and PWA surfaces (`update-docs` / `update-website`) |
 | §12 | Every tool reachable by one command, `--help`, non-zero on an unknown flag, prints its inputs and outputs |
 | §13.1 | Examples are runnable and CI-exercised, not restatements of the README |
-| §13.2 | `prompts/` versioning format (overlap with `update-prompts`) |
+| §13.2 | `prompts/` versioning format — no `prompts/` tree exists; record it N/A until one does |
 | §19.4 | The central output module — engine code prints through `engine/output.ts`, never bare `console.*` |
 | §19.5 | Nothing logs per entity per frame; diagnostics never change the simulation; the in-build developer surface |
 | §20 | Test layout: root `tests/`, `_test.ts` suffix, no inline tests; §20.3's rule/content split; §20.5's cap (`tests/file_size_test.ts`) |
-| §21 | Every `update-*` in the `maintenance` registry, each with `SKILL.md` + `.last-updated`; `.claude/skills` and `.gemini/skills` symlinks; §21.9 craft skills with a loop, a bar, traps and obligations each |
+| §21 | Every `update-*` in the `maintenance` registry, each with `SKILL.md` + `.last-updated`; `.claude/skills` and `.gemini/skills` symlinks; §21.9 subject skills with a loop, a bar, traps and obligations each (`tests/skills_test.ts`) |
 
 ### The game shape (§23–§40)
 
 | Chapter | Checks |
 | --- | --- |
 | §23 | Core framework-free and headless; one entry surface (`engine/index.ts`); dependency direction (`tests/imports_test.ts`, §23.7); sequel test (`engine/lib/` and `pwa/src/lib/` carry nothing of THIS game) |
-| §23.9 | No budget and no gate — a recorded ✗. Check the split that stood in for one is intact: `App.tsx` must still reach `renderer.ts` through `await import(...)`, or three.js is back on the first-render path |
-| §24 | Catalogs authored as data, schema-validated, generated output gitignored, drift guards, one ordered pipeline — the craft catalog is a TypeScript const, a recorded deviation |
+| §23.9 | The bundle budget — read the ledger's row; check that `App.tsx` still reaches the three.js renderer through a dynamic import, or three.js is on the first-render path |
+| §24 | Catalogs authored as data, schema-validated, generated output gitignored, drift guards, one ordered pipeline — the sled spec and the rule book are TypeScript consts, a recorded deviation |
 | §25 | Seeded run-owned randomness, fixed step, deterministic iteration, no presentation draw, replay/digest guard (`tests/determinism_test.ts`) |
 | §26–§27 | The scripting seam and the mod surface, where they exist |
 | §28 | Interface authored as content, where it exists |
-| §29 | Every derived asset from one source (the app mark → `make icons`); the style definition; the audio routing key (not yet built); generated store rasters (not yet built) |
+| §29 | Every derived asset from one source (the app mark → `make icons`); the style definition; the audio routing key (`audio/route.ts`); generated store rasters (not yet built) |
 | §30–§31 | The narrative tiers, where there is narrative (none); the naming document and its four identity carriers (`identity.ts`, `tests/identity_test.ts`) |
 | §32 | Headless simulator (scenario, progression, seed, A/B, verdict, no-rebuild tuning); automated player (the bot); bench |
-| §33 | Shells add reach not rules; each shell's own build and checks; generated, drift-tested store metadata — `tauri/` and `native/` are README placeholders |
+| §33 | Shells add reach not rules; each shell's own build and checks (`make tauri-test`, `make native-typecheck`, the seam tests); generated, drift-tested store metadata — not built |
 | §34 | Session service — N/A, single-player |
 | §35 | Reference device and viewport (1280×720, 390×844, 844×390); perception rules; accessibility; the mature gate; one identity manifest |
-| §36 | Save versioning, migration fixtures, namespaced storage identity, slots that do not share it — nothing is saved yet |
+| §36 | Save versioning, migration fixtures, namespaced storage identity — `settings.ts` keeps two fields (`mergeSettings`), nothing else is saved |
 | §37 | Input sampled and consumed without loss; the clamped accumulator (`run-loop.ts`); focus loss; the wall clock is not a rule |
-| §38 | A contained rule error; the crash report carries the repro (the `seed`/`craft`/`scene`/`t` URL); the running build says what it is (the HUD's build label) |
+| §38 | A contained rule error; the crash report carries the repro (the `seed`/`t` URL, `output-bridge.ts`'s buffer); the running build says what it is |
 | §39 | No user-visible string literal in source; layout survives the longest string; templates, not concatenation |
 | §40 | Asset and dependency provenance; telemetry opt-in and personal-data-free; a claim is never shown as a fact |
 
@@ -114,7 +113,7 @@ what a future contributor checks when the condition changes.
 4. If the spec copy itself was amended, propagate the new mandate or record in
    the ledger why it does not yet apply. A spec edit merged alone ships as
    documentation and is a violation in its own right. The copy is shared with
-   the sibling game — an amendment made here is one that game will want too;
+   the sibling games — an amendment made here is one they will want too;
    say so in the PR.
 5. Update `docs/spec-conformance.md` — every row's verdict and its date — and
    write `git rev-parse HEAD` into `.last-updated`.

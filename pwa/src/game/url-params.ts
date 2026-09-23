@@ -15,6 +15,9 @@
 //                   screenshot's shutter.
 //   ?paused=1       ...or held under the pause card.
 //   ?camera=<rung>  the run's camera (hood, bars, chase, far, high).
+//   ?bot=1          the player's own sled ridden by the bot for the whole
+//                   run, not just the pre-roll — a race watched from the
+//                   saddle to its finish plate with nobody's hands on it.
 //   ?menu=root      open on the front door rather than the attract card.
 //   ?splash=1|0     force the attract card up, or off an ordinary visit.
 //   ?update=1       draw the new-build button as if a build were waiting
@@ -35,6 +38,8 @@ export type UrlParams = {
   shot: boolean;
   paused: boolean;
   camera: CameraRung | null;
+  /** The bot rides the player's sled for the whole run. */
+  bot: boolean;
   /** The URL names the front door. */
   menu: boolean;
 };
@@ -60,6 +65,7 @@ export function readParams(search: string): UrlParams {
     paused,
     camera:
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
+    bot: q.get("bot") === "1",
     menu: q.get("menu") !== null,
   };
 }

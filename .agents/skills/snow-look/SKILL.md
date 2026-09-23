@@ -1,203 +1,125 @@
 ---
-name: water-look
-description: "Use when working on how the SEA LOOKS — the water as DRAWN rather than as simulated: the grid of nested rings and the far grid that carry the engine's surface, how the surface is LIT per pixel (the sky each face mirrors, the shore in the water, the sun's glint, the wind's ripples, the rain's rings, the light through a crest, the foam and the whitecaps, the craft's lamp on the water), what a coast's water is MADE of (its tones, its window, its clarity, the bed it fades into), and how far a rider can see into it. Owns `pwa/src/game/water-mesh.ts`, `water-grid.ts`, `water-shader.ts`, `water-optics.ts` and `reflection.ts`, and the WATER row's ladder. Not what the surface IS doing (`water-feel` — `surfaceAt` is the engine's) and not the sky itself (`atmosphere`)."
+name: snow-look
+description: "Use when working on how the SNOW LOOKS — the snow as DRAWN rather than as simulated: the terrain's shader (`snow-glsl.ts` grafted into a MeshStandardMaterial by `terrain.ts`), the ground read per pixel off the gradient texture, the wrap lighting and its blue terminator, the GLITTER (world-space crystal facets flaring when they line the sun up with the eye), the sheen at a grazing angle, the GROOMED TRACK (greyer, shinier, the comb's corduroy along it), the forest tint past the far band, and the DEFORMATION — the world-space trail map every rider's contacts are stamped into (`trail-stamp.ts` decides each capsule, `trail-map.ts` keeps the coarse and fine maps), lowering the snow in the vertex shader and bending the normal per pixel. Not what the snow DOES to the sled (`sled-physics` — `snow.ts` is the engine's), not the sky it is lit by (`atmosphere`), not the spray in the air (`visual-effects`)."
 ---
 
-# The water's look — the sea as drawn
+# The snow's look — the snow as drawn
 
-The sea is the product's face. `water-feel` owns what the surface IS doing at
-`(x, z, t)`; this skill owns everything between that answer and the pixel: the
-lattice that samples it, the light that falls on it, the sky and the shore it
-mirrors, the colour of the water body and how far into it the eye gets. The
-one rule under all of it: **nothing here moves the surface.** A vertex is the
-engine's own `surfaceAt`, and everything this skill does happens to the LIGHT.
+The snow is the product's face: it fills most of every frame. `sled-physics`
+owns what the snow DOES — how far it lets a probe sink, what it costs, how it
+grips; this skill owns everything between the generator's heightfield and the
+pixel: the light on it, the grain of the groomed track, the glitter, and the
+furrows every rider leaves. The one rule under all of it: **nothing here
+moves the ground the physics rides.** A vertex is the generator's own height,
+lowered only by the trail map, and everything else this skill does happens to
+the LIGHT.
 
 **Read this skill's lessons first** — `node scripts/skill-lessons.mjs
-water-look --list`, then the ones the task touches. Load **`skill-reflection`**
-at both ends of the session and **`write-code`** beside this one.
+snow-look --list`. Load **`skill-reflection`** at both ends of the session
+and **`write-code`** beside this one.
 
 | Load beside this one | For |
 | --- | --- |
-| `water-feel` | the surface the grid samples — a wave that is too small is a `TUNING.sea` change, never a shader one |
-| `atmosphere` | the sky the water reflects, and the one `Preset` every light here reads |
-| `visual-effects` | the spray over the water and the wake's map the shader reads |
-| `nature` | the bed the water is coloured over, the sea life seen through it |
-| `game-feel` | whether the sea reads as drama at riding pace |
+| `sled-physics` | the sink the trail is floored at — a furrow that is too shallow in powder may be a physics question |
+| `atmosphere` | the sun, the sky's blue and the haze every light here reads |
+| `visual-effects` | the spray in the air over the trail |
+| `nature` | the terrain mesh (the clipmap) and the trees the forest tint stands for |
+| `game-feel` | whether the snow reads as speed at riding pace |
 
 ## The files, one direction of flow
 
 | File | Owns |
 | --- | --- |
-| `pwa/src/game/water-grid.ts` | THE LATTICE: a fine core round the craft and nested square rings each of twice the cell, every ring dividing the coarsest, so snapping the grid's origin to the coarsest cell keeps every vertex on the world point it sampled last frame. `tests/water_grid_test.ts` holds the seams, the winding and the snap |
-| `pwa/src/game/water-mesh.ts` | THE WATER, DRAWN: the near grid displaced by `surfaceAt` at the frame's `t`, only inside the lens's frustum; the FAR grid summing only the longest components, with a hole under the near one and sunk under it; the fade between them; the colour per vertex by depth off the coast's optics; the FOAM SHARE in the colour's alpha where a crest breaks or the shallows shoal, and WHITECAPS past `WHITECAP_WIND`; `seeThrough()` — how far a rider can see into the water, 0 when the window is closed |
-| `pwa/src/game/water-break.ts` | WHERE THE SEA GOES WHITE, three-free: the SURF the bed trips (read off the depth load `Hs / (breakingHs·d)`, never a depth in metres), the CREST that spills in deep water, and the CAPS the wind blows off — kept apart, because they are not the same thing and the wind band is the only one that tells a coast from a gale. The mesh sows it, `make surf` draws it, `tests/water_break_test.ts` holds it |
-| `pwa/src/game/water-shader.ts` | HOW THE WATER IS LIT, per pixel: the body under the two lights and the light through a crest, Schlick's Fresnel on the WAVE's normal against `skyAlong`, the shore's mirror laid over it, the rain's rings, ONE Beckmann glint lobe over Cox and Munk's slope variance, the ripple tile scrolled downwind and faded with distance, the lamp's pool, the foam's lace, the wake's map read per vertex and per pixel. `tests/water_shader_test.ts` holds the uniform contract |
-| `pwa/src/game/water-optics.ts` | WHAT A COAST'S WATER IS MADE OF: three tones and the depths they run over, the surface's window, the flat unlit tone the bottom fades into, and `clarity` — the ONE depth scale the window, the bed's fade and the sea life's haze are written against. The app half of a biome row; `tests/water_optics_test.ts` holds the two lists to each other |
-| `pwa/src/game/reflection.ts` | WHAT THE WATER MIRRORS BESIDES THE SKY: the scene drawn once a frame from the lens's mirror image in the water plane, Lengyel's oblique near plane so nothing under the surface is drawn, into a small texture the shader lays over the analytic sky wherever it has a picture. THE REFLECTIONS ROW's; OFF is no pass and closes the window with it, GLOW is a fifth-size picture read three mips down on every OTHER frame (the matrix and the frustum stand with it, so the mirror is a frame old rather than out of register) |
-| `pwa/src/game/sky-glsl.ts` | `atmosphere`'s — but `mirrorBuild` is the rough-mirror build the water and the craft's gel coat are compiled with, and `seaMirror(preset)` the same question for the horizon ring's one grazing angle |
-| `pwa/src/game/fx-textures.ts` | `visual-effects`'s — the foam tile and the ripple tile, made in code, and `TEXTURE_ANISOTROPY` |
-| `pwa/src/game/settings-video.ts` | The WATER row: the grid's cell, its rings, the far reach, the ripple fade — the biggest CPU bill in the frame, and the rider's to spend. And the REFLECTIONS row beside it — the mirror's size, blur and CADENCE, plus `pressReflections`, which closes SEE-THROUGH at the floor. `tests/video_test.ts` reads both ladders |
+| `pwa/src/game/terrain.ts` | The clipmap mesh (`nature`'s geometry) and the GRAFT: `snow-glsl.ts`'s chunks spliced into a `MeshStandardMaterial`, the three textures per level (the heights, the GROUND map — gradient, packed, wooded — and the track's direction), `TERRAIN_QUALITY` |
+| `pwa/src/game/snow-glsl.ts` | HOW THE SNOW IS LIT, per pixel: the slope off the ground's gradient texture (never the mesh's normals — the clipmap's rings would show on every hill), fine noise over it, WRAP LIGHTING for the soft blue terminator (`SSS`), the GLITTER (world hashed into cells, a random facet each, a flare where it lines the sun up with the eye, faded before a cell is smaller than a pixel), the GROOMED TRACK (greyer, shinier, no glitter, the CORDUROY along the track direction, `LOOSE` powder standing over it), the forest tint, and `GLARE` — snow painted brighter than white so the tone mapper brings the lit side down to an unclipped white |
+| `pwa/src/game/trail-stamp.ts` | WHAT A SLED LEAVES, as arithmetic, three-free: every contact (`SledState.contacts` — the skis, then the tread's stations) lays a CAPSULE from where it touched at the last stamp to where it touches now, so a trail is continuous at any speed and frame rate; `drawnDepth` (the physics' sink or the powder's own furrow, whichever is deeper, scaled by how much of the snow was powder); the berm beside it (`furrowProfile`); `TRAIL` — every number; a probe that jumped further than `TRAIL.jump` is a reset, not a trail |
+| `pwa/src/game/trail-map.ts` | THE TRAIL MAP, on the GPU in world space: a COARSE map over the whole basin (every stamp of every rider, for the life of the run — a rival's trail on the far side is still there when the player comes round) and a FINE window round the player at a few centimetres a texel, moved when he rides off its centre (the old window copied, the new edge filled from the coarse map). Each stamp an instanced quad with MAX blending: a furrow ridden twice is as deep as the deeper, and a berm never fills a trough. `TRAIL_GLSL`'s `trailAt` is the one decoder |
+| `pwa/src/game/renderer.ts` | Stamps every rider's contacts each frame (even with `present` off, so a fast-forward still cuts its trails) and hands the terrain the trail uniforms |
+| `pwa/src/identity.ts` | `PALETTE.snow`, `snowShadow`, `track` — the colours the shader is keyed on |
 
-## The judgement: LOOK, at the right cells
+## The three trails, and why
 
-There is no bench for light. The review is the built app, and the trap is
-that one shot of one sea at one hour says almost nothing:
+The skis stand a stance apart outside the tread and run a ski-width wide; the
+tread's stations, left and right, together press a band its own width between
+them. Laid over each other that is the snowmobile's signature — **a wide band
+with two thin lines either side** — and it falls out of the probes rather than
+being drawn as a decal. A change that makes the trail read as one wide smear or
+as ten little lines has broken the one picture a player recognises.
+
+## The judgement: LOOK, at the right moments
+
+There is no bench for light. The lab is `make world` — one run ridden by the
+bot, drawn through the game's own renderer — because a trail only exists after
+somebody has ridden through the snow:
 
 ```sh
-make build
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots SCENE=cruise      # the body and the mirror
-make screenshots SCENE=swell                                                # the faces and the crests
-make screenshots SCENE=storm ARGS="--hs 20"                                 # the foam and the whitecaps
-make surf SEED=38 ARGS="--reach 3500"                                       # …and WHERE the white is, as numbers
-make screenshots SCENE=cruise HOUR=20.5 WEATHER=clear                       # the glint's road, the lamp
-make screenshots SCENE=cruise WEATHER=squall                                # the mirror under a lid
-make screenshots SCENE=cruise ARGS="--see 0"  # beside --see 1: the window closed and open
-make screenshots SCENE=cruise ARGS="--mirror off"   # …and off / glow / soft: the ladder, under a CLEAR sky
-make screenshots SCENE=wildlife                                             # into the water
+make world SEED=38 ARGS=--views=furrow,lookback,powder,powder-high   # the trails: close, behind, in powder, from above
+make world SEED=38 ARGS=--views=track,hood                           # the groomed track and its corduroy
+make world SEED=38 ARGS=--views=vista,forest                         # the snow at range, the forest tint
 ```
 
-Three habits, each of which found a fault five rounds of screenshots missed:
+(`CHROMIUM_PATH=/opt/pw-browsers/chromium` in a web session; it builds its own
+bundle, so no `make build`.) Three habits:
 
-- **Shoot the same sea under two skies before touching a term.** A storm's
-  "foam" was the squall's fog and the low sky mirrored on wave backs; one
-  shot under `--weather clear` said so in a minute.
-- **Zoom.** A 3× device-scale capture clipped to the stern or to a crest
-  shows what a 1280 px frame hides (a road with no texture, a ripple tile in
-  corduroy streaks). A scratch page over `scripts/lib/serve-dist.mjs` and
-  `playwright-core` with `deviceScaleFactor: 3` and a `clip` is ten lines
-  (`lab-tooling`).
-- **Paint the raw channels.** When a map effect (the wake, the reflection)
-  looks wrong, write its channels straight into the colour in a diagnostic
-  build before touching a number — one shot says "empty" where five tuning
-  rounds guess.
+- **Judge under a LOW sun as well as a high one.** The glitter, the wrap and
+  the trough walls are all sun-angle effects; a seed dealt an early hour
+  (`make level SEED=<n>` prints it) is where a change breaks.
+- **Zoom.** Crop the furrows at full resolution — three trails read as three
+  only up close, and at a quarter size you are judging the tone.
+- **Paint the raw channel.** When a trail looks wrong, write `trailAt`'s depth
+  straight into the colour in a diagnostic build before touching a number —
+  one shot says "the map is empty" (a stamping bug) or "the map is right and
+  the light is wrong" (a shader bug), where five tuning rounds guess.
 
-And ride it: a twitch at the grid's scale shows in no still. Reason from cell
-size and pass time, then `npm run dev` and cross some chop.
+Then the built app: `make build`, `make screenshots` at every viewport.
+`make profile` before and after anything that adds a pass, a texture read or a
+stamp — the trail map's stamping and the clipmap's fill are the dearest parts
+of the frame.
 
-`make profile` before and after anything that adds a pass, a sample or a
-texture read — the grid is the dearest JavaScript in the frame and the shader
-the dearest fill.
+## The rules
 
-## Craft rules
-
-- **What is drawn IS what is simulated.** Every vertex is `surfaceAt`; the
-  wake's relief is the ONE thing added to it, and it is added on the CPU to
-  the engine's own height with its slope folded into the wave's normal. A
-  ripple, a bump or a "bigger wave" written in the shader is a hull floating
-  above or buried in the picture. The ripples change the LIGHT and never the
-  surface, so a probe reading the same water agrees.
-- **Only nested power-of-two rings snapped to the coarsest cell stay still.**
-  A grid whose cells stretch with distance swims with the craft however it
-  snaps; a uniform grid at the core's cell is unaffordable. The rings are the
-  answer and `water_grid_test.ts` holds the snap.
-- **The far water carries only the long components.** It sums `surfaceAt`
-  with the field's `count` cut to what its cells can carry, has a hole under
-  the near grid and is sunk under it by more the bigger the chop it leaves
-  out; the near grid's outer fifth fades to IT, never to flat.
-- **Every absolute tilt threshold is tuned for a wind sea** — hold it against
-  the sea's own characteristic tilt too, or a monster swell paints white from
-  edge to edge.
-- **Fresnel off the WAVE's normal, one glint lobe, no painted crest.** A rough
-  surface's reflectance is the average over its slopes, which is smooth; a
-  Fresnel read off the rippled normal flickers at a grazing angle. The glint
-  is ONE Beckmann lobe whose variance is Cox and Munk's for the wind, the
-  road and the sparkle at once, with the ripple tile carrying a share of it
-  where the tile is resolved. A crest is read by what it REFLECTS.
-- **The mirror is BLURRED, and it fades at the skyline.** The water's
-  `skyAlong` is compiled with wider bands and fewer octaves (`mirrorBuild`);
-  a reflected ray that dips under the skyline lands on the next wave's back,
-  so it is mixed toward the body (`MIRROR_UNDER`), never handed the fog.
-- **The shore in the water is a second pass, sky left OUT, cleared to alpha
-  0.** The mirrored lens is the real one reflected through the WATER PLANE
-  (position, aim and up), never through the origin — a virtual lens at
-  (−x, y, −z) is a texture of nothing and no other visible error. The dome
-  and the rain stay out of the pass (the sky is reflected analytically and
-  blurred), alpha is what tells the shader where the picture is, and the
-  cover is culled against the mirrored frustum too.
-- **Most of the open sea's tone is the bed showing through it.** An opacity
-  switch that only sets alpha to 1 hands back a pale, milky sea; closing the
-  window dims the vertex colour by what the blend was worth (`CLOSED_BED`).
-  And nothing hides the bottom by raising the surface's alpha: the bed fades
-  into the coast's flat unlit `bed` tone over `clarity` (`terrain.ts`), the
-  animals haze over the same scale (`fauna.ts`), and the window merely
-  thickens over the same reach — one sea, not three settings.
-- **Foam is lace, not paint, and prove the white is foam first.** The
-  breaking term is gated to the CREST; judge the height against the sea HERE
-  (`seaShares`), not the level's headline. The tile is read in wind space,
-  stretched downwind, and the darkest holes stay open on the water at full
-  share.
-- **THE WHITE BELONGS WHERE THE BED IS, and `make surf` is what says whether
-  it is there.** Three terms put white on a sea and only one of them is the
-  big one: the SURF, where the bed has come up under the wave and it falls
-  over. Whitecaps are a scatter at any wind a level is dealt (Monahan &
-  O'Muircheartaigh: about 1 % of the surface at 10 m/s) and the surf off a
-  beach is continuous. Getting the two the wrong way round is not subtle and
-  it is not visible from one screenshot either: it shipped for months as a
-  five-per-cent-white open sea with a clean beach in front of it, which reads
-  as "the water is a bit busy" rather than as a rule being backwards.
-  Panel D of `make surf` draws the three apart; measure before you tune, and
-  measure `ARGS="--reach 3500"` too, because a rule tuned only on the coast is
-  a rule nobody checked in the storm.
-- **A depth in metres is a bug in a foam rule.** A sea's own height decides
-  where it trips, and the engine already states the ceiling a depth can hold
-  (`TUNING.sea.breakingHs`·d). Read the load against that and the surf line
-  follows every sea and every bed for free; write `smoothstep(2.2, 0.3,
-  depth)` and it fires on the beach and nowhere a rider goes.
-- **A TILE IS BUILT FROM A SPECTRUM, NOT FROM A LIST OF WAVES, and it must
-  wrap.** A handful of directional sines is a handful of directional sines:
-  the two with the most amplitude cross into a regular lattice, and a lattice
-  on water reads as woven cloth. Fill the wavenumber plane with the sea's own
-  spectrum and a random phase on every component instead (`ripple-tile.ts`),
-  which has no favourite wavelength and repeats by construction. A noise whose
-  hash has no period does NOT repeat, and a step at the tile's edge is a ridge
-  of slope ruled across the whole sea at the tile's spacing.
-- **The roughness budget is spent ONCE.** Cox and Munk's variance is split
-  between what the ripple tile resolves and what the glint's lobe carries, and
-  the share handed back to the lobe is the tile's DISTANCE FADE — never its
-  strength, which already tracks the wind, so folding it in roughens the near
-  water twice. The layer mix is the same sum: two uncorrelated reads weighted
-  w₁ and w₂ carry w₁² + w₂² of one read's variance, so an un-normalised mix
-  delivers less slope than the lobe has been told it took.
-- **A tile seen along the water needs anisotropy.** The chase lens sits two
-  metres up looking along the sea, so isotropic mips smear the ripple and
-  foam tiles into streaks radiating from the lens; `TEXTURE_ANISOTROPY`
-  (`fx-textures.ts`) is the fix and SwiftShader honours it, so the streaks
-  show in a headless shot too.
-- **Anything that displaces the grid is smooth at the grid's scale in space
-  AND time.** The wake's relief is read off a blurred mip (`WAKE_RELIEF_LOD`)
-  and given a rise time (`RELIEF_RISE`); a feature narrower than a few cells
-  makes one vertex at a time jump, and a frame diff cannot see it.
-- **Every uniform is read and every read has a uniform** — the shader test
-  parses the GLSL against the material, and an array uniform slips past a
-  regex written for scalars: the parser learns, not the shader.
-- **Every shader ends with `#include <colorspace_fragment>`**, and the sky it
-  reads is the preset's own: the glint dies behind a squall's ceiling, the
-  lamp is off by day. The near grid and the far grid share one material, so
-  every geometry that uses it has the same colour-attribute width.
-
-## Adding things
-
-- **A term in the light** (a new reflection, a new foam source): a uniform on
-  the material AND a read in the GLSL (the test holds both), sourced from the
-  `Preset` or a `CraftState` field, judged at two skies and zoomed.
-- **A coast's water**: a row in `water-optics.ts` beside its `BIOMES` row —
-  the tones, the ramp, the window, the bed and `clarity` — and nothing else;
-  `terrain.ts` and `fauna.ts` read the same row.
-- **A cost knob**: a column on the WATER row's ladder in `settings-video.ts`
-  with `renderer.setVideo` the one place it becomes a draw call, and a case
-  in `tests/video_test.ts`.
+- **What is drawn IS what is simulated — with one deliberate exaggeration,
+  stated once.** The ground is the generator's heightfield, sampled on the
+  GPU. The furrow is `drawnDepth`: never SHALLOWER than the physics' sink (a
+  sled must never ride above its own trail), deeper where the powder would
+  honestly leave a hand-deep furrow at a speed the physics planes over.
+- **The shading never sees the mesh.** The slope comes from the gradient
+  texture, the furrows from the trail map's own finite differences. A snow
+  lit by the clipmap's vertex normals shows its rings on every hillside.
+- **Pressed snow is barely darker than fresh.** What makes a furrow read is
+  its SHAPE — walls turned from the sun, a floor that sees less sky. A furrow
+  painted dark reads as a dirt road.
+- **The glitter is world-space and still.** Glints sit on the snow and
+  twinkle as the LENS moves; a glitter hashed in screen space crawls with
+  the camera. Fade it with distance before a cell is smaller than a pixel, or
+  it aliases into grey noise.
+- **The groomed track is packed snow, not a road.** Greyer and shinier by a
+  touch, the corduroy along the track direction, no glitter (the crystals
+  are crushed). `packedAt` is the one field that says where it is — the same
+  one the physics reads for grip.
+- **Snow is brighter than its paint.** `GLARE` pushes the tone past white so
+  a low sun does not arrive grey; a change that clips the lit side to flat
+  white has lost the sheen.
+- **MAX blending, two maps, one decoder.** A new stamp source (a rival, a
+  landing crater) goes through `stampsOf` and the same instanced quad; a
+  second encoding of depth drifts from `trailAt`.
+- **A stamp is continuous and a reset is not a trail.** Capsules from the last
+  touch to this one, broken on a jump past `TRAIL.jump` — a reset that drew a
+  furrow across the map is `world_render_test`'s case.
+- **Every hand-written shader ends with `#include <colorspace_fragment>`**
+  and reads the haze through `hazeMaterial`.
 
 ## What the change obliges elsewhere
 
-- Screenshots at two skies and both viewports in the PR; `make profile`
-  before and after.
-- `npx vitest run tests/water_shader_test.ts tests/water_grid_test.ts
-  tests/water_optics_test.ts tests/video_test.ts`.
-- The water bullet in `docs/architecture.md`; a `.changes/unreleased/`
-  fragment — the sea is what the player looks at.
+- `make world` pictures (furrow, track, vista) before and after, under an
+  early and a late sun, and `make profile`, in the PR.
+- `npx vitest run tests/world_render_test.ts` (the trail's arithmetic).
+- The renderer bullet in `docs/architecture.md`; a `.changes/unreleased/`
+  fragment — the snow is what the player looks at.
 
 ## Skill self-improvement
 
-Load **`skill-reflection`** before this session commits. Worth a fragment
-here: a white that was not foam, a term that only read right zoomed, a
-threshold that broke on a sea it was never tuned for.
+Load **`skill-reflection`** before this session commits. Worth a fragment: a
+trail that was a stamping bug and looked like a shader bug (or the other way
+round), a term that only read right zoomed, a sun angle a change was never
+judged at.

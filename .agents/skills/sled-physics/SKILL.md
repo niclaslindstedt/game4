@@ -145,10 +145,13 @@ rewrites that row. No build, no browser, seconds.
   sag with the CoG at `cogHeight`; `tests/sled_test.ts` holds it. A sled that
   sits wrong at rest is wrong everywhere else too, so `rest` and
   `rest-powder` are the first strips after any probe or spring change.
-- **THE SINK IS THE SUPPORT, AND THE TRAIL IS THAT DEEP.** Every probe's
-  `SnowContact.sink` is the depth of the support under the untouched surface,
-  and the renderer's trail map stamps exactly that (`trail-stamp.ts`). A sink
-  computed anywhere else is a sled riding above or inside its own furrow.
+- **THE SINK IS THE SUPPORT, AND THE TRAIL NEVER DRAWS SHALLOWER.** Every
+  probe's `SnowContact.sink` is the depth of the support under the untouched
+  surface. The renderer's `drawnDepth` (`trail-stamp.ts`) draws the sink or
+  the powder's own furrow, whichever is DEEPER — a planing sled is carried a
+  couple of centimetres in, but the eye expects a hand-deep furrow — so the
+  drawn trail may be deeper than the physics, never shallower. A sink
+  computed anywhere but `snow.ts` is a sled riding inside its own furrow.
 - **POWDER IS A HUMP.** The plough grows with v² while the sink it multiplies
   falls away with speed, so a bogged sled wants MOMENTUM, and a sled that
   planes at walking pace or never planes at all has lost the one thing that

@@ -20,7 +20,8 @@ import * as THREE from "three";
 import { SLED, TUNING, totalMass, type GameState, type Level, type SledState } from "@engine";
 
 import { createLens, type Lens } from "./camera.ts";
-import type { LensPose, RigPose } from "./camera-rigs.ts";
+import { createLineClear } from "./camera-clear.ts";
+import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
 import { createForest, FOREST_QUALITY, type Forest } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
@@ -112,6 +113,7 @@ export function createWorldRenderer(
   let gates: Gates | null = null;
   let trail: TrailMap | null = null;
   let spray: Spray | null = null;
+  let clear: LineClear | undefined;
   let riders: Rider[] = [];
   const stamps: Stamp[] = [];
   let lastTick = -1;
@@ -145,6 +147,7 @@ export function createWorldRenderer(
     }
     for (const r of riders) scene.remove(r.model.root);
     terrain = forest = gates = trail = spray = null;
+    clear = undefined;
     riders = [];
     level = null;
   }
@@ -200,6 +203,7 @@ export function createWorldRenderer(
       forest = createForest(lv, env.haze, FOREST_QUALITY[quality]);
       scene.add(forest.group);
       gates = createGates(lv, env.haze);
+      clear = createLineClear(lv);
       scene.add(gates.group);
       spray = createSpray(env.haze);
       scene.add(spray.points);
@@ -213,7 +217,13 @@ export function createWorldRenderer(
       lens.camera.position.set(sled.x, sled.y + 3, sled.z - 6);
       lens.camera.lookAt(sled.x, sled.y, sled.z);
       terrain.follow(sled.x, sled.z);
-      await gl.compileAsync(scene, lens.camera);
+      // Asynchronously where the driver can; three warns and falls back to
+      // a blocking compile anyway where it cannot, so ask first.
+      if (gl.extensions.has("KHR_parallel_shader_compile")) {
+        await gl.compileAsync(scene, lens.camera);
+      } else {
+        gl.compile(scene, lens.camera);
+      }
     },
 
     draw(state: GameState, alpha: number, dt: number, present = true) {
@@ -280,7 +290,7 @@ export function createWorldRenderer(
       rigPose.airborne = sled.airborne;
       const inside = lens.rung() === "hood" || lens.rung() === "bars";
       player.model.setRiderVisible(!inside);
-      lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt);
+      lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, clear);
       if (override) {
         const cam = lens.camera;
         cam.position.set(override.eye.x, override.eye.y, override.eye.z);

@@ -1,137 +1,112 @@
 ---
 name: simulate-run
-description: "Use to measure the game's ACTUAL balance by running the real engine headlessly — bot-ridden levels across seeds and craft, reporting finish time, gates hit and missed, top speed, air time, launches, dives, hits, groundings, and the biggest sea met. The closing measurement loop of every craft, water or generator change: run it before and after, read the diff, and paste both tables in the PR. Also the owner of what the table's columns mean and which movements are regressions."
+description: "Use to measure the game's ACTUAL balance by running the real engine headlessly — the bot racing generated maps across seeds, reporting whether it finished, the race time and the lap times, checkpoints credited, the mean and top speed, air time and jumps, harsh landings, tree hits, resets (and the engine's own), checkpoints missed, the place against a field, and the determinism digest. The closing measurement loop of every sled, snow, bot or generator change: run it before and after, read the diff, and paste both tables in the PR. Also the owner of what the table's columns mean and which movements are regressions."
 ---
 
 # Simulate Run
 
-The sim is the balance team's wave tank: it rides the REAL engine —
-`createGame`, `step`, the bot — at full speed with no renderer, and reports
-what actually happened. Nothing in it models or approximates a rule; it IS
-the rules, run fast. **Balancing this game means balancing pace and
-feel-as-measured** — do bots finish, do they hit the gates, do they fly the
-rings, do they stay off the rocks, how much sea did they meet — not tuning an
-economy: there is no XP, no loot here. The regression surface is the table.
+The sim rides the REAL engine — `createGame`, `step`, the bot — at full speed
+with no renderer, and reports what actually happened. Nothing in it models or
+approximates a rule; it IS the rules, run fast. **Balancing this game means
+balancing pace and feel-as-measured** — does the bot finish, does it take every
+checkpoint, does it fly the kickers and land them, does it stay off the trees
+and out of the reset — not tuning an economy. The regression surface is the
+table.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs simulate-run --list`, then the ones this task
-touches. Reading them here and reflecting on them before the commit is the
-**`skill-reflection`** skill's job — load it at both ends of the session.
+`node scripts/skill-lessons.mjs simulate-run --list`. Load
+**`skill-reflection`** at both ends of the session.
 
 ## The tools
 
-- **Engine module: `engine/sim/simulate.ts`** — `simulateStage({ seed, craft,
-maxSeconds })`. Deterministic per options; returns a typed `RunReport`
-  (finish time, gates hit/missed, top speed, air time, launches, dives, hits,
-  groundings, the max `Hs` met, and the **digest** — a hash over sampled
-  positions, the determinism fingerprint). The name is the blueprint's; the
-  thing it simulates is a LEVEL.
-- **CLI: `scripts/simulate-run.mjs`** — runs the sweep and prints the table.
-  It is CI's `simulate` job.
+- **Engine module: `engine/sim/simulate.ts`** — `simulateRun(seed, options)`
+  (`level`, `laps`, `rivals`, `profile`, `maxSeconds`, `keepEvents`).
+  Deterministic per options; returns a typed `RunReport`. Solo by default:
+  the bot on the grid's first slot, no lights, nobody else on the snow — a
+  solo run is the measurement; `rivals: 3` is the race.
+- **CLI: `scripts/simulate-run.mjs`** — the sweep and the table. It is CI's
+  `simulate` job, and it **exits non-zero when the bot finishes NO seed** — a
+  sled that cannot get round any map is broken, not slow.
 
 ```sh
-make sim                              # the standard sweep: the default seeds × all four craft
-make sim SEEDS=42,99                  # specific seeds (e.g. a bug report's)
-make sim CRAFT=otter                  # one craft
+make sim                              # seeds 1..8, solo, the map's laps
+make sim SEEDS=3,7,38                 # these seeds (a bug report's)
 npm run sim -- --count 20             # a wider sweep for a tuning decision
-npm run sim -- --json report.json     # machine-readable dump
+npm run sim -- --rivals 3             # a whole race: the field and the place
+npm run sim -- --json out.json        # machine-readable rows
 ```
-
-The CLI **exits non-zero if any run failed to finish**, so CI's `simulate`
-job doubles as a smoke alarm — a tuning change that strands a bot goes red
-without anyone reading the table.
 
 ## Reading the table
 
-One row per seed × craft:
+`docs/simulation.md` states every column and the table at the tuning in this
+tree; read it before the first run. The movements that matter:
 
 | Column | Meaning | Healthy movement |
 | --- | --- | --- |
-| `len` | Course length, m | Inside the rules' band (1200–2000) |
-| `time` | Finish time, s | Tracks length; a blow-up means the bot got lost or stuck |
-| `avg` | Average pace, km/h | PWC territory — see the band `tests/simulation_test.ts` pins; it falls with the sea |
-| `gates` | Gates hit / gates on the course | **all of them** — a miss is a bot that could not aim or a gate that could not be taken |
-| `miss` | Gates missed (passed the one after) | **0** — the penalty is real, and a miss the bot takes every time is a generator or bot bug |
-| `top` | Top speed, km/h | Differs by craft (the marlin's taller top should show); near the catalog's `topSpeed` on calm seeds |
-| `air` | Airborne seconds | **> 0 on every level** — there are always ramps; zero air means the ramps stopped throwing or the bot stopped taking them |
-| `launch` | Launches | ≥ the air-gate count; more is the sea throwing the hull, which is fine in wind |
-| `dive` | Nose-first landings that buried the bow | Small; growing means the launches got steeper or the bot stopped levelling |
-| `hit` | Solid contacts | **≈ 0** — the course keeps the hull's margin from every rock |
-| `ground` | Groundings | **≈ 0** — depth ≥ 1.5 m along the path is a rule |
-| `Hs` | The biggest significant wave height met, m | Tracks the seed's wind and how far out the course goes; a jump across the sweep is a spectrum change |
-| `fin` | Finished | **yes, every row** — a `NO` is a failure, full stop |
+| `fin` | The flag | **yes, every row** — a map the bot cannot finish is a map a player will not |
+| `laps` | Each lap's own time | three near-equal numbers; the first a few seconds longer (the powder run from the grid); tens of seconds longer is the bot circling at the start line |
+| `cps` | Checkpoints credited / the race's crossings (`1 + n·laps`) | **all of them** |
+| `mean`, `top` | km/h | mean around 75–90; a drop on every seed is a slower sled or a timid bot, on one seed that map; top near `SLED.topSpeed` |
+| `air`, `best`, `jmp` | Air summed over counted flights, the longest, how many | the on-track kickers taken every lap; fewer jumps is a kicker taken too slowly to leave the snow; `best` over 2.5 s is one overshot |
+| `hrsh` | Landings past `air.harshSpeed` | a few; many is a landing model gone hard or a bot misjudging a kicker |
+| `tree`, `rst`, `auto`, `miss` | Trunks met, resets (the engine's own), checkpoints ridden past | **≈ 0** — a tree hit on a generated map is the bot leaving the track |
+| `plc` | Place against the field | 1 solo; in a race, read beside the rivals' dealt paces |
+| `digest` | FNV-1a over the sled's position and speed every quarter second | changes with ANY physics, bot or generator change; must NOT change between two runs of the same tree |
 
-The footer aggregates: finished count, average pace, gates hit share, average
-air time, total dives, total hits, total groundings — the one-line
-before/after comparison.
+The footer is the one-line before/after: finished count, mean and top pace,
+air per run, jumps, harsh landings, trees, resets, missed.
 
 ## The workflow rule
 
-**Run `make sim` before and after every craft, water or generator change, and
-paste both tables in the PR description.** This is the contract in
-CONTRIBUTING.md and the PR template. A change that makes bots stop finishing
-or stop hitting gates is a regression until argued otherwise — and the
-argument happens in the PR, over the two tables, explicitly.
-
-## The roster read
-
-`make sim` races all four craft over the same seeds, which is the roster's
-balance table for free. Read it for the shape the `craft-tuning` skill
-describes: the marlin fastest on the calmest seeds, the otter with the fewest
-dives on the roughest, the skiff and the dart quickest through the tightest
-gate spacing — and nobody worst everywhere. **Any change to
-`engine/game/defs/craft.ts` owes this read**, before and after, in the PR.
+**Run `make sim` before and after every sled, snow, bot or generator change,
+and paste both tables in the PR description** — the contract in
+CONTRIBUTING.md and the PR template. A change that makes the bot stop
+finishing, stop taking checkpoints or start resetting is a regression until
+argued otherwise, and the argument happens in the PR over the two tables.
 
 ## The knob loop
 
 1. **Baseline**: `make sim` on the clean tree (or `--json baseline.json` for a
-   wider sweep you'll want to diff mechanically).
-2. **Edit the knob** — `engine/game/defs/tuning.ts` (global feel) or
-   `craft.ts` (per craft). Never inline in the model; the `engine-system`
-   skill owns where numbers live.
+   wide sweep you will diff mechanically).
+2. **Edit the knob** — `defs/tuning.ts` (shared), `defs/sled.ts` (the
+   machine), `mapgen/rules.ts` (the map) or `sim/bot.ts` (the rider). Never
+   inline in the model.
 3. **Re-run and read the diff.** Did the change move what you intended — and
-   nothing you didn't? A planing change that also halves air time is telling
-   you the systems are coupled (less lift at the ramp's lip is a lower
-   launch); understand why before shipping.
-4. **Hold seeds fixed while dialing one knob**, then confirm across the full
-   sweep. Runs are chaotic: one different wave early cascades into a
-   different run, so a single-seed A/B proves nothing — the standard sweep is
-   the decision-grade read.
-5. **Check all four craft.** A knob that fixes the skiff's chop can sink the
-   otter's — the sweep runs all four by default; keep it that way.
-6. Run the sim-driven tests — `tests/simulation_test.ts` pins the contract
-   (bots finish with every craft, hit every gate, pace stays in the band,
-   digests reproduce), `determinism_test.ts` the fingerprint. If a tuning
-   change breaks one of these, **the change is wrong or the test's world
-   just moved — decide which explicitly, never silently.**
-7. Finish with the `playtest` skill — the simulator measures numbers, never
-   fun. A change can pass every band and still feel wrong at 60 fps.
+   nothing you didn't? A sink change that also halves the jumps is telling you
+   the systems are coupled (a sled that sits lower meets the lip slower);
+   understand why before shipping.
+4. **Compare over a sweep, never a seed.** Runs are chaotic — one different
+   landing early cascades into a different race — and a generator change
+   re-rolls the maps themselves, so seed 7 after is not seed 7 before. Read
+   the footer over `--count 20` for a decision.
+5. **A race, not only a solo.** A change to the field, the grid, contact or
+   the pace band owes `--rivals 3` too.
+6. Run the sim-driven tests — `tests/simulation_test.ts` (the bot finishes
+   what the generator builds), `determinism_test.ts` (the fingerprint). If one
+   breaks, **the change is wrong or the test's world just moved — decide
+   which explicitly, never silently.**
+7. Finish with `playtest` — the simulator measures numbers, never fun.
 
 ## Caveats — what a bot run does and doesn't measure
 
-- **The bot is a probe, not a proof of fun.** It rides like a competent
-  human (see `bot-improvement`); it measures pace, gate-taking, and whether
-  the level is rideable — it cannot measure whether a wave feels good.
-- **Determinism is the instrument's calibration.** Same seed + craft ⇒ same
-  digest. If two runs of the same options diverge, stop tuning: the engine
-  has a nondeterminism bug (see `debug-game`), and every measurement is
-  noise until it's fixed.
+- **The bot is a probe, not a proof of fun.** It rides like a competent human
+  (`bot-improvement`); it measures pace, checkpoint-taking and whether the map
+  is rideable, not whether a kicker feels good.
+- **Determinism is the instrument's calibration.** Same seed, same options ⇒
+  same digest. If two runs diverge, stop tuning: the engine has a
+  nondeterminism bug (`debug-game`), and every measurement is noise until it
+  is fixed.
 - **The bot and the physics are coupled.** A physics change can look like a
-  regression because the BOT no longer suits the craft (e.g. it aims the
-  ramp at a speed that now launches short of the ring). Decide whether the
-  fix belongs in `tuning.ts` or in `engine/sim/bot.ts` — the
-  `bot-improvement` skill — and say which in the PR.
-- **The sea is a column, not a constant.** `Hs` varies by seed and by how far
-  out the course goes, so pace and dives vary with it. Compare rows at
-  similar `Hs` before reading a pace difference as a craft difference.
-- **Generator changes are measured here too**: a rules edit that produces
-  legal-but-unrideable geometry shows up as misses, groundings and DNFs long
-  before a human rides it. Pair with `make level` to look at the levels the
-  sweep rode (the `mapgen-improvement` skill).
+  regression because the BOT no longer suits the sled (its corner speed off
+  `cornerGrip`, its kicker speed flown over the old snow). Decide whether the
+  fix belongs in `tuning.ts` or `bot.ts`, and say which in the PR.
+- **Generator changes are measured here too**: a rules edit that builds
+  legal-but-unrideable country shows as resets, trees and DNFs long before a
+  human rides it. Pair with `make level` on the seeds that went wrong.
 
 ## Skill self-improvement
 
-Load the **`skill-reflection`** skill before this session commits. Settled
-balance reads ("dives above N always trace to X", a column movement that
-reliably diagnoses a cause) are exactly what belongs here — recorded as
-fragments, promoted into the table above once they hold every time.
+Load **`skill-reflection`** before this session commits. Settled balance reads
+("harsh landings above N always trace to X", a column movement that reliably
+diagnoses a cause) belong here — recorded as fragments, promoted into the
+table above once they hold every time.

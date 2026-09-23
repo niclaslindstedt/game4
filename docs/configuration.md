@@ -39,7 +39,7 @@ Every dependency resolves from the public npm registry, so `npm install` needs n
 
 `.env.example` at the root documents the same set; copy it to `.env` (gitignored) to override locally.
 
-The platform shells (`tauri/`, `native/`) will each bring an environment of their own, read neither by the website's build nor by each other; see [platforms.md](platforms.md).
+The platform shells (`tauri/`, `native/`) each bring an environment of their own, read neither by the website's build nor by each other: the desktop app's launch-time `SH_GAME_URL` (point the window at a deploy slot instead of its bundled copy), and the store app's `native/.env` (`native/.env.example` documents it — the store identifier, the Expo project, the signing team). See [platforms.md](platforms.md).
 
 ## The deploy slots
 
@@ -53,7 +53,7 @@ Each slot's manifest gets a distinct `id`/`scope`/`start_url` and install name (
 
 ## Releases
 
-`version-bump.yml` (manual dispatch, and the only entry point) checks the branch and the tree, prints the version it is about to cut, and calls `release.yml`, which derives the bump from `.changes/unreleased/` fragments, rewrites every version string via `scripts/update-versions.sh`, collates the CHANGELOG, commits `chore(release): vX.Y.Z`, tags, creates the GitHub Release as a draft, publishes it, and chains into `pages.yml` so `/` serves the new tag immediately. It is one dispatched run under the default `GITHUB_TOKEN` — no PAT. When the desktop shell lands, its packaging matrix slots in between the draft and the publish.
+`version-bump.yml` (manual dispatch, and the only entry point) checks the branch and the tree, prints the version it is about to cut, and calls `release.yml`, which derives the bump from `.changes/unreleased/` fragments, rewrites every version string via `scripts/update-versions.sh`, collates the CHANGELOG, commits `chore(release): vX.Y.Z`, tags, creates the GitHub Release as a draft, publishes it, and chains into `pages.yml` so `/` serves the new tag immediately. It is one dispatched run under the default `GITHUB_TOKEN` — no PAT. The desktop shell's packaging matrix (`release.yml`'s `desktop` job) runs between the draft and the publish, which waits until every platform's download is attached.
 
 ## Identity
 

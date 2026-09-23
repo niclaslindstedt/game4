@@ -7,7 +7,7 @@ description: "Use when docs/ may be stale. Discovers commits since the last docs
 
 **Governing spec sections:** §11.1 (`docs/` — real prose, no stubs, resolving cross-links), §21.5 (mandated because `docs/` is drift-prone).
 
-The `docs/` pages describe the engine, the water and craft models, the generator's rules, the sim harness, and the deploy plumbing. Each has concrete source files it must agree with; this skill re-syncs them.
+The `docs/` pages describe the engine, the sled and snow model, the generator's rules, the sim harness, the app shell, the audio and the deploy plumbing. Each has concrete source files it must agree with; this skill re-syncs them.
 
 ## Tracking mechanism
 
@@ -35,19 +35,22 @@ The `docs/` pages describe the engine, the water and craft models, the generator
 
 | Changed source | Page(s) to re-sync |
 | --- | --- |
-| `engine/game/water.ts`, `engine/game/wind.ts` (the spectrum, dispersion, shoaling, breaking, fetch, gusts) | `docs/water.md` |
-| `engine/game/craft.ts`, `hull.ts`, `flight.ts`, `limits.ts`, `engine/game/defs/tuning.ts`, `defs/craft.ts` | `docs/riding.md` |
-| `engine/game/collision.ts`, `course.ts` (grounding, ramps, gates, misses, reset) | `docs/riding.md` |
-| `engine/mapgen/rules.ts` (the R-rules are quoted verbatim) | `docs/level-generator.md` |
-| `engine/mapgen/generate.ts`, `compile.ts`, `shore.ts`, `geology.ts`, `course.ts`, `biomes.ts` | `docs/level-generator.md` |
-| `engine/analysis/*` (a check, a budget) | `docs/level-generator.md` (the scoring table) |
-| `engine/sim/*`, `scripts/simulate-run.mjs` (the bot, `RunReport`, the table's columns) | `docs/simulation.md` |
+| `engine/game/sled.ts`, `suspension.ts`, `snow.ts`, `traction.ts`, `flight.ts`, `chassis.ts`, `limits.ts`, `engine/game/defs/tuning.ts`, `defs/sled.ts` | `docs/riding.md` (the model, every quoted number, the measured table — re-run `npm run ride`) |
+| `engine/game/collision.ts`, `course.ts` (trees, the edge, checkpoints, the reset) | `docs/riding.md`, `docs/architecture.md` (the step, the events) |
+| `engine/game/step.ts`, `run.ts`, `rivals.ts`, `state.ts`, `defs/modes.ts`, `place.ts`, `clock.ts` | `docs/architecture.md` |
+| `engine/mapgen/rules.ts` (the R-rules are quoted verbatim — `tests/docs_rules_test.ts`) | `docs/level-generator.md` |
+| `engine/mapgen/*` (the search, the country, the loop, the kickers, the spawn, the forest, the day, the `Level` shape) | `docs/level-generator.md` |
+| `engine/analysis/*` (a check) | `docs/level-generator.md` |
+| `engine/sim/*`, `scripts/simulate-run.mjs` (the bot, `RunReport`, the table) | `docs/simulation.md` (re-run `npm run sim` for the table) |
 | `engine/index.ts`, module moves under `engine/` or `pwa/src/` | `docs/architecture.md` |
-| `pwa/src/game/input.ts`, `input-model.ts`, `hud.tsx`, `hud-touch.tsx` | `docs/getting-started.md` |
-| `pwa/src/game/scenarios.ts`, `scripts/ride-lab.mjs`, `scripts/waves-lab.mjs`, `scripts/level-map.mjs` | `docs/simulation.md` (the labs), README Usage |
+| `pwa/src/game/renderer.ts` and the modules it names, `camera*.ts`, `sky.ts`, `snow-glsl.ts`, `trail-*.ts` | `docs/architecture.md` (the app layer) |
+| `pwa/src/App.tsx`, `shell.ts`, `menu-*.tsx`, `splash*.ts*`, `loading-screen.tsx`, `run-loader.ts`, `url-params.ts`, `settings*.ts` | `docs/getting-started.md`, `docs/configuration.md` (the URL readers, what is stored) |
+| `pwa/src/game/input.ts`, `input-model.ts`, `settings-input.ts`, `hud*.tsx` | `docs/getting-started.md` (the controls) |
+| `pwa/src/game/audio/*`, `pwa/src/lib/synth.ts`, `voice.ts`, `scripts/audition.mjs` | `docs/audio.md` |
+| `scripts/*.mjs`, `Makefile` (a lab added or changed) | README Usage, `docs/troubleshooting.md` if it has a failure mode |
 | `.github/workflows/pages.yml`, `release.yml`, `pwa/pwa-plugin.ts` | `docs/configuration.md`, `docs/platforms.md` |
 | `pwa/src/identity.ts`, `pwa/public/*` | `docs/configuration.md` |
-| `tauri/README.md`, `native/README.md` (the shells, once they are more than placeholders) | `docs/platforms.md` |
+| `tauri/**`, `native/**` | `docs/platforms.md`, `docs/configuration.md` (the environment rows) |
 | Error-shaped changes (new failure modes, new tooling) | `docs/troubleshooting.md` |
 | `OSS_GAME_SPEC.md`, or a verdict under one of its chapters | `docs/spec-conformance.md` — the `sync-game-spec` skill re-dates it |
 
@@ -69,4 +72,4 @@ The `docs/` pages describe the engine, the water and craft models, the generator
 
 ## Skill self-improvement
 
-After a run, grow the mapping table with any new source → page relationship you discovered, note recurring drift patterns (e.g. tuning constants quoted in prose, a spectrum parameter restated in `docs/water.md`), and commit the skill edit together with the docs edit.
+After a run, grow the mapping table with any new source → page relationship you discovered, note recurring drift patterns (e.g. tuning constants quoted in `docs/riding.md`'s prose, the sim table in `docs/simulation.md` left at an old tuning), and commit the skill edit together with the docs edit.

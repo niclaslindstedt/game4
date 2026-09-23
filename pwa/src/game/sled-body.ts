@@ -25,6 +25,7 @@ import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js
 import { SLED, type SledState } from "@engine";
 
 import type { Pose } from "./interp.ts";
+import { mergePosed } from "./posed-merge.ts";
 import { createRider, type RiderFigure, type RiderStyle } from "./rider.ts";
 import { PALETTE } from "../identity.ts";
 
@@ -334,34 +335,26 @@ export function createSledModel(
     skis.push({ group, spindle, upper, lower });
   }
 
-  // THE BODY'S STILL PARTS, MERGED: everything bolted straight to the frame
-  // (not the bars, the skis, the tread or the A-arms, which move) is one mesh
-  // per material — a machine is a few draws rather than dozens.
-  const moving = new Set<THREE.Object3D>(skis.flatMap((k) => [k.upper, k.lower]));
-  const byMaterial = new Map<THREE.Material, THREE.Mesh[]>();
-  for (const child of [...root.children]) {
-    if (!(child instanceof THREE.Mesh) || moving.has(child)) continue;
-    const list = byMaterial.get(child.material as THREE.Material) ?? [];
-    list.push(child);
-    byMaterial.set(child.material as THREE.Material, list);
-  }
-  for (const [material, meshes] of byMaterial) {
-    if (meshes.length < 2) continue;
-    const parts = meshes.map((mesh) => {
-      mesh.updateMatrix();
-      const g = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone();
-      g.deleteAttribute("uv");
-      return g.applyMatrix4(mesh.matrix);
-    });
-    const merged = mergeGeometries(parts);
-    for (const g of parts) g.dispose();
-    if (!merged) continue;
-    for (const mesh of meshes) root.remove(mesh);
-    add(merged, material);
-  }
-
   const figure: RiderFigure = createRider(style.rider, wrap);
   root.add(figure.group);
+
+  // THE WHOLE MACHINE AND ITS RIDER AS ONE DRAW (`posed-merge.ts`): every
+  // opaque part keeps its place in the tree for the posing and is drawn
+  // through one vertex-coloured mesh. The parts bolted straight to the
+  // frame are laid once; the skis, the struts, the bars, the tread and the
+  // rider are re-laid each frame. The windshield stays its own mesh — it is
+  // the one transparent thing on the machine.
+  const struts = new Set<THREE.Object3D>(skis.flatMap((k) => [k.upper, k.lower]));
+  const parts: THREE.Mesh[] = [];
+  root.traverse((o) => {
+    if (o instanceof THREE.Mesh && o.material !== glass) parts.push(o);
+  });
+  const merged = mergePosed(
+    root,
+    parts,
+    (mesh) => mesh.parent !== root || struts.has(mesh),
+    mat({ vertexColors: true, roughness: 0.55, metalness: 0.05 }, "sled-merged"),
+  );
 
   const Y = new THREE.Vector3(0, 1, 0);
   const a = new THREE.Vector3();
@@ -412,13 +405,17 @@ export function createSledModel(
         landing: sled.landing,
       });
       bars.rotation.y = sled.steer * 0.42;
+      merged.update();
     },
     setRiderVisible(v) {
+      if (figure.group.visible === v) return;
       figure.group.visible = v;
+      merged.update();
     },
     dispose() {
       for (const g of geos) g.dispose();
       for (const m of mats) m.dispose();
+      merged.dispose();
       figure.dispose();
     },
   };

@@ -126,7 +126,7 @@ HEAD..origin/main -- <path>` names the commit the other side came from; its
    message usually says why.
 2. **The answer is often BOTH.** Two people adding a row to the same table, two
    people adding a changeset fragment, two people adding a scenario to
-   `scenarios.ts` — the resolution keeps both, in a sensible order. Taking one
+   `ride-scenarios.mjs` — the resolution keeps both, in a sensible order. Taking one
    is a silent revert of the other.
 3. **When the two genuinely contradict**, `main` wins — it is already merged
    and already reviewed. Only diverge from that when both sides changed the
