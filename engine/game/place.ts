@@ -35,7 +35,8 @@ export type RunMoment = {
   roll?: number;
   /** A pitch rate already under way, rad/s, nose up positive. */
   pitchRate?: number;
-  /** The run clock, and the checkpoint owed. */
+  /** The run clock, and the checkpoint owed — given, the start line counts
+   * as already crossed, so owing 0 is owing the end of a lap. */
   time?: number;
   nextCheckpoint?: number;
 };
@@ -60,7 +61,8 @@ export function placeRun(state: GameState, moment: RunMoment): void {
   const level = state.level;
   const packed = level.packedAt(moment.x, moment.z);
   const probes = probesOf(c.spec);
-  for (let i = 0; i < probes.length; i++) c.sinks[i] = sinkTarget(packed, speed, probes[i].sinkScale);
+  for (let i = 0; i < probes.length; i++)
+    c.sinks[i] = sinkTarget(packed, speed, probes[i].sinkScale);
   if (moment.height !== undefined && moment.height > 0) {
     c.y = level.groundAt(moment.x, moment.z) + moment.height;
     c.airborne = true;

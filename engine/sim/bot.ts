@@ -209,7 +209,12 @@ function speedAllowed(state: GameState, s: number, speed: number, profile: BotPr
 }
 
 /** Move the aim off a trunk standing in the line from the rider to it. */
-function dodgeTrees(state: GameState, tx: number, tz: number, profile: BotProfile): [number, number] {
+function dodgeTrees(
+  state: GameState,
+  tx: number,
+  tz: number,
+  profile: BotProfile,
+): [number, number] {
   const c = state.sled;
   const dx = tx - c.x;
   const dz = tz - c.z;
@@ -275,7 +280,8 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
     const uz = hs > 0.5 ? c.vz / hs : Math.cos(c.heading);
     const ax = c.x + c.vx * 0.5;
     const az = c.z + c.vz * 0.5;
-    const slope = (level.groundAt(ax + ux * 2, az + uz * 2) - level.groundAt(ax - ux * 2, az - uz * 2)) / 4;
+    const slope =
+      (level.groundAt(ax + ux * 2, az + uz * 2) - level.groundAt(ax - ux * 2, az - uz * 2)) / 4;
     const target = Math.atan(slope);
     const pitchRate = -c.wx;
     input.lean = clamp(profile.airGain * (target - c.pitch) - profile.airDamp * pitchRate, -1, 1);
@@ -290,7 +296,10 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   // ahead along its own yaw and asks for less.
   const powder = 1 - c.packed;
   const yaw = rotate(c.q, { x: c.wx, y: c.wy, z: c.wz }).y;
-  const error = angleDiff(c.heading + yaw * profile.yawLead * (1 + powder * profile.powderLead), bearing);
+  const error = angleDiff(
+    c.heading + yaw * profile.yawLead * (1 + powder * profile.powderLead),
+    bearing,
+  );
   input.steer = clamp(profile.steerGain * (1 - powder * profile.powderEase) * error, -1, 1);
 
   // THE THROTTLE AND THE BRAKE, off the bends within reach — on the track;
@@ -307,7 +316,10 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
     const grip = cornerGrip(c.packed) * profile.cornerShare;
     const turn = Math.sqrt(grip * profile.entryRadius);
     const left = on.distance - halfWidth;
-    allowed = Math.min(allowed, Math.sqrt(turn * turn + 2 * brakeDecel(c.packed) * profile.brakeShare * left));
+    allowed = Math.min(
+      allowed,
+      Math.sqrt(turn * turn + 2 * brakeDecel(c.packed) * profile.brakeShare * left),
+    );
   }
   const reach = Math.hypot(tx - c.x, tz - c.z);
   const bend = (2 * Math.abs(Math.sin(angleDiff(c.heading, bearing)))) / Math.max(reach, 1);

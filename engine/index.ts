@@ -50,7 +50,13 @@ export * from "./mapgen/index.ts";
 // The run.
 export { createGame, rulesFor, step, FIELD_SIZE, type CreateGameOptions } from "./game/step.ts";
 export { RACE, openRules, raceRules, type RunRules } from "./game/defs/modes.ts";
-export { SLED, inertiaOf, totalMass, type SledSpec, type SuspensionSpec } from "./game/defs/sled.ts";
+export {
+  SLED,
+  inertiaOf,
+  totalMass,
+  type SledSpec,
+  type SuspensionSpec,
+} from "./game/defs/sled.ts";
 export { TUNING } from "./game/defs/tuning.ts";
 export {
   NEUTRAL_INPUT,
@@ -92,14 +98,7 @@ export {
 export { stepRun } from "./game/run.ts";
 export { placeRun, type RunMoment } from "./game/place.ts";
 export { SUN_SECONDS_PER_HOUR, sunAtRun, sunHourAt } from "./game/clock.ts";
-export {
-  brakeDecel,
-  cornerGrip,
-  lockAt,
-  maxRpm,
-  topSpeedOf,
-  treadCeiling,
-} from "./game/limits.ts";
+export { brakeDecel, cornerGrip, lockAt, maxRpm, topSpeedOf, treadCeiling } from "./game/limits.ts";
 
 // The bot rider and the headless simulator.
 export { botInput, RIDER_BOT, type BotProfile } from "./sim/bot.ts";

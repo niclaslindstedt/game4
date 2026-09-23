@@ -57,7 +57,12 @@ describe("a kicker", () => {
 
 describe("a landing", () => {
   it("from a metre is taken by the suspension whole", () => {
-    const state = createGame({ level: flatLevel({ packed: 1 }), rivals: 0, countdown: 0, quiet: true });
+    const state = createGame({
+      level: flatLevel({ packed: 1 }),
+      rivals: 0,
+      countdown: 0,
+      quiet: true,
+    });
     placeRun(state, { x: 1500, z: 200, heading: 0, speed: 20, height: 1.55 });
     const events = ride(state, 2, FULL);
     const land = events.find((e) => e.kind === "land");
@@ -65,7 +70,12 @@ describe("a landing", () => {
   });
 
   it("flat from five metres bottoms the suspension and costs speed", () => {
-    const state = createGame({ level: flatLevel({ packed: 1 }), rivals: 0, countdown: 0, quiet: true });
+    const state = createGame({
+      level: flatLevel({ packed: 1 }),
+      rivals: 0,
+      countdown: 0,
+      quiet: true,
+    });
     placeRun(state, { x: 1500, z: 200, heading: 0, speed: 20, height: 5.55 });
     const events = ride(state, 2, NEUTRAL_INPUT);
     const land = events.find((e) => e.kind === "land");
@@ -79,7 +89,12 @@ describe("a landing", () => {
 
 describe("air control", () => {
   function pitchAfter(input: SledInput): number {
-    const state = createGame({ level: flatLevel({ packed: 1 }), rivals: 0, countdown: 0, quiet: true });
+    const state = createGame({
+      level: flatLevel({ packed: 1 }),
+      rivals: 0,
+      countdown: 0,
+      quiet: true,
+    });
     placeRun(state, { x: 1500, z: 200, heading: 0, speed: 20, height: 12, vy: 3 });
     ride(state, 0.6, input);
     expect(state.sled.airborne).toBe(true);

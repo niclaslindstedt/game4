@@ -96,7 +96,9 @@ function record(scenario) {
   return { frames, events, trees: level.trees };
 }
 
-console.log(`ride lab — engine ${E.engineVersion} at ${E.TUNING.physicsHz} Hz · sled ${E.SLED.name}`);
+console.log(
+  `ride lab — engine ${E.engineVersion} at ${E.TUNING.physicsHz} Hz · sled ${E.SLED.name}`,
+);
 if (!args["no-png"]) mkdirSync(join(root, args.out), { recursive: true });
 for (const scenario of chosen) {
   const run = record(scenario);

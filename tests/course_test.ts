@@ -128,7 +128,9 @@ describe("the reset", () => {
     crossAt(state, cps[1]);
     placeRun(state, { x: 300, z: 200, heading: 1, speed: 10 });
     step(state, { ...NEUTRAL_INPUT, reset: true });
-    expect(state.events.some((e) => e.kind === "reset" && e.checkpoint === 1 && !e.auto)).toBe(true);
+    expect(state.events.some((e) => e.kind === "reset" && e.checkpoint === 1 && !e.auto)).toBe(
+      true,
+    );
     const c = state.sled;
     expect(Math.hypot(c.x - cps[1].x, c.z - cps[1].z)).toBeLessThan(TUNING.course.resetAhead + 1);
     expect(c.speed).toBe(0);
@@ -189,7 +191,9 @@ describe("the lights", () => {
         expect(state.progress.time).toBe(0);
       }
     }
-    expect(events.filter((e) => e.kind === "count").map((e) => e.kind === "count" && e.left)).toEqual([3, 2, 1]);
+    expect(
+      events.filter((e) => e.kind === "count").map((e) => e.kind === "count" && e.left),
+    ).toEqual([3, 2, 1]);
     expect(events.some((e) => e.kind === "go")).toBe(true);
     expect(state.phase).toBe("racing");
     expect(state.progress.time).toBeGreaterThan(0.9);

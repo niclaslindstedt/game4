@@ -52,9 +52,15 @@ function turn(run) {
   const c = pick(end);
   const d = 2 * (a.x * (b.z - c.z) + b.x * (c.z - a.z) + c.x * (a.z - b.z));
   const ux =
-    ((a.x ** 2 + a.z ** 2) * (b.z - c.z) + (b.x ** 2 + b.z ** 2) * (c.z - a.z) + (c.x ** 2 + c.z ** 2) * (a.z - b.z)) / d;
+    ((a.x ** 2 + a.z ** 2) * (b.z - c.z) +
+      (b.x ** 2 + b.z ** 2) * (c.z - a.z) +
+      (c.x ** 2 + c.z ** 2) * (a.z - b.z)) /
+    d;
   const uz =
-    ((a.x ** 2 + a.z ** 2) * (c.x - b.x) + (b.x ** 2 + b.z ** 2) * (a.x - c.x) + (c.x ** 2 + c.z ** 2) * (b.x - a.x)) / d;
+    ((a.x ** 2 + a.z ** 2) * (c.x - b.x) +
+      (b.x ** 2 + b.z ** 2) * (a.x - c.x) +
+      (c.x ** 2 + c.z ** 2) * (b.x - a.x)) /
+    d;
   const radius = Math.hypot(a.x - ux, a.z - uz);
   const v = c.speed;
   return [

@@ -53,7 +53,11 @@ export function drawRun(run, scenario, lines) {
   panelBox(d, px, py, pw, ph, "SPEED KM/H (BLUE), TREAD (PALE), RPM/100 (ORANGE)");
   const fs = run.frames;
   const tEnd = fs[fs.length - 1].t || 1;
-  const vMax = Math.max(40, ...fs.map((f) => Math.max(f.speed, f.tread) * 3.6), ...fs.map((f) => f.rpm / 100));
+  const vMax = Math.max(
+    40,
+    ...fs.map((f) => Math.max(f.speed, f.tread) * 3.6),
+    ...fs.map((f) => f.rpm / 100),
+  );
   const X = (t) => px + 10 + (t / tEnd) * (pw - 20);
   const Y = (v) => py + ph - 10 - (v / vMax) * (ph - 30);
   for (const f of fs) if (f.airborne) d.line(X(f.t), py + 20, X(f.t), py + ph - 10, INK.air);
@@ -62,9 +66,19 @@ export function drawRun(run, scenario, lines) {
     d.text(String(v), px + pw - 34, Y(v) - 9, INK.dim);
   }
   for (let t = 0; t <= tEnd; t += 1) d.line(X(t), py + ph - 10, X(t), py + ph - 6, INK.dim);
-  d.polyline(fs.map((f) => [X(f.t), Y(f.rpm / 100)]), INK.rpm);
-  d.polyline(fs.map((f) => [X(f.t), Y(f.tread * 3.6)]), INK.tread);
-  d.polyline(fs.map((f) => [X(f.t), Y(f.speed * 3.6)]), INK.speed, 2);
+  d.polyline(
+    fs.map((f) => [X(f.t), Y(f.rpm / 100)]),
+    INK.rpm,
+  );
+  d.polyline(
+    fs.map((f) => [X(f.t), Y(f.tread * 3.6)]),
+    INK.tread,
+  );
+  d.polyline(
+    fs.map((f) => [X(f.t), Y(f.speed * 3.6)]),
+    INK.speed,
+    2,
+  );
   for (const e of run.events) {
     if (e.kind === "hit" || e.kind === "land" || e.kind === "air" || e.kind === "reset") {
       d.line(X(e.t), py + 20, X(e.t), py + ph - 10, INK.event);
@@ -93,16 +107,34 @@ export function drawRun(run, scenario, lines) {
     const PX = (x) => px + qw / 2 + (x - cx) * s;
     const PZ = (z) => qy + qh / 2 - (z - cz) * s;
     for (const tr of run.trees) d.disk(PX(tr.x), PZ(tr.z), Math.max(2, tr.radius * s), INK.event);
-    d.polyline(fs.map((f) => [PX(f.x), PZ(f.z)]), INK.speed, 2);
+    d.polyline(
+      fs.map((f) => [PX(f.x), PZ(f.z)]),
+      INK.speed,
+      2,
+    );
     let next = 0;
     for (const f of fs) {
       if (f.t < next) continue;
       next += 0.5;
       const L = 1.5;
-      d.line(PX(f.x), PZ(f.z), PX(f.x + Math.sin(f.heading) * L), PZ(f.z + Math.cos(f.heading) * L), INK.sled, 2);
+      d.line(
+        PX(f.x),
+        PZ(f.z),
+        PX(f.x + Math.sin(f.heading) * L),
+        PZ(f.z + Math.cos(f.heading) * L),
+        INK.sled,
+        2,
+      );
     }
   } else {
-    panelBox(d, px, qy, qw, qh, "PROFILE - SNOW (GREY), CENTRE OF GRAVITY (RED), NOSE EVERY 0.25 S");
+    panelBox(
+      d,
+      px,
+      qy,
+      qw,
+      qh,
+      "PROFILE - SNOW (GREY), CENTRE OF GRAVITY (RED), NOSE EVERY 0.25 S",
+    );
     const dEnd = Math.max(10, fs[fs.length - 1].dist);
     const [g0, g1] = range(fs.flatMap((f) => [f.ground - f.sink, f.y + 0.6]));
     const hSpan = Math.max(4, g1 - g0 + 1);
@@ -113,9 +145,20 @@ export function drawRun(run, scenario, lines) {
     const DX = (dd) => px + 20 + dd * sx;
     const DY = (h) => qy + qh - 20 - (h - g0) * sy;
     d.text(`VERTICAL X${(sy / sx).toFixed(1)}`, px + qw - 110, qy + 6, INK.dim);
-    d.polyline(fs.map((f) => [DX(f.dist), DY(f.ground)]), INK.snow, 2);
-    d.polyline(fs.map((f) => [DX(f.dist), DY(f.ground - f.sink)]), INK.grid);
-    d.polyline(fs.map((f) => [DX(f.dist), DY(f.y)]), INK.sled, 2);
+    d.polyline(
+      fs.map((f) => [DX(f.dist), DY(f.ground)]),
+      INK.snow,
+      2,
+    );
+    d.polyline(
+      fs.map((f) => [DX(f.dist), DY(f.ground - f.sink)]),
+      INK.grid,
+    );
+    d.polyline(
+      fs.map((f) => [DX(f.dist), DY(f.y)]),
+      INK.sled,
+      2,
+    );
     let next = 0;
     for (const f of fs) {
       if (f.t < next) continue;
@@ -123,7 +166,14 @@ export function drawRun(run, scenario, lines) {
       const L = 1.4;
       const dx = Math.cos(f.pitch) * L * sx;
       const dy = Math.sin(f.pitch) * L * sy;
-      d.line(DX(f.dist), DY(f.y), DX(f.dist) + dx, DY(f.y) - dy, f.airborne ? INK.rpm : INK.sled, 2);
+      d.line(
+        DX(f.dist),
+        DY(f.y),
+        DX(f.dist) + dx,
+        DY(f.y) - dy,
+        f.airborne ? INK.rpm : INK.sled,
+        2,
+      );
     }
   }
   return d.toPng();

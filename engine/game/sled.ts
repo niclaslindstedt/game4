@@ -192,7 +192,9 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   // The ground under the CoG: the roll the rider holds is measured against
   // it, and the carve reads it.
   level.normalAt(c.x, c.z, normal);
-  const rollRel = Math.asin(clamp(-(right.x * normal.x + right.y * normal.y + right.z * normal.z), -1, 1));
+  const rollRel = Math.asin(
+    clamp(-(right.x * normal.x + right.y * normal.y + right.z * normal.z), -1, 1),
+  );
 
   // ── The suspension and the grip, probe by probe ───────────────────────
   const probes = probesOf(spec);
@@ -292,7 +294,9 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const damp = rate > 0 ? p.susp.bump : p.susp.rebound;
     let spring = p.susp.rate * comp + damp * rate;
     if (comp > p.susp.travel) {
-      spring += STOP_RATE * p.susp.rate * (comp - p.susp.travel) + STOP_DAMP * p.susp.bump * Math.max(0, rate);
+      spring +=
+        STOP_RATE * p.susp.rate * (comp - p.susp.travel) +
+        STOP_DAMP * p.susp.bump * Math.max(0, rate);
     }
     if (spring <= 0) continue;
     if (spring > MAX_LOAD * p.rest) spring = MAX_LOAD * p.rest;
@@ -332,7 +336,12 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
       across -= grip.treadSide * load * Math.tanh(vl / G.sideRef);
       // THE CARVE: a tread rolled onto its edge in powder bites toward the
       // low side, once there is way on to carve with.
-      across += load * R.carve * (1 - packed) * Math.sin(rollRel) * clamp(Math.abs(vf) / R.carveSpeed, 0, 1);
+      across +=
+        load *
+        R.carve *
+        (1 - packed) *
+        Math.sin(rollRel) *
+        clamp(Math.abs(vf) / R.carveSpeed, 0, 1);
     } else {
       across -= grip.ski * load * Math.tanh(vl / G.sideRef);
     }
@@ -385,7 +394,8 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const packed = c.packed;
     const target = c.steer * (R.rollPacked * packed + R.rollPowder * (1 - packed));
     const hold = clamp((1.3 - Math.abs(rollRel)) / 0.4, 0, 1);
-    tb.z += clamp(R.rollStiff * (rollRel - target) - R.rollDamp * c.wz, -R.rollMax, R.rollMax) * hold;
+    tb.z +=
+      clamp(R.rollStiff * (rollRel - target) - R.rollDamp * c.wz, -R.rollMax, R.rollMax) * hold;
     // THE YAW HELD (`steer.yawHold`): toward the rate the skis ask for, no
     // more than the grip can turn the way at, and the nose held to the way
     // the sled is actually going.
@@ -395,7 +405,8 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const reach = Math.abs(way) > 1 ? (cornerGrip(packed) * S.pathShare) / Math.abs(way) : 0;
     const asked = clamp((way * Math.tan(c.skiAngle)) / S.base, -reach, reach);
     const slip = flat > S.slipFrom && way > 0 ? angleDiff(Math.atan2(c.vx, c.vz), c.heading) : 0;
-    tb.y += clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) * hold;
+    tb.y +=
+      clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) * hold;
   } else {
     airTorque(c, tb);
   }
@@ -470,8 +481,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   // ── The automatic reset's clocks (`run.ts` acts on them) ──────────────
   const upright = rotate(c.q, { x: 0, y: 1, z: 0 }).y;
   c.overFor = upright < TUNING.reset.overUp ? c.overFor + dt : 0;
-  c.stuckFor =
-    input.throttle > 0.5 && c.speed < TUNING.reset.stuckSpeed ? c.stuckFor + dt : 0;
+  c.stuckFor = input.throttle > 0.5 && c.speed < TUNING.reset.stuckSpeed ? c.stuckFor + dt : 0;
   if (c.hitCooldown > 0) c.hitCooldown -= dt;
   if (c.bumpCooldown > 0) c.bumpCooldown -= dt;
 }
