@@ -23,17 +23,12 @@ import type { Level } from "@engine";
 
 import { PALETTE } from "../identity.ts";
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
+import type { ForestLook } from "./settings-video.ts";
 
-export type ForestOptions = {
-  near: number;
-  mid: number;
-  far: number;
-};
-
-export const FOREST_QUALITY: Record<"high" | "low", ForestOptions> = {
-  high: { near: 45, mid: 160, far: 1100 },
-  low: { near: 30, mid: 160, far: 700 },
-};
+/** Where the three bands end (the FOREST row's `near` and `mid`, the
+ * DISTANCE row's `far`, all m) and the share of the far band's sketches that
+ * stand — `settings-video.ts` says what each stop buys. */
+export type ForestOptions = ForestLook & { far: number };
 
 const CELL = 64;
 
@@ -177,10 +172,13 @@ export type Forest = {
   update(camera: THREE.PerspectiveCamera): void;
   /** Force the next update to recompute (a new frame of reference). */
   invalidate(): void;
+  /** New bands (a picture row moved); takes effect on the next update. */
+  setOptions(next: ForestOptions): void;
   dispose(): void;
 };
 
-export function createForest(level: Level, haze: HazeUniforms, options: ForestOptions): Forest {
+export function createForest(level: Level, haze: HazeUniforms, initial: ForestOptions): Forest {
+  let options = { ...initial };
   const group = new THREE.Group();
   const trees = level.trees;
   const count = trees.length;
@@ -188,6 +186,10 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
   const matrices = new Float32Array(count * 16);
   const colours = new Float32Array(count * 3);
   const shapeOf = new Uint8Array(count);
+  /** Each tree's place in the far band's thinning: a sketch stands while
+   * this is under `farShare`, so a thinner wood is a subset of a thicker
+   * one and walking the row never swaps one tree for another. */
+  const thin = new Float32Array(count);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const s = new THREE.Vector3();
@@ -197,6 +199,7 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
     const t = trees[i];
     const h = hash(t.x, t.z);
     shapeOf[i] = h < 0.62 ? 0 : 1;
+    thin[i] = hash(t.x * 1.7 + 11, t.z * 0.6 - 5);
     q.setFromAxisAngle(up, h * Math.PI * 2);
     // The crown the generator gives is the collision's idea of it; drawn a
     // touch narrower so a wood keeps gaps between its trees.
@@ -331,7 +334,7 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
             if (e2 < near2) place(atLens(t, Math.sqrt(e2), cy) ? ghost : near, i);
             else if (!seen) continue;
             else if (e2 < mid2) place(mid, i);
-            else if (e2 < far2) place(far, i);
+            else if (e2 < far2 && thin[i] < options.farShare) place(far, i);
           }
         }
       }
@@ -350,6 +353,10 @@ export function createForest(level: Level, haze: HazeUniforms, options: ForestOp
       }
     },
     invalidate() {
+      lastAt.set(Infinity, 0, 0);
+    },
+    setOptions(next) {
+      options = { ...next };
       lastAt.set(Infinity, 0, 0);
     },
     dispose() {

@@ -59,10 +59,12 @@ export type RideBed = {
   live: () => number;
 };
 
-export function createRideBed(synth: Synth): RideBed {
+/** `voice` is what the engine's layers play through — its own fader's view
+ * of the one synth (`bus.ts`); the snow and the wind play through `synth`. */
+export function createRideBed(synth: Synth, voice: Synth = synth): RideBed {
   let wind = 0;
   let listener: Listener = listenerFor("chase");
-  const engine: Rack<EngineLayer> = createRack(synth, ENGINE_LAYERS, ENGINE_GLIDE);
+  const engine: Rack<EngineLayer> = createRack(voice, ENGINE_LAYERS, ENGINE_GLIDE);
   const snow: Rack<SnowLayer> = createRack(synth, SNOW_LAYERS, SNOW_GLIDE);
 
   const hush = (): void => {

@@ -7,8 +7,9 @@
 // steps and handed to the step it arrives in, so a tap inside one step is
 // still seen by that step.
 //
-// WHICH KEY DOES WHAT is `settings-input.ts`'s table, and nothing in this
-// file knows any particular key:
+// WHICH KEY DOES WHAT is `settings-input.ts`'s table (as shipped; OPTIONS ▸
+// KEYS rebinds it and `setBindings` hands the manager the answer), and
+// nothing in this file knows any particular key:
 //   W / ↑        throttle             S / ↓ / Space   brake
 //   A / ←  D / → steer                E / Shift       lean back (nose up)
 //   Q / Z        lean forward         R               back to the checkpoint
@@ -52,6 +53,9 @@ export type InputManager = {
   requestReset: () => void;
   /** Hear the app-level presses. */
   onAction: (handler: (action: InputAction) => void) => void;
+  /** Ride on a new keyboard (OPTIONS ▸ KEYS). Every held key is let go:
+   * a key down under the old layout has no keyup under the new one. */
+  setBindings: (bindings: KeyBindings) => void;
   dispose: () => void;
 };
 
@@ -78,13 +82,17 @@ export function createInputManager(
   /** The index every keystroke is answered from: one code, the actions on
    * it. A list, because one key may serve two rows. */
   const byCode = new Map<string, KeyAction[]>();
-  for (const [action, codes] of Object.entries(bindings) as [KeyAction, string[]][]) {
-    for (const code of codes) {
-      const on = byCode.get(code);
-      if (on) on.push(action);
-      else byCode.set(code, [action]);
+  const index = (next: KeyBindings): void => {
+    byCode.clear();
+    for (const [action, codes] of Object.entries(next) as [KeyAction, string[]][]) {
+      for (const code of codes) {
+        const on = byCode.get(code);
+        if (on) on.push(action);
+        else byCode.set(code, [action]);
+      }
     }
-  }
+  };
+  index(bindings);
 
   const onKeyDown = (e: KeyboardEvent): void => {
     const actions = byCode.get(e.code);
@@ -139,6 +147,10 @@ export function createInputManager(
     },
     onAction: (handler) => {
       onAction = handler;
+    },
+    setBindings: (next) => {
+      onBlur();
+      index(next);
     },
     dispose: () => {
       target.removeEventListener("keydown", onKeyDown);

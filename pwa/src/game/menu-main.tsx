@@ -13,8 +13,9 @@
 // same map every time with nothing on the card to say why would read as a
 // broken dealer.
 //
-// EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, the keys
-// on a machine that has them, and the build. Low, and not tile-shaped at
+// EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, OPTIONS
+// (`menu-options.tsx`), the keys on a machine that has them — read off the
+// bindings the rider actually has — and the build. Low, and not tile-shaped at
 // all, because a thing that does not start a race should not wear the shape
 // of one.
 
@@ -54,6 +55,7 @@ export function MainMenu({
   keys,
   onRace,
   onSound,
+  onOptions,
 }: {
   /** The seed RACE will build. */
   seed: number;
@@ -62,10 +64,11 @@ export function MainMenu({
   laps: number;
   riders: number;
   sound: boolean;
-  /** Whether this machine has keys worth listing. */
-  keys: boolean;
+  /** The keys line, on a machine that has keys worth listing. */
+  keys: string | null;
   onRace: () => void;
   onSound: () => void;
+  onOptions: () => void;
 }) {
   return (
     <div class="menu">
@@ -108,7 +111,11 @@ export function MainMenu({
             <Glyph name={sound ? "speaker" : "mute"} />
             <span class="menu-tile-name">{STRINGS.menuSound(sound)}</span>
           </button>
-          {keys && <span class="menu-keys">{STRINGS.menuKeys}</span>}
+          <button type="button" class="menu-chip" data-menu="options" onClick={onOptions}>
+            <Glyph name="sliders" />
+            <span class="menu-tile-name">{STRINGS.menuOptions}</span>
+          </button>
+          {keys !== null && <span class="menu-keys">{keys}</span>}
           <VersionStamp />
         </div>
       </div>

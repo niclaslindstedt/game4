@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE TOUCH CONTROLS — the two thumb zones the phone rides the sled with:
-// the HANDLEBAR on the lower left, the LEVER on the lower right — the
-// throttle dragged DOWN from its anchor, the brake pushed UP from it. Both
+// the HANDLEBAR on the lower left, the LEVER on the lower right (swapped for
+// a rider who has asked for the lever on the left) — the throttle dragged
+// DOWN from its anchor, the brake pushed UP from it. Both
 // stop short of the top of the screen so the readouts and their presses keep
 // their own glass; styles.css owns where the line falls.
 //
@@ -28,14 +29,15 @@
 import { useEffect, useMemo, useRef } from "preact/hooks";
 
 import {
-  BAR_REACH_PX,
   LEVER_BRAKE_DEAD_PX,
   LEVER_BRAKE_PX,
   LEVER_FULL_PX,
   barLean,
+  barReachPx,
   barSteer,
   leverBrake,
   leverThrottle,
+  type TouchFeel,
 } from "./input-model.ts";
 import type { InputManager } from "./input.ts";
 import { createThumbGuard } from "./thumb-guard.ts";
@@ -63,30 +65,43 @@ function stillDown(zone: EventTarget | null): (pointerId: number) => boolean {
 const BAR_LOCK_DEG = 28;
 /** The bar's drawing is this many px across (styles.css `.hud-bar-svg`),
  * mapped onto a hundred-unit box — so the reach ring can be drawn at the
- * thumb's real travel. */
+ * thumb's real travel (`barReachPx`, which the sensitivity moves: the
+ * drawing lets a wider ring overhang its box). */
 const BAR_SVG_PX = 200;
-/** ...which puts the reach ring at this radius in the drawing's own units. */
-const BAR_REACH_UNITS = (BAR_REACH_PX / BAR_SVG_PX) * 100;
 /** Half the drawn bar's own height, units: the crossbar's top edge to the
  * base grip's bottom. The art is drawn CENTRED on the box (that is what the
  * −8 in every y below is for), so this one number bounds its travel in both
  * directions instead of one. */
 const BAR_ART_HALF = 17;
-/** ...so the bar slides this far at full lean: right up against the reach
- * ring and no further, at BOTH ends of the axis.
- *
- * The lean is the one axis of the two with nothing to SHOW for itself — a
- * turned bar is unmistakable, a leaning rider is a few degrees of pitch
- * behind a chase camera, and in the air it is the whole of the pitch
- * control — so the overlay carries the whole of its travel, and the end of
- * that travel is the ring the player can already see. */
-const BAR_LEAN_SLIDE = BAR_REACH_UNITS - BAR_ART_HALF;
+
+/** Which side of the glass a zone stands on (OPTIONS ▸ CONTROLS). */
+export type ZoneSide = "left" | "right";
 
 /** The left thumb: touching anywhere in the zone anchors a handlebar under
  * the finger; dragging sideways turns it, dragging up or down leans the
  * rider, and releasing centres both. Screen-space: right = +1
  * (input-model.ts flips the sign for the engine, once). */
-export function BarZone({ touch }: { touch: InputManager["touch"] }) {
+export function BarZone({
+  touch,
+  feel,
+  side,
+}: {
+  touch: InputManager["touch"];
+  feel: TouchFeel;
+  side: ZoneSide;
+}) {
+  /** The reach ring's radius in the drawing's own units... */
+  const reachUnits = (barReachPx(feel) / BAR_SVG_PX) * 100;
+  /** ...so the bar slides this far at full lean: right up against the reach
+   * ring and no further, at BOTH ends of the axis.
+   *
+   * The lean is the one axis of the two with nothing to SHOW for itself — a
+   * turned bar is unmistakable, a leaning rider is a few degrees of pitch
+   * behind a chase camera, and in the air it is the whole of the pitch
+   * control — so the overlay carries the whole of its travel, and the end of
+   * that travel is the ring the player can already see. An inverted lean
+   * slides it the other way, because the bar goes where the thumb went. */
+  const leanSlide = (reachUnits - BAR_ART_HALF) * (feel.invertLean ? -1 : 1);
   const barRef = useRef<HTMLDivElement>(null);
   const rotorRef = useRef<SVGGElement>(null);
   const originRef = useRef({ x: 0, y: 0 });
@@ -101,7 +116,7 @@ export function BarZone({ touch }: { touch: InputManager["touch"] }) {
       // ring at the ends of its travel.
       rotor.setAttribute(
         "transform",
-        `translate(0 ${(lean * BAR_LEAN_SLIDE).toFixed(1)}) rotate(${(steer * BAR_LOCK_DEG).toFixed(1)} 50 50)`,
+        `translate(0 ${(lean * leanSlide).toFixed(1)}) rotate(${(steer * BAR_LOCK_DEG).toFixed(1)} 50 50)`,
       );
     }
   };
@@ -121,7 +136,7 @@ export function BarZone({ touch }: { touch: InputManager["touch"] }) {
 
   return (
     <div
-      class="hud-zone hud-zone-left"
+      class={`hud-zone hud-zone-${side}`}
       data-touch="bar"
       onPointerDown={(e) => {
         // The first finger owns the bar; a second touch on this half is
@@ -143,7 +158,10 @@ export function BarZone({ touch }: { touch: InputManager["touch"] }) {
       }}
       onPointerMove={(e) => {
         if (!guard.owns(e.pointerId)) return;
-        write(barSteer(e.clientX - originRef.current.x), barLean(e.clientY - originRef.current.y));
+        write(
+          barSteer(e.clientX - originRef.current.x, feel),
+          barLean(e.clientY - originRef.current.y, feel),
+        );
       }}
       onPointerUp={(e) => guard.release(e.pointerId)}
       onPointerCancel={(e) => guard.release(e.pointerId)}
@@ -152,9 +170,9 @@ export function BarZone({ touch }: { touch: InputManager["touch"] }) {
       onLostPointerCapture={(e) => guard.release(e.pointerId)}
     >
       <div ref={barRef} class="hud-bar" aria-hidden="true">
-        <svg class="hud-bar-svg" viewBox="0 0 100 100">
+        <svg class="hud-bar-svg" viewBox="0 0 100 100" overflow="visible">
           {/* The reach ring: how far the thumb can go for full lock. */}
-          <circle cx="50" cy="50" r={(BAR_REACH_PX / BAR_SVG_PX) * 100} class="hud-bar-reach" />
+          <circle cx="50" cy="50" r={reachUnits} class="hud-bar-reach" />
           <g ref={rotorRef}>
             {/* The bar itself: a crossbar with two grips and a column down
                 to the deck, seen from the saddle — drawn CENTRED on the box
@@ -186,7 +204,15 @@ const LEVER_BOX_PX = LEVER_UP_PX + LEVER_FULL_PX + LEVER_PAD_PX * 2;
  * `LEVER_FULL_PX`; pushing UP past a small dead band pulls the BRAKE over
  * `LEVER_BRAKE_PX`. Analogue the whole way, held while the finger is down
  * and let go on the lift. `input-model.ts` states the maths once. */
-export function LeverZone({ touch }: { touch: InputManager["touch"] }) {
+export function LeverZone({
+  touch,
+  feel,
+  side,
+}: {
+  touch: InputManager["touch"];
+  feel: TouchFeel;
+  side: ZoneSide;
+}) {
   const leverRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<SVGGElement>(null);
   const fillRef = useRef<SVGRectElement>(null);
@@ -225,7 +251,7 @@ export function LeverZone({ touch }: { touch: InputManager["touch"] }) {
 
   return (
     <div
-      class="hud-zone hud-zone-right"
+      class={`hud-zone hud-zone-${side}`}
       data-touch="lever"
       onPointerDown={(e) => {
         capturePointer(e);
@@ -244,7 +270,7 @@ export function LeverZone({ touch }: { touch: InputManager["touch"] }) {
       onPointerMove={(e) => {
         if (!guard.owns(e.pointerId)) return;
         const dy = e.clientY - originRef.current;
-        write(leverThrottle(dy), leverBrake(dy));
+        write(leverThrottle(dy, feel), leverBrake(dy, feel));
       }}
       onPointerUp={(e) => guard.release(e.pointerId)}
       onPointerCancel={(e) => guard.release(e.pointerId)}

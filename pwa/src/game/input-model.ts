@@ -76,18 +76,27 @@ export const LEVER_FULL_PX = 90;
 export const LEVER_BRAKE_DEAD_PX = 12;
 export const LEVER_BRAKE_PX = 60;
 
+/** HOW A RIDER HAS ASKED THE THUMBS TO FEEL (OPTIONS ▸ CONTROLS):
+ * `sensitivity` multiplies every thumb's travel before it is read, so above
+ * one the whole throw is shorter; `invertLean` reads the bar pushed AWAY as
+ * the lean back, the way a flight stick does. The keys never pass through
+ * it — a key is a whole press either way, and the binding page is how a key
+ * is turned round. */
+export type TouchFeel = { sensitivity: number; invertLean: boolean };
+export const PLAIN_FEEL: TouchFeel = { sensitivity: 1, invertLean: false };
+
 /** How open the throttle is for a thumb `dyPx` below its anchor (screen y
  * grows downward): shut at the anchor and above it, opening analogue over
  * `LEVER_FULL_PX` of travel down. */
-export function leverThrottle(dyPx: number): number {
-  return clamp(dyPx / LEVER_FULL_PX, 0, 1);
+export function leverThrottle(dyPx: number, feel: TouchFeel = PLAIN_FEEL): number {
+  return clamp((dyPx * feel.sensitivity) / LEVER_FULL_PX, 0, 1);
 }
 
 /** ...and how far the brake is pulled for the same thumb: the travel ABOVE
  * the anchor past the dead band, 0..1. One throw carries both, so a rider
  * can never be asking for the throttle and the brake with the same thumb. */
-export function leverBrake(dyPx: number): number {
-  const past = -dyPx - LEVER_BRAKE_DEAD_PX;
+export function leverBrake(dyPx: number, feel: TouchFeel = PLAIN_FEEL): number {
+  const past = -dyPx * feel.sensitivity - LEVER_BRAKE_DEAD_PX;
   if (past <= 0) return 0;
   return clamp(past / LEVER_BRAKE_PX, 0, 1);
 }
@@ -109,8 +118,8 @@ export const LEAN_DEAD_PX = 14;
 export const LEAN_REACH_PX = BAR_REACH_PX - LEAN_DEAD_PX;
 
 /** Screen-space steer, -1..1, for a thumb `dxPx` right of its anchor. */
-export function barSteer(dxPx: number): number {
-  const travel = clamp(dxPx / BAR_REACH_PX, -1, 1);
+export function barSteer(dxPx: number, feel: TouchFeel = PLAIN_FEEL): number {
+  const travel = clamp((dxPx * feel.sensitivity) / BAR_REACH_PX, -1, 1);
   return Math.sign(travel) * Math.abs(travel) ** BAR_THROW_CURVE;
 }
 
@@ -118,10 +127,18 @@ export function barSteer(dxPx: number): number {
  * the rider (down the glass) is leaning BACK (+1, nose up — the engine's
  * sign), pushing it away is leaning forward. The dead band is spent before
  * the travel counts. */
-export function barLean(dyPx: number): number {
-  const beyond = Math.max(0, Math.abs(dyPx) - LEAN_DEAD_PX);
+export function barLean(dyPx: number, feel: TouchFeel = PLAIN_FEEL): number {
+  const dy = dyPx * feel.sensitivity * (feel.invertLean ? -1 : 1);
+  const beyond = Math.max(0, Math.abs(dy) - LEAN_DEAD_PX);
   if (beyond === 0) return 0;
-  return clamp((Math.sign(dyPx) * beyond) / LEAN_REACH_PX, -1, 1);
+  return clamp((Math.sign(dy) * beyond) / LEAN_REACH_PX, -1, 1);
+}
+
+/** Where the bar's reach ring is drawn for a feel, px: the thumb travel
+ * that IS full lock, so the circle a player sees is still the control's
+ * whole extent at any sensitivity. */
+export function barReachPx(feel: TouchFeel = PLAIN_FEEL): number {
+  return BAR_REACH_PX / feel.sensitivity;
 }
 
 /** Which keys are down, as the actions they are bound to. */

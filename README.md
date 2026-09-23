@@ -16,7 +16,7 @@ Every map is **generated from a seed** by a rules engine: a basin of rolling hil
 
 One sled ships, an invented trail sled with no real brand behind it, with its rider on the seat. Every hill, every tree and every sled is written in code; the game ships no asset files, and every sound is synthesized.
 
-**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock and your place, keyboard and touch controls, and a shell of attract card, front door, loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night, more modes and more sleds are planned, not built.
+**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock and your place, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night, more modes and more sleds are planned, not built.
 
 ## Why
 
@@ -51,41 +51,41 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 
 ## Usage
 
-| Command                 | What it does                                                                                                |
-| ----------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `make build`            | Typecheck both programs (the engine and the app) and build the site into `pwa/dist/`                        |
-| `make test`             | The vitest suite; `SHARD=i/N` runs one slice of it (CI runs two)                                            |
-| `make lint`             | eslint and the typecheck, zero warnings                                                                     |
-| `make fmt`              | prettier in place; `make fmt-check` is what CI runs                                                         |
-| `make hooks`            | Install the pre-commit and commit-msg git hooks                                                             |
-| `make icons`            | Regenerate the install icons and the favicon from the app mark                                              |
-| `make sim`              | The headless balance sweep: the bot races generated maps through the real engine (`SEEDS=3,7`)              |
-| `make level`            | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`) |
-| `make analyze`          | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                 |
-| `make ride`             | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`)                                |
-| `make world`            | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)    |
-| `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                    |
-| `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)            |
-| `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first)                        |
-| `make tauri`            | Build the site into the desktop app and launch it (needs Rust)                                              |
-| `make tauri-test`       | The desktop app's decision layer, on a bare Rust toolchain                                                  |
-| `make tauri-lint`       | clippy over both desktop crates at zero warnings (needs the webview libraries); `make tauri-fmt` formats    |
-| `make desktop`          | Package this machine's desktop downloads into `tauri/release/`                                              |
-| `make native-install`   | The store app's own dependency tree                                                                         |
-| `make native-bundle`    | Pack the built site into the store app — before every native build                                          |
-| `make native-typecheck` | tsc over the store app's shell                                                                              |
-| `make native-ios`       | The store app on an iOS simulator (`native-android` for Android, `native-iphone` for a real iPhone)         |
-| `make shellcheck`       | shellcheck over the scripts and the git hooks; `make actionlint` lints the workflows                        |
-| `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                       |
-| `make bump`             | Print the semver bump the release would derive from the changeset fragments                                 |
+| Command                 | What it does                                                                                                                           |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `make build`            | Typecheck both programs (the engine and the app) and build the site into `pwa/dist/`                                                   |
+| `make test`             | The vitest suite; `SHARD=i/N` runs one slice of it (CI runs two)                                                                       |
+| `make lint`             | eslint and the typecheck, zero warnings                                                                                                |
+| `make fmt`              | prettier in place; `make fmt-check` is what CI runs                                                                                    |
+| `make hooks`            | Install the pre-commit and commit-msg git hooks                                                                                        |
+| `make icons`            | Regenerate the install icons and the favicon from the app mark                                                                         |
+| `make sim`              | The headless balance sweep: the bot races generated maps through the real engine (`SEEDS=3,7`)                                         |
+| `make level`            | One map from above, from the engine alone: the hills, the forest, the track and its checkpoints (`SEED=38`)                            |
+| `make analyze`          | Score generated maps for defects; exits non-zero on an error finding (`SEED=7`, `COUNT=24`)                                            |
+| `make ride`             | The sled on the snow in profile, one staged scenario at a time (`SCENARIO=`)                                                           |
+| `make world`            | One map ridden by the bot, photographed through the renderer at named views (`SEED=38`, `ARGS=--views=`)                               |
+| `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                                               |
+| `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)                                       |
+| `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first; `ARGS="--video all"` meters every picture preset) |
+| `make tauri`            | Build the site into the desktop app and launch it (needs Rust)                                                                         |
+| `make tauri-test`       | The desktop app's decision layer, on a bare Rust toolchain                                                                             |
+| `make tauri-lint`       | clippy over both desktop crates at zero warnings (needs the webview libraries); `make tauri-fmt` formats                               |
+| `make desktop`          | Package this machine's desktop downloads into `tauri/release/`                                                                         |
+| `make native-install`   | The store app's own dependency tree                                                                                                    |
+| `make native-bundle`    | Pack the built site into the store app — before every native build                                                                     |
+| `make native-typecheck` | tsc over the store app's shell                                                                                                         |
+| `make native-ios`       | The store app on an iOS simulator (`native-android` for Android, `native-iphone` for a real iPhone)                                    |
+| `make shellcheck`       | shellcheck over the scripts and the git hooks; `make actionlint` lints the workflows                                                   |
+| `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                                                  |
+| `make bump`             | Print the semver bump the release would derive from the changeset fragments                                                            |
 
 The browser-driven labs (`screenshots`, `profile`, `world`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
 
 ## Controls
 
-**Keyboard:** W / ↑ throttle, S / ↓ / Space brake, A D / ← → steer, E / Shift lean back and Q / Z lean forward (in the air they pitch the sled), R back onto the track at the last checkpoint you passed, B restart the race from the grid, C camera, Escape pause. In the air the throttle spins the tread and lifts the nose; the brake stops it and drops the nose.
+**Keyboard:** W / ↑ throttle, S / ↓ / Space brake, A D / ← → steer, E / Shift lean back and Q / Z lean forward (in the air they pitch the sled), R back onto the track at the last checkpoint you passed, B restart the race from the grid, C camera, Escape pause — every one of them rebindable on OPTIONS ▸ KEYS. In the air the throttle spins the tread and lifts the nose; the brake stops it and drops the nose.
 
-**Touch:** the lower-left of the screen is the handlebar — touch anywhere and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the lever — it anchors where your thumb lands: drag DOWN to open the throttle, push UP to brake. The top-right corner carries three presses: pause, reset, camera. Works in portrait and landscape; the HUD re-flows to fit.
+**Touch:** the lower-left of the screen is the handlebar — touch anywhere and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the lever — it anchors where your thumb lands: drag DOWN to open the throttle, push UP to brake. The top-right corner carries three presses: pause, reset, camera. OPTIONS swaps the lever and the bar for a left hand, sets the thumbs' travel, and inverts the lean. Works in portrait and landscape; the HUD re-flows to fit.
 
 **On the phone:** the game is an installable PWA — open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/), then "Add to Home Screen" (iOS Safari: Share → Add to Home Screen; Android Chrome: menu → Install app). It launches fullscreen, works offline and prompts in-app when a new build ships.
 
@@ -94,6 +94,7 @@ The browser-driven labs (`screenshots`, `profile`, `world`, `audition ARGS=--met
 All configuration is a URL parameter or build-time:
 
 - `?seed=` — which map.
+- OPTIONS on the front door — the picture, the sound, the keys, the thumbs and the assist, remembered between visits.
 - `VITE_BASE` — deploy base path (`/`, `/preview/`, `/branch/`); set by the Pages workflow, defaults to `/`.
 - `VITE_PWA_IGNORE_PATHS` — sibling deploy slots the root service worker must not claim; set by the Pages workflow.
 

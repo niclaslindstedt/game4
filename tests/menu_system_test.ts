@@ -24,10 +24,25 @@ import { MAX_FRAME_SECONDS, createRunClock } from "../pwa/src/game/run-loop.ts";
 import {
   DEFAULT_CAMERA,
   RUN_CAMERAS,
+  assistOf,
   freshSettings,
   mergeSettings,
+  mixOf,
   nextCamera,
 } from "../pwa/src/game/settings.ts";
+import {
+  DEFAULT_KEYS,
+  KEY_ACTIONS,
+  bindKey,
+  boundLabel,
+  clashesWith,
+  freshKeys,
+  keyLabel,
+  keysLine,
+  mergeKeys,
+  type KeyAction,
+} from "../pwa/src/game/settings-input.ts";
+import { DEFAULT_VIDEO } from "../pwa/src/game/settings-video.ts";
 import {
   SHELLS,
   cameraFor,
@@ -185,6 +200,14 @@ describe("the URL (url-params.ts, splash.ts)", () => {
     expect(readParams("?t=-4").t).toBe(0);
     expect(readParams("?start=race&bot=1").bot).toBe(true);
     expect(readParams("?start=race").bot).toBe(false);
+    expect(readParams("?menu=root")).toMatchObject({ menu: true, page: "root" });
+    expect(readParams("?menu=options").page).toBe("options");
+    expect(readParams("?menu=keys").page).toBe("keys");
+    expect(readParams("?menu=cellar").page).toBe("root");
+    expect(readParams("?video=low").video).toBe("low");
+    expect(readParams("?video=ultra").video).toBe(null);
+    expect(readParams("").probe).toBe(true);
+    expect(readParams("?probe=0").probe).toBe(false);
   });
 
   it("deals a seed in the generator's range", () => {
@@ -213,10 +236,43 @@ describe("what the game remembers (settings.ts)", () => {
   it("merges a stored blob field by field and checks every value", () => {
     expect(mergeSettings(null)).toEqual(freshSettings());
     expect(mergeSettings("junk")).toEqual(freshSettings());
-    expect(mergeSettings({ camera: "far", sound: false })).toEqual({ camera: "far", sound: false });
+    expect(mergeSettings({ camera: "far", sound: false })).toEqual({
+      ...freshSettings(),
+      camera: "far",
+      sound: false,
+    });
     // Off the ladder, and the wrong type: back to the defaults.
     expect(mergeSettings({ camera: "orbit", sound: "no" })).toEqual(freshSettings());
     expect(mergeSettings({ camera: "helicopter" }).camera).toBe(DEFAULT_CAMERA);
+  });
+
+  it("puts every stored fader, thumb and hand back on its own grid", () => {
+    const s = mergeSettings({
+      audio: { master: 0.43, engine: 7, effects: "loud" },
+      touch: { lever: "left", sensitivity: 1.23, invertLean: true },
+      assist: { steer: "off", air: "most" },
+      video: { terrain: "high", trails: "sideways" },
+      probed: true,
+    });
+    expect(s.audio).toEqual({ master: 0.4, engine: 1, effects: 1 });
+    expect(s.touch).toEqual({ lever: "left", sensitivity: 1.2, invertLean: true });
+    expect(s.assist).toEqual({ steer: "off", air: "full" });
+    expect(s.video).toEqual({ ...DEFAULT_VIDEO, terrain: "high" });
+    expect(s.probed).toBe(true);
+    expect(mergeSettings({ touch: { sensitivity: 9 } }).touch.sensitivity).toBe(1.5);
+    expect(mergeSettings({ touch: { lever: "up" } }).touch.lever).toBe("right");
+  });
+
+  it("folds the master and the switch into both faders the mixer is handed", () => {
+    const s = { ...freshSettings(), audio: { master: 0.5, engine: 0.8, effects: 0.4 } };
+    expect(mixOf(s).engine).toBeCloseTo(0.4);
+    expect(mixOf(s).effects).toBeCloseTo(0.2);
+    expect(mixOf({ ...s, sound: false })).toEqual({ engine: 0, effects: 0 });
+  });
+
+  it("hands the engine a number per hand, every hand on by default", () => {
+    expect(assistOf(freshSettings().assist)).toEqual({ yaw: 1, air: 1 });
+    expect(assistOf({ steer: "half", air: "off" })).toEqual({ yaw: 0.5, air: 0 });
   });
 
   it("walks the camera ladder round, and back onto it from anywhere off it", () => {
@@ -229,6 +285,48 @@ describe("what the game remembers (settings.ts)", () => {
     expect(rung).toBe(RUN_CAMERAS[0]);
     expect(seen.size).toBe(RUN_CAMERAS.length);
     expect(nextCamera("orbit")).toBe(DEFAULT_CAMERA);
+  });
+});
+
+describe("the keys page (settings-input.ts)", () => {
+  it("lists every action once, the held six first", () => {
+    const ids = KEY_ACTIONS.map((a) => a.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    expect([...ids].sort()).toEqual((Object.keys(DEFAULT_KEYS) as KeyAction[]).sort());
+    for (const a of KEY_ACTIONS) expect(a.label.length).toBeGreaterThan(0);
+  });
+
+  it("rebinds a row to one key, and says when a key does two jobs", () => {
+    const keys = bindKey(freshKeys(), "reset", "KeyC");
+    expect(keys.reset).toEqual(["KeyC"]);
+    expect(clashesWith(keys, "reset")).toEqual(["camera"]);
+    expect(clashesWith(keys, "camera")).toEqual(["reset"]);
+    expect(clashesWith(freshKeys(), "throttle")).toEqual([]);
+    // The shipped table is never handed out to be rebound.
+    const fresh = freshKeys() as Record<KeyAction, string[]>;
+    fresh.throttle.push("KeyX");
+    expect(DEFAULT_KEYS.throttle).not.toContain("KeyX");
+  });
+
+  it("reads a code the way the cap is printed", () => {
+    expect(keyLabel("KeyW")).toBe("W");
+    expect(keyLabel("ArrowUp")).toBe("UP ARROW");
+    expect(keyLabel("ShiftLeft")).toBe("L SHIFT");
+    expect(boundLabel([])).toMatch(/\S/);
+    expect(boundLabel(["KeyE", "ShiftLeft"])).toBe("E / L SHIFT");
+  });
+
+  it("merges stored keys against the actions this build has", () => {
+    expect(mergeKeys(null)).toEqual(freshKeys());
+    const merged = mergeKeys({ throttle: ["KeyI", 4, "KeyI"], hover: ["KeyH"], brake: "KeyK" });
+    expect(merged.throttle).toEqual(["KeyI"]);
+    expect(merged.brake).toEqual(DEFAULT_KEYS.brake);
+    expect("hover" in merged).toBe(false);
+  });
+
+  it("prints the front door's line off the keys in force", () => {
+    expect(keysLine(freshKeys())).toContain("W throttle");
+    expect(keysLine(bindKey(freshKeys(), "throttle", "KeyI"))).toContain("I throttle");
   });
 });
 

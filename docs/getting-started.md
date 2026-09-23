@@ -9,7 +9,7 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 ## A first race
 
 1. **The attract card.** The publisher's name while the first map is built behind the card, then the app's two trails lay themselves, POWDER RUN rises under them, and the card asks for a press. Any key or a tap clears it.
-2. **The front door.** One lit tile, **RACE**: three laps against three riders on a map dealt fresh from a seed, with the seed printed on the tile — that number is the map, and `?seed=<n>` on the URL rides it again. Along the foot: the sound switch, the keys, the build. Behind the card a bot is already racing the map and the camera circles its sled; nothing is paused.
+2. **The front door.** One lit tile, **RACE**: three laps against three riders on a map dealt fresh from a seed, with the seed printed on the tile — that number is the map, and `?seed=<n>` on the URL rides it again. Along the foot: the sound switch, **OPTIONS**, the keys you ride on, the build. Behind the card a bot is already racing the map and the camera circles its sled; nothing is paused.
 3. **The loading card.** The map generated from its seed, the field stood on the grid, the terrain, the forest and the checkpoints built, every shader compiled — a second or two, shown as a bar per phase.
 4. **The lights.** You stand in deep powder beside the track with the field abreast of you. Three lights, then GO.
 5. **Onto the track.** The first thing a race asks is the run through the powder onto the packed trail. The start line is the track point nearest the grid; crossing it opens lap one.
@@ -48,9 +48,13 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 
 **Cameras** (C, or the camera press): **hood** and **bars** are bolted to the sled and pitch and roll with it; **chase** (the default), **far** and **high** stand behind on a boom. The game remembers the one you chose.
 
+## Options
+
+**OPTIONS** on the front door, over the same live race, in four groups. **CONTROLS**: **KEYS** opens a page with every action on it — press a row, then the key to put on it (Escape leaves it as it was); a key on two actions says so. On a touchscreen, **LEVER SIDE** swaps the lever and the handlebar, **TRAVEL** shortens or lengthens every thumb's throw, and **INVERT LEAN** makes pushing the bar away the lean back. **ASSIST**: **STEER HOLD** (the arcade's hand keeping the nose on the line the skis ask for) and **AIR LEVEL** (the rider's body keeping the sled level side to side in the air), each FULL, HALF or OFF, from the next race. **SOUND**: the switch, and faders for everything, the engine and the effects. **PICTURE**: a **PRESET** that moves every row at once, then RESOLUTION, DISTANCE, TERRAIN, TRAILS, FOREST, SHADOWS, SPRAY and SMOOTH EDGES one at a time — each applied at once, so it is judged against the race behind the card (SMOOTH EDGES alone waits for the next visit). A first visit picks its own preset by timing the machine (`docs/configuration.md`). The caption at the foot says what the row under the pointer does.
+
 ## What the game remembers
 
-The camera and whether the sound is on — nothing else (`docs/configuration.md`).
+The camera, the sound switch and every OPTIONS row (`docs/configuration.md`).
 
 ## From a checkout
 

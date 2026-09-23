@@ -9,6 +9,7 @@
 //   node scripts/profile-render.mjs                 # every moment below
 //   node scripts/profile-render.mjs --scene race    # one
 //   node scripts/profile-render.mjs --seed 7
+//   node scripts/profile-render.mjs --video all     # every picture rung
 //
 // Two sources, both read when they are there:
 //   - the WebGL context itself, patched before any page script runs, so
@@ -51,11 +52,15 @@ const args = parseArgs(
     scene: { kind: "string", help: `only this moment (${Object.keys(SCENES).join(", ")})` },
     seed: { kind: "number", default: 38, help: "map seed" },
     camera: { kind: "string", help: "hood, bars, chase, far, high" },
+    video: {
+      kind: "string",
+      help: "picture preset (low, medium, high, or all — one table row per rung)",
+    },
     window: { kind: "number", default: 6, help: "seconds metered per moment" },
     timeout: { kind: "number", default: 45, help: "seconds to wait for window.__SH_READY__" },
   },
   "usage: node scripts/profile-render.mjs [--scene name] [--seed n] [--camera rung] " +
-    "[--window s] [--timeout s]",
+    "[--video tier|all] [--window s] [--timeout s]",
 );
 const scenes = args.scene ? [args.scene] : Object.keys(SCENES);
 
@@ -134,60 +139,70 @@ const browser = await found.chromium.launch({
 });
 console.log(`profile — seed ${args.seed}, 1280×720, ${args.window} s per moment`);
 
+/** The picture rungs metered: one row per rung per moment, so a table reads
+ * straight down as what each rung of OPTIONS ▸ PICTURE saves. */
+const tiers =
+  args.video === "all" ? ["low", "medium", "high"] : args.video ? [String(args.video)] : [null];
+
 const rows = [];
-for (const scene of scenes) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
-  const problems = [];
-  page.on("pageerror", (err) => problems.push(`pageerror: ${err.message}`));
-  await page.addInitScript(METER);
-  // No `shot`: the race keeps moving, which is what a frame costs when
-  // played rather than photographed.
-  const params = new URLSearchParams({
-    start: "race",
-    seed: String(args.seed),
-    t: String(SCENES[scene] ?? 0),
-  });
-  if (args.camera !== undefined) params.set("camera", String(args.camera));
-  await page.goto(`${site.url}?${params}`, { waitUntil: "load" });
-  try {
-    await page.waitForFunction("window.__SH_READY__ === true", null, {
-      timeout: args.timeout * 1000,
+for (const tier of tiers)
+  for (const moment of scenes) {
+    const scene = tier ? `${moment}/${tier}` : moment;
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
+    const problems = [];
+    page.on("pageerror", (err) => problems.push(`pageerror: ${err.message}`));
+    await page.addInitScript(METER);
+    // No `shot`: the race keeps moving, which is what a frame costs when
+    // played rather than photographed.
+    const params = new URLSearchParams({
+      start: "race",
+      seed: String(args.seed),
+      t: String(SCENES[moment] ?? 0),
+      // The first-visit probe must not move the picture being metered.
+      probe: "0",
     });
-  } catch {
-    console.log(`  ${scene}: window.__SH_READY__ never went true in ${args.timeout} s — skipped`);
-    for (const p of problems) console.log(`   ${p}`);
-    await page.close();
-    continue;
-  }
-  await page.evaluate(`
+    if (args.camera !== undefined) params.set("camera", String(args.camera));
+    if (tier) params.set("video", tier);
+    await page.goto(`${site.url}?${params}`, { waitUntil: "load" });
+    try {
+      await page.waitForFunction("window.__SH_READY__ === true", null, {
+        timeout: args.timeout * 1000,
+      });
+    } catch {
+      console.log(`  ${scene}: window.__SH_READY__ never went true in ${args.timeout} s — skipped`);
+      for (const p of problems) console.log(`   ${p}`);
+      await page.close();
+      continue;
+    }
+    await page.evaluate(`
     for (const k of Object.keys(window.__meter)) window.__meter[k] = 0;
     window.__meterFrom = performance.now();
   `);
-  await page.waitForTimeout(args.window * 1000);
-  const m = await page.evaluate(
-    "({ ...window.__meter, built: { ...window.__built }, wall: performance.now() - window.__meterFrom, app: window.__SH_STATS__ ?? null })",
-  );
-  await page.close();
-  const frames = Math.max(1, m.frames);
-  rows.push({
-    scene,
-    frames: m.frames,
-    fps: m.frames / (m.wall / 1000),
-    draws: m.draws / frames,
-    tris: m.tris / frames,
-    programs: m.programs / frames,
-    textures: m.textures / frames,
-    cpu: m.cpu / frames,
-    built: m.built,
-    app: m.app,
-  });
-  console.log(`  ${scene}: ${m.frames} frames metered`);
-  for (const p of problems) console.log(`   ${p}`);
-}
+    await page.waitForTimeout(args.window * 1000);
+    const m = await page.evaluate(
+      "({ ...window.__meter, built: { ...window.__built }, wall: performance.now() - window.__meterFrom, app: window.__SH_STATS__ ?? null })",
+    );
+    await page.close();
+    const frames = Math.max(1, m.frames);
+    rows.push({
+      scene,
+      frames: m.frames,
+      fps: m.frames / (m.wall / 1000),
+      draws: m.draws / frames,
+      tris: m.tris / frames,
+      programs: m.programs / frames,
+      textures: m.textures / frames,
+      cpu: m.cpu / frames,
+      built: m.built,
+      app: m.app,
+    });
+    console.log(`  ${scene}: ${m.frames} frames metered`);
+    for (const p of problems) console.log(`   ${p}`);
+  }
 
 const num = (v, d = 0) => Number(v).toLocaleString("en-US", { maximumFractionDigits: d });
 const COLS = [
-  ["scene", (r) => r.scene, 10],
+  ["scene", (r) => r.scene, 14],
   ["draws", (r) => num(r.draws), 8],
   ["tris", (r) => num(r.tris), 10],
   ["useProg", (r) => num(r.programs), 8],
@@ -201,14 +216,14 @@ if (rows.length) {
   console.log("\nbuilding one map, cumulative since the page loaded:");
   for (const r of rows) {
     console.log(
-      `  ${r.scene.padEnd(9)} ${num(r.built.textures).padStart(6)} texture uploads` +
+      `  ${r.scene.padEnd(13)} ${num(r.built.textures).padStart(6)} texture uploads` +
         `  ${num(r.built.bytes / 1e6, 1).padStart(7)} MB of geometry`,
     );
   }
   const withApp = rows.filter((r) => r.app);
   if (withApp.length) {
     console.log("\nthe app's own window.__SH_STATS__ (last frame):");
-    for (const r of withApp) console.log(`  ${r.scene.padEnd(9)} ${JSON.stringify(r.app)}`);
+    for (const r of withApp) console.log(`  ${r.scene.padEnd(13)} ${JSON.stringify(r.app)}`);
   } else {
     console.log(
       "\nwindow.__SH_STATS__ is not exposed by this build; only the patched context was read.",

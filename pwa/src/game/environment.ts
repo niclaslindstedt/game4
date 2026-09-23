@@ -15,6 +15,7 @@ import * as THREE from "three";
 
 import { createHazeUniforms, writeHaze, type HazeUniforms } from "./haze.ts";
 import { createSkyDome, type SkyDome } from "./sky-dome.ts";
+import { hazeFor, type Tier } from "./settings-video.ts";
 import type { SkyLook } from "./sky.ts";
 
 /** Half the side of the shadow box, m. */
@@ -29,6 +30,11 @@ export type Environment = {
   dome: SkyDome;
   /** Apply a look, and aim the shadow box at (x, y, z). */
   update(look: SkyLook, camera: THREE.Camera, x: number, y: number, z: number): void;
+  /** The key light's shadow map, texels a side; 0 casts nothing (the
+   * SHADOWS row). */
+  setShadow(size: number): void;
+  /** The DISTANCE row, whose haze is `hazeFor`'s. */
+  setDistance(distance: Tier): void;
   dispose(): void;
 };
 
@@ -45,24 +51,34 @@ export function createEnvironment(
   scene.add(hemi);
 
   const sun = new THREE.DirectionalLight(0xffffff, 3);
-  sun.castShadow = shadowSize > 0;
-  if (shadowSize > 0) {
-    sun.shadow.mapSize.set(shadowSize, shadowSize);
-    const cam = sun.shadow.camera;
-    cam.left = -SHADOW_HALF;
-    cam.right = SHADOW_HALF;
-    cam.top = SHADOW_HALF;
-    cam.bottom = -SHADOW_HALF;
-    cam.near = 1;
-    cam.far = KEY_DISTANCE * 2;
-    sun.shadow.bias = -0.0004;
-    sun.shadow.normalBias = 0.04;
-    sun.shadow.radius = 2;
-  }
+  const cam = sun.shadow.camera;
+  cam.left = -SHADOW_HALF;
+  cam.right = SHADOW_HALF;
+  cam.top = SHADOW_HALF;
+  cam.bottom = -SHADOW_HALF;
+  cam.near = 1;
+  cam.far = KEY_DISTANCE * 2;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.04;
+  sun.shadow.radius = 2;
   scene.add(sun);
   scene.add(sun.target);
 
-  const texel = (2 * SHADOW_HALF) / Math.max(shadowSize, 1);
+  /** The box's centre snaps to this, so shadow edges do not crawl. */
+  let texel = 1;
+  let distance: Tier = "high";
+  const setShadow = (size: number): void => {
+    sun.castShadow = size > 0;
+    texel = (2 * SHADOW_HALF) / Math.max(size, 1);
+    if (size > 0 && sun.shadow.mapSize.x !== size) {
+      sun.shadow.mapSize.set(size, size);
+      // Three allocates the map on first use at the size it finds; a map
+      // already standing at another size has to go for the new one to come.
+      sun.shadow.map?.dispose();
+      sun.shadow.map = null;
+    }
+  };
+  setShadow(shadowSize);
   const lightSpace = new THREE.Matrix4();
   const inv = new THREE.Matrix4();
   const at = new THREE.Vector3();
@@ -73,6 +89,7 @@ export function createEnvironment(
     dome,
     update(look, camera, x, y, z) {
       writeHaze(haze, look);
+      haze.uHaze.value = hazeFor(look.haze, distance);
       sun.color.setRGB(...look.sunColour);
       sun.intensity = look.sunIntensity;
       hemi.color.setRGB(...look.skyLight);
@@ -90,6 +107,10 @@ export function createEnvironment(
       sun.position.copy(at).addScaledVector(dir, KEY_DISTANCE);
       sun.target.updateMatrixWorld();
       dome.follow(camera);
+    },
+    setShadow,
+    setDistance(next) {
+      distance = next;
     },
     dispose() {
       dome.dispose();

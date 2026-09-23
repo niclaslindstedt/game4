@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // The app's single audio surface: ONE underlying synth (one AudioContext),
-// wrapped into a volume-scaled view the SOUND switch turns off and on (the
-// front door and the pause card carry it; `settings.ts` remembers it).
+// wrapped into two volume-scaled VIEWS — the machine's own voice (the engine
+// and the belt) and every other sound — each under its OPTIONS fader, with
+// the master and the SOUND switch folded into both (`mixOf` in
+// `settings.ts`, which remembers all of it).
 // Unlocking on any user gesture unlocks everything, because there is only
 // ever one context to unlock.
 //
@@ -17,17 +19,18 @@ import type { Layer, Synth } from "../../lib/voice.ts";
 
 const raw = createSynth();
 
-let sfxVolume = 1;
+let engineVolume = 1;
+let effectsVolume = 1;
 
 /** Clamp to the 0–1 the fader promises. */
 function clamp01(v: number): number {
   return v < 0 ? 0 : v > 1 ? 1 : v;
 }
 
-/** Set the 0–1 effects volume. The SOUND switch is 0 or 1; a fader, the
- * day there is an options page, is everything between. */
-export function setAudioVolumes(v: { sfx: number }): void {
-  sfxVolume = clamp01(v.sfx);
+/** Set the two 0–1 volumes, the master and the switch already folded in. */
+export function setAudioVolumes(v: { engine: number; effects: number }): void {
+  engineVolume = clamp01(v.engine);
+  effectsVolume = clamp01(v.effects);
 }
 
 /**
@@ -66,8 +69,11 @@ function scaledView(volume: () => number): Synth {
   };
 }
 
-/** Every sound effect routes through this view. */
-export const sfx: Synth = scaledView(() => sfxVolume);
+/** Every sound but the machine's own voice routes through this view. */
+export const sfx: Synth = scaledView(() => effectsVolume);
+
+/** The engine and the belt route through this one. */
+export const engineSfx: Synth = scaledView(() => engineVolume);
 
 /** Start (or revive) audio from a real user gesture. Safe to call on every
  * pointer down — it is a no-op once the context is running. */

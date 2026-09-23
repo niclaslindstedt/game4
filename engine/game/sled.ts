@@ -406,9 +406,11 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const asked = clamp((way * Math.tan(c.skiAngle)) / S.base, -reach, reach);
     const slip = flat > S.slipFrom && way > 0 ? angleDiff(Math.atan2(c.vx, c.vz), c.heading) : 0;
     tb.y +=
-      clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) * hold;
+      clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) *
+      hold *
+      state.assist.yaw;
   } else {
-    airTorque(c, tb);
+    airTorque(c, tb, state.assist.air);
   }
   // Euler's equations with a diagonal inertia: τ − ω × Iω.
   const gx = (I.z - I.y) * c.wy * c.wz;

@@ -14,7 +14,7 @@ import { generateLevel } from "../mapgen/index.ts";
 import type { Level } from "../mapgen/types.ts";
 import { status } from "../output.ts";
 import { freshProgress, standSled } from "./course.ts";
-import { RACE, raceRules, type RunRules } from "./defs/modes.ts";
+import { FULL_ASSIST, RACE, raceRules, type Assist, type RunRules } from "./defs/modes.ts";
 import { SLED, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { clipRiders, createRivals, gridSlot, stepRivals } from "./rivals.ts";
@@ -39,6 +39,9 @@ export type CreateGameOptions = {
   contact?: boolean;
   /** The machine; the one sled when left out. */
   spec?: SledSpec;
+  /** The arcade's help for the player's own sled (`Assist`); every hand on
+   * when left out. The field rides with every hand on whatever this says. */
+  assist?: Assist;
   /** Build without announcing the map (the sim's sweeps). */
   quiet?: boolean;
 };
@@ -68,6 +71,7 @@ export function createGame(options: CreateGameOptions = {}): GameState {
     input: { ...NEUTRAL_INPUT },
     progress: freshProgress(level),
     rules,
+    assist: { ...(options.assist ?? FULL_ASSIST) },
     rivals: [],
     countdown: rules.countdown,
     phase: rules.countdown > 0 ? "countdown" : "racing",

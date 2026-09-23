@@ -26,7 +26,8 @@ import { REPO_URL } from "../identity.ts";
 import { formatTime } from "../lib/util.ts";
 import { HudActions } from "./hud-actions.tsx";
 import { RevBar } from "./hud-dial.tsx";
-import { BarZone, LeverZone } from "./hud-touch.tsx";
+import { BarZone, LeverZone, type ZoneSide } from "./hud-touch.tsx";
+import type { TouchFeel } from "./input-model.ts";
 import type { InputManager } from "./input.ts";
 import type { HudFlash } from "./run-news.ts";
 import type { HudSnapshot } from "./snapshot.ts";
@@ -62,6 +63,8 @@ export function Hud({
   flashes,
   touch,
   input,
+  feel,
+  lever,
   away,
   onReset,
   onCamera,
@@ -72,6 +75,10 @@ export function Hud({
   /** Draw the thumb zones. */
   touch: boolean;
   input: InputManager;
+  /** How the thumbs read (OPTIONS ▸ CONTROLS). */
+  feel: TouchFeel;
+  /** Which side of the glass the lever stands on; the bar takes the other. */
+  lever: ZoneSide;
   /** The TAB is away and the clock with it (§37.3) — not the pause card,
    * which is a surface of its own (`menu-pause.tsx`) and stands over all of
    * this. The two share a word and nothing else. */
@@ -223,8 +230,11 @@ export function Hud({
 
       {touch && (
         <div class="hud-touch">
-          <BarZone touch={input.touch} />
-          <LeverZone touch={input.touch} />
+          {/* In reading order, so the zone on the left is the first child
+              whichever of the two it is. */}
+          {lever === "left" && <LeverZone touch={input.touch} feel={feel} side="left" />}
+          <BarZone touch={input.touch} feel={feel} side={lever === "left" ? "right" : "left"} />
+          {lever === "right" && <LeverZone touch={input.touch} feel={feel} side="right" />}
         </div>
       )}
     </div>

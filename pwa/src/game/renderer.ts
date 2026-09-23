@@ -11,6 +11,10 @@
 //   spray.ts        the roost, the ski spray and the landing puff
 //   camera.ts       the ladder of lenses and the hand-over between them
 //
+// WHAT IT COSTS is the picture it is handed (`settings-video.ts`): every
+// module above is built or tuned off one `VideoSettings`, and `setVideo` is
+// the one place a row of OPTIONS ▸ PICTURE becomes a draw call.
+//
 // It READS `GameState` and never writes it. Everything that depends on the
 // map is built in `load`; `draw` only moves things. Every rider — the player
 // and each rival — is drawn at `alpha` of a step on from the step before
@@ -23,7 +27,7 @@ import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
 import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
-import { createForest, FOREST_QUALITY, type Forest } from "./forest.ts";
+import { createForest, type Forest } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
 import { hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
@@ -32,14 +36,26 @@ import { createSledModel, SLED_STYLES, type SledModel } from "./sled-body.ts";
 import { skyLookAt } from "./sky.ts";
 import { LOOSE } from "./snow-glsl.ts";
 import { createSpray, type Spray } from "./spray.ts";
-import { createTerrain, TERRAIN_QUALITY, type Terrain } from "./terrain.ts";
-import { createTrailMap, TRAIL_QUALITY, type TrailMap } from "./trail-map.ts";
+import {
+  DEFAULT_VIDEO,
+  DISTANCE_LOOK,
+  FOREST_LOOK,
+  RESOLUTION_SHARE,
+  SHADOW_SIZE,
+  SPRAY_SHARE,
+  TRAIL_LOOK,
+  terrainLook,
+  type VideoSettings,
+} from "./settings-video.ts";
+import { createTerrain, type Terrain } from "./terrain.ts";
+import { createTrailMap, type TrailMap } from "./trail-map.ts";
 import { createPen, drawnDepth, stampsOf, type Stamp, type TrailPen } from "./trail-stamp.ts";
 
-export type Quality = "high" | "low";
-
 export type RendererOptions = {
-  quality?: Quality;
+  /** The picture to open on (`settings-video.ts`); `setVideo` moves it. Its
+   * ANTIALIAS row is read here and only here — a canvas's multisampling is
+   * fixed when its context is made. */
+  video?: VideoSettings;
   /** Keep the last frame in the canvas after it is shown (a lab that reads
    * the pixels back). */
   preserveDrawingBuffer?: boolean;
@@ -88,23 +104,24 @@ export function createWorldRenderer(
   canvas: HTMLCanvasElement,
   options: RendererOptions = {},
 ): WorldRendererExt {
-  const quality = options.quality ?? "high";
+  let video: VideoSettings = { ...(options.video ?? DEFAULT_VIDEO) };
   const gl = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
+    antialias: video.antialias,
     powerPreference: "high-performance",
     preserveDrawingBuffer: options.preserveDrawingBuffer ?? false,
   });
   gl.outputColorSpace = THREE.SRGBColorSpace;
   gl.toneMapping = THREE.ACESFilmicToneMapping;
   gl.toneMappingExposure = 1.05;
-  gl.shadowMap.enabled = true;
+  gl.shadowMap.enabled = SHADOW_SIZE[video.shadows] > 0;
   gl.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   const lens: Lens = createLens(NEAR, FAR);
   scene.add(lens.camera);
-  const env: Environment = createEnvironment(scene, quality === "high" ? 2048 : 1024, FAR * 0.9);
+  const env: Environment = createEnvironment(scene, SHADOW_SIZE[video.shadows], FAR * 0.9);
+  env.setDistance(video.distance);
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
 
   let level: Level | null = null;
@@ -119,6 +136,11 @@ export function createWorldRenderer(
   let lastTick = -1;
   let lastState: GameState | null = null;
   let override: LensPose | null = null;
+  /** The box the canvas was last given, so a RESOLUTION press can re-apply
+   * it at the new share. */
+  let box = { width: 1, height: 1, pixelRatio: 1 };
+  /** The one pixel `drain` reads back. */
+  const drained = new Uint8Array(4);
   const rigPose: RigPose = {
     x: 0,
     y: 0,
@@ -153,6 +175,24 @@ export function createWorldRenderer(
   }
 
   const breathe = () => new Promise<void>((done) => setTimeout(done, 0));
+
+  /** The trail maps and the ground that reads them, built for the picture in
+   * force. One step, because the ground's shader holds the maps' uniforms by
+   * reference: new maps are a new ground. */
+  function buildTrail(lv: Level): TrailMap {
+    const map = createTrailMap(lv.size, TRAIL_LOOK[video.trails]);
+    map.clear(gl);
+    return map;
+  }
+  function buildTerrain(lv: Level, map: TrailMap): Terrain {
+    const ground = createTerrain(lv, env.haze, map.uniforms, terrainLook(video.terrain));
+    scene.add(ground.group);
+    return ground;
+  }
+  const forestOptions = () => ({
+    ...FOREST_LOOK[video.forest],
+    far: DISTANCE_LOOK[video.distance].far,
+  });
 
   function riderFor(i: number): Rider {
     const model = createSledModel(SLED_STYLES[i % SLED_STYLES.length], wrap);
@@ -194,18 +234,17 @@ export function createWorldRenderer(
       unload();
       level = state.level;
       const lv = level;
-      trail = createTrailMap(lv.size, TRAIL_QUALITY[quality]);
-      trail.clear(gl);
+      trail = buildTrail(lv);
       await breathe();
-      terrain = createTerrain(lv, env.haze, trail.uniforms, TERRAIN_QUALITY[quality]);
-      scene.add(terrain.group);
+      terrain = buildTerrain(lv, trail);
       await breathe();
-      forest = createForest(lv, env.haze, FOREST_QUALITY[quality]);
+      forest = createForest(lv, env.haze, forestOptions());
       scene.add(forest.group);
       gates = createGates(lv, env.haze);
       clear = createLineClear(lv);
       scene.add(gates.group);
       spray = createSpray(env.haze);
+      spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
       riders = runsOf(state).map((_, i) => riderFor(i));
       lastTick = -1;
@@ -255,10 +294,11 @@ export function createWorldRenderer(
         const sled = run.sled;
         observe(r.track, sled, run.tick);
         sample(r.track, alpha, r.drawn);
-        const want = extraSink(sled);
+        // With the trails off there is no furrow to sit in.
+        const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled) : 0;
         r.sink += (want - r.sink) * (1 - Math.exp(-dt * 10));
         r.model.pose(sled, r.drawn, r.sink);
-        if (stepped > 0 || lastTick < 0) {
+        if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
           stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps);
         }
         // The landing puff: grounded now, in the air at the last frame.
@@ -326,11 +366,42 @@ export function createWorldRenderer(
       return lens.rung();
     },
     resize(width, height, pixelRatio) {
-      gl.setPixelRatio(pixelRatio);
+      box = { width, height, pixelRatio };
+      gl.setPixelRatio(pixelRatio * RESOLUTION_SHARE[video.resolution]);
       gl.setSize(width, height, false);
       lens.camera.aspect = width / Math.max(1, height);
       lens.camera.updateProjectionMatrix();
       forest?.invalidate();
+    },
+    setVideo(next) {
+      const was = video;
+      video = { ...next };
+      if (was.resolution !== video.resolution) api.resize(box.width, box.height, box.pixelRatio);
+      gl.shadowMap.enabled = SHADOW_SIZE[video.shadows] > 0;
+      env.setShadow(SHADOW_SIZE[video.shadows]);
+      env.setDistance(video.distance);
+      spray?.setBudget(SPRAY_SHARE[video.spray]);
+      forest?.setOptions(forestOptions());
+      // THE GROUND AND ITS TRAILS ARE REBUILT, not adjusted: a grid's pitch
+      // and a map's size are what their buffers were allocated at. The
+      // trails cut so far go with the old maps — this is pressed over a
+      // card, where the race behind it is scenery.
+      if (level && (was.terrain !== video.terrain || was.trails !== video.trails)) {
+        if (terrain) {
+          scene.remove(terrain.group);
+          terrain.dispose();
+        }
+        trail?.dispose();
+        trail = buildTrail(level);
+        terrain = buildTerrain(level, trail);
+        terrain.follow(lens.camera.position.x, lens.camera.position.z);
+      }
+    },
+    drain() {
+      const at = performance.now();
+      const ctx = gl.getContext();
+      ctx.readPixels(0, 0, 1, 1, ctx.RGBA, ctx.UNSIGNED_BYTE, drained);
+      return performance.now() - at;
     },
     info() {
       const r = gl.info.render;
