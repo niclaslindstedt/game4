@@ -22,6 +22,7 @@
 // digits so it reads as one word in a campaign map's row.
 
 import { sampleField } from "../lib/heightfield.ts";
+import { DEFAULT_REGION, regionOf } from "./regions.ts";
 import { weatherOf } from "./weather.ts";
 import type { Level } from "./types.ts";
 
@@ -103,5 +104,10 @@ export function levelDigest(level: Level): string {
   mix(sky.wind);
   mix(sky.windFrom);
   word(sky.evening ? "evening" : "day");
+  // R21 — a region other than the boreal is named, so two regions' maps of
+  // one seed never share a word; the boreal adds nothing, which is what
+  // keeps every map pinned before there were regions on its own digest.
+  const region = regionOf(level).id;
+  if (region !== DEFAULT_REGION) word(region);
   return hash.toString(16).padStart(8, "0");
 }

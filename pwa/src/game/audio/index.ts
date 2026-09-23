@@ -20,6 +20,7 @@
 import type { GameEvent, GameState } from "@engine";
 
 import { RUN_BANK } from "./bank.ts";
+import { createBirdBed, type BirdBed } from "./bird-bed.ts";
 import { engineSfx, sfx } from "./bus.ts";
 import { listenerFor, type Listener } from "./listener.ts";
 import { playSound } from "./play.ts";
@@ -50,6 +51,9 @@ export type RunAudio = {
 
 export function createRunAudio(): RunAudio {
   const bed: RideBed = createRideBed(sfx, engineSfx);
+  // The wood's own voices (`bird-bed.ts`): cues off the birds' plan, never
+  // an engine event.
+  const birds: BirdBed = createBirdBed(sfx);
   let ear: Listener = listenerFor("chase");
 
   return {
@@ -61,19 +65,23 @@ export function createRunAudio(): RunAudio {
 
     frame(state, dt, duck = 1) {
       bed.update(state, dt, duck);
+      birds.update(state, dt, duck);
     },
 
     setView(view) {
       ear = listenerFor(view);
       bed.setView(view);
+      birds.setView(view);
     },
 
     silence() {
       bed.silence();
+      birds.silence();
     },
 
     reset() {
       bed.reset();
+      birds.reset();
     },
   };
 }

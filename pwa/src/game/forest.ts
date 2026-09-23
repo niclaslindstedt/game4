@@ -10,6 +10,13 @@
 // fir; each tree is one of them, scaled to its own height and crown, turned
 // and tinted by a hash of where it stands.
 //
+// A BIRCH IN WINTER (the birch valley's, R21) is the opposite read: a pale
+// trunk with dark bands on it and a bare crown of purple-brown twigs — no
+// needles to hold the snow. It is built as fins of twigs sprayed up off the
+// trunk, drawn from both faces, and it is a third shape only on a map that
+// grows one. What colour the needles are and how much snow the boughs carry
+// is the region's (`region-look.ts`); the boreal's row is the palette's.
+//
 // TENS OF THOUSANDS OF THEM, so they are instanced, and in two bands of
 // distance: FULL (the whole tree) and FAR (a three-tier sketch of it at a
 // quarter of the triangles). The trees are binned into 64 m cells once; when
@@ -28,10 +35,11 @@
 import * as THREE from "three";
 import type { Level } from "@engine";
 
-import { PALETTE } from "../identity.ts";
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
 import type { ForestLook, TreeCasters } from "./settings-video.ts";
 import { castsInto, shadowLength, type ShadowBox } from "./shadow-box.ts";
+import { regionLookOf, type RegionLook } from "./region-look.ts";
+import { regionOf } from "@engine";
 
 /** Where the two bands end (the FOREST row's `full`, the DISTANCE row's
  * `far`, both m), the share of the far band's sketches that stand, and what
@@ -46,9 +54,24 @@ const CELL = 64;
 
 const SNOW = new THREE.Color(0xeef4fb);
 const SNOW_SHADE = new THREE.Color(0xc4d6ea);
-const NEEDLE = new THREE.Color(PALETTE.pine);
-const NEEDLE_DARK = new THREE.Color(PALETTE.pineDark);
 const BARK = new THREE.Color(0x3a2c22);
+
+/** What a region paints its trees with. */
+type Paint = {
+  needle: THREE.Color;
+  needleDark: THREE.Color;
+  bark: THREE.Color;
+  twigs: THREE.Color;
+};
+
+function paintOf(look: RegionLook): Paint {
+  return {
+    needle: new THREE.Color(look.needle),
+    needleDark: new THREE.Color(look.needleDark),
+    bark: new THREE.Color(look.bark),
+    twigs: new THREE.Color(look.twigs),
+  };
+}
 
 type Tier = { bottom: number; top: number; radius: number; snow: number };
 
@@ -66,7 +89,15 @@ function jitter(i: number): number {
  * soft "volume" normal pointing out of the crown and up — foliage lit as a
  * mass rather than as a pile of flat plates.
  */
-function conifer(tiers: Tier[], sides: number, trunk: boolean, seed: number): THREE.BufferGeometry {
+function conifer(
+  tiers: Tier[],
+  sides: number,
+  trunk: boolean,
+  seed: number,
+  paint: Paint,
+): THREE.BufferGeometry {
+  const NEEDLE = paint.needle;
+  const NEEDLE_DARK = paint.needleDark;
   const pos: number[] = [];
   const col: number[] = [];
   const nrm: number[] = [];
@@ -153,12 +184,93 @@ function tiersOf(count: number, base: number, snow: number, taper: number): Tier
   return out;
 }
 
-const SHAPES = [
-  // A narrow spruce: many tiers, a spire.
-  { tiers: tiersOf(8, 0.1, 0.45, 1.1), sides: 9 },
-  // A fir carrying more snow: fewer, broader tiers.
-  { tiers: tiersOf(6, 0.08, 0.7, 0.95), sides: 8 },
-];
+/** The two conifers, their snow scaled by the region's `load`. */
+function coniferShapes(load: number): { tiers: Tier[]; sides: number }[] {
+  return [
+    // A narrow spruce: many tiers, a spire.
+    { tiers: tiersOf(8, 0.1, 0.45 * load, 1.1), sides: 9 },
+    // A fir carrying more snow: fewer, broader tiers.
+    { tiers: tiersOf(6, 0.08, 0.7 * load, 0.95), sides: 8 },
+  ];
+}
+
+/**
+ * A BIRCH, unit height and unit crown radius: a pale trunk banded dark up
+ * to the crown, and `fins` sprays of twigs rising off it — each a thin
+ * tapering quad pushed with both windings, so it reads from either side —
+ * with snow lying along the tops of the lower ones.
+ */
+function birch(fins: number, seed: number, paint: Paint): THREE.BufferGeometry {
+  const pos: number[] = [];
+  const col: number[] = [];
+  const nrm: number[] = [];
+  const snow = SNOW.clone().lerp(paint.twigs, 0.35);
+  const dark = paint.bark.clone().multiplyScalar(0.25);
+  const push = (p: [number, number, number], colour: THREE.Color, n: [number, number, number]) => {
+    pos.push(p[0], p[1], p[2]);
+    col.push(colour.r, colour.g, colour.b);
+    nrm.push(n[0], n[1], n[2]);
+  };
+  // The trunk: six sides, in bands — the bark's white broken by the dark
+  // marks a birch is known by.
+  const r = 0.045;
+  const bands = 7;
+  for (let b = 0; b < bands; b++) {
+    const y0 = (b / bands) * 0.82;
+    const y1 = ((b + 1) / bands) * 0.82;
+    const rr0 = r * (1 - 0.5 * (b / bands));
+    const rr1 = r * (1 - 0.5 * ((b + 1) / bands));
+    for (let i = 0; i < 6; i++) {
+      const a0 = (i / 6) * Math.PI * 2;
+      const a1 = ((i + 1) / 6) * Math.PI * 2;
+      const tone = jitter(seed * 13 + b * 7 + i) < 0.28 ? dark : paint.bark;
+      const n0: [number, number, number] = [Math.cos(a0), 0.1, Math.sin(a0)];
+      const n1: [number, number, number] = [Math.cos(a1), 0.1, Math.sin(a1)];
+      const p0: [number, number, number] = [Math.cos(a0) * rr0, y0, Math.sin(a0) * rr0];
+      const p1: [number, number, number] = [Math.cos(a1) * rr0, y0, Math.sin(a1) * rr0];
+      const q0: [number, number, number] = [Math.cos(a0) * rr1, y1, Math.sin(a0) * rr1];
+      const q1: [number, number, number] = [Math.cos(a1) * rr1, y1, Math.sin(a1) * rr1];
+      push(p0, tone, n0);
+      push(q1, tone, n1);
+      push(p1, tone, n1);
+      push(p0, tone, n0);
+      push(q0, tone, n0);
+      push(q1, tone, n1);
+    }
+  }
+  // The crown: sprays of twigs, lower ones wider and flatter, the top ones
+  // steep — the teardrop a birch's crown makes against the sky.
+  for (let i = 0; i < fins; i++) {
+    const u = (i + 0.5) / fins;
+    const a = i * 2.39996 + seed;
+    const base = 0.3 + 0.5 * u + (jitter(seed * 5 + i) - 0.5) * 0.06;
+    const reach =
+      (0.3 + 0.6 * Math.sin(Math.PI * Math.min(1, u * 1.1))) * (0.75 + 0.5 * jitter(i + seed));
+    const rise = 0.22 + 0.22 * u;
+    const dx = Math.cos(a);
+    const dz = Math.sin(a);
+    const w = 0.022 + 0.02 * (1 - u);
+    const sx = -dz * w;
+    const sz = dx * w;
+    const root: [number, number, number] = [dx * 0.03, base, dz * 0.03];
+    const tipL: [number, number, number] = [dx * reach + sx, base + rise, dz * reach + sz];
+    const tipR: [number, number, number] = [dx * reach - sx, base + rise * 0.9, dz * reach - sz];
+    const top = u < 0.6 && jitter(seed + i * 3) < 0.6 ? snow : paint.twigs;
+    const nUp: [number, number, number] = [dx * 0.5, 0.85, dz * 0.5];
+    const nDown: [number, number, number] = [dx * 0.5, -0.2, dz * 0.5];
+    push(root, paint.twigs, nUp);
+    push(tipL, top, nUp);
+    push(tipR, paint.twigs, nUp);
+    push(root, paint.twigs, nDown);
+    push(tipR, paint.twigs, nDown);
+    push(tipL, paint.twigs, nDown);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("color", new THREE.Float32BufferAttribute(col, 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute(nrm, 3));
+  return g;
+}
 
 function hash(x: number, z: number): number {
   const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453;
@@ -220,7 +332,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
   for (let i = 0; i < count; i++) {
     const t = trees[i];
     const h = hash(t.x, t.z);
-    shapeOf[i] = h < 0.62 ? 0 : 1;
+    shapeOf[i] = t.kind === "birch" ? 2 : h < 0.62 ? 0 : 1;
     thin[i] = hash(t.x * 1.7 + 11, t.z * 0.6 - 5);
     q.setFromAxisAngle(up, h * Math.PI * 2);
     // The crown the generator gives is the collision's idea of it; drawn a
@@ -256,11 +368,22 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     haze,
     "tree",
   );
-  const detailed = SHAPES.map((sh, k) => conifer(sh.tiers, sh.sides, true, k + 1));
+  const region = regionLookOf(regionOf(level).id);
+  const paint = paintOf(region);
+  const detailed = coniferShapes(region.load).map((sh, k) =>
+    conifer(sh.tiers, sh.sides, true, k + 1, paint),
+  );
   const sketch = [
-    conifer(tiersOf(3, 0.1, 0.45, 1.05), 5, false, 3),
-    conifer(tiersOf(3, 0.08, 0.7, 0.95), 5, false, 4),
+    conifer(tiersOf(3, 0.1, 0.45 * region.load, 1.05), 5, false, 3, paint),
+    conifer(tiersOf(3, 0.08, 0.7 * region.load, 0.95), 5, false, 4, paint),
   ];
+  // The birch is a third shape only where one grows.
+  if (trees.some((t) => t.kind === "birch")) {
+    detailed.push(birch(56, 5, paint));
+    sketch.push(birch(16, 6, paint));
+  }
+  const shapes = detailed.length;
+  const zeros = (): number[] => new Array<number>(shapes).fill(0);
 
   // Two shapes × two bands, and the casters.
   type Band = { meshes: THREE.InstancedMesh[]; fill: number[] };
@@ -277,7 +400,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       group.add(im);
       return im;
     });
-    return { meshes, fill: [0, 0] };
+    return { meshes, fill: zeros() };
   };
   const full = makeBand(detailed);
   const far = makeBand(sketch);
@@ -333,7 +456,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
   /** Refill the casters: every tree whose shadow can reach the circle. */
   function fillCasters(shadow: ShadowBox | null) {
     const sets = [casterSets.full, casterSets.sketch];
-    let n = [0, 0];
+    let n = zeros();
     const into =
       !shadow || options.casters === "none"
         ? null
@@ -355,7 +478,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       const cMax = Math.min(cols - 1, Math.floor(x1 / CELL));
       const rMin = Math.max(0, Math.floor(z0 / CELL));
       const rMax = Math.min(cols - 1, Math.floor(z1 / CELL));
-      n = [0, 0];
+      n = zeros();
       for (let row = rMin; row <= rMax; row++) {
         for (let c = cMin; c <= cMax; c++) {
           for (const i of bins[row * cols + c]) {
@@ -418,7 +541,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       const cx = camera.position.x;
       const cy = camera.position.y;
       const cz = camera.position.z;
-      for (const b of [full, far]) b.fill = [0, 0];
+      for (const b of [full, far]) b.fill = zeros();
       const reach = Math.ceil(options.far / CELL) + 1;
       const c0 = Math.floor(cx / CELL);
       const r0 = Math.floor(cz / CELL);

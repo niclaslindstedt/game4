@@ -25,6 +25,8 @@
 //   ?video=<tier>    ride at a picture preset (low, medium, high) this visit.
 //   ?weather=<kind>  the map under another sky (clear, fair, high, overcast,
 //                    snow, fog), and ?hour=<h> from another start hour.
+//   ?region=<id>     the seed's map built in another kind of snow country
+//                    (R21: boreal, alpine, tundra, birch).
 //   ?probe=0         always sent: the first-visit probe must not move the
 //                    picture under the shutter.
 //   ?update=1        the new-build button, as if a build were waiting.
@@ -101,6 +103,11 @@ const SURFACES = {
   // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
   options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
   keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },
+  // THE DEVELOPER PAGE (`?menu=dev` lets it out, as the title's hold does)
+  // and the two pages behind it.
+  dev: { params: { menu: "dev" }, wait: ".menu-card-options", settle: 900 },
+  unlocks: { params: { menu: "unlocks" }, wait: ".dev-locks", settle: 900 },
+  "bench-history": { params: { menu: "benchHistory" }, wait: ".bench-runs", settle: 900 },
   // THE SLED CARD, straight off the URL; the turntable is its own chunk and
   // builds the machine on its first frame, so it is given a moment.
   sled: { params: { menu: "sled" }, wait: ".sled-pick-canvas", settle: 1800 },
@@ -162,6 +169,10 @@ const args = parseArgs(
     video: { kind: "string", help: "picture preset for the visit (low, medium, high)" },
     update: { kind: "flag", help: "draw the new-build button (?update=1)" },
     weather: { kind: "string", help: `ride under this sky (${WEATHERS.join(", ")}, all)` },
+    region: {
+      kind: "string",
+      help: "build the seed's map in this kind of snow country (boreal, alpine, tundra, birch)",
+    },
     hour: { kind: "number", help: "the race's solar start hour, 0–24" },
     trial: { kind: "flag", help: "a time trial rather than a race (?mode=trial)" },
     tricks: { kind: "flag", help: "a tricks run on the trick field (?mode=tricks)" },
@@ -173,7 +184,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
   },
   "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
-    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--trial] [--tricks] [--viewport v] [--timeout s]",
+    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--region id] [--update] [--trial] [--tricks] [--viewport v] [--timeout s]",
 );
 const viewports =
   args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
@@ -294,11 +305,17 @@ if (args.surface) {
       continue;
     }
     const params = { seed: String(args.seed), probe: "0", ...surface.params };
+    if (args.region !== undefined) params.region = String(args.region);
     if (args.video !== undefined) params.video = String(args.video);
     if (args.update) params.update = "1";
     if (args.camera !== undefined) params.camera = String(args.camera);
     for (const v of viewports)
-      await capture(`${name}${args.update ? "-update" : ""}`, params, v, surface);
+      await capture(
+        `${name}${args.region !== undefined ? `-${args.region}` : ""}${args.update ? "-update" : ""}`,
+        params,
+        v,
+        surface,
+      );
   }
 } else {
   const scenes = args.scene === "all" ? Object.keys(SCENES) : String(args.scene).split(",");
@@ -332,11 +349,13 @@ if (args.surface) {
       if (args.update) params.update = "1";
       if (sky !== undefined) params.weather = sky;
       if (args.hour !== undefined) params.hour = String(args.hour);
+      if (args.region !== undefined) params.region = String(args.region);
       if (args.trial) params.mode = "trial";
       if (args.tricks) params.mode = "tricks";
       const name =
         `${scene}${args.trial ? "-trial" : ""}${args.tricks ? "-tricks" : ""}${sky !== undefined ? `-${sky}` : ""}` +
         `${args.hour !== undefined ? `-h${args.hour}` : ""}` +
+        `${args.region !== undefined ? `-${args.region}` : ""}` +
         `${args.t !== undefined ? `-t${args.t}` : ""}` +
         `${args.camera !== undefined ? `-${args.camera}` : ""}` +
         `${args.video !== undefined ? `-${args.video}` : ""}${args.update ? "-update" : ""}`;

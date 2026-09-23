@@ -31,7 +31,7 @@ import {
   error,
   type GameMode,
   type GameState,
-  type SkyOverride,
+  type CreateGameOptions,
   type SledSpec,
 } from "@engine";
 
@@ -59,6 +59,9 @@ export type LoadPlan = {
   camera: CameraRung;
   /** Run on the frame the card lifts. */
   done: () => void;
+  /** Steps paid for under the card after the three every load makes — the
+   * benchmark's warm-up (`bench-run.ts`), and nothing else today. */
+  after?: LoadStep[];
 };
 
 export type LoadWorld = {
@@ -116,6 +119,7 @@ export function loadPlanSteps(world: LoadWorld, plan: LoadPlan): LoadStep[] {
         return false;
       },
     },
+    ...(plan.after ?? []),
   ];
 }
 
@@ -195,7 +199,7 @@ export function createLoader(
 export function raceOrFallback(
   seed: number,
   rider: { assist: Settings["assist"]; spec: SledSpec; mode: GameMode; laps: number } | null,
-  sky?: SkyOverride,
+  world: Pick<CreateGameOptions, "sky" | "region"> = {},
 ): GameState {
   const help = {
     ...(rider
@@ -206,7 +210,7 @@ export function raceOrFallback(
           laps: rider.mode === "timeTrial" ? rider.laps : undefined,
         }
       : {}),
-    sky,
+    ...world,
   };
   try {
     return createGame({ seed, ...help });

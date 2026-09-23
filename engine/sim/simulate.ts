@@ -11,6 +11,7 @@ import { TUNING } from "../game/defs/tuning.ts";
 import { createGame, step } from "../game/step.ts";
 import { generateLevel } from "../mapgen/generate.ts";
 import type { GameEvent } from "../game/state.ts";
+import type { RegionId } from "../mapgen/regions.ts";
 import type { Level } from "../mapgen/types.ts";
 import { botInput, RIDER_BOT, type BotProfile } from "./bot.ts";
 
@@ -32,6 +33,9 @@ export type SimOptions = {
   /** Ride the seed's map with its TRICK FIELD laid (R20) — the same race,
    * on the map a tricks run is ridden on. Ignored when `level` is given. */
   tricks?: boolean;
+  /** Ride the seed's map as built in this kind of snow country (R21); the
+   * boreal when left out. Ignored when `level` is given. */
+  region?: RegionId;
 };
 
 export type RunReport = {
@@ -88,7 +92,11 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
   const maxSeconds = options.maxSeconds ?? SIM_SECONDS;
   const state = createGame({
     seed,
-    level: options.level ?? (options.tricks ? generateLevel(seed, { tricks: true }) : undefined),
+    level:
+      options.level ??
+      (options.tricks || options.region
+        ? generateLevel(seed, { tricks: options.tricks, region: options.region })
+        : undefined),
     laps: options.laps,
     rivals: options.rivals ?? 0,
     countdown: 0,

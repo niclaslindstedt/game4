@@ -171,7 +171,9 @@ function LevelBox({
               {STRINGS.campaignPlace(result.place, field)}
             </span>
           )}
-          <span class="menu-level-mark">{formatTime(result.best)}</span>
+          {result.best !== undefined && (
+            <span class="menu-level-mark">{formatTime(result.best)}</span>
+          )}
         </span>
       )}
     </button>

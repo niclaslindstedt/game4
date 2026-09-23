@@ -106,8 +106,8 @@ off-site links handed to the system browser.
 It has **its own dependency tree, outside the npm workspace** — `make lint`
 and `make test` do not reach it, and eslint ignores `native/**` because a root
 `npm ci` never installs its plugins. `make native-typecheck` does reach it,
-and the root suite holds its three import-free SEAM modules (`src/injected.ts`,
-`navigation.ts`, `rumble.ts` — `tests/imports_test.ts`'s `SHELL_SEAM`; a seam
+and the root suite holds its four import-free SEAM modules (`src/injected.ts`,
+`navigation.ts`, `rumble.ts`, `cloud-ask.ts` — `tests/imports_test.ts`'s `SHELL_SEAM`; a seam
 module that grows an import fails that test). Built on demand only, by the
 `native` workflow (dispatch-only — a build spends paid minutes and store
 credentials) or `make native-*`; never on push. → `native/README.md`,

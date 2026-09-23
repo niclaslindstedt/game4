@@ -19,6 +19,7 @@ import { angleDiff } from "../lib/math.ts";
 import { sunAt } from "../lib/solar.ts";
 import { nearestTrackPoint, nearestWithin, trackPointAt } from "../mapgen/query.ts";
 import { LEVEL_RULES as R, withinBand, type Band } from "../mapgen/rules.ts";
+import { regionOf, scaleCount } from "../mapgen/regions.ts";
 import { declinationOf } from "../mapgen/sun.ts";
 import { WEATHER_KINDS, sunsetOf, weatherOf } from "../mapgen/weather.ts";
 import { maxGradeOf, minRadius, minSeparation } from "../mapgen/track.ts";
@@ -235,7 +236,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       add("R4", "error", `${k.id} stands ${fmt(hit.distance, 0)} m from the track`);
     }
   }
-  if (offKickers.length < R.kickers.off.count.min) {
+  if (offKickers.length < scaleCount(R.kickers.off.count, regionOf(level).kickers).min) {
     add("R4", "warn", `only ${offKickers.length} kicker(s) off the track`);
   }
 
@@ -369,9 +370,13 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   if (treeGap < R.forest.gap - 0.01) {
     add("R14", "error", `two trunks stand ${fmt(treeGap)} m apart (least ${R.forest.gap} m)`);
   }
-  if (level.trees.length < 1000) add("R14", "warn", `only ${level.trees.length} trees`);
+  if (level.trees.length < 1000 * regionOf(level).forest.density) {
+    add("R14", "warn", `only ${level.trees.length} trees`);
+  }
 
-  // R15 — the day; an evening map (R19) starts from sunset instead.
+  // R15 — the day, from the region's own bands (R21); an evening map (R19)
+  // starts from sunset instead.
+  const bands = regionOf(level).sun;
   const sun = sunAt(level.sun.hour, level.sun.latitude, declinationOf(level.sun.dayOfYear));
   const elevation = (sun.elevation * 180) / Math.PI;
   const weather = weatherOf(level);
@@ -380,8 +385,8 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     : withinBand(level.sun.hour, R.sun.hour) && elevation >= R.sun.minElevation - 0.05;
   if (
     !startOk ||
-    !withinBand(level.sun.latitude, R.sun.latitude) ||
-    !withinBand(level.sun.dayOfYear, R.sun.dayOfYear)
+    !withinBand(level.sun.latitude, bands.latitude) ||
+    !withinBand(level.sun.dayOfYear, bands.dayOfYear)
   ) {
     add(
       "R15",

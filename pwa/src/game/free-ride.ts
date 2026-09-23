@@ -17,9 +17,12 @@
 // picked on and read only while that is still the seed on the card.
 
 import {
+  DEFAULT_REGION,
   SNOW_DIAL,
   WEATHER_KINDS,
   clampSnowDepth,
+  isRegionId,
+  type RegionId,
   type WeatherKind,
   type Assist,
   type CreateGameOptions,
@@ -55,10 +58,20 @@ export type FreeRide = {
   /** The sky to ride under (R19's kinds, at their typical numbers —
    * `weatherFor`); null is the one the map was dealt. */
   weather: WeatherKind | null;
+  /** The kind of snow country the map is built in (R21). */
+  region: RegionId;
 };
 
 export function freshRide(): FreeRide {
-  return { seed: null, day: null, hour: null, depth: 1, spot: null, weather: null };
+  return {
+    seed: null,
+    day: null,
+    hour: null,
+    depth: 1,
+    spot: null,
+    weather: null,
+    region: DEFAULT_REGION,
+  };
 }
 
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
@@ -83,6 +96,7 @@ export function mergeRide(blob: unknown): FreeRide {
   if (typeof b.weather === "string" && WEATHER_KINDS.includes(b.weather as WeatherKind)) {
     out.weather = b.weather as WeatherKind;
   }
+  if (isRegionId(b.region)) out.region = b.region;
   const spot = b.spot as Record<string, unknown> | null | undefined;
   if (
     spot &&
@@ -115,6 +129,7 @@ export function freeGameOptions(
     spec,
     assist,
     mode: "free",
+    region: ride.region,
     snowDepth: ride.depth,
     // ONE PATH FOR THE HOUR: the TIME row's hour goes through `day`
     // (`withDay`, held to that date's daylight); the WEATHER row names only

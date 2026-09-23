@@ -23,7 +23,10 @@
 // walked in toward the wood — a shadow that appears between two of them was
 // switched on by the lens coming nearer), orbit, and last, staged rather
 // than ridden to: wipeout and wipeout-lie (the player put into the nearest
-// trunk flat out, then where the rider came to rest).
+// trunk flat out, then where the rider came to rest); then the wildlife:
+// herd (the biggest animal the map holds, from beside it), birds (the flock
+// most in the air, from the snow under it) and prints (last night's prints
+// on a fox's round, the player stood off it so the fine trail map is over it).
 
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -60,12 +63,20 @@ const VIEWS = [
   "orbit",
   "wipeout",
   "wipeout-lie",
+  "herd",
+  "birds",
+  "prints",
 ];
 
 const args = parseArgs(
   process.argv.slice(2),
   {
     seed: { kind: "number", default: 38, help: "the map's seed" },
+    region: {
+      kind: "string",
+      default: "boreal",
+      help: "the kind of snow country (R21): boreal, alpine, tundra, birch",
+    },
     views: {
       kind: "string",
       default: "",
@@ -91,7 +102,7 @@ const args = parseArgs(
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 900, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/world-preview.mjs [--seed=n] [--views=a,b] [--quality=low] [--shadows=sleds] [--skip-build]",
+  "usage: node scripts/world-preview.mjs [--seed=n] [--region=id] [--views=a,b] [--quality=low] [--shadows=sleds] [--skip-build]",
 );
 
 mkdirSync(outDir, { recursive: true });
@@ -166,13 +177,14 @@ page.setDefaultTimeout(args.timeout * 1000);
 
 const query = new URLSearchParams({
   seed: String(args.seed),
+  region: args.region,
   quality: args.quality,
   ...(args.shadows ? { shadows: args.shadows } : {}),
   w: String(args.width),
   h: String(args.height),
 }).toString();
 console.log(
-  `world — seed ${args.seed}, ${args.quality} quality${args.shadows ? `, shadows ${args.shadows}` : ""}, ${args.width}×${args.height}`,
+  `world — seed ${args.seed}, ${args.region}, ${args.quality} quality${args.shadows ? `, shadows ${args.shadows}` : ""}, ${args.width}×${args.height}`,
 );
 await page.goto(`${server.url}world-preview.html?${query}`);
 await page.waitForFunction("window.__world !== undefined");
@@ -186,7 +198,7 @@ for (const view of VIEWS.filter((v) => wanted.includes(v))) {
   const t0 = Date.now();
   const shot = await page.evaluate((name) => globalThis.__world.shoot(name), view);
   if (crashed) process.exit(1);
-  const out = join(outDir, `world-${view}.png`);
+  const out = join(outDir, `world-${args.region === "boreal" ? "" : `${args.region}-`}${view}.png`);
   await page.locator("body").screenshot({ path: out });
   console.log(
     `${out.replace(`${root}/`, "")}  ${shot.note}  (${((Date.now() - t0) / 1000).toFixed(1)} s)`,

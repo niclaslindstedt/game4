@@ -1,6 +1,6 @@
 ---
 name: nature
-description: "Use when working on the NATURE the race runs through — the snow-loaded conifers (where the generator stands them under R14, their height and crown, the meadows and clearings between the woods, the tree line up the rim) and how `pwa/src/game/forest.ts` draws them (two shapes, the white-over-green banding, two bands of distance and a shadow-only caster set, the woods carried to the rim by the terrain's forest tint); the country as a LANDSCAPE (the mountain flanks as the horizon, the bare high snow, the hills and bowls as they read from the saddle); and the ground as a mesh (`terrain.ts`'s clipmap reaching past the rim). There are no biomes, no fauna, no birds and no rocks in this game. Owns the look-first loop for all of it: `make world`'s forest and vista views, `make level`'s plan, `make profile`."
+description: "Use when working on the NATURE the race runs through — the snow-loaded conifers (where the generator stands them under R14, their height and crown, the meadows and clearings between the woods, the tree line up the rim) and how `pwa/src/game/forest.ts` draws them (two shapes, the white-over-green banding, two bands of distance and a shadow-only caster set, the woods carried to the rim by the terrain's forest tint); the country as a LANDSCAPE (the mountain flanks as the horizon, the bare high snow, the hills and bowls as they read from the saddle); and the ground as a mesh (`terrain.ts`'s clipmap reaching past the rim); and the WILDLIFE — the birds over the woods (ravens, crossbills, the eagle, the ptarmigan and capercaillie a sled flushes, the skeins crossing in March) and the animals in the snow (hares, foxes, reindeer, a moose, a lynx) with their rarity ladder, their rounds, their fright and the prints they leave in the trail map, all presentation, all dealt off the map's seed on generators of their own. There are no biomes and no rocks in this game. Owns the look-first loop for all of it: `make world`'s forest, vista, herd, birds and prints views, `make birds`' roster sheet, `make level`'s plan, `make profile`."
 ---
 
 # The nature: the woods, the country, the snow on both
@@ -13,10 +13,23 @@ horizon. The snow's own light — the glitter, the blue shadows, the groomed
 grain, the furrows — is `snow-look`'s; the rules that shape the country and
 the loop are `mapgen-improvement`'s.
 
-**ONE NATURE.** This slice has one kind of country — snowy hills, mountain
-flanks, forests of snow-covered conifers, open powder meadows. There are no
-biomes, no water, no animals, no birds and no rocks, and nothing here should
-grow a table keyed by a biome id until a second kind of country is asked for.
+**FOUR KINDS OF COUNTRY (R21).** The boreal forest — snowy hills, mountain
+flanks, snow-covered conifers, open powder meadows — is the country every
+rule and every paint was written against; the high alpine, the tundra plateau
+and the birch valley are rows over it (`engine/mapgen/regions.ts`: the woods'
+density, height, tree line and roster; `pwa/src/game/region-look.ts`: the
+needles, the bough load, the birch's bark and twigs, the far woods' tint). A
+new one is `add-region`'s checklist. There is no water but a frozen river, and
+no rocks as objects; the wildlife's rosters name the regions each row lives
+in (`regions` on a row, filtered by `level.region`).
+
+**THE WILDLIFE NEVER MOVES A MAP.** Every flock and group is placed off
+`level.seed` XOR a salt of its own (`BIRD_SALT`, `BEAST_SALT`) on a fresh
+`createRng`, reading only what the `Level` publishes (`wild-ground.ts`) and
+writing nothing back; poses are pure functions of the engine's clock. A
+placement that drew from the generator's stream or wrote into the `Level`
+would move a pinned campaign map's digest (`tests/generator_version_test.ts`)
+— and `tests/birds_test.ts` holds that it does not.
 
 **Read this skill's lessons first** —
 `node scripts/skill-lessons.mjs nature --list`. Load **`skill-reflection`**
@@ -36,6 +49,10 @@ code change.
 | `pwa/src/game/terrain.ts` | THE GROUND AS A MESH: a camera-centred CLIPMAP of nested grids (a quarter metre a vertex at the lens, doubling per level, eight levels past the rim), nothing baked into the mesh — the vertex shader reads the heights from a float texture of the generator's own heightfield. Three textures per level: the heights, the GROUND map (gradient, packed, how wooded), the track direction. `TERRAIN_QUALITY` |
 | `pwa/src/game/snow-glsl.ts` | The terrain's shader — `snow-look`'s — but its FOREST TINT (the woods past the far band, read off the ground map) is where this skill's trees end and the ground's paint begins; the two must agree on where a wood is |
 | `pwa/src/identity.ts` | `PALETTE.pine`, `pineDark`, `snow`, `snowShadow` — the colours every piece of nature is drawn from |
+| `pwa/src/game/rarity.ts`, `wild-ground.ts` | The RARITY LADDER (`perKm` → a word, and the drawn fraction that makes a count of it) and the questions both wildlife placers ask a map: the nearest trunk, the loop, the drawn snow's height, the slope |
+| `pwa/src/game/bird-defs.ts`, `bird-roost.ts`, `bird-plan.ts` | THE BIRDS: the roster (a plain array), where every flock lives (a spruce crown, a burrow in a meadow, a crag on the rim) and its loop held over the canopy, and `birdPose` — the cycle, the loop, the wings, the FLUSH (`flushAt`, any sled) and the skeins going north from March (`crossingAt`, by the map's day) |
+| `pwa/src/game/beast-defs.ts`, `beast-plan.ts`, `beast-tracks.ts` | THE ANIMALS IN THE SNOW: the roster, where every group lives (a wood's edge, a meadow — never on or beside the loop), `beastPose` — a round walked in a closed-form cycle of standing and moving — and the FRIGHT (`spookAt`); the PRINTS as trail-map stamps in the species' own pattern |
+| `pwa/src/game/bird-shapes.ts`, `beast-shapes.ts`, `birds.ts`, `beasts.ts`, `wildlife.ts` | The wildlife as drawn: one instanced mesh a species (a draw call each, only while one is in reach), the wings and the legs and the head moved in the vertex shader, the haze through `hazeMaterial`; the renderer's two memories (the flushes, the frights) and the prints laid again whenever the fine trail window moves |
 
 ## How the country should read
 
@@ -95,6 +112,12 @@ code change.
    framing at the reference viewports.
 6. If a rule moved: `mapgen-improvement`'s loop (`make analyze`, the
    verbatim mirror in `docs/level-generator.md`, `make sim`).
+7. **The wildlife**: `make birds` for the roster side by side (the
+   silhouettes, the paint, three poses each over a metre rule), then
+   `make world ARGS=--views=herd,birds,prints` for them in the country, and
+   `tests/birds_test.ts` for the claims (no digest moved, nothing on the
+   loop, the flush and the fright as rules). A cry is `sound-effects`'
+   (`audio/bird-voice.ts`, `bird-bank.ts`) and owes `make audition`.
 
 ## What the change obliges elsewhere
 

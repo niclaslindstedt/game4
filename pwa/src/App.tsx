@@ -1,26 +1,12 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE APP: the shell the game lives inside, and the §37 clock underneath it.
 //
-// FIVE SURFACES, ONE CANVAS, AND THE SNOW NEVER STOPS — except under the
-// card standing over the PLAYER's own race. `game/shell.ts` names the
-// surfaces and owns that distinction; this file decides when one gives way
-// to the next.
-//
-//   splash   the attract card (`splash-screen.tsx`) — the house's name while
-//            the first map is built, then the title and an invitation.
-//   menu     the front door (`menu-main.tsx`), over a bot-ridden race — and
-//            its pages: the SLED card RACE opens (`menu-sled.tsx`), the last
-//            card before the grid; the FREE RIDE's start card before it
-//            (`menu-start.tsx`); OPTIONS (`menu-options.tsx`), OPTIONS ▸
-//            KEYS (`menu-keys.tsx`) and the GALLERY of pictures kept
-//            (`menu-gallery.tsx`). All the same surface: the race behind
-//            them is the one the picture rows are judged against.
-//   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
-//            paid for in slices so the page stays a page.
-//   pause    the race HELD (`menu-pause.tsx`), reached by Escape or the
-//            HUD's pause mark: RESUME, OPTIONS, RESTART, or out to the door.
-//   run      the player's hands on the bars, with the HUD over the top —
-//            and the finish plate over that once the flag has fallen.
+// SEVEN SURFACES, ONE CANVAS, AND THE SNOW NEVER STOPS — except under the
+// card standing over the PLAYER's own race, and under the BENCHMARK, whose
+// pump turns it itself. `game/shell.ts` names every surface (the attract
+// card, the front door and all its pages, the loading card, the pause card,
+// the run, the replay and the bench) and owns what each means; this file
+// decides when one gives way to the next. DEVELOPER's half is `dev-app.tsx`.
 //
 // ONE ENGINE STATE THROUGHOUT, and the surface decides who rides it:
 // `botInput` under a card, the input manager under a run. Leaving a race
@@ -72,6 +58,7 @@ import {
   botInput,
   createGame,
   error,
+  placeRun,
   sledById,
   step,
   type CreateGameOptions,
@@ -88,7 +75,9 @@ import { createLoader, raceOrFallback } from "./game/app-load.ts";
 import { NO_PRESSES, type Presses } from "./game/app-presses.ts";
 import { frontDoorPins, pinnedFor, pinnedPress } from "./game/campaign.ts";
 import { useCampaign } from "./game/campaign-app.ts";
+import { useCloudSync } from "./game/use-cloud-sync.ts";
 import { freeGameOptions } from "./game/free-ride.ts";
+import { DevLayer, useDevApp } from "./game/dev-app.tsx";
 import { snapInput } from "./game/ghost.ts";
 import { createRunBook, type RunBook, type RunTicket } from "./game/ghost-run.ts";
 import { keepsRecords } from "./game/records.ts";
@@ -100,6 +89,8 @@ import { createReplayRun, type ReplayBarFacts } from "./game/replay-run.ts";
 import { prepareMinimap } from "./game/minimap.tsx";
 import { createInputManager, type InputManager } from "./game/input.ts";
 import { LoadingScreen } from "./game/loading-screen.tsx";
+import { labProbe } from "./game/lab-probe.ts";
+import { DevPages } from "./game/menu-dev.tsx";
 import { KeysPage } from "./game/menu-keys.tsx";
 import { MainMenu } from "./game/menu-main.tsx";
 import { createMenuNav, walkCardsOnKeys } from "./game/menu-nav.ts";
@@ -127,6 +118,7 @@ import {
 import { keysLine } from "./game/settings-input.ts";
 import { withPreset, type VideoSettings } from "./game/settings-video.ts";
 import {
+  appDraws,
   cameraFor,
   canPause,
   hudOver,
@@ -141,7 +133,7 @@ import { splashSkipped } from "./game/splash.ts";
 import { readHudLayer } from "./game/shot-hud.ts";
 import { createShotRequest } from "./game/shot-request.ts";
 import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
-import { dealSeed, readParams, type MenuPage } from "./game/url-params.ts";
+import { dealSeed, linkWorld, overLink, readParams, type MenuPage } from "./game/url-params.ts";
 import { applyVerdict, createVideoProbe } from "./game/video-probe.ts";
 import { UpdateButton } from "./game/update-button.tsx";
 import { clamp } from "./lib/util.ts";
@@ -155,18 +147,6 @@ const FLASH_LIFE = 3.2;
 const LOAD_FADE_MS = 260;
 /** How much of the mix the bot's race gets under a card. */
 const CARD_DUCK = 0.5;
-
-declare global {
-  interface Window {
-    __SH_READY__?: boolean;
-    /** A LAB'S WINDOW ON THE RUN: what the HUD reads, where the player's
-     * sled is and which way it points, the shell, the rung, and a tally of
-     * every event the player's run has raised — so a script driving the
-     * built app can check a key did what it says without reading pixels.
-     * Read-only; nothing in the app calls it. */
-    __SH_PROBE__?: () => Record<string, unknown>;
-  }
-}
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -192,6 +172,7 @@ export function App() {
   const [warm, setWarm] = useState(false);
   const [settings, setSettings] = useState<Settings>(() => {
     const s = loadSettings();
+    if (params.page === "dev") s.developer = true;
     return params.camera ? { ...s, camera: params.camera } : s;
   });
   /** Which page of the front door is up. */
@@ -219,7 +200,9 @@ export function App() {
   const modeRef = useRef<GameMode>(params.page === "start" ? "free" : params.mode);
   /** THE CAMPAIGN: the board, the rig that books a rung, the rung being ridden. */
   const campaign = useCampaign({ mode: modeRef, setPage, setSettings });
+  const dev = useDevApp();
   const bookRef = useRef<RunBook | null>(null);
+  useCloudSync({ settings, setSettings, campaign, book: bookRef, shell });
   const [input, setInput] = useState<InputManager | null>(null);
   /** The bar over a recording, and whether there is one worth offering —
    * both refreshed on the HUD's tick, never per frame. */
@@ -311,18 +294,9 @@ export function App() {
         if (wanted === level) standing = level;
       });
     };
-    const view: WorldRenderer = {
-      load: build,
-      draw: (s, alpha, dt) => renderer.draw(s, alpha, dt),
-      setCamera: (rung) => renderer.setCamera(rung),
-      camera: () => renderer.camera(),
-      resize: (w, h, r) => renderer.resize(w, h, r),
-      setVideo: (v) => renderer.setVideo(v),
-      setGhost: (g) => renderer.setGhost(g),
-      setShot: (shot) => renderer.setShot(shot),
-      drain: () => renderer.drain(),
-      dispose: () => renderer.dispose(),
-    };
+    // The renderer's methods are closures, never `this`, so a copy with its
+    // own `load` is the renderer with every build going through `build`.
+    const view: WorldRenderer = { ...renderer, load: build };
 
     const raceSeed = params.seed ?? nextSeedRef.current;
     /** The options the free ride on the pause card's START AGAIN rides:
@@ -334,8 +308,8 @@ export function App() {
       const s = settingsRef.current;
       const seed = params.seed ?? s.ride.seed ?? raceSeed;
       const ride = freeGameOptions(s.ride, seed, specOf(s), assistOf(s.assist));
-      // A link's sky (`?weather=` / `?hour=`) over the card's, as on a race.
-      const opts = params.sky ? { ...ride, sky: { ...ride.sky, ...params.sky } } : ride;
+      // A link's sky (`?weather=` / `?hour=`) and region over the card's.
+      const opts = overLink(ride, params);
       try {
         const game = createGame(opts);
         freeAgain = { ...opts, level: game.level };
@@ -364,7 +338,7 @@ export function App() {
                 laps: settingsRef.current.trialLaps,
               }
             : null,
-          params.sky ?? undefined,
+          linkWorld(params),
         );
     /** The mode the player's runs are ridden in, until a tile says otherwise. */
     let mode: GameMode = params.mode;
@@ -375,7 +349,7 @@ export function App() {
         // A tricks run needs its map's trick field (R20): the race's won't do.
         level: mode === "tricks" && !level?.kickers?.some((k) => k.trick) ? undefined : level,
         seed,
-        sky: params.sky ?? undefined,
+        ...linkWorld(params),
         mode,
         laps: mode === "timeTrial" ? settingsRef.current.trialLaps : undefined,
         spec: specOf(settingsRef.current),
@@ -444,24 +418,13 @@ export function App() {
         ? botInput(state)
         : manager.sample(TUNING.dt, state.sled.airborne);
 
-    // The minimap's payload is left off: it carries the level itself, which
-    // a lab would be handed across the page boundary whole.
-    window.__SH_PROBE__ = () => ({
-      ...takeSnapshot(state, book.ledger()),
-      ghost: book.ghost() !== null,
-      minimap: undefined,
-      phase: state.phase,
-      t: state.t,
-      x: state.sled.x,
-      z: state.sled.z,
-      heading: state.sled.heading,
-      sled: state.sled.spec.id,
-      input: { ...state.input },
-      shell: shellRef.current,
-      camera: renderer.camera(),
-      replay: replays.bar()?.rung ?? null,
-      events: { ...tally },
-    });
+    window.__SH_PROBE__ = () =>
+      labProbe(state, book, {
+        shell: shellRef.current,
+        camera: renderer.camera(),
+        replay: replays.bar()?.rung ?? null,
+        events: tally,
+      });
 
     const stepOnce = (): void => {
       // ON THE TAPE'S GRID whoever is riding (`ghost.ts`), and written down.
@@ -497,6 +460,7 @@ export function App() {
       for (let i = 0; i < steps; i++) stepOnce();
       preroll = false;
     }
+    if (params.rides && params.pose) placeRun(state, params.pose);
     renderer.setCamera(cameraFor(shellRef.current, settingsRef.current.camera));
     build(state).catch((e: unknown) =>
       error(`the renderer could not build the map: ${e instanceof Error ? e.message : String(e)}`),
@@ -549,6 +513,22 @@ export function App() {
       spec: specOf,
       setMode: (asked) => (mode = asked),
       done: lift,
+    });
+    // DEVELOPER's instruments and its BENCHMARK (`dev-app.tsx`).
+    const devRig = dev.attach({
+      renderer,
+      canvas,
+      settings: () => settingsRef.current,
+      current: () => state,
+      mode: () => mode,
+      setMode: (asked) => (mode = asked),
+      begin: loader.begin,
+      shell: () => shellRef.current,
+      setShell: setShellNow,
+      silence: audio.silence,
+      toDevPage: () => setPage("dev"),
+      video: () => videoOf(settingsRef.current),
+      benchNow: params.bench,
     });
 
     pressRef.current = {
@@ -685,6 +665,7 @@ export function App() {
       // SLOW MOTION is fewer steps per frame and nothing else (`replay-shots.ts`).
       const rate = replays.frame();
       const dtRun = dtFrame * rate;
+      const simAt = performance.now();
       if (!frozen && !held && shown) {
         const steps = clock.frame(dtRun);
         for (let i = 0; i < steps; i++) stepOnce();
@@ -694,7 +675,8 @@ export function App() {
         // fire the moment the picture thaws.
         manager.sample(TUNING.dt);
       }
-      if (!shown) return;
+      devRig.frame(frameMs, dtFrame, performance.now() - simAt);
+      if (!shown || !appDraws(shellRef.current)) return;
       const still = frozen || held || clock.paused();
       const timing = probe !== null && !playerRides(shellRef.current) && !loader.busy() && !still;
       const drawAt = performance.now();
@@ -736,6 +718,7 @@ export function App() {
         setFlashes(live.map(({ id, text, tone }) => ({ id, text, tone })));
         setReplayBar(replays.bar());
         setCanReplay(replays.offers());
+        devRig.tick();
         if (clock.paused() !== awayRef.current) {
           awayRef.current = clock.paused();
           setAway(awayRef.current);
@@ -781,6 +764,7 @@ export function App() {
       document.removeEventListener("pointerdown", unlockAudio, unlockOpts);
       document.removeEventListener("keydown", unlockAudio, unlockOpts);
       walk.stop();
+      devRig.dispose();
       stopShellCommands();
       manager.dispose();
       renderer.dispose();
@@ -918,6 +902,9 @@ export function App() {
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onOptions={() => setPage("options")}
           onGallery={() => setPage("gallery")}
+          developer={settings.developer}
+          onDeveloper={() => setPage("dev")}
+          onHeld={() => setSettings((s) => ({ ...s, developer: true }))}
         />
       )}
       {shell === "menu" && page !== "root" && (
@@ -956,6 +943,18 @@ export function App() {
             />
           ) : page === "gallery" ? (
             <GalleryPage onBack={() => setPage("root")} />
+          ) : page === "dev" || page === "unlocks" || page === "benchHistory" ? (
+            <DevPages
+              page={page}
+              settings={settings}
+              progress={campaign.progress}
+              repro={() => dev.rig.current?.repro() ?? ""}
+              onSettings={setSettings}
+              onProgress={campaign.setProgress}
+              onPage={setPage}
+              onBack={() => setPage("root")}
+              onBenchmark={() => dev.rig.current?.startBench()}
+            />
           ) : page === "options" ? (
             <OptionsPage
               settings={settings}
@@ -982,6 +981,7 @@ export function App() {
           onBack={() => pressRef.current.abandonLoad()}
         />
       )}
+      <DevLayer dev={dev} shell={shell} video={videoOf(settings)} />
       {shell === "splash" && (
         <SplashScreen
           warm={warm}

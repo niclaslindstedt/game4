@@ -28,6 +28,13 @@
 //     snow worked. The ridge itself is the engine's ground; what this adds
 //     is only what kind of snow is on it, so the edge of the track reads as
 //     a white line with a shadowed side even from the chase camera.
+//   * THE REGION'S OWN SNOW (R21, `region-look.ts`) — the wind crust and a
+//     frozen river's ice, read per pixel off a SURFACE map of the engine's
+//     own fields: the crust a touch greyer and glossier, carved into
+//     SASTRUGI along the wind where the country is scoured; the ice a flat
+//     blue mirror with no crystals on it; and, where the region says so,
+//     rock showing through on every face too steep to hold snow. The
+//     boreal lays none of it and paints nothing of it.
 //   * THE TRAIL — the depth the trail map holds lowers the snow in the
 //     vertex shader (as far as the mesh can show it) and bends the normal
 //     per pixel (all of it). Pressed snow is barely darker than fresh;
@@ -42,12 +49,15 @@
 
 import { LAMP_SLOTS } from "./haze.ts";
 import { TRAIL_GLSL } from "./trail-map.ts";
+import { LOOSE } from "./trail-stamp.ts";
 
 /** How much brighter than white snow's albedo is painted. */
 export const GLARE = 1.12;
 
-/** How far loose powder stands over the groomed track, m. */
-export const LOOSE = 0.1;
+// How far loose powder stands over the groomed track: stated three-free in
+// `trail-stamp.ts`, so what stands ON the snow (the wildlife's feet) reads
+// the same surface this shader lifts.
+export { LOOSE };
 
 /** The vertex half's declarations: the height field, the clipmap level, the
  * rim of mountains past the map. */
@@ -181,6 +191,14 @@ uniform vec3 uLampPos[${LAMP_SLOTS}];
 uniform vec3 uLampDir[${LAMP_SLOTS}];
 uniform float uLampOn[${LAMP_SLOTS}];
 uniform vec3 uLampCol;
+uniform sampler2D uSurface;
+uniform vec3 uForestTint;
+uniform vec3 uCrustTone;
+uniform vec3 uIceTone;
+uniform vec4 uRock;
+uniform vec2 uRockSlope;
+uniform float uSastrugi;
+uniform vec2 uWindDir;
 varying vec3 vSnowWorld;
 varying vec3 vSnowNormal;
 ${TRAIL_GLSL}
@@ -236,6 +254,9 @@ float snowPress;     // 0 untouched .. 1 a full furrow
 float snowWall;      // how steep the furrow's wall is here
 float snowForest;    // how wooded the ground round here is
 float snowBerm;      // 0 off the plough's berm .. 1 on its crest
+float snowCrust;     // 0 powder .. 1 a wind slab (R21)
+float snowIce;       // 0 snow .. 1 a frozen river's bare ice (R21)
+float snowRock;      // 0 snow .. 1 rock showing through a steep face
 `;
 
 /** Straight after `clipping_planes_fragment`: throw away what the finer
@@ -254,6 +275,9 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
   snowPacked = g.b;
   snowForest = g.a;
   vec2 grad = g.rg;
+  vec2 surf = texture2D(uSurface, guv).rg;
+  snowCrust = surf.r;
+  snowIce = surf.g;
   // The loose cover's step at the track's shoulders.
   {
     vec2 du = vec2(0.5 / uHeightCount.x, 0.0);
@@ -270,6 +294,7 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
     vec3 vn = normalize(vSnowNormal);
     grad = mix(grad, -vn.xz / max(vn.y, 0.2), smoothstep(0.0, 30.0, past));
   }
+  snowRock = uRock.w * smoothstep(uRockSlope.x, uRockSlope.y, length(grad)) * (1.0 - snowPacked);
 
   // THE FURROWS, per pixel.
   vec2 tr = trailAt(p);
@@ -290,6 +315,17 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
   float nearFade = 1.0 - smoothstep(20.0, 90.0, snowDist);
   float midFade = 1.0 - smoothstep(60.0, 400.0, snowDist);
   grad += snowNoiseGrad(p * 0.23, 0.35) * 0.23 * 0.35 * midFade * (1.0 - snowPacked);
+  // SASTRUGI: the crust carved into ridges across the wind, a few metres
+  // apart and a hand high, broken up along their length.
+  if (uSastrugi > 0.0 && snowCrust > 0.01) {
+    float sFade = 1.0 - smoothstep(40.0, 260.0, snowDist);
+    vec2 across = vec2(-uWindDir.y, uWindDir.x);
+    float warp = snowNoise(p * 0.08) * 6.0;
+    float ph = dot(p, across) * 1.9 + warp;
+    float breakUp = smoothstep(0.3, 0.7, snowNoise(p * vec2(0.35, 0.35) + 7.0));
+    float k = uSastrugi * snowCrust * sFade * breakUp * (1.0 - snowPress);
+    grad += across * cos(ph) * 1.9 * 0.07 * k;
+  }
   grad += snowNoiseGrad(p * 1.7, 0.3) * 1.7 * 0.025 * nearFade;
   grad += snowNoiseGrad(p * 7.0, 0.3) * 7.0 * 0.004 * nearFade * (1.0 - snowPress);
 
@@ -317,6 +353,8 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
     grad += snowNoiseGrad(p * 6.5, 0.1) * 6.5 * 0.025 * b * clodFade;
   }
 
+  // Ice is flat: the swells and the grain are the snow's, not the ice's.
+  grad = mix(grad, g.rg, snowIce * 0.85);
   snowN = normalize(vec3(-grad.x, 1.0, -grad.y));
 }
 `;
@@ -341,7 +379,11 @@ export const SNOW_FRAGMENT_COLOUR = /* glsl */ `
   alb *= mix(vec3(1.0), vec3(0.8, 0.86, 0.95), snowWall * 0.8);
   // A wood seen from afar is a darker, greener ground — the trees past the
   // draw distance are still there in its colour.
-  alb = mix(alb, vec3(0.32, 0.4, 0.38), snowForest * 0.55 * smoothstep(160.0, 520.0, snowDist));
+  alb = mix(alb, uForestTint, snowForest * 0.55 * smoothstep(160.0, 520.0, snowDist));
+  // THE REGION'S OWN SNOW: the wind slab, the river's bare ice, the rock.
+  alb = mix(alb, alb * uCrustTone, snowCrust * (1.0 - snowPacked * 0.5));
+  alb = mix(alb, uIceTone * mix(0.9, 1.05, snowNoise(p * 0.05)), snowIce * (1.0 - snowPress * 0.6));
+  alb = mix(alb, uRock.rgb * mix(0.7, 1.2, snowNoise(p * 0.6)), snowRock);
   diffuseColor.rgb = alb * ${GLARE.toFixed(3)};
 }
 `;
@@ -349,6 +391,9 @@ export const SNOW_FRAGMENT_COLOUR = /* glsl */ `
 /** After `roughnessmap_fragment`: groomed snow is glossier. */
 export const SNOW_FRAGMENT_ROUGHNESS = /* glsl */ `
 roughnessFactor = mix(mix(0.85, 0.55, snowPacked), 0.92, snowBerm) - 0.1 * snowPress;
+roughnessFactor = mix(roughnessFactor, 0.62, snowCrust * 0.6);
+roughnessFactor = mix(roughnessFactor, 0.18, snowIce);
+roughnessFactor = mix(roughnessFactor, 0.95, snowRock);
 `;
 
 /** After `normal_fragment_maps`: the per-pixel normal replaces the mesh's. */
@@ -381,7 +426,7 @@ export const SNOW_FRAGMENT_LIGHT = /* glsl */ `
 }
 {
   vec3 V = normalize(cameraPosition - vSnowWorld);
-  float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6);
+  float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6) * (1.0 - snowIce) * (1.0 - snowRock);
   vec3 lampLit = vec3(0.0);
   float lampGlint = 0.0;
   for (int i = 0; i < ${LAMP_SLOTS}; i++) {
@@ -416,7 +461,7 @@ export const SNOW_FRAGMENT_LIGHT = /* glsl */ `
   // sparser, larger one carrying it a little further out.
   vec3 V = normalize(cameraPosition - vSnowWorld);
   vec3 H = normalize(uSunDir + V);
-  float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6);
+  float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6) * (1.0 - snowIce) * (1.0 - snowRock);
   float glint = snowGlints(vSnowWorld, 7.0, 600.0, 0.6, snowN, H, 0.0)
     * (1.0 - smoothstep(15.0, 45.0, snowDist));
   glint += snowGlints(vSnowWorld, 2.5, 900.0, 0.35, snowN, H, 31.0)

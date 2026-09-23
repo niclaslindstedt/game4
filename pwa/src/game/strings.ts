@@ -10,6 +10,7 @@ import type { TrickKind, TrickPart } from "@engine";
 
 import { formatTime, ordinal } from "../lib/util.ts";
 import { CAMPAIGN_STRINGS } from "./strings-campaign.ts";
+import { DEV_STRINGS } from "./strings-dev.ts";
 import { GALLERY_STRINGS } from "./strings-gallery.ts";
 
 /** THE TRICK VOCABULARY: what each element the engine names (`TrickKind`)
@@ -53,6 +54,8 @@ export function comboLine(parts: readonly TrickPart[]): string {
 export const STRINGS = {
   /* ── THE SHUTTER AND THE GALLERY — stated in strings-gallery.ts ─────── */
   ...GALLERY_STRINGS,
+  /* ── THE DEVELOPER PAGE — stated in strings-dev.ts ─────────────────── */
+  ...DEV_STRINGS,
 
   /* ── THE HUD (hud.tsx) ─────────────────────────────────────────────── */
   speedUnit: "km/h",
@@ -222,6 +225,11 @@ export const STRINGS = {
   startMap: "MAP",
   startMapHint: "Which map: every seed is another basin. Type one, or step through them.",
   startReroll: "ANOTHER MAP",
+  startRegion: "COUNTRY",
+  startRegionHint:
+    "What kind of snow country the map is built in: boreal forest, high alpine bowls above the tree line, a wind-crusted tundra plateau, or a birch valley with a frozen river through it.",
+  /** The REGION row's stops (R21) — a kind of country, never a place. */
+  regionNames: { boreal: "BOREAL", alpine: "ALPINE", tundra: "TUNDRA", birch: "BIRCH VALLEY" },
   startDate: "DATE",
   startDateHint:
     "The day of the year: how high the sun climbs and how long the shadows are. Starts on the map's own.",

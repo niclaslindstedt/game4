@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// WHICH SURFACE IS UP, and everything that follows from it. Six surfaces
+// WHICH SURFACE IS UP, and everything that follows from it. Seven surfaces
 // over ONE canvas and ONE engine state — the shell never tears a run down,
 // it only decides who rides it and what is drawn over the top:
 //
@@ -13,6 +13,11 @@
 //            was ridden on, with nobody's hands on it — a surface of its own
 //            rather than a flag on `run`, because nothing a rider presses
 //            may reach it and nothing it does is booked.
+//   bench    a race being TIMED (`benchmark.ts`) behind the developer
+//            page's card: the benchmark pumps its own frames as fast as
+//            the machine draws them, so the app's loop neither steps nor
+//            draws while it is up (`appDraws`) — not because the snow is
+//            held, but because somebody else is turning it.
 //
 // THE SNOW NEVER STOPS BEHIND A CARD — with exactly one exception, and the
 // difference between the two is the whole reason this module exists. The
@@ -28,9 +33,10 @@
 // browser. `App.tsx` is the one module that decides WHEN the surface
 // changes; these say what each one means once it has.
 
+import { BENCHMARK } from "./benchmark-plan.ts";
 import type { CameraRung } from "./renderer-api.ts";
 
-export const SHELLS = ["splash", "menu", "loading", "pause", "run", "replay"] as const;
+export const SHELLS = ["splash", "menu", "loading", "pause", "run", "replay", "bench"] as const;
 
 export type Shell = (typeof SHELLS)[number];
 
@@ -54,10 +60,17 @@ export function soundsLive(shell: Shell): boolean {
   return playerRides(shell) || watching(shell);
 }
 
-/** Whether the engine takes steps at all — every surface but the pause
- * card (see this module's header). */
+/** Whether the APP's loop takes steps at all — every surface but the pause
+ * card (see this module's header) and the benchmark, which steps its own. */
 export function simulates(shell: Shell): boolean {
-  return shell !== "pause";
+  return shell !== "pause" && shell !== "bench";
+}
+
+/** Whether the app's loop DRAWS: everywhere but under the benchmark, whose
+ * pump owns the canvas — a frame drawn between two of its frames is time the
+ * measurement is charged for and did not spend. */
+export function appDraws(shell: Shell): boolean {
+  return shell !== "bench";
 }
 
 /** Whether the HUD is drawn. The pause card stands OVER the readouts rather
@@ -80,5 +93,6 @@ export function canPause(shell: Shell): boolean {
  * in it — and the run and the frame held under the pause card are seen
  * through the rung the rider chose. */
 export function cameraFor(shell: Shell, chosen: CameraRung): CameraRung {
+  if (shell === "bench") return BENCHMARK.camera;
   return hudOver(shell) ? chosen : "orbit";
 }

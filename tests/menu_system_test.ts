@@ -51,6 +51,7 @@ import {
 import { DEFAULT_VIDEO } from "../pwa/src/game/settings-video.ts";
 import {
   SHELLS,
+  appDraws,
   cameraFor,
   canPause,
   hudOver,
@@ -67,12 +68,14 @@ import {
   splashSkipped,
 } from "../pwa/src/game/splash.ts";
 import { dealSeed, readParams } from "../pwa/src/game/url-params.ts";
+import { BENCHMARK } from "../pwa/src/game/benchmark-plan.ts";
 import { STRINGS } from "../pwa/src/game/strings.ts";
 import { SHELL_COMMANDS } from "../pwa/src/shell-host.ts";
 
-describe("the six surfaces (shell.ts)", () => {
-  it("steps the engine behind every card but the pause card", () => {
-    for (const s of SHELLS) expect(simulates(s), s).toBe(s !== "pause");
+describe("the seven surfaces (shell.ts)", () => {
+  it("steps the engine behind every card but the pause card — and leaves the bench to its pump", () => {
+    for (const s of SHELLS) expect(simulates(s), s).toBe(s !== "pause" && s !== "bench");
+    expect(SHELLS.filter((s) => !appDraws(s))).toEqual(["bench"]);
   });
 
   it("puts the player's hands on the sled only on a run — the bot rides everywhere else", () => {
@@ -87,9 +90,11 @@ describe("the six surfaces (shell.ts)", () => {
   });
 
   it("frames every card with the orbit and a race with the rider's own rung", () => {
-    for (const s of SHELLS) {
+    for (const s of SHELLS.filter((s) => s !== "bench")) {
       expect(cameraFor(s, "hood"), s).toBe(hudOver(s) ? "hood" : "orbit");
     }
+    // The benchmark states its own view rather than inheriting one.
+    expect(cameraFor("bench", "hood")).toBe(BENCHMARK.camera);
   });
 });
 

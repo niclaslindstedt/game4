@@ -19,6 +19,7 @@ import { smoothstep } from "../lib/math.ts";
 import { createHeightfield, type Heightfield } from "../lib/heightfield.ts";
 import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
+import { REGIONS, scaleBand, scaleCount, type Region } from "./regions.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 
 /** A bowl: a round hollow in the basin floor (R3). */
@@ -41,6 +42,11 @@ export type TerrainPlan = {
   readonly tiltX: number;
   readonly tiltZ: number;
   readonly bowls: readonly Bowl[];
+  /** The flanks' ridged crests at full height, m (R2, scaled by R21). */
+  readonly crests: number;
+  /** The region the country is built in (R21), which everything downstream
+   * of the plan reads its own multipliers off. */
+  readonly region: Region;
   /** Noise seeds, one per layer so the layers do not echo each other. */
   readonly seeds: {
     readonly warp: number;
@@ -51,35 +57,41 @@ export type TerrainPlan = {
   };
 };
 
-/** Deal the country's plan off the attempt's stream. */
-export function planTerrain(rng: Rng): TerrainPlan {
+/** Deal the country's plan off the attempt's stream, in `region` (R21).
+ * Every band is the rule's scaled by the region's row — the same band, and
+ * so the same draws, in the boreal. */
+export function planTerrain(rng: Rng, region: Region = REGIONS.boreal): TerrainPlan {
   const size = R.world.size;
+  const K = region.relief;
   const seed = (): number => rng.int(1, 0x7ffffff0);
   const tiltHeading = rng.range(0, Math.PI * 2);
-  const tilt = rng.range(0.4, 1) * R.tilt.grade;
+  const tilt = rng.range(0.4, 1) * R.tilt.grade * K.tilt;
   const cx = size / 2;
   const cz = size / 2;
   const bowls: Bowl[] = [];
-  const count = rng.int(R.bowls.count.min, R.bowls.count.max);
+  const nBowls = scaleCount(R.bowls.count, K.bowls.count);
+  const count = rng.int(nBowls.min, nBowls.max);
   for (let i = 0; i < count; i++) {
     const a = rng.range(0, Math.PI * 2);
     const d = rng.range(80, R.basin.rim.inner - 120);
     bowls.push({
       x: cx + Math.sin(a) * d,
       z: cz + Math.cos(a) * d,
-      r: inBand(rng, R.bowls.radius),
-      depth: inBand(rng, R.bowls.depth),
+      r: inBand(rng, scaleBand(R.bowls.radius, K.bowls.radius)),
+      depth: inBand(rng, scaleBand(R.bowls.depth, K.bowls.depth)),
     });
   }
   return {
     cx,
     cz,
-    mountain: inBand(rng, R.basin.mountain),
-    hills: inBand(rng, R.hills.amplitude),
-    ridges: inBand(rng, R.ridges.amplitude),
+    mountain: inBand(rng, scaleBand(R.basin.mountain, K.mountain)),
+    hills: inBand(rng, scaleBand(R.hills.amplitude, K.hills)),
+    ridges: inBand(rng, scaleBand(R.ridges.amplitude, K.ridges)),
     tiltX: Math.sin(tiltHeading) * tilt,
     tiltZ: Math.cos(tiltHeading) * tilt,
     bowls,
+    crests: R.basin.crests * K.crests,
+    region,
     seeds: { warp: seed(), rim: seed(), hills: seed(), ridges: seed(), crests: seed() },
   };
 }
@@ -153,7 +165,7 @@ export function countryAt(plan: TerrainPlan, x: number, z: number): number {
     const rx = wx * 0.866 - wz * 0.5;
     const rz = wx * 0.5 + wz * 0.866;
     h +=
-      R.basin.crests *
+      plan.crests *
       rim *
       (ridged(rx, rz, 170, s.crests) * 0.75 + ridged(rz, rx, 60, s.crests + 5) * 0.25);
   }

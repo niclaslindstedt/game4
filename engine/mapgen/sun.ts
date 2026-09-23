@@ -11,7 +11,7 @@
 
 import { daylightWindow } from "../lib/solar.ts";
 import type { Rng } from "../lib/prng.ts";
-import { LEVEL_RULES as R, inBand } from "./rules.ts";
+import { LEVEL_RULES as R, inBand, type Band } from "./rules.ts";
 
 /** The sun's declination on a day of the year, degrees. */
 export function declinationOf(dayOfYear: number): number {
@@ -35,17 +35,21 @@ export function sunWindow(
   return max > min ? { min, max } : null;
 }
 
-/** R15 — deal the day. */
-export function dealSun(rng: Rng): { hour: number; dayOfYear: number; latitude: number } {
+/** R15 — deal the day, from the region's latitudes and days (R21; the
+ * rule's own bands when none is given). */
+export function dealSun(
+  rng: Rng,
+  bands: { latitude: Band; dayOfYear: Band } = R.sun,
+): { hour: number; dayOfYear: number; latitude: number } {
   for (let i = 0; i < 64; i++) {
-    const latitude = inBand(rng, R.sun.latitude);
-    const dayOfYear = Math.round(inBand(rng, R.sun.dayOfYear));
+    const latitude = inBand(rng, bands.latitude);
+    const dayOfYear = Math.round(inBand(rng, bands.dayOfYear));
     const w = sunWindow(latitude, dayOfYear);
     if (!w) continue;
     return { latitude, dayOfYear, hour: rng.range(w.min, w.max) };
   }
   // The band's own southern edge in its latest week always has a noon.
-  return { latitude: R.sun.latitude.min, dayOfYear: R.sun.dayOfYear.max, hour: 12 };
+  return { latitude: bands.latitude.min, dayOfYear: bands.dayOfYear.max, hour: 12 };
 }
 
 /** THE HOURS A FREE RIDE MAY START AT on a day at a latitude: every hour the

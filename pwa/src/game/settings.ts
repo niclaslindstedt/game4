@@ -111,7 +111,30 @@ export type Settings = {
    * the thumbs and the corner presses, and a picture is then the snow
    * alone (`shot-hud.ts`). */
   hud: boolean;
+  /** Whether the DEVELOPER chip is on the front door — let out by holding
+   * the title for `DEV_HOLD_MS` (`menu-hold.ts`), shut by its LOCK press. */
+  developer: boolean;
+  /** The developer page's switches (`menu-dev.tsx`). */
+  dev: DevSettings;
 };
+
+/** How long the front door's title is held to let the developer page out,
+ * ms: long enough that no thumb resting on it does it by accident. */
+export const DEV_HOLD_MS = 7000;
+
+/** DEVELOPER's switches, every one an instrument over the picture rather
+ * than a change to the game: the frame rate, the frame's cost, the physics'
+ * readouts, the trail maps, the engine's debug output, the free camera. */
+export type DevSettings = {
+  fps: boolean;
+  cost: boolean;
+  physics: boolean;
+  trails: boolean;
+  log: boolean;
+  freefly: boolean;
+};
+
+export const DEV_SWITCHES = ["fps", "cost", "physics", "trails", "log", "freefly"] as const;
 
 export function freshSettings(): Settings {
   return {
@@ -129,6 +152,8 @@ export function freshSettings(): Settings {
     ride: freshRide(),
     level: null,
     hud: true,
+    developer: false,
+    dev: { fps: false, cost: false, physics: false, trails: false, log: false, freefly: false },
   };
 }
 
@@ -193,6 +218,12 @@ export function mergeSettings(parsed: unknown): Settings {
   out.ride = mergeRide(blob.ride);
   if (typeof blob.level === "string" && findLevel(blob.level) !== null) out.level = blob.level;
   if (typeof blob.hud === "boolean") out.hud = blob.hud;
+  if (typeof blob.developer === "boolean") out.developer = blob.developer;
+  const dev = record(blob.dev);
+  for (const k of DEV_SWITCHES) {
+    const on = dev[k];
+    if (typeof on === "boolean") out.dev[k] = on;
+  }
   return out;
 }
 

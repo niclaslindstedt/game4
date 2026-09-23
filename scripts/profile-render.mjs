@@ -57,6 +57,10 @@ const args = parseArgs(
       help: "ride under this sky (clear, fair, high, overcast, snow, fog)",
     },
     hour: { kind: "number", help: "the race's solar start hour, 0–24" },
+    region: {
+      kind: "string",
+      help: "build the seed's map in this kind of snow country (boreal, alpine, tundra, birch)",
+    },
     video: {
       kind: "string",
       help: "picture preset (low, medium, high, or all — one table row per rung)",
@@ -65,7 +69,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for window.__SH_READY__" },
   },
   "usage: node scripts/profile-render.mjs [--scene name] [--seed n] [--camera rung] " +
-    "[--video tier|all] [--weather kind] [--hour h] [--window s] [--timeout s]",
+    "[--video tier|all] [--weather kind] [--hour h] [--region id] [--window s] [--timeout s]",
 );
 const scenes = args.scene ? [args.scene] : Object.keys(SCENES);
 
@@ -170,6 +174,7 @@ for (const tier of tiers)
     if (tier) params.set("video", tier);
     if (args.weather !== undefined) params.set("weather", String(args.weather));
     if (args.hour !== undefined) params.set("hour", String(args.hour));
+    if (args.region !== undefined) params.set("region", String(args.region));
     await page.goto(`${site.url}?${params}`, { waitUntil: "load" });
     try {
       await page.waitForFunction("window.__SH_READY__ === true", null, {

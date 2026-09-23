@@ -17,6 +17,13 @@
 //
 // Everything is drawn off the attempt's stream in a fixed order, so the
 // same seed grows the same wood.
+//
+// THE REGION (R21) moves the numbers and draws nothing: its row thins or
+// thickens the woods, stunts them, pulls the tree line down, keeps a high
+// basin's trees to its hollows (`lowland`), names what grows (off a hash of
+// where the trunk stands, `treeKindAt`), and keeps every trunk off a frozen
+// river's ice. The boreal's row is all ones, so its wood is the one the
+// rules grew before there were regions.
 
 import { cellKey, smoothstep } from "../lib/math.ts";
 import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
@@ -24,6 +31,7 @@ import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { onKicker } from "./kickers.ts";
+import { treeKindAt } from "./regions.ts";
 import { nearestWithin, type HasTrack } from "./query.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import type { Kicker, TrackHit, TreeDef } from "./types.ts";
@@ -35,8 +43,19 @@ export function growForest(
   ground: Heightfield,
   loop: HasTrack,
   kickers: readonly Kicker[],
+  ice: Heightfield | null = null,
 ): TreeDef[] {
   const F = R.forest;
+  const W = plan.region.forest;
+  const density = F.density * W.density;
+  const meadow = Math.min(1, F.meadow * W.meadow);
+  const treeLine = F.treeLine * W.treeLine;
+  let lowland = Infinity;
+  if (W.lowland !== null) {
+    let sum = 0;
+    for (const p of loop.track.points) sum += p.y;
+    lowland = sum / Math.max(1, loop.track.points.length) + W.lowland;
+  }
   const seed = rng.int(1, 1 << 30);
   const clearings: { x: number; z: number; r: number }[] = [];
   const nClear = rng.int(F.clearings.count.min, F.clearings.count.max);
@@ -85,10 +104,17 @@ export function growForest(
         const d = Math.hypot(x - cl.x, z - cl.z);
         if (d < cl.r + 12) clear = Math.min(clear, smoothstep(cl.r * 0.8, cl.r + 12, d));
       }
-      const density = F.density * (F.meadow + (1 - F.meadow) * woods * clear);
-      if (keep >= density) continue;
+      const share = density * (meadow + (1 - meadow) * woods * clear);
+      if (keep >= share) continue;
       const rim = rimAt(plan, x, z);
-      if (rim > F.treeLine) continue;
+      if (rim > treeLine) continue;
+      if (
+        lowland !== Infinity &&
+        sampleField(ground, x, z) > lowland + (valueNoise(x, z, 90, seed + 7) - 0.5) * 8
+      ) {
+        continue;
+      }
+      if (ice && sampleField(ice, x, z) > 0) continue;
       const g = fieldGradient(ground, x, z);
       if (Math.hypot(g.gx, g.gz) > F.maxSlope) continue;
       nearestWithin(loop, x, z, reach, hit);
@@ -98,7 +124,8 @@ export function growForest(
       // Tall in the thick of a wood and low down, short at its edge and up
       // the flanks.
       const tall = 0.35 + 0.45 * woods + 0.2 * size - 0.5 * rim;
-      const height = F.height.min + (F.height.max - F.height.min) * Math.max(0, Math.min(1, tall));
+      const height =
+        F.height.min + (F.height.max - F.height.min) * Math.max(0, Math.min(1, tall)) * W.height;
       const tree: TreeDef = {
         x,
         z,
@@ -107,6 +134,8 @@ export function growForest(
         radius: F.trunk.floor + F.trunk.share * height,
         crown: Math.min(F.crownMax, F.crown * height),
       };
+      const kind = treeKindAt(plan.region, x, z);
+      if (kind !== "spruce") tree.kind = kind;
       trees.push(tree);
       const key = cellKey(bucketOf(x), bucketOf(z));
       const list = buckets.get(key);

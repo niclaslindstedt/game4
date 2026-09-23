@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky birds build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -44,7 +44,7 @@ icons:
 # needs a Chromium: CHROMIUM_PATH=/opt/pw-browsers/chromium in a web
 # session. SEED=n picks the map; ARGS="--views=powder,lookback" a subset.
 world:
-	npm run world -- $(if $(SEED),--seed $(SEED),) $(ARGS)
+	npm run world -- $(if $(SEED),--seed $(SEED),) $(if $(REGION),--region $(REGION),) $(ARGS)
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact
@@ -54,6 +54,14 @@ world:
 # ARGS="--hours=6,12,18 --view=vista --weathers=overcast,fog" narrows it.
 sky:
 	npm run sky -- $(if $(SEED),--seed $(SEED),) $(ARGS)
+
+# THE WILDLIFE LAB: every bird over the woods and every animal in the snow
+# side by side, three poses each through the game's own geometry and
+# material, over a metre rule — previews/birds.png. Its own one-off bundle
+# from pwa/birds-preview.html (never deployed); needs a Chromium like
+# `world`. ARGS="--rows=raven,ptarmigan,reindeer" narrows it.
+birds:
+	npm run birds -- $(ARGS)
 
 # ---------------------------------------------------------------------------
 # The desktop app (tauri/)
@@ -134,7 +142,7 @@ native-android:
 # `simulate` job — it exits non-zero when the bot finishes NO seed.
 # `make sim` · `make sim SEEDS=3,7`
 sim:
-	npm run sim -- $(if $(SEEDS),--seeds $(SEEDS),) $(ARGS)
+	npm run sim -- $(if $(SEEDS),--seeds $(SEEDS),) $(if $(REGION),--region $(REGION),) $(ARGS)
 
 # THE LEVEL MAP: one map from above, from the engine alone — no build, no
 # browser. The hills, the forest, the track and every checkpoint numbered,
@@ -143,14 +151,14 @@ sim:
 # 38" is a claim about a row here.
 # `make level SEED=38` · `make level SEED=38 ARGS=--json`
 level:
-	npm run level -- $(if $(SEED),--seed $(SEED),) $(ARGS)
+	npm run level -- $(if $(SEED),--seed $(SEED),) $(if $(REGION),--region $(REGION),) $(ARGS)
 
 # SCORE generated maps instead of looking at them: each check a band, and a
 # finding names what is wrong. The measuring half of the generator loop;
 # `make level` is the looking half. Exits non-zero on any error finding.
 # `make analyze SEED=7` · `make analyze COUNT=24`
 analyze:
-	npm run analyze -- $(if $(SEED),--seed $(SEED),) $(if $(COUNT),--count $(COUNT),) $(ARGS)
+	npm run analyze -- $(if $(SEED),--seed $(SEED),) $(if $(COUNT),--count $(COUNT),) $(if $(REGION),--region $(REGION),) $(ARGS)
 
 # RATE generated maps — how HARD each one is and what KIND of hard, on the
 # eight axes of engine/rating/ folded into one index. `--stats` is the
@@ -204,6 +212,14 @@ screenshots:
 # `make profile` · `make profile ARGS="--seed 7"`
 profile:
 	npm run profile -- $(ARGS)
+
+# DEVELOPER ▸ BENCHMARK off the command line: the built site on `?bench=1`,
+# the pinned race timed to its end, and the report COPY DEBUG REPORT would
+# copy printed and written to previews/benchmark.txt. Headless Chromium draws
+# in software, so read its score as this build's cost, not a phone's.
+# `make bench` · `make bench ARGS="--width 640 --height 360 --video low"`
+bench:
+	npm run bench -- $(ARGS)
 
 shellcheck:
 	shellcheck scripts/*.sh .githooks/*

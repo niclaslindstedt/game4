@@ -36,6 +36,7 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
       depth: 1,
       spot: null,
       weather: null,
+      region: "boreal",
     });
   });
 
@@ -81,6 +82,7 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
       depth: 1.5,
       spot: { seed: 9, x: 400, z: 200 },
       weather: "fog" as const,
+      region: "boreal" as const,
     };
     const opts = freeGameOptions(ride, 9, SLED, { yaw: 1, air: 1 });
     expect(opts.mode).toBe("free");

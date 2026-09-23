@@ -165,6 +165,29 @@
 //       ramp, and as much between any of them and one of R9's. The field
 //       draws nothing from any stream: the country, the loop, the start and
 //       the checkpoints are the seed's own.
+//   R21 THE REGION. Every map is built in one REGION — a kind of snow
+//       country, never a place — asked for by `GenerateOptions.region` and
+//       published as `Level.region`: the `boreal` forest, the `alpine` high
+//       country, the `tundra` plateau or the `birch` valley. A region's row
+//       (`mapgen/regions.ts`) scales R3's hills, ridges, tilt and bowls and
+//       R2's flanks and crests; R4's count of kickers off the track; and
+//       R14's density, meadow share, tallest trees and tree line — and may
+//       keep its woods below `forest.lowland` metres over the loop's mean
+//       height, so a high basin's trees stand only in its hollows. It names
+//       what grows (spruce, birch), off a hash of where each trunk stands,
+//       and deals R15's latitude and day from bands of its own. It may lay
+//       WIND CRUST — a packed share of `crust.packed` pressed into the
+//       powder over about `crust.cover` of the country and over every crest
+//       standing proud of the ground round it — and a FROZEN RIVER from one
+//       foot of the range to the other, its channel `river.width` metres
+//       wide on a bed cut `river.depth` metres under a smoothed profile of
+//       the country it crosses: flat ice (`Level.ice`), as hard as the
+//       groomer and with a fraction of its grip, where no tree grows and no
+//       kicker is shaped. Neither comes within `CLEAR` metres of the track's
+//       centreline, so R10 holds. The crust and the river are each dealt off
+//       a stream of their own, and the boreal's row is all ones and lays
+//       neither, so a map built without a region is exactly the map its seed
+//       built before there were regions.
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };

@@ -18,6 +18,7 @@
 // anything with a body behind it — a chassis thumping, a trunk — because a
 // clean sine is a bell.
 
+import { BIRD_BANK } from "./bird-bank.ts";
 import type { SoundBank } from "./types.ts";
 
 export const RUN_BANK: SoundBank = {
@@ -358,4 +359,8 @@ export const RUN_BANK: SoundBank = {
       },
     ],
   },
+
+  // THE BIRDS' CRIES are their own module (`bird-bank.ts`), raised by
+  // `bird-bed.ts` off the flocks `bird-plan.ts` laid over the map.
+  ...BIRD_BANK,
 };

@@ -11,8 +11,20 @@
 // furrows and flies its spray, it only skips drawing the picture — which in a
 // software rasterizer is most of the cost.
 
-import { botInput, createGame, NEUTRAL_INPUT, placeRun, step, type GameState } from "@engine";
+import {
+  botInput,
+  createGame,
+  isRegionId,
+  NEUTRAL_INPUT,
+  placeRun,
+  step,
+  type GameState,
+  type RegionId,
+} from "@engine";
 
+import { beastById } from "../game/beast-defs.ts";
+import { beastPlanFor, beastPose, freshBeastPose, roundAt } from "../game/beast-plan.ts";
+import { birdPlanFor, birdPose, flightShare, freshBirdPose } from "../game/bird-plan.ts";
 import type { LensPose } from "../game/camera-rigs.ts";
 import { createWorldRenderer } from "../game/renderer.ts";
 import {
@@ -23,6 +35,7 @@ import {
   type ShadowLevel,
   type Tier,
 } from "../game/settings-video.ts";
+import { wildGround } from "../game/wild-ground.ts";
 
 type Shot = { name: string; note: string };
 
@@ -38,6 +51,8 @@ declare global {
 
 const params = new URLSearchParams(location.search);
 const seed = Number(params.get("seed") ?? 38);
+/** The kind of snow country (R21); the boreal unless named. */
+const region = isRegionId(params.get("region")) ? (params.get("region") as RegionId) : undefined;
 /** The picture, a preset at a time (`settings-video.ts`); HIGH unless named. */
 const tier = (TIERS as readonly string[]).includes(params.get("quality") ?? "")
   ? (params.get("quality") as Tier)
@@ -59,7 +74,7 @@ const renderer = createWorldRenderer(canvas, {
   preserveDrawingBuffer: true,
 });
 renderer.resize(width, height, 1);
-const state: GameState = createGame({ seed });
+const state: GameState = createGame({ seed, region });
 
 const FRAME = 1 / 60;
 
@@ -195,6 +210,54 @@ function furrow(): LensPose {
     target: { x: s.x - fx * 9, y: level.groundAt(s.x - fx * 9, s.z - fz * 9), z: s.z - fz * 9 },
     fov: 55,
     roll: 0,
+  };
+}
+
+/** THE WILDLIFE: the biggest kind of animal the map holds, from beside it
+ * at head height — the herd at its wood's edge, the fox on its meadow. */
+function herdView(): { pose: LensPose; note: string } | null {
+  const ground = wildGround(level);
+  const groups = beastPlanFor(level).groups;
+  const g = ["moose", "reindeer", "lynx", "fox", "hare"]
+    .map((id) => groups.find((x) => x.species === id))
+    .find((x) => x !== undefined);
+  if (!g) return null;
+  const spec = beastById(g.species);
+  const at = beastPose(g, 0, state.t, ground, freshBeastPose());
+  const d = Math.max(7, spec.length * 6);
+  const a = at.heading + Math.PI / 2;
+  const ex = at.x + Math.sin(a) * d;
+  const ez = at.z + Math.cos(a) * d;
+  return {
+    pose: {
+      eye: { x: ex, y: ground.snowY(ex, ez) + 1.6, z: ez },
+      target: { x: at.x, y: at.y + spec.height * 0.6, z: at.z },
+      fov: 50,
+      roll: 0,
+    },
+    note: `${spec.name.toLowerCase()} ×${g.count}, ${d.toFixed(0)} m off`,
+  };
+}
+
+/** A bird over the wood: the flock most in the air at this moment, from
+ * the snow thirty metres off, looking up at its leader. */
+function birdView(): { pose: LensPose; note: string } | null {
+  const plan = birdPlanFor(level);
+  if (plan.flocks.length === 0) return null;
+  const up = (f: (typeof plan.flocks)[number]) => flightShare(f, state.t);
+  const flock = plan.flocks.reduce((a, b) => (up(b) > up(a) ? b : a));
+  const bird = birdPose(flock, 0, state.t, freshBirdPose());
+  const ground = wildGround(level);
+  const ex = bird.x + 24;
+  const ez = bird.z + 12;
+  return {
+    pose: {
+      eye: { x: ex, y: ground.snowY(ex, ez) + 1.8, z: ez },
+      target: { x: bird.x, y: bird.y, z: bird.z },
+      fov: 40,
+      roll: 0,
+    },
+    note: `${flock.species} ×${flock.count}, ${Math.round(up(flock) * 100)} % in the air`,
   };
 }
 
@@ -360,6 +423,49 @@ const shots: Record<string, () => string> = {
     renderer.setOverride(null);
     return `lying ${off.t.toFixed(1)} s after, tumbled ${(off.tumble / (2 * Math.PI)).toFixed(1)} turns`;
   },
+  herd() {
+    const view = herdView();
+    if (!view) return "no animal on this map";
+    renderer.setOverride(view.pose);
+    still();
+    renderer.setOverride(null);
+    return view.note;
+  },
+  birds() {
+    const view = birdView();
+    if (!view) return "no bird on this map";
+    renderer.setOverride(view.pose);
+    still();
+    renderer.setOverride(null);
+    return view.note;
+  },
+  prints() {
+    // Last night's prints across a meadow: the player stood fifty metres
+    // off a fox's round (outside its fright), so the fine trail window is
+    // over it, and the lens down on the line.
+    const groups = beastPlanFor(level).groups;
+    const g =
+      groups.find((x) => x.species === "fox") ??
+      groups.find((x) => x.species === "reindeer") ??
+      groups[0];
+    if (!g) return "no animal on this map";
+    const p = { x: 0, z: 0, fx: 0, fz: 1 };
+    roundAt(g.round, g.round.length * 0.25, p);
+    placeRun(state, { x: p.x + p.fz * 50, z: p.z - p.fx * 50, heading: 0, speed: 0 });
+    for (let i = 0; i < 6; i++) renderer.draw(state, 0, FRAME, false);
+    const ground = wildGround(level);
+    const ex = p.x - p.fx * 1.5 + p.fz * 2;
+    const ez = p.z - p.fz * 1.5 - p.fx * 2;
+    renderer.setOverride({
+      eye: { x: ex, y: ground.snowY(ex, ez) + 2.4, z: ez },
+      target: { x: p.x + p.fx * 2, y: ground.snowY(p.x, p.z), z: p.z + p.fz * 2 },
+      fov: 55,
+      roll: 0,
+    });
+    still();
+    renderer.setOverride(null);
+    return `${beastById(g.species).name.toLowerCase()}'s prints on its round`;
+  },
 };
 
 window.__world = {
@@ -368,7 +474,7 @@ window.__world = {
     const run = shots[name];
     if (!run) throw new Error(`no view "${name}" — known: ${Object.keys(shots).join(", ")}`);
     const note = run();
-    label.textContent = `${name.toUpperCase()} · seed ${seed} · ${note}`;
+    label.textContent = `${name.toUpperCase()} · seed ${seed}${region ? ` · ${region}` : ""} · ${note}`;
     return { name, note };
   },
   async frameMs(frames) {
