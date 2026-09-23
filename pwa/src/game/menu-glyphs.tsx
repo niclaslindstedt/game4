@@ -4,14 +4,13 @@
 // a player has to READ to find the press they came for is a card that has
 // failed; a mark is found without reading.
 //
-// Only the marks this slice's cards use: the flag on RACE, the kicker on
-// FREE RIDE, the speaker on
-// the sound switch, the three the pause card is read by — carry on, start
-// again, leave — the sliders on the OPTIONS chip, and the three more its
-// groups are headed with (the keys, the dial, the screen; SOUND takes the
-// speaker). Each group mark is chosen for what it is NOT: a wide box with a
-// spacebar in it is not a screen on a stand, and a dial shares no
-// silhouette with either.
+// Only the marks this slice's cards use: the flag on RACE, the stopwatch on
+// the TIME TRIAL, the kicker on FREE RIDE, the speaker on the sound switch,
+// the three the pause card is read by — carry on, start again, leave — the
+// sliders on the OPTIONS chip, and the three more its groups are headed with
+// (the keys, the dial, the screen; SOUND takes the speaker). Each group mark
+// is chosen for what it is NOT: a wide box with a spacebar in it is not a
+// screen on a stand, and a dial shares no silhouette with either.
 
 import type { JSX } from "preact";
 
@@ -27,6 +26,7 @@ export const GLYPH_NAMES = [
   "gauge",
   "display",
   "kicker",
+  "clock",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -124,6 +124,16 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <path d="M3 19.5h18" />
       <path d="M13 13.2c2.2-4.6 5.4-6 7.6-3.8" />
       <circle cx="20.4" cy="12.4" r="1.2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // A STOPWATCH: the time trial — the loop alone, against the clock. The
+  // crown on top is what keeps it from reading as the dial.
+  clock: (
+    <>
+      <circle cx="12" cy="13.4" r="7.6" />
+      <path d="M10 2.8h4M12 2.8v3" />
+      <path d="M12 13.4V9.2" />
+      <path d="M18.2 6.4l1.4-1.4" />
     </>
   ),
 };

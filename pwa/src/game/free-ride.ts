@@ -108,7 +108,7 @@ export function freeGameOptions(
     seed,
     spec,
     assist,
-    free: true,
+    mode: "free",
     snowDepth: ride.depth,
     day: { hour: ride.hour, dayOfYear: ride.day },
     spawn: spotOn(ride, seed) ?? undefined,

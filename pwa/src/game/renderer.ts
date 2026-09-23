@@ -9,6 +9,7 @@
 //   gates.ts        the checkpoints' poles and flags, the start banner
 //   sled-body.ts    the four machines and their riders
 //   spray.ts        the roost, the ski spray and the landing puff
+//   ghost-model.ts  the time trial's ghost, see-through and trail-less
 //   camera.ts       the ladder of lenses and the hand-over between them
 //
 // WHAT IT COSTS is the picture it is handed (`settings-video.ts`): every
@@ -37,6 +38,7 @@ import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
 import { createForest, type Forest } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
+import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
 import type { CameraRung, WorldRenderer } from "./renderer-api.ts";
@@ -143,6 +145,8 @@ export function createWorldRenderer(
   let spray: Spray | null = null;
   let clear: LineClear | undefined;
   let riders: Rider[] = [];
+  let ghost: GhostModel | null = null;
+  let ghostRun: GameState | null = null;
   const stamps: Stamp[] = [];
   let lastTick = -1;
   let lastState: GameState | null = null;
@@ -179,6 +183,8 @@ export function createWorldRenderer(
       if (o) scene.remove(o);
     }
     for (const r of riders) scene.remove(r.model.root);
+    ghost?.dispose();
+    ghost = null;
     terrain = forest = gates = trail = spray = null;
     clear = undefined;
     riders = [];
@@ -259,6 +265,7 @@ export function createWorldRenderer(
       spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
       riders = runsOf(state).map((run, i) => riderFor(i, run.sled.spec));
+      ghost = createGhostModel(scene, wrap);
       lastTick = -1;
       lastState = null;
       lens.snap();
@@ -334,6 +341,8 @@ export function createWorldRenderer(
         if (sled.airborne) r.vy = sled.vy;
       }
       lastTick = state.tick;
+      // The ghost is posed and drawn, and nothing more: no furrow, no spray.
+      ghost?.draw(ghostRun?.level === level ? ghostRun : null, alpha);
 
       const player = riders[0];
       const sled = state.sled;
@@ -375,6 +384,10 @@ export function createWorldRenderer(
       spray.update(Math.min(dt, 0.1), look, level);
 
       if (present) gl.render(scene, lens.camera);
+    },
+
+    setGhost(run) {
+      ghostRun = run;
     },
 
     setOverride(view) {

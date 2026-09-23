@@ -67,7 +67,7 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
   it("stands a ride up as a free run on the card's answers", () => {
     const ride = { seed: 9, day: 40, hour: 11, depth: 1.5, spot: { seed: 9, x: 400, z: 200 } };
     const opts = freeGameOptions(ride, 9, SLED, { yaw: 1, air: 1 });
-    expect(opts.free).toBe(true);
+    expect(opts.mode).toBe("free");
     expect(opts.seed).toBe(9);
     expect(opts.snowDepth).toBe(1.5);
     expect(opts.day).toEqual({ hour: 11, dayOfYear: 40 });
@@ -152,7 +152,7 @@ describe("the URL (url-params.ts)", () => {
 
 describe("the HUD over a free ride (snapshot.ts, minimap-view.ts)", () => {
   it("reads the best air and the distance, and puts no checkpoint on the plate", () => {
-    const state = createGame({ level: syntheticLevel(), free: true, quiet: true });
+    const state = createGame({ level: syntheticLevel(), mode: "free", quiet: true });
     for (let i = 0; i < 360; i++) step(state, { ...NEUTRAL_INPUT, throttle: 1 });
     const snap = takeSnapshot(state);
     expect(snap.free).toBe(true);

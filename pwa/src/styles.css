@@ -1173,6 +1173,12 @@ canvas {
   color: var(--hud-good);
 }
 
+/* THE GAP to the record at the same crossing: the flag's colour ahead of
+   it, the warning's behind — the one chip whose colour IS the reading. */
+.hud-gap.hud-gap-behind > span:first-child {
+  color: var(--hud-bad);
+}
+
 /* THE ARROW BACK: a chevron in the warning colour, turned by the HUD to point
    at the checkpoint that is owed. The turn is a transform tweened across the
    snapshot's twelve ticks a second, so the arrow swings rather than steps. */
@@ -2104,6 +2110,27 @@ canvas {
 
 /* Ink on the orange, where every other mark on the card is orange on the
    blue: the hero is the one tile lit from the other side. */
+/* THE TIME TRIAL: the hero's shape, a row the card's width, but in the
+   card's own blue — the second way onto the snow, not the lit one. */
+.menu-tile-wide {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 0.9rem;
+  min-height: 0;
+  padding: 0.85rem 1.1rem;
+  text-align: left;
+}
+
+.menu-tile-wide .menu-glyph {
+  width: 2.6em;
+  height: 2.6em;
+}
+
+.menu-tile-wide .menu-tile-name {
+  font-size: 1.25em;
+}
+
 .menu-tile-hero .menu-glyph {
   width: 2.6em;
   height: 2.6em;
@@ -3403,19 +3430,9 @@ canvas {
   }
 }
 
-/* ── THE FREE RIDE: its tile, its start card, its chart ─────────────────────
-   The tile is the door's SECOND way onto the snow, so it is a tile — and it
-   is unlit: exactly one red control per card, and that is RACE. Laid out as
-   the hero is (mark left, words right), because it too has a line to say. */
-.menu-tile-free {
-  flex-direction: row;
-  justify-content: flex-start;
-  gap: 0.9rem;
-  min-height: 0;
-  padding: 0.7rem 1.1rem;
-  text-align: left;
-}
-
+/* ── THE FREE RIDE: its start card, its chart ──────────────────────────────
+   (Its front-door tile is a `.menu-tile-wide`, unlit, like the time trial's:
+   exactly one red control per card, and that is RACE.) */
 /* A PAGE'S WAY ON, STANDING IN ITS HEAD opposite the way back. `.menu-item`
    is a full-width row; here only its colour and weight are kept. */
 .menu-head-with-action {

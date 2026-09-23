@@ -51,13 +51,19 @@ export * from "./mapgen/index.ts";
 export { createGame, rulesFor, step, FIELD_SIZE, type CreateGameOptions } from "./game/step.ts";
 export {
   FULL_ASSIST,
+  GAME_MODES,
+  MODE_RULES,
   RACE,
   SNOW_DIAL,
+  TIME_TRIAL,
   clampSnowDepth,
   freeRules,
+  isGameMode,
   openRules,
   raceRules,
+  timeTrialRules,
   type Assist,
+  type GameMode,
   type RunRules,
 } from "./game/defs/modes.ts";
 export {

@@ -20,6 +20,9 @@
 //   ?sled=<id>      the player's machine for this visit (trail, crossover,
 //                   mountain, cross), over the stored one and never written
 //                   back — how a lab photographs a sled it did not pick.
+//   ?mode=trial     the run a link boots into (or the next one pressed) is
+//                   a TIME TRIAL — alone, against the record and the ghost —
+//                   rather than a race.
 //   ?bot=1          the player's own sled ridden by the bot for the whole
 //                   run, not just the pre-roll — a race watched from the
 //                   saddle to its finish plate with nobody's hands on it.
@@ -40,7 +43,7 @@
 // DOM-free: the query string is an argument, so `tests/menu_system_test.ts`
 // reads every rule here without a browser.
 
-import { isSledId, type SledId } from "@engine";
+import { isSledId, type GameMode, type SledId } from "@engine";
 
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
@@ -63,6 +66,8 @@ export type UrlParams = {
   camera: CameraRung | null;
   /** The player's machine for this visit. */
   sled: SledId | null;
+  /** The mode a booted run is ridden in. */
+  mode: GameMode;
   /** The bot rides the player's sled for the whole run. */
   bot: boolean;
   /** The URL names the front door. */
@@ -99,7 +104,9 @@ export function readParams(search: string): UrlParams {
     camera:
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
     sled: sled !== null && isSledId(sled) ? sled : null,
+    mode: start === "free" ? "free" : q.get("mode") === "trial" ? "timeTrial" : "race",
     bot: q.get("bot") === "1",
+
     menu: q.get("menu") !== null,
     page: MENU_PAGES.includes(q.get("menu") as MenuPage) ? (q.get("menu") as MenuPage) : "root",
     video: TIERS.includes(q.get("video") as Tier) ? (q.get("video") as Tier) : null,

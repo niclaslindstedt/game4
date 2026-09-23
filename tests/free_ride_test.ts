@@ -30,7 +30,7 @@ import {
 import { flatLevel, LONE_TREE, STADIUM, syntheticLevel } from "./support/synthetic.ts";
 
 function freeRide(extra: Parameters<typeof createGame>[0] = {}): GameState {
-  return createGame({ level: syntheticLevel(), free: true, quiet: true, ...extra });
+  return createGame({ level: syntheticLevel(), mode: "free", quiet: true, ...extra });
 }
 
 describe("the free ride's rules", () => {
@@ -206,7 +206,7 @@ describe("the snow dial", () => {
     const at = (depth: number): number => {
       const state = createGame({
         level: flatLevel({ packed: 0 }),
-        free: true,
+        mode: "free",
         snowDepth: depth,
         quiet: true,
       });
@@ -221,7 +221,7 @@ describe("the snow dial", () => {
     const speedAt = (depth: number): number => {
       const state = createGame({
         level: flatLevel({ packed: 0 }),
-        free: true,
+        mode: "free",
         snowDepth: depth,
         quiet: true,
       });

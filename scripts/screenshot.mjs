@@ -15,6 +15,7 @@
 //     by the bot, held still once drawn so nothing moves under the shutter.
 //   ?paused=1        ...held under the pause card instead.
 //   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
+//   ?mode=trial      the run is a TIME TRIAL rather than a race (--trial).
 //   ?splash=1 / ?menu=root   the attract card / the front door;
 //   ?menu=options|keys       OPTIONS, and its KEYS page.
 //   ?menu=sled[&sled=id]     the sled card RACE opens, on a machine.
@@ -132,6 +133,7 @@ const args = parseArgs(
     camera: { kind: "string", help: "hood, bars, chase, far, high" },
     video: { kind: "string", help: "picture preset for the visit (low, medium, high)" },
     update: { kind: "flag", help: "draw the new-build button (?update=1)" },
+    trial: { kind: "flag", help: "a time trial rather than a race (?mode=trial)" },
     viewport: {
       kind: "string",
       default: "all",
@@ -140,7 +142,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
   },
   "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
-    "[--camera rung] [--video tier] [--update] [--viewport v] [--timeout s]",
+    "[--camera rung] [--video tier] [--update] [--trial] [--viewport v] [--timeout s]",
 );
 const viewports =
   args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
@@ -265,8 +267,9 @@ if (args.surface) {
     if (args.camera !== undefined) params.camera = String(args.camera);
     if (args.video !== undefined) params.video = String(args.video);
     if (args.update) params.update = "1";
+    if (args.trial) params.mode = "trial";
     const name =
-      `${scene}${args.t !== undefined ? `-t${args.t}` : ""}` +
+      `${scene}${args.trial ? "-trial" : ""}${args.t !== undefined ? `-t${args.t}` : ""}` +
       `${args.camera !== undefined ? `-${args.camera}` : ""}` +
       `${args.video !== undefined ? `-${args.video}` : ""}${args.update ? "-update" : ""}`;
     for (const v of viewports) await capture(name, params, v);

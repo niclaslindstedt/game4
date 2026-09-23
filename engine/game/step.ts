@@ -17,11 +17,11 @@ import { status } from "../output.ts";
 import { freeSpawn, freshProgress, standSled } from "./course.ts";
 import {
   FULL_ASSIST,
+  MODE_RULES,
   RACE,
   clampSnowDepth,
-  freeRules,
-  raceRules,
   type Assist,
+  type GameMode,
   type RunRules,
 } from "./defs/modes.ts";
 import { SLED, type SledSpec } from "./defs/sled.ts";
@@ -37,6 +37,9 @@ export type CreateGameOptions = {
   seed?: number;
   /** A map to ride instead of the one the seed generates (tests, labs). */
   level?: Level;
+  /** The mode whose rules the run is dealt (`MODE_RULES`); a race when left
+   * out. Each option below still overrides its own rule. */
+  mode?: GameMode;
   /** How many rivals stand on the grid (`RACE.rivals` when left out; 0 is a
    * solo run — what the sim and the labs ride). */
   rivals?: number;
@@ -53,12 +56,10 @@ export type CreateGameOptions = {
   assist?: Assist;
   /** Build without announcing the map (the sim's sweeps). */
   quiet?: boolean;
-  /** A FREE RIDE: the whole map and nobody else on it — no lights, no
-   * course to count (`freeRules`). */
-  free?: boolean;
-  /** Where a free ride starts, a plan point on the map (`freeSpawn` holds
-   * it inside the edge and out of the trees); the grid's first slot when
-   * left out. Ignored by a race, which starts on its grid. */
+  /** Where a FREE RIDE (`mode: "free"`) starts, a plan point on the map
+   * (`freeSpawn` holds it inside the edge and out of the trees); the grid's
+   * first slot when left out. Ignored by every other mode, which starts on
+   * its grid. */
   spawn?: { x: number; z: number };
   /** THE SNOW DIAL (`SNOW_DIAL`): the powder's sink as a multiple of the
    * ordinary snow's. 1 when left out. */
@@ -70,9 +71,7 @@ export type CreateGameOptions = {
 
 /** The rules a run is dealt from what it asked for. */
 export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
-  const laps = options.laps ?? level.laps;
-  if (options.free) return freeRules(laps);
-  const base = raceRules(laps);
+  const base = MODE_RULES[options.mode ?? "race"](options.laps ?? level.laps);
   return {
     rivals: options.rivals ?? base.rivals,
     laps: base.laps,
@@ -105,7 +104,7 @@ export function createGame(options: CreateGameOptions = {}): GameState {
     events: [],
   };
   const at =
-    options.free && options.spawn
+    options.mode === "free" && options.spawn
       ? freeSpawn(level, options.spawn.x, options.spawn.z)
       : gridSlot(state, 0);
   standSled(state, at.x, at.z, at.heading);
