@@ -17,7 +17,7 @@
 //   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
 //            paid for in slices so the page stays a page.
 //   pause    the race HELD (`menu-pause.tsx`), reached by Escape or the
-//            HUD's pause mark: RESUME, SOUND, RESTART, or out to the door.
+//            HUD's pause mark: RESUME, OPTIONS, RESTART, or out to the door.
 //   run      the player's hands on the bars, with the HUD over the top —
 //            and the finish plate over that once the flag has fallen.
 //
@@ -830,10 +830,14 @@ export function App() {
       {shell === "pause" && snap !== null && (
         <PauseMenu
           snap={snap}
-          sound={settings.sound}
+          settings={settings}
+          onSettings={setSettings}
+          onCamera={(camera) => {
+            setSettings((s) => ({ ...s, camera }));
+            rendererRef.current?.setCamera(camera);
+          }}
           onResume={() => pressRef.current.resume()}
           onRestart={() => pressRef.current.restart()}
-          onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onMainMenu={() => pressRef.current.toMenu()}
         />
       )}

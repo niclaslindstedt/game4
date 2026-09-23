@@ -169,14 +169,17 @@ export function Hud({
         )}
       </div>
 
+      {/* The map first and the three presses UNDER it: the map is read at a
+          glance from the top of the corner, and the presses sit a thumb's
+          reach lower, nearer the hands. */}
       <div class="hud-topright">
+        <Minimap map={snap.minimap} />
         <HudActions
           onPause={onPause}
           onReset={onReset}
           onCamera={onCamera}
           missed={snap.missed !== null}
         />
-        <Minimap map={snap.minimap} />
       </div>
 
       {/* THE MISSED CHECKPOINT, centred in the upper quarter where the eye
