@@ -64,7 +64,7 @@ out.push(
 );
 out.push(
   `spawn: (${f(level.spawn.x, 0)}, ${f(level.spawn.z, 0)}) facing ${f(deg(level.spawn.heading), 0)}°, ` +
-    `${f(st.spawnDistance, 0)} m from the start line, ${level.grid.length} slots`,
+    `on the track behind the start line, ${level.grid.length} slots`,
 );
 out.push(
   `forest: ${level.trees.length} trees; kickers: ${st.trackKickers} on the track, ${st.offKickers} off it`,
@@ -126,7 +126,7 @@ const canvas = renderLevelMap({
     `MAX GRADE ${f(st.maxGrade * 100)} %`,
     `CLIMB ${f(st.relief, 0)} M`,
     `TREES ${level.trees.length}`,
-    `SPAWN ${f(st.spawnDistance, 0)} M OFF`,
+    `TREE GAP ${f(st.treeGap, 1)} M`,
     `SUN ${f(level.sun.hour, 1)} H DAY ${level.sun.dayOfYear}`,
     `LAT ${f(level.sun.latitude)} ELEV ${f(st.sunElevation)}`,
     analysis.ok ? "ANALYSIS CLEAN" : "ANALYSIS: ERRORS",

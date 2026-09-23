@@ -25,6 +25,7 @@ import {
   placeRun,
   sledById,
   step,
+  tipLimit,
   TUNING,
   type GameState,
   type Level,
@@ -81,14 +82,17 @@ describe("the catalog", () => {
 
   it("keeps every machine inside the real bands it claims", () => {
     for (const s of SLEDS) {
-      expect(s.dryMass).toBeGreaterThanOrEqual(195);
-      expect(s.dryMass).toBeLessThanOrEqual(240);
-      expect(s.powerKw).toBeGreaterThanOrEqual(90);
-      expect(s.powerKw).toBeLessThanOrEqual(130);
-      expect(s.skiStance).toBeGreaterThanOrEqual(0.9);
-      expect(s.skiStance).toBeLessThanOrEqual(1.1);
-      expect(s.treadLength).toBeGreaterThanOrEqual(3.0);
-      expect(s.treadLength).toBeLessThanOrEqual(4.1);
+      expect(s.dryMass).toBeGreaterThanOrEqual(190);
+      expect(s.dryMass).toBeLessThanOrEqual(235);
+      // 850-class two-strokes make 165 hp, the turbocharged one 180.
+      expect(s.powerKw).toBeGreaterThanOrEqual(120);
+      expect(s.powerKw).toBeLessThanOrEqual(135);
+      // Mountain stances 34–36 in, trail stances up to 43–44 in.
+      expect(s.skiStance).toBeGreaterThanOrEqual(0.86);
+      expect(s.skiStance).toBeLessThanOrEqual(1.12);
+      // Belts 120–175 in.
+      expect(s.treadLength).toBeGreaterThanOrEqual(3.05);
+      expect(s.treadLength).toBeLessThanOrEqual(4.45);
       expect(s.lugHeight).toBeGreaterThanOrEqual(0.025);
       expect(s.lugHeight).toBeLessThanOrEqual(0.075);
     }
@@ -122,10 +126,19 @@ describe("every machine, on the groomer", () => {
 });
 
 describe("four answers to a kind of snow", () => {
-  it("the trail sled is the quickest flat out on packed snow, the mountain the slowest", () => {
+  it("the trail sled is the quickest flat out on packed snow; the cross, geared short, the slowest", () => {
     const tops = new Map(SLEDS.map((s) => [s.id, topOn(s, PACKED)]));
     expect(Math.max(...tops.values())).toBe(tops.get("trail"));
-    expect(Math.min(...tops.values())).toBe(tops.get("mountain"));
+    expect(Math.min(...tops.values())).toBe(tops.get("cross"));
+    // ...and the long, tall belt costs the mountain sled the top end of
+    // the crossover's, with more power under it.
+    expect(tops.get("mountain")!).toBeLessThan(tops.get("crossover")!);
+  });
+
+  it("the wide, low trail sled tips last in a bend, the narrow mountain sled first", () => {
+    const tips = SLEDS.map(tipLimit);
+    expect(Math.max(...tips)).toBe(tipLimit(TRAIL_SLED));
+    expect(Math.min(...tips)).toBe(tipLimit(MOUNTAIN_SLED));
   });
 
   it("the trail sled holds the groomer hardest in a bend, the mountain pushes widest", () => {

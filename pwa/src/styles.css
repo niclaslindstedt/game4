@@ -1310,8 +1310,9 @@ canvas {
   fill: var(--hud-good);
 }
 
-/* The throttle lever: a track from the anchor DOWN the glass, the knob on
-   the thumb, the fill how open the pump is. */
+/* The throttle lever: a track UP the glass from the anchor (wide open) to
+   the shut mark and the brake past it, the knob on the thumb, the fill how
+   open the throttle is. */
 .hud-lever {
   position: absolute;
   display: none;
@@ -1340,8 +1341,8 @@ canvas {
   fill: var(--hud-good);
 }
 
-/* The upward half of the throw is the BRAKE, and it is the one control
-   that has to read differently at a glance from the one beside it. */
+/* The top of the throw, past the shut mark, is the BRAKE, and it is the one
+   control that has to read differently at a glance from the one beside it. */
 .hud-lever-fill-reverse {
   fill: var(--hud-bad);
 }

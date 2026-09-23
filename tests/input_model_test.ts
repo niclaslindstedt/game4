@@ -15,7 +15,7 @@ import {
   LEAN_DEAD_PX,
   LEVER_BRAKE_DEAD_PX,
   LEVER_BRAKE_PX,
-  LEVER_FULL_PX,
+  LEVER_EASE_PX,
   NO_KEYS,
   SCREEN_TO_ENGINE,
   barLean,
@@ -87,20 +87,22 @@ describe("the keyboard's ramps", () => {
   });
 });
 
-describe("the throttle lever (drag DOWN, brake UP)", () => {
-  it("is shut at the anchor and wide open a full throw down the glass", () => {
-    expect(leverThrottle(0)).toBe(0);
-    expect(leverThrottle(-40)).toBe(0);
-    expect(leverThrottle(LEVER_FULL_PX / 2)).toBeCloseTo(0.5);
-    expect(leverThrottle(LEVER_FULL_PX)).toBe(1);
-    expect(leverThrottle(LEVER_FULL_PX * 3)).toBe(1);
+describe("the throttle lever (full on touch, ease off UP, brake further UP)", () => {
+  it("is wide open at the anchor and below it, and eases off to shut up the glass", () => {
+    expect(leverThrottle(0)).toBe(1);
+    expect(leverThrottle(40)).toBe(1);
+    expect(leverThrottle(-LEVER_EASE_PX / 2)).toBeCloseTo(0.5);
+    expect(leverThrottle(-LEVER_EASE_PX)).toBe(0);
+    expect(leverThrottle(-LEVER_EASE_PX * 3)).toBe(0);
   });
 
-  it("pulls the brake only past a dead band up the glass, and never with the throttle", () => {
+  it("pulls the brake only past a dead band over the shut point, and never with the throttle", () => {
+    const shut = LEVER_EASE_PX;
     expect(leverBrake(0)).toBe(0);
-    expect(leverBrake(-LEVER_BRAKE_DEAD_PX)).toBe(0);
-    expect(leverBrake(-(LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX / 2))).toBeCloseTo(0.5);
-    expect(leverBrake(-(LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX))).toBe(1);
+    expect(leverBrake(-shut)).toBe(0);
+    expect(leverBrake(-(shut + LEVER_BRAKE_DEAD_PX))).toBe(0);
+    expect(leverBrake(-(shut + LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX / 2))).toBeCloseTo(0.5);
+    expect(leverBrake(-(shut + LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX))).toBe(1);
     for (let dy = -200; dy <= 200; dy += 5) {
       expect(leverThrottle(dy) > 0 && leverBrake(dy) > 0, `dy ${dy}`).toBe(false);
     }
@@ -153,8 +155,10 @@ describe("the thumbs' feel (OPTIONS ▸ CONTROLS)", () => {
     expect(barSteer(BAR_REACH_PX / 1.5, quick)).toBeCloseTo(1);
     expect(barSteer(BAR_REACH_PX / 1.5)).toBeLessThan(1);
     expect(barReachPx(quick)).toBeCloseTo(BAR_REACH_PX / 1.5);
-    expect(leverThrottle(LEVER_FULL_PX / 1.5, quick)).toBeCloseTo(1);
-    expect(leverBrake(-(LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX) / 1.5, quick)).toBeCloseTo(1);
+    expect(leverThrottle(-LEVER_EASE_PX / 1.5, quick)).toBeCloseTo(0);
+    expect(
+      leverBrake(-(LEVER_EASE_PX + LEVER_BRAKE_DEAD_PX + LEVER_BRAKE_PX) / 1.5, quick),
+    ).toBeCloseTo(1);
   });
 
   it("turns the lean round when inverted, and nothing else", () => {
@@ -162,7 +166,7 @@ describe("the thumbs' feel (OPTIONS ▸ CONTROLS)", () => {
     expect(barLean(BAR_REACH_PX, flipped)).toBeCloseTo(-barLean(BAR_REACH_PX));
     expect(barLean(-BAR_REACH_PX, flipped)).toBeGreaterThan(0);
     expect(barSteer(40, flipped)).toBe(barSteer(40));
-    expect(leverThrottle(45, flipped)).toBe(leverThrottle(45));
+    expect(leverThrottle(-25, flipped)).toBe(leverThrottle(-25));
   });
 });
 

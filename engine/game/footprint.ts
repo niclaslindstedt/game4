@@ -27,9 +27,12 @@
 // the tread's sideways grip there.
 //
 // THE BELT'S OWN LOSSES — the rails, the idlers and the belt flexing round
-// them, the biggest drag a sled has at speed (`TUNING.tread.lossQuad`) —
-// grow with how much belt there is to turn: `treadLength / L₀`. That is the
-// long tread's top end gone, and nothing else takes it.
+// them (`TUNING.tread.lossQuad`) — grow with how much belt there is to turn
+// and how tall its lugs stand: `(treadLength / L₀) · (h / h₀)^lugLoss`. A
+// longer belt with taller lugs is a slower one at the same track speed —
+// riders put a 144-inch belt at a tenth off a 136-inch one at 60 mph, and a
+// 156-inch belt with 2-inch lugs at a quarter off — and that is the long
+// tread's top end gone, and nothing else takes it.
 
 import { SLED, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
@@ -82,7 +85,7 @@ export function footprintOf(spec: SledSpec): Footprint {
     plane: Math.sqrt(ratio),
     powderDrive: Math.pow(lug, F.lugPowder),
     packedSide: Math.pow(1 / lug, F.lugSide),
-    beltLoss: spec.treadLength / SLED.treadLength,
+    beltLoss: (spec.treadLength / SLED.treadLength) * Math.pow(lug, F.lugLoss),
   };
   cache.set(spec, fit);
   return fit;

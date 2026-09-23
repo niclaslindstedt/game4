@@ -64,7 +64,8 @@ export interface Level {
   packedAt(x: number, z: number): number;
   track: { points: TrackPoint[]; length: number; closed: true };
   checkpoints: Checkpoint[];
-  /** The grid's anchor: a seeded spot in powder near the track. */
+  /** The grid's anchor: the front row's point on the centreline, behind the
+   * start line, facing along the loop (R13). */
   spawn: Spawn;
   /** One slot per rider, the player's first. */
   grid: Spawn[];

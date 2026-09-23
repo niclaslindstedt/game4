@@ -10,8 +10,8 @@
 // not credited until the skipped one is taken, and the HUD's arrow points him
 // back at it (`Progress.missed`, `bearingToNext`).
 //
-// THE LAPS: the grid stands in powder off the track and the run owes the
-// START LINE (checkpoint 0) first — crossing it opens lap one. Then 1, 2, …
+// THE LAPS: the grid stands on the track behind the start line and the run
+// owes the START LINE (checkpoint 0) first — crossing it opens lap one. Then 1, 2, …
 // the last, and 0 again closes the lap; after `rules.laps` of them the flag.
 // So a race of `n` checkpoints over `L` laps is `1 + n·L` crossings, and the
 // standings count them (`rivals.ts`).

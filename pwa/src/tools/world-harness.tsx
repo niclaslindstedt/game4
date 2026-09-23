@@ -193,13 +193,16 @@ const shots: Record<string, () => string> = {
     rideUntil(() => state.t >= 1.5, 3);
     renderer.setCamera("chase", true);
     settle(20);
-    return `on the grid in powder, t ${state.t.toFixed(1)} s`;
+    return `on the grid behind the start line, t ${state.t.toFixed(1)} s`;
   },
   powder() {
-    rideUntil(() => state.t >= 10, 12);
+    // The grid is on the groomer, so the first powder the race rides is its
+    // first drift across the track (R17) — ridden to, for as long as it
+    // takes, on a map that has one.
+    rideUntil(() => state.t >= 10 && state.sled.packed < 0.4, 150);
     renderer.setCamera("chase", true);
     settle(4);
-    return `chase after 7 s of riding, packed ${state.sled.packed.toFixed(2)}`;
+    return `chase in the first drift, t ${state.t.toFixed(1)} s, packed ${state.sled.packed.toFixed(2)}`;
   },
   "powder-high"() {
     renderer.setCamera("high", true);

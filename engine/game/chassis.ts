@@ -24,6 +24,7 @@ import { rotate, unrotate, type Vec3 } from "../lib/quat.ts";
 import type { Level } from "../mapgen/types.ts";
 import { inertiaOf, totalMass } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
+import { footprintOf } from "./footprint.ts";
 import { powderFloor } from "./snow.ts";
 import { hullOf } from "./suspension.ts";
 import type { SledState } from "./state.ts";
@@ -40,6 +41,7 @@ function cross(a: Vec3, b: Vec3): Vec3 {
 export function chassisContacts(c: SledState, level: Level): number {
   const m = totalMass(c.spec);
   const I = inertiaOf(c.spec);
+  const sink = footprintOf(c.spec).sink;
   let worst = 0;
   let touched = false;
   for (const h of hullOf(c.spec)) {
@@ -47,7 +49,7 @@ export function chassisContacts(c: SledState, level: Level): number {
     const px = c.x + r.x;
     const py = c.y + r.y;
     const pz = c.z + r.z;
-    const floor = level.groundAt(px, pz) - powderFloor(level.packedAt(px, pz));
+    const floor = level.groundAt(px, pz) - powderFloor(level.packedAt(px, pz), sink);
     const pen = floor - py;
     if (pen <= 0) continue;
     touched = true;

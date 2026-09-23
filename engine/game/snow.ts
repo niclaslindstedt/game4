@@ -38,11 +38,13 @@ export function sinkTarget(packed: number, speed: number, scale: number, plane =
   return powder * (1 - packed) + S.packedSink * packed;
 }
 
-/** The deepest a sled can sink here — a resting machine's — m. What the
- * chassis contacts read as the bottom of the snow (`sled.ts`): deep powder
- * does not hold a belly up, it is pushed aside by it. */
-export function powderFloor(packed: number): number {
-  return S.powderSink * (1 - packed) + S.packedSink * packed;
+/** The deepest a sled can sink here — a resting machine's — m, for a tread
+ * that sinks `scale` times the reference's (`Footprint.sink`). What the
+ * chassis contacts read as the bottom of the snow (`chassis.ts`): deep
+ * powder does not hold a belly up, it is pushed aside by it — down to the
+ * base the machine's own tread has pressed, and no further. */
+export function powderFloor(packed: number, scale = 1): number {
+  return S.powderSink * Math.max(1, scale) * (1 - packed) + S.packedSink * packed;
 }
 
 /** The resistance along a probe's line of travel, N, as a magnitude (the

@@ -41,17 +41,34 @@ describe("analyzeLevel", () => {
     expect(errorRules({ ...base, trees: [...base.trees, tree] })).toContain("R14");
   });
 
-  it("finds a spawn standing on the packed track (R10, R12)", () => {
-    const p = base.track.points[0];
-    const broken = errorRules({ ...base, spawn: { x: p.x, z: p.z, heading: p.heading } });
-    expect(broken).toContain("R12");
-    expect(broken).toContain("R10");
+  it("finds a grid slot standing out in the powder (R13)", () => {
+    const g = base.grid[1];
+    const rx = Math.cos(g.heading);
+    const rz = -Math.sin(g.heading);
+    const off = { ...g, x: g.x + rx * 30, z: g.z + rz * 30 };
+    expect(errorRules({ ...base, grid: [base.grid[0], off, ...base.grid.slice(2)] })).toContain(
+      "R13",
+    );
   });
 
-  it("finds a spawn that does not face the start line (R12)", () => {
+  it("finds a spawn that does not face along the loop (R13)", () => {
     expect(
       errorRules({ ...base, spawn: { ...base.spawn, heading: base.spawn.heading + 1 } }),
+    ).toContain("R13");
+  });
+
+  it("finds a start line on a kicker's doorstep (R12)", () => {
+    const k = base.kickers.find((kk) => kk.onTrack)!;
+    const moved = { ...k, s: 20 };
+    expect(
+      errorRules({ ...base, kickers: base.kickers.map((kk) => (kk === k ? moved : kk)) }),
     ).toContain("R12");
+  });
+
+  it("finds two trees too close to ride between (R14)", () => {
+    const t = base.trees[0];
+    const twin = { ...t, x: t.x + 3 };
+    expect(errorRules({ ...base, trees: [...base.trees, twin] })).toContain("R14");
   });
 
   it("finds a missing checkpoint (R11)", () => {

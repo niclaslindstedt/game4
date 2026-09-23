@@ -205,39 +205,26 @@ describe("the kickers (R4, R9)", () => {
 });
 
 describe("the start (R11–R13)", () => {
-  it("stands the spawn in powder inside its distance band, facing the start line", () => {
+  it("stands the start line on a straight, gentle stretch clear of every kicker (R12)", () => {
     for (const level of corpus()) {
-      const hit = nearestTrackPoint(level, level.spawn.x, level.spawn.z);
-      expect(withinBand(hit.distance, R.spawn.distance)).toBe(true);
-      expect(level.packedAt(level.spawn.x, level.spawn.z)).toBe(0);
-      const p0 = level.track.points[0];
-      const aim = Math.atan2(p0.x - level.spawn.x, p0.z - level.spawn.z);
-      const diff = Math.atan2(
-        Math.sin(aim - level.spawn.heading),
-        Math.cos(aim - level.spawn.heading),
-      );
-      expect(Math.abs(diff)).toBeLessThan(1e-9);
-      for (const t of level.trees) {
-        expect(Math.hypot(t.x - level.spawn.x, t.z - level.spawn.z)).toBeGreaterThanOrEqual(
-          R.spawn.clear,
-        );
+      const L = level.track.length;
+      const line = level.track.points[0];
+      for (let u = 0; u <= R.spawn.run; u += 2) {
+        const p = trackPointAt(level, L - u);
+        expect(
+          Math.abs(
+            Math.atan2(Math.sin(p.heading - line.heading), Math.cos(p.heading - line.heading)),
+          ),
+        ).toBeLessThanOrEqual(R.spawn.straight + 0.02);
       }
-    }
-  });
-
-  it("makes checkpoint 0 the track point nearest the spawn, the loop starting there", () => {
-    for (const level of corpus()) {
-      const pts = level.track.points;
-      let best = 0;
-      for (let i = 1; i < pts.length; i++) {
-        const d = Math.hypot(pts[i].x - level.spawn.x, pts[i].z - level.spawn.z);
-        if (d < Math.hypot(pts[best].x - level.spawn.x, pts[best].z - level.spawn.z)) best = i;
+      for (const k of level.kickers.filter((kk) => kk.onTrack)) {
+        const ds = k.s ?? 0;
+        expect(Math.min(ds, L - ds)).toBeGreaterThanOrEqual(R.spawn.kickerGap - 1);
       }
-      expect(best).toBe(0);
       const c0 = level.checkpoints[0];
       expect(c0.s).toBe(0);
-      expect(c0.x).toBeCloseTo(pts[0].x, 6);
-      expect(c0.z).toBeCloseTo(pts[0].z, 6);
+      expect(c0.x).toBeCloseTo(line.x, 6);
+      expect(c0.z).toBeCloseTo(line.z, 6);
     }
   });
 
@@ -254,19 +241,34 @@ describe("the start (R11–R13)", () => {
     }
   });
 
-  it("stands the grid abreast across the spawn's heading", () => {
+  it("stands the grid on the groomer behind the line, facing along the loop (R13)", () => {
     for (const level of corpus()) {
-      const [player, ...rest] = level.grid;
-      for (const g of level.grid) expect(g.heading).toBe(level.spawn.heading);
-      // The player's slot is the nearest the middle.
-      const mid = Math.hypot(player.x - level.spawn.x, player.z - level.spawn.z);
-      for (const g of rest) {
-        expect(Math.hypot(g.x - level.spawn.x, g.z - level.spawn.z)).toBeGreaterThanOrEqual(
-          mid - 1e-9,
-        );
-        expect(Math.hypot(g.x - player.x, g.z - player.z)).toBeGreaterThanOrEqual(
-          R.grid.spacing - 1e-9,
-        );
+      const L = level.track.length;
+      expect(level.grid).toHaveLength(R.grid.slots);
+      for (const g of [level.spawn, ...level.grid]) {
+        const hit = nearestTrackPoint(level, g.x, g.z);
+        const p = level.track.points[hit.index];
+        expect(hit.distance).toBeLessThan(p.width / 2 - 1);
+        expect(level.packedAt(g.x, g.z)).toBeGreaterThan(0.98);
+        expect(L - hit.s).toBeGreaterThanOrEqual(R.grid.back - 0.5);
+        expect(Math.abs(Math.sin(g.heading - p.heading))).toBeLessThan(0.05);
+      }
+      // The spawn is the front row's centreline point; the player is in the
+      // front row, and nobody stands on anybody.
+      expect(nearestTrackPoint(level, level.spawn.x, level.spawn.z).distance).toBeLessThan(0.1);
+      const [player] = level.grid;
+      expect(Math.hypot(player.x - level.spawn.x, player.z - level.spawn.z)).toBeCloseTo(
+        R.grid.spacing / 2,
+        1,
+      );
+      for (let a = 0; a < level.grid.length; a++) {
+        for (let b = a + 1; b < level.grid.length; b++) {
+          const d = Math.hypot(
+            level.grid[a].x - level.grid[b].x,
+            level.grid[a].z - level.grid[b].z,
+          );
+          expect(d).toBeGreaterThanOrEqual(Math.min(R.grid.spacing, R.grid.row) - 0.05);
+        }
       }
     }
   });
@@ -331,6 +333,15 @@ describe("the drifts (R17)", () => {
 });
 
 describe("the forest (R14)", () => {
+  it("leaves room to ride between any two trees", () => {
+    for (const level of corpus()) {
+      expect(analysisFor(level.seed).stats.treeGap).toBeGreaterThanOrEqual(R.forest.gap - 0.01);
+      for (const t of level.trees) expect(t.crown).toBeLessThanOrEqual(R.forest.crownMax);
+      // Two crowns at their widest still leave a lane wider than a sled.
+      expect(R.forest.gap - 2 * R.forest.crownMax).toBeGreaterThan(2);
+    }
+  });
+
   it("stands no tree on the track's corridor", () => {
     for (const level of corpus()) {
       for (const t of level.trees) {

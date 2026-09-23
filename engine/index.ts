@@ -120,6 +120,7 @@ export {
   lockAt,
   maxRpm,
   topSpeedOf,
+  tipLimit,
   treadCeiling,
 } from "./game/limits.ts";
 

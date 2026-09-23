@@ -49,7 +49,8 @@ export type SledSpec = {
   name: string;
   /** One line the sled card says about it — what it is FOR. */
   blurb: string;
-  /** Machine dry, kg — a 600-class trail/cross sled sits at 210–240 kg. */
+  /** Machine dry, kg — 850-class sleds sit at 190–235 kg, the mountain
+   * machines lightest. */
   dryMass: number;
   /** The rider in his gear, kg. */
   riderMass: number;
@@ -106,139 +107,146 @@ export type SledSpec = {
   riderHeight: number;
   riderReach: number;
   /** Documented expectations: km/h flat out on packed snow, and seconds
-   * from rest to 100 km/h on packed snow. */
+   * from rest to 100 km/h on packed snow (the 850 class runs 105–128 mph
+   * flat out and does 0–60 mph in 3–6 s). */
   topSpeed: number;
   accel0to100: number;
 };
 
-/** THE CROSSOVER — the reference machine. A 600-class trail/cross sled at
- * the middle of every band: 210–240 kg dry, 90–125 kW, a 1.0–1.1 m stance,
- * a 3.2–3.5 m belt of 38 mm lugs, 110–130 km/h flat out on the groomer. */
+/** THE CROSSOVER — the reference machine, and the one every shared number
+ * in `TUNING` was tuned on. An 850-class crossover at the middle of every
+ * band: 165 hp (123 kW) out of the two-stroke 850, about 230 kg dry, a
+ * 1.02–1.07 m stance, a 146-inch (3.71 m) belt of 1.75-inch (44 mm) lugs —
+ * crossover belts run 137–146 in with 1.5–2 in lugs. */
 export const SLED: SledSpec = {
   id: "crossover",
   name: "Crossover",
   blurb: "The middle of every road: groomer or powder, it asks nothing and refuses nothing.",
   dryMass: 230,
   riderMass: 85,
-  length: 3.1,
+  length: 3.2,
   width: 1.2,
   height: 1.25,
   cogHeight: 0.55,
-  skiStance: 1.05,
+  skiStance: 1.04,
   skiForward: 1.15,
   skiWidth: 0.15,
-  treadLength: 3.35,
+  treadLength: 3.71,
   treadWidth: 0.38,
   treadFront: 0.2,
-  treadRear: -1.3,
-  lugHeight: 0.041,
+  treadRear: -1.45,
+  lugHeight: 0.044,
   // Rest sag of about 8 cm on either end (the load shares come off the
   // geometry, `suspension.ts`), a bit under 2 Hz in heave, and a shock that
   // is about half critical: a sled that settles in one bob.
   front: { rate: 6200, bump: 380, rebound: 560, travel: 0.23 },
   rear: { rate: 3000, bump: 190, rebound: 280, travel: 0.3 },
-  powerKw: 110,
+  powerKw: 123,
   peakRpm: 7900,
   maxRpm: 8400,
   idleRpm: 1500,
   engageRpm: 3800,
-  gearTop: 36,
+  gearTop: 50,
   gearSpan: 3.6,
   driveline: 0.8,
-  cdA: 1.05,
+  cdA: 0.9,
   skiLock: 0.42,
   brakeForce: 3400,
   riderHeight: 0.45,
   riderReach: 0.3,
-  topSpeed: 120,
-  accel0to100: 4.5,
+  topSpeed: 160,
+  accel0to100: 4.1,
 };
 
-/** THE TRAIL SLED — a short-tread groomer machine: a 3.0–3.1 m belt of low
- * 30 mm lugs, a wide 1.07–1.1 m stance, a firm front end and a clutch that
- * engages early. The least belt to turn is the least belt to lose to, so it
- * is the quickest thing on packed snow — and the smallest footprint under
- * the most weight, so it is the first to bog in a drift. */
+/** THE TRAIL SLED — an 850 trail machine: the same 165 hp, a 129-inch
+ * (3.28 m) belt of 1.25-inch (32 mm) lugs (trail belts are 120–137 in with
+ * 1.25–1.5 in lugs), the wide 1.09 m (43 in) stance trail sleds have grown
+ * to, about 227 kg dry (474–500 lb for the class), a firm front end and a
+ * clutch that engages early. The least belt to turn is the least belt to
+ * lose to, so it is the quickest thing on packed snow — and the smallest
+ * footprint under the most weight, so it is the first to bog in a drift. */
 export const TRAIL_SLED: SledSpec = {
   ...SLED,
   id: "trail",
   name: "Trail",
   blurb: "Short on tread and low on lugs: planted and quick on the groomer, lost in a drift.",
-  dryMass: 235,
-  length: 2.95,
+  dryMass: 227,
+  length: 3.05,
   skiStance: 1.09,
-  treadLength: 3.07,
+  treadLength: 3.28,
   treadFront: 0.25,
-  treadRear: -1.08,
-  lugHeight: 0.03,
+  treadRear: -1.15,
+  lugHeight: 0.032,
   front: { rate: 7000, bump: 430, rebound: 630, travel: 0.22 },
   rear: { rate: 3300, bump: 210, rebound: 310, travel: 0.28 },
-  powerKw: 108,
   engageRpm: 3500,
-  gearTop: 37,
-  topSpeed: 124,
-  accel0to100: 3.9,
+  gearTop: 52,
+  topSpeed: 168,
+  accel0to100: 3.5,
 };
 
-/** THE MOUNTAIN SLED — a long-tread powder machine: a 3.9–4.1 m belt of
- * 64 mm paddles on the snow for half again the crossover's length, a narrow
- * 0.9–1.0 m stance to sidehill on, a bigger engine that engages high, and a
- * CVT geared low to turn all that belt. The footprint floats it and the
- * lugs dig; on the groomer the same lugs fold under a bend, the narrow
- * stance lifts a ski, and the long belt costs it the top end. */
+/** THE MOUNTAIN SLED — a turbocharged 850 on a 155-inch (3.94 m) belt of
+ * 2.6-inch (66 mm) paddles: 180 hp (134 kW), and the lightest machine here
+ * — about 194 kg dry (428 lb for the class) — on a 0.89 m (35 in) stance,
+ * mountain sleds having narrowed to 34–36 in to sidehill. Engages high and
+ * geared low to turn all that belt. The footprint floats it and the lugs
+ * dig; on the groomer the same lugs fold under a bend, the narrow stance
+ * lifts a ski, and the long, tall belt costs it the top end. */
 export const MOUNTAIN_SLED: SledSpec = {
   ...SLED,
   id: "mountain",
   name: "Mountain",
   blurb:
     "A long belt of tall paddles: floats where the others bog, and pushes wide on the groomer.",
-  dryMass: 225,
+  dryMass: 195,
   length: 3.55,
-  width: 1.1,
-  skiStance: 0.96,
+  width: 1.0,
+  skiStance: 0.89,
   skiForward: 1.2,
   treadLength: 3.94,
   treadFront: 0.3,
   treadRear: -1.65,
-  lugHeight: 0.064,
+  lugHeight: 0.066,
   front: { rate: 5600, bump: 340, rebound: 500, travel: 0.23 },
   rear: { rate: 2900, bump: 180, rebound: 270, travel: 0.33 },
-  powerKw: 124,
+  powerKw: 134,
   engageRpm: 4300,
-  gearTop: 34,
-  topSpeed: 118,
-  accel0to100: 4.5,
+  gearTop: 44,
+  topSpeed: 151,
+  accel0to100: 4.3,
 };
 
-/** THE CROSS SLED — a race machine: 195–210 kg dry on a short 3.0–3.1 m
- * belt, stiff springs on long travel (a 0.25–0.28 m front, a 0.35–0.4 m
- * rear) with firm damping, a revvy 600 that engages late. It shrugs off the
- * landing that bottoms the others — and puts the most weight on the least
- * belt, so deep powder swallows it. */
+/** THE CROSS SLED — a race-bred 850: 165 hp, about 212 kg dry (race-bred sleds sit
+ * at 205–215 kg), a 1.09 m stance, a 137-inch (3.48 m) belt of
+ * 1.25-inch lugs, and stiff springs on long travel — 0.265 m (10.4 in)
+ * front and 0.34 m rear, trail rears running 9–16 in — with firm damping
+ * and an engine that revs higher and engages late, geared short the way a
+ * race sled is — for the drive out of a corner and off a landing, at the
+ * cost of the top end. It shrugs off the landing that bottoms the others —
+ * and carries its weight on a short footprint, so deep powder swallows it. */
 export const CROSS_SLED: SledSpec = {
   ...SLED,
   id: "cross",
   name: "Cross",
   blurb: "Light, stiff and long in travel: lands what the others bottom on, and sinks in powder.",
-  dryMass: 202,
-  length: 2.95,
-  height: 1.3,
-  cogHeight: 0.58,
-  skiStance: 1.08,
-  treadLength: 3.07,
+  dryMass: 212,
+  length: 3.1,
+  height: 1.32,
+  cogHeight: 0.61,
+  skiStance: 1.09,
+  treadLength: 3.48,
   treadFront: 0.25,
-  treadRear: -1.08,
-  lugHeight: 0.035,
-  front: { rate: 7600, bump: 560, rebound: 800, travel: 0.27 },
-  rear: { rate: 3500, bump: 270, rebound: 390, travel: 0.38 },
-  powerKw: 100,
+  treadRear: -1.2,
+  lugHeight: 0.032,
+  front: { rate: 7600, bump: 560, rebound: 800, travel: 0.265 },
+  rear: { rate: 3800, bump: 290, rebound: 420, travel: 0.34 },
   peakRpm: 8200,
   maxRpm: 8700,
   engageRpm: 4100,
-  gearTop: 36,
-  cdA: 1.0,
-  topSpeed: 122,
-  accel0to100: 3.9,
+  gearTop: 41,
+  cdA: 0.85,
+  topSpeed: 146,
+  accel0to100: 3.5,
 };
 
 /** THE CATALOG, in the order the sled card turns through it: groomer to

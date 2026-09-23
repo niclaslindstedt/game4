@@ -1,6 +1,6 @@
 ---
 name: hud-and-menus
-description: "Use when changing WHAT THE PLAYER READS AND PRESSES DURING A RACE — a HUD readout (the race clock, the position, the lap and checkpoint count, the split, the air clock, the lights and GO, the missed-checkpoint arrow, the rev bar over the speed, the news column, the finish plate), the three presses in the top right (pause, reset, camera), the touch controls (the handlebar on the lower left, the lever on the lower right — throttle dragged DOWN, brake pushed UP) and the keyboard layout. Owns the DOM-free-payload split every one of these is built on (`snapshot.ts`, `input-model.ts`, `run-news.ts`, `thumb-guard.ts`, `hud-press.ts`), the thumb-guard discipline, and where each surface lives. The CARDS around a race — the attract screen, the front door, the loading card, the pause card, the settings — are `menu-system`. Load `ui-review` beside either for the screenshot sweep."
+description: "Use when changing WHAT THE PLAYER READS AND PRESSES DURING A RACE — a HUD readout (the race clock, the position, the lap and checkpoint count, the split, the air clock, the lights and GO, the missed-checkpoint arrow, the rev bar over the speed, the news column, the finish plate), the three presses in the top right (pause, reset, camera), the touch controls (the handlebar on the lower left, the lever on the lower right — wide open on touch, eased off UP, brake further UP) and the keyboard layout. Owns the DOM-free-payload split every one of these is built on (`snapshot.ts`, `input-model.ts`, `run-news.ts`, `thumb-guard.ts`, `hud-press.ts`), the thumb-guard discipline, and where each surface lives. The CARDS around a race — the attract screen, the front door, the loading card, the pause card, the settings — are `menu-system`. Load `ui-review` beside either for the screenshot sweep."
 ---
 
 # The HUD and the controls: what the player reads and presses
@@ -52,7 +52,7 @@ the layout the manager rides (`setBindings`) and how the thumbs read
 | WHICH KEY DOES WHAT | `pwa/src/game/settings-input.ts` — rebound on OPTIONS ▸ KEYS and handed to the manager through `setBindings`; as it SHIPS, `DEFAULT_KEYS` (W/↑ throttle, S/↓/Space brake, A D/← → steer, E/Shift lean back, Q/Z lean forward, R reset, B restart, C camera, Escape pause) and why each key is where it is; `HeldAction` is `keyof KeysHeld`, so a new held key does not compile until it is named |
 | Listening to the DOM | `pwa/src/game/input.ts` — keys and the thumb zones into one `SledInput`, sampled once per STEP; the reset edge banked between steps |
 | Touch: the HANDLEBAR | `pwa/src/game/hud-touch.tsx`, lower LEFT — sideways travel steers, vertical travel leans |
-| Touch: the LEVER | `hud-touch.tsx`, lower RIGHT — anchored where the thumb lands; dragged DOWN opens the throttle, pushed UP is the brake |
+| Touch: the LEVER | `hud-touch.tsx`, lower RIGHT — anchored WIDE OPEN where the thumb lands; slid UP eases it to shut, further UP is the brake |
 | HOW THE THUMBS READ (OPTIONS ▸ CONTROLS): the lever's side, the travel, the inverted lean | `TouchFeel` in `input-model.ts` — every thumb function takes it, `barReachPx` draws the ring at the travel it asks for; the side is `Settings.touch.lever`, and the bar takes the other. The keys never pass through it |
 | A zone's grip on a finger, and every way it has to END | `pwa/src/game/thumb-guard.ts` (DOM-free, injected window) |
 | A BUTTON pressed while a zone is held | `pwa/src/game/hud-press.ts` — `click` comes only from the PRIMARY pointer, and a ridden sled has that finger spoken for, so every press over a race fires from `pointerup` |
@@ -60,9 +60,12 @@ the layout the manager rides (`setBindings`) and how the thumbs read
 
 ## The traps
 
-- **The lever drags DOWN, and that is a decision.** A thumb on the lower
-  right of a phone held sideways pulls toward the palm; down is easy to hold
-  and feather. Keep the anchor at the touch point, never a fixed zero.
+- **A thumb on the lever is full gas, and that is a decision.** A race is
+  ridden flat out nearly all the time, and a lever that opened only as it
+  was dragged made every start and every corner exit a hand-over. The
+  anchor is WIDE OPEN; the whole throw runs UP from it — easing off to the
+  shut mark, then the brake past a dead band. Keep the anchor at the touch
+  point, never a fixed zero.
 - **Analogue means analogue.** The lever's output goes straight into
   `throttle`; a key is RAMPED so a press does not read as a lever slammed
   open. Do not quantise either.

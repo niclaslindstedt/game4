@@ -3,9 +3,10 @@
 // GameState the HUD reads and produces the same SledInput a thumb produces.
 // It rides the TRACK'S CENTRELINE: a point a speed-dependent distance ahead
 // of where it stands on the loop is what it steers at; it reads the bends
-// coming and brakes for the ones it cannot take at the speed it has; it
-// rides from the grid through the powder onto the track short of the start
-// line, so it crosses it riding along it; it levels the machine to the slope
+// coming and brakes for the ones it cannot take at the speed it has; off
+// the track before the start line (a hand-built map's grid in the powder),
+// it rides onto the track short of the line, so it crosses it riding along
+// it; it levels the machine to the slope
 // it is going to land on while in the air; it steers round a trunk in its
 // way; and it asks to be reset when a checkpoint has not come for too long.
 //
@@ -266,7 +267,8 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   const on = locate(state);
   const cps = level.checkpoints;
   let aimS = on.s + profile.lookBase + profile.lookPerSpeed * speed;
-  // BEFORE THE START LINE and still out in the powder: aim onto the track
+  // BEFORE THE START LINE and off the track (a grid in the powder, on a
+  // hand-built map): aim onto the track
   // SHORT of the line, so it is crossed riding along the track.
   const halfWidth = trackPointAt(level, on.s, pa).width / 2;
   if (!p.started && p.nextCheckpoint === 0 && on.distance > halfWidth) {

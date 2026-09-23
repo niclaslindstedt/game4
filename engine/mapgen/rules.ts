@@ -74,35 +74,37 @@
 //   R10 PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's
 //       width and fades to 0 over `track.shoulder.packed` metres beyond each
 //       edge — except where R17 drifts it over; everywhere else the snow is
-//       virgin powder, the spawn's run-in included.
+//       virgin powder.
 //   R11 CHECKPOINTS EVERY 120–200 m. Checkpoint 0 — the start and finish
-//       line — is the track point nearest the spawn, and the loop is
+//       line — stands at the station R12 chooses, and the loop is
 //       re-indexed to begin there, so its arc length is 0. The rest follow
 //       in the direction of travel, evenly spaced as near
 //       `checkpoint.spacing.target` (150 m) as divides the loop, and never
 //       outside `checkpoint.spacing` (120–200 m). A checkpoint spans the
 //       track's width plus `checkpoint.margin` metres either side.
-//   R12 THE SPAWN IS IN POWDER BESIDE THE TRACK. The riders start at a
-//       seeded spot `spawn.distance` (25–90 m) from the nearest point of the
-//       track, on ground no steeper than `spawn.maxSlope`, in powder, with no
-//       tree within `spawn.clear` metres and a lane `spawn.lane` metres wide
-//       clear of trees to the track, facing that nearest point — so the
-//       race opens with a run through the powder onto the loop. The start
-//       line stands at least `spawn.kickerGap` metres along the loop from
-//       any kicker's lip, and the run-in never climbs or falls more steeply
-//       than `spawn.maxRunIn`.
-//   R13 THE GRID. The riders stand `grid.slots` (4) abreast across the
-//       spawn's heading, `grid.spacing` (4.5 m) apart, the player's slot
-//       first in the list and nearest the middle.
+//   R12 THE START LINE. The line stands at a seeded station of the loop at
+//       least `spawn.kickerGap` metres along it from any kicker's lip, where
+//       the loop turns no more than `spawn.straight` radians over the
+//       `spawn.run` metres before the line — the stretch the grid stands on
+//       — and climbs or falls no more steeply than `spawn.maxSlope` over it.
+//   R13 THE GRID ON THE TRACK. The riders stand on the groomer behind the
+//       start line, facing along the loop: `grid.slots` (4) of them in rows
+//       of `grid.abreast` (2) straddling the centreline `grid.spacing`
+//       (5 m) apart, the front row `grid.back` (10 m) behind the line and
+//       each row `grid.row` (8 m) behind the one before, the player's slot
+//       first in the list — the front row's left. The spawn is the front
+//       row's point on the centreline.
 //   R14 FORESTS AND MEADOWS. Conifers stand where a slow noise says forest
 //       — at most one per `forest.spacing` metre cell, jittered — thinning to
 //       `forest.meadow` of that density in the open meadows between, with
 //       `forest.clearings.count` round clearings cut out of the woods. A
 //       tree is `forest.height` (6–19 m) tall with a trunk of
-//       `forest.trunk` and a crown `forest.crown` of its height across. No
-//       tree stands within `forest.corridor` metres of the track's edge, on
-//       ground steeper than `forest.maxSlope`, above `forest.treeLine` of the
-//       way up the rim, on a kicker, or in the spawn's clearing or its lane.
+//       `forest.trunk` and a crown `forest.crown` of its height across, never
+//       wider than `forest.crownMax`. No two trunks stand closer than
+//       `forest.gap` (9 m), so a sled can be ridden between any two trees.
+//       No tree stands within `forest.corridor` metres of the track's edge,
+//       on ground steeper than `forest.maxSlope`, above `forest.treeLine` of
+//       the way up the rim, or on a kicker.
 //   R15 A CLEAR WINTER DAY. The map lies at a seeded latitude in
 //       `sun.latitude` (46–64°N) on a seeded day of the year in
 //       `sun.dayOfYear` (mid-January to mid-March), and the race starts at a
@@ -264,23 +266,18 @@ export const LEVEL_RULES = {
     /** Extra width beyond each track edge, m. */
     margin: 3,
   },
-  /** R12 — the spawn. */
+  /** R12 — the start line. */
   spawn: {
-    /** Distance to the nearest track point, m. */
-    distance: { min: 25, max: 90 } as Band,
-    /** Steepest ground under the grid. */
-    maxSlope: 0.18,
-    /** Tree-free radius round the spawn, m. */
-    clear: 28,
-    /** Width of the tree-free lane to the track, m. */
-    lane: 18,
     /** Least arc length between the start line and a kicker lip, m. */
     kickerGap: 120,
-    /** Steepest the run-in to the track may climb or fall. */
-    maxRunIn: 0.3,
+    /** The stretch before the line the grid stands on, m, the most it may
+     * turn over it, rad, and the steepest it may climb or fall. */
+    run: 40,
+    straight: 0.35,
+    maxSlope: 0.12,
   },
   /** R13 — the grid. */
-  grid: { slots: 4, spacing: 4.5 },
+  grid: { slots: 4, abreast: 2, spacing: 5, back: 10, row: 8 },
   /** R14 — the forest. */
   forest: {
     /** Candidate cell, m: at most one tree per cell. */
@@ -300,8 +297,13 @@ export const LEVEL_RULES = {
     height: { min: 6, max: 19 } as Band,
     /** Trunk collision radius as a share of height (plus a floor, m). */
     trunk: { share: 0.018, floor: 0.14 },
-    /** Crown radius as a share of height. */
+    /** Crown radius as a share of height, and the most it may spread, m. */
     crown: 0.24,
+    crownMax: 3.2,
+    /** The least distance between two trunks, m: with two crowns at their
+     * widest that leaves a lane of 2.6 m under the boughs, twice a sled's
+     * width. */
+    gap: 9,
     /** Clear ground between the track's edge and any trunk, m. */
     corridor: 5,
     /** Steepest ground a tree stands on. */

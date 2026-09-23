@@ -32,10 +32,22 @@ export function lockAt(spec: SledSpec, speed: number): number {
   return skiLockAt(spec, speed);
 }
 
+/** THE TIPPING POINT, as a lateral acceleration over g: past it a sled
+ * lifts its inside ski before it slides. Half the ski stance, plus how far
+ * the rider hanging off carries the whole machine's weight outboard, over
+ * the height of the centre of gravity — the static stability factor, which
+ * is why a wide, low trail sled holds a bend a narrow mountain sled lifts
+ * a ski in, and why long travel (a taller machine) gives some of it back. */
+export function tipLimit(spec: SledSpec): number {
+  const hang = (spec.riderReach * spec.riderMass) / totalMass(spec);
+  return (spec.skiStance / 2 + hang) / spec.cogHeight;
+}
+
 /** HOW HARD A SLED CAN CORNER, m/s², on snow `packed` 0..1: the skis' and
  * the tread's sideways grip over the whole weight, each on the share of it
- * the geometry puts there (`skiShare`), which is what a sled holding a line
- * round a bend can call on. The bot reads it to judge a corner's speed. */
+ * the geometry puts there (`skiShare`) — or the tipping point, whichever
+ * comes first. That is what a sled holding a line round a bend can call on;
+ * the bot reads it to judge a corner's speed. */
 export function cornerGrip(spec: SledSpec, packed: number): number {
   const G = TUNING.grip;
   const fit = footprintOf(spec);
@@ -44,7 +56,7 @@ export function cornerGrip(spec: SledSpec, packed: number): number {
     G.treadSidePacked * fit.packedSide * packed +
     G.treadSidePowder * fit.powderDrive * (1 - packed);
   const share = skiShare(spec);
-  return TUNING.g * (ski * share + tread * (1 - share));
+  return TUNING.g * Math.min(ski * share + tread * (1 - share), tipLimit(spec));
 }
 
 /** How hard a sled can stop, m/s², on snow `packed` 0..1: the tread locked
