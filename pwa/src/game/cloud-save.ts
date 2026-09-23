@@ -154,8 +154,10 @@ export function mergeBoards(mine: CampaignProgress, theirs: CampaignProgress): C
     // The time and the sled are kept or replaced TOGETHER, as `recordRun`
     // keeps them — a best time beside the wrong machine is a line the card
     // would read out loud.
+    // A row with no time is one DEVELOPER ▸ UNLOCKS set by hand: any run's
+    // figure beats it.
     const figure =
-      row.best < standing.best
+      row.best !== undefined && (standing.best === undefined || row.best < standing.best)
         ? { best: row.best, sled: row.sled }
         : { best: standing.best, sled: standing.sled };
     results[id] = {

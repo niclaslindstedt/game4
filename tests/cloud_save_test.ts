@@ -128,6 +128,25 @@ describe("the campaign: furthest progress", () => {
     expect(merged.results["foothills-1"]).toMatchObject({ best: 90, place: 2 });
   });
 
+  it("lets any ridden time beat a row UNLOCKS set by hand", () => {
+    const unlocked: CampaignProgress = {
+      results: { "foothills-1": { place: 4, medal: null } },
+      points: {},
+    };
+    expect(
+      mergeBoards(unlocked, board({ best: 97, sled: "cross" })).results["foothills-1"],
+    ).toMatchObject({
+      best: 97,
+      sled: "cross",
+    });
+    expect(
+      mergeBoards(board({ best: 97, sled: "cross" }), unlocked).results["foothills-1"],
+    ).toMatchObject({
+      best: 97,
+      sled: "cross",
+    });
+  });
+
   it("keeps the better medal", () => {
     const merged = mergeBoards(
       board({ best: 95, medal: "bronze" }),
