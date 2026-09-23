@@ -42,6 +42,9 @@ export type CreateGameOptions = {
   /** The arcade's help for the player's own sled (`Assist`); every hand on
    * when left out. The field rides with every hand on whatever this says. */
   assist?: Assist;
+  /** Whether blows bend the player's machine (`damage.ts`); off when left
+   * out. */
+  damage?: boolean;
   /** Build without announcing the map (the sim's sweeps). */
   quiet?: boolean;
 };
@@ -72,6 +75,7 @@ export function createGame(options: CreateGameOptions = {}): GameState {
     progress: freshProgress(level),
     rules,
     assist: { ...(options.assist ?? FULL_ASSIST) },
+    damage: options.damage ?? false,
     rivals: [],
     countdown: rules.countdown,
     phase: rules.countdown > 0 ? "countdown" : "racing",

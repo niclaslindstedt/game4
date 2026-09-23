@@ -18,6 +18,7 @@ describe("the bot on the synthetic stadium", () => {
     expect(r.checkpoints).toBe(r.crossings);
     expect(r.resets).toBe(0);
     expect(r.treeHits).toBe(0);
+    expect(r.wipeouts).toBe(0);
     expect(r.meanSpeed * 3.6).toBeGreaterThan(60);
     expect(r.jumps).toBeGreaterThanOrEqual(3);
   });
@@ -32,6 +33,8 @@ describe("the bot on generated maps", () => {
       expect(r.checkpoints).toBe(r.crossings);
       expect(r.meanSpeed * 3.6).toBeGreaterThan(55);
       expect(r.autoResets).toBeLessThanOrEqual(1);
+      // A clean ride never comes near a wipeout's thresholds (`TUNING.crash`).
+      expect(r.wipeouts).toBe(0);
       expect(r.airTime).toBeGreaterThan(0);
     });
   }

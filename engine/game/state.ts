@@ -126,6 +126,17 @@ export type SledState = {
    * nowhere — the automatic reset's two clocks. */
   overFor: number;
   stuckFor: number;
+  /** THE TRENCH (`trench.ts`): how far the tread has dug itself into the
+   * powder under it, m, on top of the sink — and seconds it has been
+   * trenched, the automatic reset's third clock; and seconds it has been
+   * bogged (on the gas going nowhere in powder), which is when it digs. */
+  trench: number;
+  trenchFor: number;
+  boggedFor: number;
+  /** THE RIDER OFF THE SLED, or null while he is on it (`crash.ts`). */
+  thrown: Thrown | null;
+  /** What the machine has taken (`damage.ts`). */
+  damage: SledDamage;
   /** Seconds before another tree hit (or sled bump) is reported. */
   hitCooldown: number;
   bumpCooldown: number;
@@ -135,6 +146,49 @@ export type SledState = {
   /** Each probe's compression at the last step, m (0 when it was not
    * touching) — what the damper's rate is read off (`sled.ts`). */
   comps: number[];
+};
+
+/** WHAT PUT THE RIDER OFF (`crash.ts`): a trunk met hard, a landing taken
+ * on the nose, or the sled going over at speed. */
+export type CrashCause = "tree" | "nose" | "roll";
+
+/** THE RIDER THROWN — a body of his own from the moment he leaves the sled
+ * until the reset stands them both back on the track (`crash.ts`). A point
+ * with a radius, sliding and bouncing on the snow, and a TUMBLE: the angle
+ * he has turned head over heels about the axis across the way he was
+ * thrown. Written by `stepThrown` only; the renderer poses the figure off
+ * it and stamps the snow where it is `touching`. */
+export type Thrown = {
+  cause: CrashCause;
+  /** Seconds since he left the sled. */
+  t: number;
+  /** His centre, world frame, m, and his velocity, m/s. */
+  x: number;
+  y: number;
+  z: number;
+  vx: number;
+  vy: number;
+  vz: number;
+  /** The bearing he was thrown along, rad (0 = +z, clockwise), the angle
+   * turned head over heels about the axis across it, rad (forward
+   * positive), and its rate, rad/s. */
+  heading: number;
+  tumble: number;
+  spin: number;
+  /** On the snow this step. */
+  touching: boolean;
+};
+
+/** A part `damage.ts` keeps a figure for. */
+export type DamagePart = "skiLeft" | "skiRight" | "suspension";
+
+/** WHAT THE MACHINE HAS TAKEN (`damage.ts`), each 0 sound … 1 wrecked:
+ * the two skis (left, right) and the suspension. Kept only on a run that
+ * asked for damage (`GameState.damage`); all zero, and read as nothing,
+ * otherwise. A reset does not mend it. */
+export type SledDamage = {
+  ski: [number, number];
+  suspension: number;
 };
 
 /** The engine's name for the ridden machine, kept for the vocabulary the
@@ -204,6 +258,13 @@ export type GameEvent =
     }
   /** A trunk met at `speed` m/s closing. */
   | { kind: "hit"; t: number; speed: number; x: number; z: number }
+  /** THE RIDER THROWN OFF: why, how fast the sled was going, and where. */
+  | { kind: "wipeout"; t: number; cause: CrashCause; speed: number; x: number; z: number }
+  /** The tread has dug itself in (`trench.ts`): rock it out or reset. */
+  | { kind: "stuck"; t: number }
+  /** A part of the machine has taken a blow worth saying (`damage.ts`):
+   * which, and how bad it now is, 0..1. */
+  | { kind: "damage"; t: number; part: DamagePart; level: number }
   /** Another sled — the player's own contact with rival `rival`. */
   | { kind: "bump"; t: number; rival: number; speed: number }
   /** A checkpoint taken: its index, the lap it was taken on (0 before the
@@ -238,6 +299,9 @@ export type GameState = {
   /** The arcade's help (`Assist`), 0..1 per hand; the field always rides
    * with every hand on. */
   assist: Assist;
+  /** Whether blows bend the machine (`damage.ts`) — the player's option,
+   * off unless asked for; a rival never takes damage. */
+  damage?: boolean;
   /** THE FIELD: every other rider, in grid order; empty on a solo run. */
   rivals: Rival[];
   /** Seconds of the lights still to run; 0 once they are out. */

@@ -323,6 +323,7 @@ export function App() {
         seed,
         spec: specOf(settingsRef.current),
         assist: assistOf(settingsRef.current.assist),
+        damage: settingsRef.current.damage,
       });
     const drawable = (): boolean => standing !== null && standing === state.level;
     let frozen = params.shot;

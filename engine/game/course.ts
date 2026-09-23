@@ -210,6 +210,12 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
   c.landing = 1e6;
   c.overFor = 0;
   c.stuckFor = 0;
+  // Stood up out of its hole with the rider back on it; what the machine
+  // has taken, it keeps.
+  c.trench = 0;
+  c.trenchFor = 0;
+  c.boggedFor = 0;
+  c.thrown = null;
   c.hitCooldown = 0;
   c.bumpCooldown = 0;
   for (const contact of c.contacts) {

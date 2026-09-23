@@ -83,6 +83,9 @@ export type Settings = {
   keys: KeyBindings;
   touch: TouchSettings;
   assist: AssistSettings;
+  /** Whether blows bend the machine (`damage.ts`) — the next race's, off
+   * unless asked for. */
+  damage: boolean;
 };
 
 export function freshSettings(): Settings {
@@ -96,6 +99,7 @@ export function freshSettings(): Settings {
     keys: freshKeys(),
     touch: { lever: "right", sensitivity: 1, invertLean: false },
     assist: { steer: "full", air: "full" },
+    damage: false,
   };
 }
 
@@ -153,6 +157,7 @@ export function mergeSettings(parsed: unknown): Settings {
   const assist = record(blob.assist);
   out.assist.steer = onLadder(assist.steer, ASSIST_LEVELS, out.assist.steer);
   out.assist.air = onLadder(assist.air, ASSIST_LEVELS, out.assist.air);
+  if (typeof blob.damage === "boolean") out.damage = blob.damage;
   return out;
 }
 

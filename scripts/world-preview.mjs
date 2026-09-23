@@ -18,7 +18,9 @@
 //   node scripts/world-preview.mjs --skip-build --frames=30   # time 30 frames
 //
 // The views, in the order the run reaches them: spawn, powder, powder-high,
-// lookback, furrow, track, hood, bars, far, jump, landing, vista, forest, orbit.
+// lookback, furrow, track, hood, bars, far, jump, landing, vista, forest, orbit,
+// and last, staged rather than ridden to: wipeout and wipeout-lie (the player
+// put into the nearest trunk flat out, then where the rider came to rest).
 
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -49,6 +51,8 @@ const VIEWS = [
   "vista",
   "forest",
   "orbit",
+  "wipeout",
+  "wipeout-lie",
 ];
 
 const args = parseArgs(

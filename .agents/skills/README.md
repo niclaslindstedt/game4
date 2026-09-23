@@ -48,6 +48,7 @@ sibling's the day one lands, and add its registry row.
 | `sled-design` | How the sled LOOKS: the builder in the body frame, the four grid styles; `make world` |
 | `rider` | The man on the sled: the half-standing pose from the engine's readings, the limbs solved to the grips and the boards; judged from behind |
 | `collision` | The sled meeting what is not snow — trunks, rivals, the edge — and the course counting: checkpoints, misses, laps, the flag, the reset |
+| `crash` | The sled past saving and the rider off it: the wipeout and his tumble, the trench and rocking it out, damage when it is on (the rally game's `crash`, rewritten for a rider and snow) |
 | `engine-system` | Adding or changing a gameplay system, engine-first |
 | `mapgen-improvement` | The world generator: the basin, the loop, the kickers, the spawn, the forest, the day; the R-rules; track-and-terrain craft; the analyze → fix → `make level` loop |
 | `nature` | The snow-loaded woods (where they stand, how they are drawn), the country as a landscape, the ground's clipmap |
@@ -76,8 +77,6 @@ starting point.
 | Future skill | Will own |
 | --- | --- |
 | `soundtrack` | The scores — a second view of the one synth in `audio/bus.ts`, its own fader (the rally game's) |
-| `crash` | The sled past saving: the rollover as its own staged lab (the rally game's `crash`; today the far end of `sled-physics`) |
-| `damage` | What a hit costs the machinery and how it reads |
 | `tricks` | The aerial vocabulary and its scoring (the jet-ski game's `tricks.ts`) |
 | `campaign`, `level-rating` | Pinned seeds and a ladder of them; whether a generated map is any GOOD and how HARD (both siblings') |
 | `debug-tools` | An in-game developer overlay, the REPRO line, `make debug-shot` (the rally game's) |

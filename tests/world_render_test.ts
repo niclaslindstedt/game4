@@ -21,9 +21,10 @@ import {
 } from "../pwa/src/game/camera-rigs.ts";
 import { createLineClear } from "../pwa/src/game/camera-clear.ts";
 import { createTrack, nlerp, observe, sample } from "../pwa/src/game/interp.ts";
-import { BODY, gripAt, riderPose, solveLimb } from "../pwa/src/game/rider-pose.ts";
+import { BODY, gripAt, riderPose, solveLimb, sprawlPose } from "../pwa/src/game/rider-pose.ts";
 import { airMass, skyLookAt, skyLookFor, sunDirection, sunTint } from "../pwa/src/game/sky.ts";
 import {
+  bodyStampOf,
   createPen,
   drawnDepth,
   furrowProfile,
@@ -127,6 +128,19 @@ describe("the trail a sled leaves", () => {
     out.length = 0;
     stampsOf([contact({ x: 50, z: 0 })], pen, flat, 400, out);
     expect(out).toHaveLength(0);
+  });
+
+  it("gouges a thrown rider's slide into the snow, and nothing while he flies", () => {
+    const pen = createPen(1);
+    const out: Stamp[] = [];
+    bodyStampOf({ x: 0, z: 0, touching: false }, pen, flat, out);
+    expect(out).toHaveLength(0);
+    bodyStampOf({ x: 0, z: 0, touching: true }, pen, flat, out);
+    bodyStampOf({ x: 0, z: 1.5, touching: true }, pen, flat, out);
+    expect(out).toHaveLength(2);
+    expect(out[1]).toMatchObject({ ax: 0, az: 0, bx: 0, bz: 1.5, half: TRAIL.body / 2 });
+    // A body is a wider mark than any probe.
+    expect(TRAIL.body).toBeGreaterThan(2 * 0.3);
   });
 
   it("presses the centre deepest and throws a berm just outside it", () => {
@@ -268,6 +282,22 @@ describe("the rider's pose", () => {
     expect(d(joint, target)).toBeCloseTo(0.46, 6);
     // Bent toward the pole.
     expect(joint.z).toBeGreaterThan(0.15);
+  });
+
+  it("thrown, sprawls with every limb its own length, flailing and then still", () => {
+    const d = (a: { x: number; y: number; z: number }, b: typeof a) =>
+      Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
+    const at = (phase: number, flail: number) => sprawlPose(phase, flail);
+    for (const p of [at(0.2, 1), at(1.3, 0.6), at(3, 0)]) {
+      for (let i = 0; i < 2; i++) {
+        expect(d(p.shoulders[i], p.elbows[i])).toBeCloseTo(BODY.upperArm, 3);
+        expect(d(p.elbows[i], p.hands[i])).toBeCloseTo(BODY.forearm, 2);
+      }
+      expect(d(p.hips, p.neck)).toBeCloseTo(BODY.spine, 6);
+    }
+    // Windmilling while flailing; the same whenever he is still.
+    expect(at(0.2, 1).hands[0]).not.toEqual(at(0.4, 1).hands[0]);
+    expect(at(2, 0).hands[0]).toEqual(at(3, 0).hands[0]);
   });
 
   it("keeps his hands on the grips as the bars turn", () => {

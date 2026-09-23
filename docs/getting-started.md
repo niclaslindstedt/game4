@@ -25,8 +25,10 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 
 - **Turning.** On the track the skis turn you. In powder the rider's weight does: the sled rolls onto the edge of its tread and carves round.
 - **Kickers.** Crests on the track (and on hilltops off it) are shaped to throw you. In the air the **lean** pitches the sled; the **throttle** spins the tread up and lifts the nose; the **brake** stops the tread and drops it. Land on the downslope and you keep your speed; land flat past it and the suspension bottoms and costs you.
-- **Trees** are solid. A clipped trunk spins you; one met square stops you.
-- **Stuck or upside down?** **R** stands you back on the track just past the last checkpoint you took. It also happens on its own after a few seconds on your side or going nowhere at full throttle.
+- **Trees** are solid. A clipped trunk spins you; one met square stops you — and met hard, it stops the sled and not you.
+- **Wipeouts.** Hit a trunk hard, land on the nose or roll the sled at speed and the rider comes off, tumbles through the snow, and a couple of seconds later you are stood back on the track at the last checkpoint you took.
+- **Dug in.** Sit in deep powder with the belt spinning and it digs itself a hole until the belly is on the snow (**STUCK** on the screen). Ease off the throttle and **rock it** — the lean back and forth and the bars side to side — then drive out. Pinned, it only digs deeper.
+- **Stuck or upside down?** **R** stands you back on the track just past the last checkpoint you took. It also happens on its own after a few seconds on your side or going nowhere at full throttle (longer once you have dug in, to give you the time to rock it out).
 
 ## Controls
 
@@ -51,7 +53,7 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 
 ## Options
 
-**OPTIONS** on the front door, over the same live race, in four groups. **CONTROLS**: **KEYS** opens a page with every action on it — press a row, then the key to put on it (Escape leaves it as it was); a key on two actions says so. On a touchscreen, **LEVER SIDE** swaps the lever and the handlebar, **TRAVEL** shortens or lengthens every thumb's throw, and **INVERT LEAN** makes pushing the bar away the lean back. **ASSIST**: **STEER HOLD** (the arcade's hand keeping the nose on the line the skis ask for) and **AIR LEVEL** (the rider's body keeping the sled level side to side in the air), each FULL, HALF or OFF, from the next race. **SOUND**: the switch, and faders for everything, the engine and the effects. **PICTURE**: a **PRESET** that moves every row at once, then RESOLUTION, DISTANCE, TERRAIN, TRAILS, FOREST, SHADOWS, SPRAY and SMOOTH EDGES one at a time — each applied at once, so it is judged against the race behind the card (SMOOTH EDGES alone waits for the next visit). A first visit picks its own preset by timing the machine (`docs/configuration.md`). The caption at the foot says what the row under the pointer does.
+**OPTIONS** on the front door, over the same live race, in four groups. **CONTROLS**: **KEYS** opens a page with every action on it — press a row, then the key to put on it (Escape leaves it as it was); a key on two actions says so. On a touchscreen, **LEVER SIDE** swaps the lever and the handlebar, **TRAVEL** shortens or lengthens every thumb's throw, and **INVERT LEAN** makes pushing the bar away the lean back. **ASSIST**: **STEER HOLD** (the arcade's hand keeping the nose on the line the skis ask for) and **AIR LEVEL** (the rider's body keeping the sled level side to side in the air), each FULL, HALF or OFF, and **DAMAGE** (on, a trunk or a hard landing bends a ski or hurts the suspension and the sled rides it for the rest of the race, with an instrument beside the speed; off by default), all from the next race. **SOUND**: the switch, and faders for everything, the engine and the effects. **PICTURE**: a **PRESET** that moves every row at once, then RESOLUTION, DISTANCE, TERRAIN, TRAILS, FOREST, SHADOWS, SPRAY and SMOOTH EDGES one at a time — each applied at once, so it is judged against the race behind the card (SMOOTH EDGES alone waits for the next visit). A first visit picks its own preset by timing the machine (`docs/configuration.md`). The caption at the foot says what the row under the pointer does.
 
 ## What the game remembers
 

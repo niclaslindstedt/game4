@@ -17,6 +17,7 @@ import {
   fieldOrder,
   maxRpm,
   racePlace,
+  trenched,
   type GameState,
   type Progress,
 } from "@engine";
@@ -96,6 +97,12 @@ export type HudSnapshot = {
   /** THE MINIMAP: the plate's pose and every mark on it
    * (`minimap-view.ts`). */
   minimap: HudMinimap;
+  /** THE TRENCH: the tread is dug in (`trench.ts`) and the rider must rock
+   * it out — the standing hint, up while it is. */
+  stuck: boolean;
+  /** THE DAMAGE INSTRUMENT: each part 0 sound … 1 wrecked, or null on a
+   * race run without damage (`GameState.damage`). */
+  damage: { skiLeft: number; skiRight: number; suspension: number } | null;
 };
 
 /** The lap a run is on, 1-based, and never past the last: the final
@@ -163,5 +170,13 @@ export function takeSnapshot(state: GameState): HudSnapshot {
     result: p.finished ? { place: racePlace(state), time: p.time } : null,
     standings: p.finished ? standingsOf(state) : null,
     minimap: buildMinimap(state),
+    stuck: trenched(c.trench) && c.thrown === null,
+    damage: state.damage
+      ? {
+          skiLeft: c.damage.ski[0],
+          skiRight: c.damage.ski[1],
+          suspension: c.damage.suspension,
+        }
+      : null,
   };
 }

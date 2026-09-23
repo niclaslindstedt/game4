@@ -405,6 +405,14 @@ export function createSledModel(
   );
 
   const Y = new THREE.Vector3(0, 1, 0);
+  const X = new THREE.Vector3(1, 0, 0);
+  const toRoot = new THREE.Quaternion();
+  const thrown = new THREE.Quaternion();
+  const tumble = new THREE.Quaternion();
+  // The merged draw's bound: the machine's own, grown while the rider is
+  // lying away from it.
+  const bound = merged.mesh.geometry.boundingSphere!;
+  const BOUND = bound.radius;
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
   const c = new THREE.Vector3();
@@ -437,14 +445,36 @@ export function createSledModel(
       }
       const rearLift = Math.max(-0.12, Math.min(0.25, sled.treadCompression - REST_SAG));
       tread.position.y = rearLift + sink * 0.8;
-      figure.pose({
-        riderRight: sled.riderRight,
-        riderAft: sled.riderAft,
-        lean: sled.lean,
-        steer: sled.steer,
-        airborne: sled.airborne,
-        landing: sled.landing,
-      });
+      const off = sled.thrown;
+      if (off) {
+        // THE RIDER THROWN (`crash.ts`): off the machine on a body of his
+        // own, tumbling head over heels along the way he was thrown — laid
+        // in the root's frame, so the one merged draw still carries him,
+        // and the draw's bound grown to reach him.
+        toRoot.set(at.q.x, at.q.y, at.q.z, at.q.w).invert();
+        figure.group.position
+          .set(off.x - at.x, off.y - (at.y - sink), off.z - at.z)
+          .applyQuaternion(toRoot);
+        thrown.setFromAxisAngle(Y, off.heading).multiply(tumble.setFromAxisAngle(X, off.tumble));
+        figure.group.quaternion.copy(toRoot).multiply(thrown);
+        const flail = Math.min(1, Math.hypot(off.vx, off.vz) / 6 + (off.touching ? 0 : 0.5));
+        figure.sprawl(off.t, flail);
+        bound.radius = BOUND + figure.group.position.length();
+      } else {
+        if (bound.radius !== BOUND) {
+          figure.group.position.set(0, 0, 0);
+          figure.group.quaternion.identity();
+          bound.radius = BOUND;
+        }
+        figure.pose({
+          riderRight: sled.riderRight,
+          riderAft: sled.riderAft,
+          lean: sled.lean,
+          steer: sled.steer,
+          airborne: sled.airborne,
+          landing: sled.landing,
+        });
+      }
       bars.rotation.y = sled.steer * 0.42;
       merged.update();
     },

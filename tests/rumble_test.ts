@@ -166,6 +166,14 @@ describe("what an event is worth in the hands (pwa/src/game/rumble.ts)", () => {
     }
   });
 
+  it("gives a wipeout the whole motor, a trench a shudder, and a bent part nothing", () => {
+    const off = rumbleForEvent({ kind: "wipeout", t: 1, cause: "nose", speed: 15, x: 0, z: 0 });
+    expect(off).toEqual(ROLL_OVER);
+    const stuck = rumbleForEvent({ kind: "stuck", t: 1 })!;
+    expect(stuck.strength).toBeLessThan(rumbleForEvent(land(0))!.strength);
+    expect(rumbleForEvent({ kind: "damage", t: 1, part: "suspension", level: 0.4 })).toBe(null);
+  });
+
   it("leaves the news (a lap, a miss, a reset, the finish) to the HUD and the sound", () => {
     const news: GameEvent[] = [
       { kind: "lap", t: 1, lap: 1, time: 60 },

@@ -15,8 +15,10 @@
 //                 already looking to aim the landing
 //   dead centre   the LIGHTS, and GO
 //   upper centre  a MISSED CHECKPOINT warning with an arrow pointing back at
-//                 it and the metres to go, until it is taken
-//   bottom left   the rev bar over the speed
+//                 it and the metres to go, until it is taken — or STUCK,
+//                 while the tread is dug in and wants rocking out
+//   bottom left   the rev bar over the speed, and on a race with damage on
+//                 the DAMAGE instrument beside it (hud-damage.tsx)
 //   bottom right  the news column — a checkpoint's clock, a lap, a tree
 //
 // The thumb zones it hangs under all that are next door in hud-touch.tsx:
@@ -27,6 +29,7 @@
 import { REPO_URL } from "../identity.ts";
 import { formatTime } from "../lib/util.ts";
 import { HudActions } from "./hud-actions.tsx";
+import { DamageGauge } from "./hud-damage.tsx";
 import { RevBar } from "./hud-dial.tsx";
 import { BarZone, LeverZone, type ZoneSide } from "./hud-touch.tsx";
 import type { TouchFeel } from "./input-model.ts";
@@ -167,8 +170,19 @@ export function Hud({
         <div class="hud-cluster">
           <span class="hud-speed-num">{Math.round(snap.speedKmh)}</span>
           <span class="hud-speed-unit">{STRINGS.speedUnit}</span>
+          {snap.damage && <DamageGauge damage={snap.damage} />}
         </div>
       </div>
+
+      {/* STUCK: the tread dug in, where the missed arrow stands (the two
+          are never up together — a trenched sled is going nowhere near a
+          checkpoint). Up for as long as the engine says it is dug in. */}
+      {snap.stuck && snap.missed === null && (
+        <div class="hud-missed hud-stuck" role="status">
+          <span class="hud-missed-title">{STRINGS.stuck}</span>
+          <span class="hud-missed-distance">{STRINGS.stuckHow}</span>
+        </div>
+      )}
 
       {/* THE LIGHTS, dead centre and as big as the frame allows: the one
           moment the whole screen is about one number. Keyed on the count,

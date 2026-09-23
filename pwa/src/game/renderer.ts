@@ -57,7 +57,14 @@ import {
 } from "./settings-video.ts";
 import { createTerrain, type Terrain } from "./terrain.ts";
 import { createTrailMap, type TrailMap } from "./trail-map.ts";
-import { createPen, drawnDepth, stampsOf, type Stamp, type TrailPen } from "./trail-stamp.ts";
+import {
+  bodyStampOf,
+  createPen,
+  drawnDepth,
+  stampsOf,
+  type Stamp,
+  type TrailPen,
+} from "./trail-stamp.ts";
 
 export type RendererOptions = {
   /** The picture to open on (`settings-video.ts`); `setVideo` moves it. Its
@@ -104,6 +111,13 @@ type Rider = {
   wasAirborne: boolean;
   vy: number;
   airTime: number;
+  /** The rider thrown (`thrownEffects`): whether he was off at the last
+   * frame, whether his body was on the snow, the seconds of slide since the
+   * last plume, and the pen his gouge is drawn with. */
+  wasThrown: boolean;
+  bodyDown: boolean;
+  plume: number;
+  bodyPen: TrailPen;
 };
 
 /** The runs a frame draws: the player's first, then the field's. */
@@ -218,6 +232,10 @@ export function createWorldRenderer(
       wasAirborne: false,
       vy: 0,
       airTime: 0,
+      wasThrown: false,
+      bodyDown: false,
+      plume: 0,
+      bodyPen: createPen(1),
     };
   }
 
@@ -238,6 +256,32 @@ export function createWorldRenderer(
       n++;
     }
     return n > 0 ? Math.max(-0.1, Math.min(0.2, (sum / n) * 0.85)) : 0;
+  }
+
+  /** THE WIPEOUT, as it reads in the snow (`crash.ts`): the burst the
+   * moment he leaves the machine, a puff every time his body comes down on
+   * the snow and a plume while it slides, and the gouge it leaves
+   * (`bodyStampOf`). Presentation only: every figure is the engine's. */
+  function thrownEffects(r: Rider, sled: SledState, simDt: number): void {
+    const off = sled.thrown;
+    if (!off || !level || !spray) {
+      r.wasThrown = false;
+      r.bodyPen.down[0] = 0;
+      return;
+    }
+    if (!r.wasThrown) spray.burst(off.x, off.y - 0.4, off.z, off.vx, off.vz, 1);
+    const sliding = Math.hypot(off.vx, off.vz);
+    if (off.touching && !r.bodyDown && sliding > 2) {
+      spray.burst(off.x, off.y - 0.3, off.z, off.vx, off.vz, Math.min(0.6, sliding / 20));
+    }
+    r.plume = off.touching && sliding > 3 ? r.plume + simDt : 0;
+    if (r.plume > 0.15) {
+      r.plume = 0;
+      spray.burst(off.x, off.y - 0.3, off.z, off.vx, off.vz, 0.02);
+    }
+    r.bodyDown = off.touching;
+    r.wasThrown = true;
+    if (TRAIL_LOOK[video.trails].stamp) bodyStampOf(off, r.bodyPen, level.packedAt, stamps);
   }
 
   const api: WorldRendererExt = {
@@ -301,6 +345,7 @@ export function createWorldRenderer(
         for (const r of riders) {
           r.track = createTrack();
           r.pen = createPen(16);
+          r.bodyPen = createPen(1);
         }
         lens.snap();
         lastTick = -1;
@@ -329,6 +374,7 @@ export function createWorldRenderer(
           landed = Math.abs(r.vy) + r.airTime * 2;
         }
         if (simDt > 0 || landed > 0) spray.emit(sled, level, simDt, landed);
+        thrownEffects(r, sled, simDt);
         r.wasAirborne = sled.airborne;
         r.airTime = sled.airborne ? sled.airTime : r.airTime * (sled.airborne ? 1 : 0);
         if (sled.airborne) r.vy = sled.vy;

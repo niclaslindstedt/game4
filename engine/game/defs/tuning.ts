@@ -263,6 +263,107 @@ export const TUNING = {
     resetAhead: 3,
   },
 
+  /** THE WIPEOUT — the rider off the sled (`crash.ts`). Three ways off,
+   * each a threshold no clean ride comes near: the bot over every seed on
+   * every machine lands at most 6° nose-down and 9 m/s into the slope,
+   * never goes past half over, and meets no trunk. */
+  crash: {
+    /** A trunk met at this closing speed or more throws him, m/s (29 km/h):
+     * the sled stops and he does not. */
+    treeSpeed: 8,
+    /** A landing taken this far nose-down against the slope, rad (29°),
+     * at this speed into it or more, m/s, goes over the bars. */
+    noseAngle: 0.5,
+    noseImpact: 5,
+    /** A sled going over (`reset.overUp`) at this speed or more, m/s, puts
+     * him off; slower, he hangs on and the reset's own clock stands it up. */
+    rollSpeed: 8,
+    /** ...once it has been over (`SledState.overFor`) this long, s. */
+    rollHold: 0.2,
+    /** What he leaves with: this share of the sled's velocity before the
+     * blow, and a climb, m/s — the pitch of a body off a seat. */
+    keep: 0.85,
+    throwUp: 2.4,
+    /** THE BODY: its radius, m; how far into powder it settles, m; the
+     * share of the speed into the snow it gets back; its friction on the
+     * groomer and in powder (a sprawled body ploughs fresh snow). */
+    radius: 0.3,
+    sink: 0.12,
+    restitution: 0.25,
+    frictionPacked: 0.5,
+    frictionPowder: 0.8,
+    /** THE TUMBLE: head over heels at the speed over this rolling radius,
+     * m, no faster than `maxSpin` rad/s; on the snow the spin chases the
+     * roll at `spinGrip` 1/s, and at rest he settles flat. */
+    tumbleRadius: 0.5,
+    maxSpin: 12,
+    spinGrip: 4,
+    /** THE SLED, riderless: the nose-over a nose-in landing puts into it,
+     * rad/s per m/s of impact, capped. */
+    sledKick: 0.35,
+    sledKickMax: 5,
+    /** How long he lies before the reset stands them up, s: at least
+     * `lieMin`, once he has stopped (`restSpeed` m/s), and never past
+     * `lieMax`. */
+    lieMin: 1.8,
+    restSpeed: 0.6,
+    lieMax: 4.5,
+  },
+
+  /** STUCK IN DEEP POWDER (`trench.ts`). A tread spinning with the sled
+   * going nowhere digs itself down until the belly is on the snow and the
+   * belt has nothing under it; the way out is to rock it — the rider
+   * throwing his weight fore and aft, side to side — or the reset. */
+  trench: {
+    /** Seconds BOGGED before it starts to dig — over half throttle in
+     * powder, the belt slipping past half `slipRef`, and under `creep` m/s
+     * along the nose: a launch out of the powder never gets there. */
+    after: 1,
+    /** How fast it digs, m/s, with the tread slipping `slipRef` m/s or
+     * more, and the deepest it gets, m, on top of the sink. */
+    dig: 0.14,
+    slipRef: 6,
+    max: 0.3,
+    /** The share of the tread's drive lost at the deepest trench. */
+    grip: 0.75,
+    /** ROCKING IT OUT: trench packed back per metre the rider's weight
+     * moves (`riderAft`, `riderRight`), m/m — and cleared as the sled
+     * drives out of its hole, m per m of way past `creep` m/s (creeping
+     * about in the hole is not driving out of it). */
+    rock: 0.04,
+    clear: 0.4,
+    creep: 1,
+    /** Past this depth it is trenched and `stuck` fires, m. From its first
+     * centimetre the automatic reset waits `holdFor` s of trench instead of
+     * `reset.stuckFor`, so the rider has the time to rock it out. */
+    stuckAt: 0.06,
+    holdFor: 8,
+  },
+
+  /** DAMAGE (`damage.ts`) — only on a run that asked for it. */
+  damage: {
+    /** A trunk bends the ski on its side past this closing speed, m/s, by
+     * `treeRate` per m/s over. */
+    treeFrom: 4,
+    treeRate: 0.06,
+    /** A harsh landing hurts the suspension by `landRate` per m/s past the
+     * machine's harsh speed. */
+    landRate: 0.05,
+    /** A wipeout's own share, on the parts its cause reaches. */
+    wipeout: 0.2,
+    /** Below this much in one blow nothing is reported. */
+    report: 0.04,
+    /** A BENT SKI: the pull it puts on the bars at fully bent, rad toward
+     * its own side, and the share of its bite lost. */
+    skiToe: 0.07,
+    skiGrip: 0.4,
+    /** A HURT SUSPENSION: the shares of spring rate, damping and harsh
+     * speed lost at fully wrecked. */
+    springSoft: 0.4,
+    dampSoft: 0.5,
+    harshSoft: 0.45,
+  },
+
   /** THE AUTOMATIC RESET. */
   reset: {
     /** Seconds on its side or back before the rider is put back. A sled

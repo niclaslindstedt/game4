@@ -37,6 +37,14 @@ export const STRINGS = {
    * taken, and how far back it is. */
   missed: "MISSED CHECKPOINT",
   missedBack: (metres: number): string => `${Math.round(metres)} M BACK`,
+  /** The standing hint while the tread is dug in (`trench.ts`). */
+  stuck: "STUCK",
+  stuckHow: "ROCK IT: LEAN AND BARS",
+  /** THE DAMAGE INSTRUMENT: its caption, and what each part is called. */
+  damageLabel: "DAMAGE",
+  damageSkiLeft: "Left ski",
+  damageSkiRight: "Right ski",
+  damageSuspension: "Suspension",
   /** The three presses in the corner. */
   resetTitle: "Back to the last checkpoint you took (R)",
   cameraTitle: "Next camera (C)",
@@ -57,6 +65,16 @@ export const STRINGS = {
   newsTree: "TREE!",
   newsHarsh: "HARD LANDING",
   newsReset: "BACK ON THE TRACK",
+  /** THE WIPEOUT (`crash.ts`), by what put the rider off. */
+  newsWipeout: (cause: "tree" | "nose" | "roll"): string =>
+    cause === "tree" ? "WIPEOUT! TREE" : cause === "nose" ? "WIPEOUT! NOSED IN" : "WIPEOUT! ROLLED",
+  newsStuck: "STUCK! ROCK IT OUT",
+  newsDamage: (part: "skiLeft" | "skiRight" | "suspension"): string =>
+    part === "suspension"
+      ? "SUSPENSION HURT"
+      : part === "skiLeft"
+        ? "LEFT SKI BENT"
+        : "RIGHT SKI BENT",
   newsFinish: (place: number, of: number, seconds: number): string =>
     `${ordinal(place)} OF ${of}  ${formatTime(seconds)}`,
 
@@ -169,6 +187,9 @@ export const STRINGS = {
   assistHalf: "HALF",
   assistFull: "FULL",
   optAssistNote: "Applies from the next race.",
+  optDamage: "DAMAGE",
+  optDamageHint:
+    "On: a trunk or a hard landing bends a ski or hurts the suspension, and the sled rides it for the rest of the race.",
 
   optSoundGroup: "SOUND",
   optSound: "SOUND",

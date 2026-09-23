@@ -111,7 +111,7 @@ See [docs/configuration.md](docs/configuration.md) for the full picture.
 ## Troubleshooting
 
 - **Black canvas / WebGL errors** — the renderer needs WebGL2; check `chrome://gpu` or try another browser. The engine itself is fine — `make sim` runs without any GPU.
-- **The sled bogs down off the track** — deep powder holds a slow sled. Keep the throttle open and the speed up and it climbs onto the top of the snow; stop in it and you dig in.
+- **The sled bogs down off the track** — deep powder holds a slow sled. Keep the throttle open and the speed up and it climbs onto the top of the snow; stop in it with the belt spinning and it digs itself in (STUCK on the screen): ease off and rock it out with the lean and the bars.
 - **Stuck or upside down** — R puts you back on the track at the last checkpoint you passed; it also happens on its own after a few seconds.
 - **Stale build after deploy** — the service worker prompts before updating; if a prompt was dismissed, reload twice or clear site data.
 

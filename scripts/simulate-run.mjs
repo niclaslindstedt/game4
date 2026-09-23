@@ -85,6 +85,7 @@ const header = [
   pad("jmp", 4),
   pad("hrsh", 4),
   pad("tree", 4),
+  pad("wipe", 4),
   pad("rst", 4),
   pad("auto", 4),
   pad("miss", 4),
@@ -120,6 +121,7 @@ for (const spec of roster) {
         pad(r.jumps, 4),
         pad(r.harshLandings, 4),
         pad(r.treeHits, 4),
+        pad(r.wipeouts, 4),
         pad(r.resets, 4),
         pad(r.autoResets, 4),
         pad(r.missed, 4),
@@ -160,6 +162,7 @@ console.log(
     Math.max(...rows.map((r) => r.topSpeed)),
   )} km/h · air ${(sum((r) => r.airTime) / rows.length).toFixed(1)} s/run · ` +
     `jumps ${sum((r) => r.jumps)} · harsh ${sum((r) => r.harshLandings)} · trees ${sum((r) => r.treeHits)} · ` +
+    `wipeouts ${sum((r) => r.wipeouts)} · ` +
     `resets ${sum((r) => r.resets)} (auto ${sum((r) => r.autoResets)}) · missed ${sum((r) => r.missed)}`,
 );
 

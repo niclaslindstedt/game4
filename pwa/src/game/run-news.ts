@@ -6,7 +6,7 @@
 //
 // NEWS IS WHAT CHANGED THE RACE: a checkpoint taken and its clock, a lap
 // done, one missed, a tree met, a landing the suspension could not take, a
-// reset, the flag. What the HUD already shows in its own corner every
+// wipeout and what caused it, a trench dug, a part bent, a reset, the flag. What the HUD already shows in its own corner every
 // frame — the speed, the place — is not news, and neither is a landing the
 // sled simply rode away from.
 
@@ -43,6 +43,12 @@ export function newsFor(e: GameEvent, state: GameState): NewsLine | null {
       return e.harsh ? { text: STRINGS.newsHarsh, tone: "bad" } : null;
     case "reset":
       return { text: STRINGS.newsReset, tone: "info" };
+    case "wipeout":
+      return { text: STRINGS.newsWipeout(e.cause), tone: "bad" };
+    case "stuck":
+      return { text: STRINGS.newsStuck, tone: "bad" };
+    case "damage":
+      return { text: STRINGS.newsDamage(e.part), tone: "bad" };
     case "finish":
       return {
         text: STRINGS.newsFinish(e.place, state.rivals.length + 1, e.time),

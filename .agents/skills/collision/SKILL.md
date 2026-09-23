@@ -1,6 +1,6 @@
 ---
 name: collision
-description: "Use when working on the sled TOUCHING SOMETHING THAT IS NOT SNOW, and on the course COUNTING something — a trunk met, another sled shouldered, the soft push back from the map's edge, a checkpoint's line crossed or ridden past, a lap closed, the flag, the reset back onto the track — and on what the events (`hit`, `bump`, `checkpoint`, `missed`, `lap`, `finish`, `reset`, `land`, `air`) mean. Owns `engine/game/collision.ts` (the trunks and the edge), `course.ts` (the checkpoints, the laps, the reset), the sled-against-sled shoulder in `rivals.ts`, `TUNING.trees` / `.bounds` / `.course` / `.reset`, and the stage-a-contact → LOOK loop. The snow itself is `sled-physics`'s; damage is not built."
+description: "Use when working on the sled TOUCHING SOMETHING THAT IS NOT SNOW, and on the course COUNTING something — a trunk met, another sled shouldered, the soft push back from the map's edge, a checkpoint's line crossed or ridden past, a lap closed, the flag, the reset back onto the track — and on what the events (`hit`, `bump`, `checkpoint`, `missed`, `lap`, `finish`, `reset`, `land`, `air`) mean. Owns `engine/game/collision.ts` (the trunks and the edge), `course.ts` (the checkpoints, the laps, the reset), the sled-against-sled shoulder in `rivals.ts`, `TUNING.trees` / `.bounds` / `.course` / `.reset`, and the stage-a-contact → LOOK loop. The snow itself is `sled-physics`'s; what a crash does to the rider and the machine (the wipeout, the trench, damage) is `crash`'s."
 ---
 
 # Collision: the sled meeting what is not snow
@@ -33,7 +33,7 @@ when the work touches where trees and checkpoints STAND, and
 | Where a tree, a checkpoint, the grid stands | `engine/mapgen/` (`forest.ts`, `spawn.ts` under `rules.ts`) — the `mapgen-improvement` skill |
 | Drawing the trees and the checkpoints | `pwa/src/game/forest.ts`, `gates.ts` |
 | What the events mean to the app | `pwa/src/game/run-news.ts` (the news line), `audio/route.ts` (the sound), `rumble.ts` (the pulse), `spray.ts` (the landing puff) |
-| Damage | NOT BUILT. A contact today costs speed and attitude, never a ledger |
+| The wipeout, the trench, damage | `crash.ts`, `trench.ts`, `damage.ts` — the `crash` skill: a contact STARTS a crash here (the `hit` closing speed), and what it does to the rider and the machine is decided there |
 | Tests | `tests/collision_test.ts` (trunks, the edge), `tests/course_test.ts` (order, laps, misses, the reset), `tests/rivals_test.ts` (the grid, the shoulder, the standings) |
 
 ## The events, and what each MEANS
@@ -49,6 +49,9 @@ when the work touches where trees and checkpoints STAND, and
 | `lap` | Checkpoint 0 crossed after all the others | laps done, that lap's time |
 | `finish` | The last lap closed | the race time, the place |
 | `reset` | Stood back on the track | the checkpoint, whether the engine did it |
+| `wipeout` | The rider thrown off (`crash.ts`): a `hit` past `crash.treeSpeed`, a nose-in `land`, a rollover at speed | the cause, the speed, where |
+| `stuck` | The tread dug in past `trench.stuckAt` (`trench.ts`) | — |
+| `damage` | A part bent (`damage.ts`, damage on only) | the part, how bad it now is |
 | `count` / `go` | The lights | seconds left / the clock starts |
 
 **Each fires ONCE per occurrence.** A `hit` every step the sled leans on a

@@ -75,6 +75,10 @@ export { TUNING } from "./game/defs/tuning.ts";
 export {
   NEUTRAL_INPUT,
   type CraftState,
+  type CrashCause,
+  type DamagePart,
+  type SledDamage,
+  type Thrown,
   type GameEvent,
   type GamePhase,
   type GameState,
@@ -90,6 +94,9 @@ export { footprintOf, pressureOf, skiShare, type Footprint } from "./game/footpr
 export { sinkTarget, snowDrag, powderFloor, gripAt, type Grip } from "./game/snow.ts";
 export { powerShare, driveForce, maxDriveForce, rpmAtTop } from "./game/traction.ts";
 export { landingLoss } from "./game/flight.ts";
+export { noseDown, wipeoutCause, crashOver } from "./game/crash.ts";
+export { trenched, trenchGrip } from "./game/trench.ts";
+export { dampShare, harshShare, skiBite, skiPull, springShare, takeDamage } from "./game/damage.ts";
 export {
   bearingToNext,
   crossedCheckpoint,

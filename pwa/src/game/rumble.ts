@@ -103,6 +103,18 @@ export function rumbleForEvent(event: GameEvent): Rumble | null {
       return { ms: 90 + 140 * hard, strength: 0.6 + 0.38 * hard };
     }
 
+    // THE WIPEOUT: the rider off the machine — the longest blow in the
+    // game, level with going over, whatever put him off. The trunk or the
+    // landing that caused it is felt on the same step, and one motor plays
+    // the bigger of the two.
+    case "wipeout":
+      return { ms: RUMBLE.longest, strength: 1 };
+
+    // STUCK: the belt digging in under the rider — a low, short shudder so
+    // the hands know the throttle has stopped doing anything.
+    case "stuck":
+      return { ms: 120, strength: 0.3 };
+
     // ANOTHER SLED — a shoulder rather than a tree: shorter and softer than
     // the same speed into wood, because the other machine gives.
     case "bump": {

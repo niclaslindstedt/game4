@@ -44,6 +44,9 @@ export type Spray = {
   /** Emit for one rider over `dt`; `wasAirborne`/`airTime` are the rider's
    * state at the last frame, for the landing puff. */
   emit(sled: SledState, level: Level, dt: number, landed: number): void;
+  /** A BURST of snow thrown up at a point — a wipeout's (`size` 1) or a
+   * body bouncing on the snow (less) — carried along at (vx, vz). */
+  burst(x: number, y: number, z: number, vx: number, vz: number, size: number): void;
   update(dt: number, look: SkyLook, level: Level): void;
   /** Pixels per metre at one metre from the lens (the projection's scale). */
   setScale(pixelsPerMetre: number): void;
@@ -241,6 +244,25 @@ export function createSpray(haze: HazeUniforms): Spray {
             0.18 + random() * 0.22,
           );
         }
+      }
+    },
+    burst(x, y, z, vx, vz, size) {
+      // THE WIPEOUT'S BURST: a cloud flung up and out, bigger and slower to
+      // fall than a landing's puff — a man and a machine going in separately.
+      const n = Math.round(Math.min(220, 30 + 170 * size) * share);
+      for (let i = 0; i < n; i++) {
+        const a = random() * Math.PI * 2;
+        const sp = 1 + random() * (2 + 4 * size);
+        spawn(
+          x + Math.cos(a) * 0.5 * random(),
+          y + random() * 0.4,
+          z + Math.sin(a) * 0.5 * random(),
+          Math.cos(a) * sp + vx * 0.35,
+          1.5 + random() * (2 + 3 * size),
+          Math.sin(a) * sp + vz * 0.35,
+          0.45 + random() * (0.4 + 0.5 * size),
+          0.2 + random() * 0.3 * (0.6 + size),
+        );
       }
     },
     update(dt, look, level) {

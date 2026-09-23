@@ -43,6 +43,10 @@ export const TRAIL = {
   /** A probe that has moved further than this since its last stamp is a
    * reset or a teleport, not a trail, m. */
   jump: 6,
+  /** A THROWN RIDER's gouge (`bodyStampOf`): its width, m — shoulders and a
+   * flung arm — and its depth in virgin powder, m. */
+  body: 0.7,
+  bodyDepth: 0.14,
 };
 
 /** One capsule of trail: from (ax, az) to (bx, bz), `half` wide either side
@@ -117,6 +121,42 @@ export function stampsOf(
       berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare),
     });
   }
+}
+
+/** THE BODY'S TRAIL: a thrown rider (`Thrown`, `crash.ts`) sliding on the
+ * snow ploughs a wide, shallow gouge of his own — a body is a footprint
+ * too, and the sprawl it leaves is the one mark on the map that says a
+ * crash happened here. One capsule from where he last touched to where he
+ * touches now, drawn as a furrow of `TRAIL.body` width at the powder's own
+ * depth (a scuff on the groomer); `pen` is a one-probe pen of its own. */
+export function bodyStampOf(
+  body: { x: number; z: number; touching: boolean },
+  pen: TrailPen,
+  packedAt: (x: number, z: number) => number,
+  out: Stamp[],
+): void {
+  if (!body.touching) {
+    pen.down[0] = 0;
+    return;
+  }
+  const was = pen.down[0] === 1;
+  const ax = was ? pen.xs[0] : body.x;
+  const az = was ? pen.zs[0] : body.z;
+  pen.xs[0] = body.x;
+  pen.zs[0] = body.z;
+  pen.down[0] = 1;
+  if (Math.hypot(body.x - ax, body.z - az) > TRAIL.jump) return;
+  const p = Math.min(1, Math.max(0, packedAt(body.x, body.z)));
+  const depth = TRAIL.bodyDepth * (1 - p) + TRAIL.packedDepth * 2 * p;
+  out.push({
+    ax,
+    az,
+    bx: body.x,
+    bz: body.z,
+    half: TRAIL.body / 2,
+    depth,
+    berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare),
+  });
 }
 
 /** The cross-section of one furrow at `d` m from its centreline: how far

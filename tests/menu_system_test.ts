@@ -263,6 +263,12 @@ describe("what the game remembers (settings.ts)", () => {
     expect(mergeSettings({ touch: { lever: "up" } }).touch.lever).toBe("right");
   });
 
+  it("keeps damage off unless it was asked for, and only as a switch", () => {
+    expect(freshSettings().damage).toBe(false);
+    expect(mergeSettings({ damage: true }).damage).toBe(true);
+    expect(mergeSettings({ damage: "yes" }).damage).toBe(false);
+  });
+
   it("folds the master and the switch into both faders the mixer is handed", () => {
     const s = { ...freshSettings(), audio: { master: 0.5, engine: 0.8, effects: 0.4 } };
     expect(mixOf(s).engine).toBeCloseTo(0.4);

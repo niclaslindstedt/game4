@@ -131,6 +131,58 @@ export function gripAt(side: number, bars: number): V3 {
   return { x: pv.x + x * c + z * s, y: g.y, z: pv.z - x * s + z * c };
 }
 
+/**
+ * THE RIDER THROWN — a sprawl, in the frame of his own body rather than the
+ * sled's: the origin at his centre (`Thrown`'s point, `crash.ts`), y along
+ * his spine from the hips to the head, z out of his chest. The renderer
+ * turns this frame by the tumble and the bearing he was thrown along, so
+ * what is decided here is only what his limbs are doing: flung wide and
+ * windmilling while he is going over and over (`flail` 1), and settling
+ * spread-eagle as he comes to rest (`flail` 0). `phase` is his own clock,
+ * s, so the windmill is a pure function of how long he has been off.
+ */
+export function sprawlPose(phase: number, flail: number): RiderPose {
+  const f = Math.max(0, Math.min(1, flail));
+  const hips: V3 = { x: 0, y: -0.25, z: 0 };
+  const neck = add(hips, { x: 0, y: BODY.spine, z: 0 });
+  const head = add(neck, { x: 0, y: BODY.neck, z: 0.02 });
+  const across: V3 = { x: 1, y: 0, z: 0 };
+  const w = phase * 9;
+  const shoulders = [-1, 1].map((side) => add(neck, scale(across, side * BODY.shoulder))) as [
+    V3,
+    V3,
+  ];
+  // The arms flung out past the shoulders and windmilling fore and aft, a
+  // little short of straight so the elbow still has somewhere to bend.
+  const reach = 0.9 * (BODY.upperArm + BODY.forearm);
+  const hands = [-1, 1].map((side, i) => {
+    const swing = f * Math.sin(w + i * 2.1);
+    const out = norm({
+      x: side * (0.42 + 0.1 * f),
+      y: 0.18 + 0.25 * swing,
+      z: 0.1 + 0.3 * f * Math.cos(w + i * 2.1),
+    });
+    return add(shoulders[i], scale(out, reach));
+  }) as [V3, V3];
+  const elbows = [-1, 1].map((side, i) =>
+    solveLimb(shoulders[i], hands[i], BODY.upperArm, BODY.forearm, { x: side, y: -0.3, z: -0.4 }),
+  ) as [V3, V3];
+  // The legs apart, kicking against each other.
+  const feet = [-1, 1].map((side, i) => ({
+    x: side * (0.24 + 0.08 * f),
+    y: hips.y - 0.82,
+    z: 0.08 + 0.3 * f * Math.sin(w * 0.8 + i * Math.PI),
+  })) as [V3, V3];
+  const knees = [-1, 1].map((side, i) =>
+    solveLimb(add(hips, scale(across, side * BODY.hip)), feet[i], BODY.thigh, BODY.shin, {
+      x: side * 0.3,
+      y: 0,
+      z: 1,
+    }),
+  ) as [V3, V3];
+  return { hips, neck, head, pitch: 0, roll: 0, knees, feet, shoulders, elbows, hands, bars: 0 };
+}
+
 /** THE WHOLE POSE for one frame. */
 export function riderPose(input: RiderInput): RiderPose {
   const lean = Math.max(-1, Math.min(1, input.lean));
