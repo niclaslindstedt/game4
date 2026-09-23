@@ -41,7 +41,7 @@ the rows are its `menu-knobs.tsx` trimmed to what this page uses.
 | Surface | Covers | Where |
 | --- | --- | --- |
 | `splash` | The publisher's name while the first map is built, then the title, the trails laying themselves, and an invitation | `splash-screen.tsx` over the policy in `splash.ts`; the mark from `app-mark.ts` via `mark-trails.tsx` |
-| `menu` | The front door over a bot-ridden race: RACE (three laps against three riders on a map dealt from a seed, the seed ON the tile), the sound switch, OPTIONS — and its two pages, which are the SAME surface over the same live race (`App.tsx`'s `page`: `root`, `options`, `keys`) | `menu-main.tsx`, `menu-options.tsx`, `menu-keys.tsx` |
+| `menu` | The front door over a bot-ridden race: RACE (three laps against three riders on a map dealt from a seed, the seed ON the tile), the sound switch, OPTIONS — and its pages, which are the SAME surface over the same live race (`App.tsx`'s `page`: `root`, `sled`, `options`, `keys`). RACE opens the SLED card — the machine turning on its stand, its sheet beside it, RIDE — which is the last card before the grid | `menu-main.tsx`, `menu-sled.tsx` (over `sled-picker.tsx`, `sled-turntable.ts`, `sled-stats.ts`), `menu-options.tsx`, `menu-keys.tsx` |
 | `loading` | A race being stood up, paid for in slices | `loading-screen.tsx` over `run-loader.ts`, whose steps are `app-load.ts`'s |
 | `pause` | The race HELD: RESUME, RESTART RACE, SOUND, and the way out | `menu-pause.tsx` |
 | `run` | The player's hands on the bars, the HUD over the top; the finish plate once the flag is down | `hud.tsx`, `hud-result.tsx` (`hud-and-menus`) |
@@ -57,7 +57,7 @@ all.
 
 | Piece | Where |
 | --- | --- |
-| What the game REMEMBERS: the camera rung, the sound switch, the three faders, the picture, the keys, the thumbs and the assist — versioned, merged field by field | `pwa/src/game/settings.ts` (`mergeSettings`, `mixOf`, `assistOf`, `RUN_CAMERAS`, `nextCamera`) |
+| What the game REMEMBERS: the camera rung, the sled picked, the sound switch, the three faders, the picture, the keys, the thumbs and the assist — versioned, merged field by field | `pwa/src/game/settings.ts` (`mergeSettings`, `mixOf`, `assistOf`, `RUN_CAMERAS`, `nextCamera`) |
 | WHAT THE PICTURE COSTS: eight rows, each a ladder cheapest first, the presets, `presetOf` | `pwa/src/game/settings-video.ts` — DOM-free, three-free; `tests/video_test.ts` holds the whole ladder. `renderer.setVideo` is the ONE place a row becomes a draw call |
 | The first visit's picture: time MEDIUM under the front door, then promote to HIGH or demote to LOW — only a picture nobody touched | `pwa/src/game/video-probe.ts` (`judgeTier`, DOM-free), fed from `App.tsx`'s loop; off under `?probe=0`, `?video=` and any race a link boots |
 | The rows every settings page is built from (a ladder, a fader, a link, a binding), the page head and the ONE caption | `pwa/src/game/menu-knobs.tsx` |

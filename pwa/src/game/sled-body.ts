@@ -1,8 +1,23 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE SNOWMOBILE AS DRAWN — built from a handful of extruded profiles and
 // boxes in the engine's own body frame (x right, y up, z forward, the origin
-// at the centre of gravity of machine and rider, the snow `SLED.cogHeight`
-// under it), so every number here reads against `defs/sled.ts`:
+// at the centre of gravity of machine and rider), so every number here reads
+// against `defs/sled.ts`. EACH MACHINE IS DRAWN OFF ITS OWN SPEC:
+//
+//   * THE RUNNING GEAR — the skis, the spindles, the tread — stands on the
+//     snow `spec.cogHeight` under the origin, the skis `skiStance` apart at
+//     `skiForward`, the tread's run from `treadFront` to `treadRear`.
+//   * THE CHASSIS — the cowl, the seat, the boards, the bars — stands where
+//     the REFERENCE machine's does (`SLED.cogHeight` over the snow), because
+//     that is where the rider's hands and feet are fixed (`MOUNTS` in
+//     `rider-pose.ts`). A machine carried higher on its springs (the cross
+//     sled's long travel) is drawn with its running gear further under it,
+//     which is exactly what long travel looks like.
+//   * THE TUNNEL runs back to the tread's end, so the mountain sled's long
+//     belt is a long tail and the trail sled's short one a stubby one, and
+//     the cowl is as wide as the machine's envelope (`width`).
+//
+// What each part is:
 //
 //   * TWO SKIS a stance apart at the ski contact, each on a SPINDLE under an
 //     A-arm pair. They turn with the engine's `skiAngle` and ride up and
@@ -21,7 +36,7 @@
 
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { SLED, type SledState } from "@engine";
+import { SLED, type SledSpec, type SledState } from "@engine";
 
 import type { Pose } from "./interp.ts";
 import { mergePosed } from "./posed-merge.ts";
@@ -59,7 +74,7 @@ export const SLED_STYLES: SledStyle[] = [
 
 /** Rest compression of either end, m — the sag the drawn skis and tread sit
  * at when the engine reports it (the spec's "about 8 cm"). */
-const REST_SAG = 0.08;
+export const REST_SAG = 0.08;
 
 export type SledModel = {
   root: THREE.Group;
@@ -91,6 +106,7 @@ function profile(points: [number, number][], width: number, bevel: number): THRE
 }
 
 export function createSledModel(
+  spec: SledSpec,
   style: SledStyle,
   wrap: <M extends THREE.Material>(m: M, name: string) => M,
 ): SledModel {
@@ -131,7 +147,15 @@ export function createSledModel(
     return mesh;
   };
 
+  // The chassis's snow line (the reference's, where the rider is mounted),
+  // and the running gear's (this machine's own).
   const snow = -SLED.cogHeight;
+  const ground = -spec.cogHeight;
+  /** How much further back this machine's tread ends than the reference's,
+   * m — the tunnel, the tail and the flap all move with it. */
+  const tail = spec.treadRear - SLED.treadRear;
+  /** The cowl's width against the reference's. */
+  const wide = spec.width / SLED.width;
   // THE COWL.
   add(
     profile(
@@ -146,7 +170,7 @@ export function createSledModel(
         [0.34, snow + 0.3],
         [1.3, snow + 0.24],
       ],
-      0.86,
+      0.86 * wide,
       0.07,
     ),
     paint,
@@ -162,7 +186,7 @@ export function createSledModel(
         [1.0, snow + 0.5],
         [1.55, snow + 0.37],
       ],
-      0.9,
+      0.9 * wide,
       0.0,
     ),
     accent,
@@ -177,7 +201,7 @@ export function createSledModel(
         [0.2, snow + 0.32],
         [1.3, snow + 0.3],
       ],
-      0.8,
+      0.8 * wide,
       0.03,
     ),
     black,
@@ -185,7 +209,7 @@ export function createSledModel(
   const bumper = add(new THREE.TorusGeometry(0.28, 0.018, 5, 12, Math.PI), alloy);
   bumper.rotation.set(-Math.PI / 2, 0, 0);
   bumper.position.set(0, snow + 0.36, 1.7);
-  bumper.scale.set(1, 0.7, 1);
+  bumper.scale.set(wide, 0.7, 1);
   // The headlight.
   const light = add(new THREE.BoxGeometry(0.26, 0.06, 0.04), lamp);
   light.position.set(0, snow + 0.58, 1.48);
@@ -198,16 +222,31 @@ export function createSledModel(
   shield.position.set(0, snow + 0.98, 0.42);
 
   // THE TUNNEL and the running boards; the tunnel's flanks carry the paint.
-  add(new THREE.BoxGeometry(0.52, 0.14, 1.95), black).position.set(0, snow + 0.36, -0.62);
+  // Both run back to the tread's end, and the flanks reach down over the
+  // extra travel a taller machine carries its tread on.
+  const drop = spec.cogHeight - SLED.cogHeight;
+  add(new THREE.BoxGeometry(0.52, 0.14, 1.95 - tail), black).position.set(
+    0,
+    snow + 0.36,
+    -0.62 + tail / 2,
+  );
   for (const side of [-1, 1]) {
-    add(new THREE.BoxGeometry(0.02, 0.2, 1.7), paint).position.set(side * 0.27, snow + 0.36, -0.72);
+    add(new THREE.BoxGeometry(0.02, 0.2 + drop, 1.7 - tail), paint).position.set(
+      side * 0.27,
+      snow + 0.36 - drop / 2,
+      -0.72 + tail / 2,
+    );
     add(new THREE.BoxGeometry(0.2, 0.025, 1.2), alloy).position.set(
       side * 0.34,
       snow + 0.32,
       -0.35,
     );
     // Side panel between the cowl and the boards.
-    add(new THREE.BoxGeometry(0.03, 0.24, 0.5), paint).position.set(side * 0.43, snow + 0.42, 0.18);
+    add(new THREE.BoxGeometry(0.03, 0.24, 0.5), paint).position.set(
+      side * 0.43 * wide,
+      snow + 0.42,
+      0.18,
+    );
   }
   // THE SEAT.
   add(
@@ -225,15 +264,16 @@ export function createSledModel(
     ),
     seatMat,
   );
-  // The tail cap behind the seat, in the paint.
+  // The tail cap behind the seat, in the paint, reaching back to the end of
+  // this machine's tunnel.
   add(
     profile(
       [
         [-0.95, snow + 0.44],
         [-0.95, snow + 0.7],
         [-1.1, snow + 0.72],
-        [-1.5, snow + 0.56],
-        [-1.55, snow + 0.44],
+        [Math.min(-1.2, -1.5 + tail), snow + 0.56],
+        [Math.min(-1.25, -1.55 + tail), snow + 0.44],
       ],
       0.5,
       0.03,
@@ -242,6 +282,7 @@ export function createSledModel(
   );
   // Rear bumper, tail light, and the SNOW FLAP (on the rear suspension).
   const rear = new THREE.Group();
+  rear.position.z = tail;
   root.add(rear);
   const grab = add(new THREE.TorusGeometry(0.24, 0.016, 5, 10, Math.PI), alloy, rear);
   grab.rotation.set(Math.PI / 2, 0, 0);
@@ -271,29 +312,37 @@ export function createSledModel(
   // THE TREAD, on the rear suspension.
   const tread = new THREE.Group();
   root.add(tread);
-  const tf = SLED.treadFront;
-  const tr = SLED.treadRear;
+  const tf = spec.treadFront;
+  const tr = spec.treadRear;
   const belt = new THREE.Shape();
   const r0 = 0.12;
-  belt.moveTo(tr, snow);
-  belt.lineTo(tf, snow);
-  belt.lineTo(0.5, snow + 0.2);
-  belt.absarc(0.44, snow + 0.3, r0, -0.4, Math.PI * 0.9, false);
-  belt.lineTo(tr, snow + 0.26);
-  belt.absarc(tr, snow + 0.13, 0.13, Math.PI / 2, Math.PI * 1.5, false);
+  // The belt climbs from the front of its run to the drive sprocket under
+  // the cowl, which is the chassis's and so stands on the chassis's line.
+  const rise = snow - ground;
+  belt.moveTo(tr, ground);
+  belt.lineTo(tf, ground);
+  belt.lineTo(0.5, ground + 0.2 + rise * 0.5);
+  belt.absarc(0.44, ground + 0.3 + rise, r0, -0.4, Math.PI * 0.9, false);
+  belt.lineTo(tr, ground + 0.26 + rise);
+  belt.absarc(tr, ground + 0.13 + rise / 2, 0.13 + rise / 2, Math.PI / 2, Math.PI * 1.5, false);
   const beltGeo = new THREE.ExtrudeGeometry(belt, {
-    depth: SLED.treadWidth,
+    depth: spec.treadWidth,
     bevelEnabled: false,
     curveSegments: 6,
   });
   beltGeo.rotateY(-Math.PI / 2);
-  beltGeo.translate(SLED.treadWidth / 2, 0, 0);
+  beltGeo.translate(spec.treadWidth / 2, 0, 0);
   add(beltGeo, rubber, tread);
-  // The lugs, a row of paddles along the run, so the belt reads as a track.
+  // The lugs, a row of paddles along the run at their own height, so the
+  // belt reads as a track and the mountain sled's reads as a paddle wheel.
   const lugs: THREE.BufferGeometry[] = [];
   for (let z = tr; z <= tf; z += 0.1) {
     lugs.push(
-      new THREE.BoxGeometry(SLED.treadWidth * 0.96, 0.03, 0.035).translate(0, snow + 0.005, z),
+      new THREE.BoxGeometry(spec.treadWidth * 0.96, spec.lugHeight, 0.035).translate(
+        0,
+        ground + 0.02 - spec.lugHeight / 2,
+        z,
+      ),
     );
   }
   add(mergeGeometries(lugs), rubber, tread);
@@ -313,18 +362,18 @@ export function createSledModel(
       [0.4, 0.05],
       [-0.55, 0.05],
     ],
-    SLED.skiWidth,
+    spec.skiWidth,
     0.012,
   );
   geos.push(skiGeo);
   for (const side of [-1, 1]) {
     const group = new THREE.Group();
-    group.position.set((side * SLED.skiStance) / 2, snow, SLED.skiForward);
+    group.position.set((side * spec.skiStance) / 2, ground, spec.skiForward);
     root.add(group);
     const skiMesh = new THREE.Mesh(skiGeo, black);
     skiMesh.castShadow = true;
     group.add(skiMesh);
-    const tip = add(new THREE.BoxGeometry(SLED.skiWidth * 0.9, 0.02, 0.18), paint, group);
+    const tip = add(new THREE.BoxGeometry(spec.skiWidth * 0.9, 0.02, 0.18), paint, group);
     tip.position.set(0, 0.055, 0.1);
     const spindle = add(new THREE.CylinderGeometry(0.025, 0.03, 0.34, 6), alloy, group);
     spindle.position.set(0, 0.22, 0);
@@ -375,23 +424,16 @@ export function createSledModel(
       for (let i = 0; i < 2; i++) {
         const s = skis[i];
         const lift = Math.max(-0.12, Math.min(0.2, sled.skiCompression[i] - REST_SAG));
-        s.group.position.y = snow + lift + sink * 0.7;
+        s.group.position.y = ground + lift + sink * 0.7;
         // Clockwise from above is a positive turn about +y in the engine's
         // frame, which is three's too (`lib/quat.ts`).
         s.group.rotation.y = sled.skiAngle;
         const side = i === 0 ? -1 : 1;
         const top = s.group.position.y + 0.36;
-        const x = (side * SLED.skiStance) / 2;
-        strut(
-          s.upper,
-          a.set(side * 0.2, snow + 0.46, SLED.skiForward - 0.12),
-          c.set(x, top, SLED.skiForward),
-        );
-        strut(
-          s.lower,
-          a.set(side * 0.2, snow + 0.3, SLED.skiForward),
-          c.set(x, top - 0.14, SLED.skiForward),
-        );
+        const x = (side * spec.skiStance) / 2;
+        const fwd = spec.skiForward;
+        strut(s.upper, a.set(side * 0.2, snow + 0.46, fwd - 0.12), c.set(x, top, fwd));
+        strut(s.lower, a.set(side * 0.2, snow + 0.3, fwd), c.set(x, top - 0.14, fwd));
       }
       const rearLift = Math.max(-0.12, Math.min(0.25, sled.treadCompression - REST_SAG));
       tread.position.y = rearLift + sink * 0.8;

@@ -15,11 +15,15 @@
 //                   screenshot's shutter.
 //   ?paused=1       ...or held under the pause card.
 //   ?camera=<rung>  the run's camera (hood, bars, chase, far, high).
+//   ?sled=<id>      the player's machine for this visit (trail, crossover,
+//                   mountain, cross), over the stored one and never written
+//                   back — how a lab photographs a sled it did not pick.
 //   ?bot=1          the player's own sled ridden by the bot for the whole
 //                   run, not just the pre-roll — a race watched from the
 //                   saddle to its finish plate with nobody's hands on it.
 //   ?menu=root      open on the front door rather than the attract card;
-//   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS.
+//   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
+//                   the sled card RACE opens.
 //   ?video=<tier>   ride this visit at a picture preset (low, medium, high —
 //                   `settings-video.ts`) without storing it: how a lab
 //                   meters or photographs a rung.
@@ -33,13 +37,15 @@
 // DOM-free: the query string is an argument, so `tests/menu_system_test.ts`
 // reads every rule here without a browser.
 
+import { isSledId, type SledId } from "@engine";
+
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "options" | "keys";
-const MENU_PAGES: readonly MenuPage[] = ["root", "options", "keys"];
+export type MenuPage = "root" | "sled" | "options" | "keys";
+const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys"];
 
 export type UrlParams = {
   seed: number | null;
@@ -50,6 +56,8 @@ export type UrlParams = {
   shot: boolean;
   paused: boolean;
   camera: CameraRung | null;
+  /** The player's machine for this visit. */
+  sled: SledId | null;
   /** The bot rides the player's sled for the whole run. */
   bot: boolean;
   /** The URL names the front door. */
@@ -75,6 +83,7 @@ export function readParams(search: string): UrlParams {
   const paused = q.get("paused") === "1";
   const t = Number(q.get("t") ?? 0);
   const camera = q.get("camera");
+  const sled = q.get("sled");
   return {
     seed: seedOf(q.get("seed")),
     rides: start === "race" || start === "1" || paused || q.get("shot") === "1",
@@ -83,6 +92,7 @@ export function readParams(search: string): UrlParams {
     paused,
     camera:
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
+    sled: sled !== null && isSledId(sled) ? sled : null,
     bot: q.get("bot") === "1",
     menu: q.get("menu") !== null,
     page: MENU_PAGES.includes(q.get("menu") as MenuPage) ? (q.get("menu") as MenuPage) : "root",

@@ -21,7 +21,15 @@
 // (`interp.ts`), since the engine keeps no previous pose of its own.
 
 import * as THREE from "three";
-import { SLED, TUNING, totalMass, type GameState, type Level, type SledState } from "@engine";
+import {
+  SLED,
+  TUNING,
+  totalMass,
+  type GameState,
+  type Level,
+  type SledSpec,
+  type SledState,
+} from "@engine";
 
 import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
@@ -85,6 +93,9 @@ const FAR = 6000;
 
 type Rider = {
   model: SledModel;
+  /** The machine the model was built off: a run on another one is a new
+   * model, even on the same map and in the same slot. */
+  spec: SledSpec;
   track: PoseTrack;
   pen: TrailPen;
   drawn: Pose;
@@ -194,11 +205,12 @@ export function createWorldRenderer(
     far: DISTANCE_LOOK[video.distance].far,
   });
 
-  function riderFor(i: number): Rider {
-    const model = createSledModel(SLED_STYLES[i % SLED_STYLES.length], wrap);
+  function riderFor(i: number, spec: SledSpec): Rider {
+    const model = createSledModel(spec, SLED_STYLES[i % SLED_STYLES.length], wrap);
     scene.add(model.root);
     return {
       model,
+      spec,
       track: createTrack(),
       pen: createPen(16),
       drawn: { x: 0, y: 0, z: 0, q: { x: 0, y: 0, z: 0, w: 1 } },
@@ -246,7 +258,7 @@ export function createWorldRenderer(
       spray = createSpray(env.haze);
       spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
-      riders = runsOf(state).map((_, i) => riderFor(i));
+      riders = runsOf(state).map((run, i) => riderFor(i, run.sled.spec));
       lastTick = -1;
       lastState = null;
       lens.snap();
@@ -268,7 +280,17 @@ export function createWorldRenderer(
     draw(state: GameState, alpha: number, dt: number, present = true) {
       if (!level || state.level !== level || !terrain || !trail || !spray) return;
       const runs = runsOf(state);
-      while (riders.length < runs.length) riders.push(riderFor(riders.length));
+      while (riders.length < runs.length) {
+        riders.push(riderFor(riders.length, runs[riders.length].sled.spec));
+      }
+      // A slot on another machine than the one it was drawn as — the player
+      // chose a different sled for a race on the same map — is rebuilt.
+      for (let i = 0; i < runs.length; i++) {
+        if (riders[i].spec === runs[i].sled.spec) continue;
+        scene.remove(riders[i].model.root);
+        riders[i].model.dispose();
+        riders[i] = riderFor(i, runs[i].sled.spec);
+      }
       const fresh = state !== lastState || state.tick < lastTick;
       if (fresh) {
         // A new run on the same map: the trails and the spray start clean.

@@ -14,9 +14,9 @@ Powder Run is an arcade snowmobile racer — no account, no download, free. The 
 
 Every map is **generated from a seed** by a rules engine: a basin of rolling hills and ridges walled by mountain flanks, open powder meadows between forests of snow-loaded conifers, and a closed race loop graded into the ground with crests on it that are jumps. The race starts from a grid on the track behind the start line, and runs three laps against three rivals through checkpoints in order; stretches of the track lie drifted over with fresh snow, some maps barely any and some nearly half the loop. The sun's hour comes with the seed too; the same seed is the same map on every machine, so a URL is a map and a bug report is a repro.
 
-One sled ships, an invented trail sled with no real brand behind it, with its rider on the seat. Every hill, every tree and every sled is written in code; the game ships no asset files, and every sound is synthesized.
+Four sleds ship — a trail sled, a crossover, a mountain sled and a cross sled, each an answer to a kind of snow and none with a real brand behind it — with their rider on the seat. Every hill, every tree and every sled is written in code; the game ships no asset files, and every sound is synthesized.
 
-**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock, your place and a heading-up minimap, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night, more modes and more sleds are planned, not built.
+**What exists today is the first vertical slice**: one generated map, four sleds to choose between on a sled card, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock, your place and a heading-up minimap, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night and more modes are planned, not built.
 
 ## Why
 
@@ -93,7 +93,7 @@ The browser-driven labs (`screenshots`, `profile`, `world`, `audition ARGS=--met
 
 All configuration is a URL parameter or build-time:
 
-- `?seed=` — which map.
+- `?seed=` — which map; `?sled=` — which machine, for the visit.
 - OPTIONS on the front door — the picture, the sound, the keys, the thumbs and the assist, remembered between visits.
 - `VITE_BASE` — deploy base path (`/`, `/preview/`, `/branch/`); set by the Pages workflow, defaults to `/`.
 - `VITE_PWA_IGNORE_PATHS` — sibling deploy slots the root service worker must not claim; set by the Pages workflow.

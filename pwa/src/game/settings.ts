@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // WHAT THE GAME REMEMBERS between visits: the camera the rider last chose,
-// whether the sound is on at all, and every row of OPTIONS (`menu-options.tsx`)
+// the machine they last rode (the sled card, `menu-sled.tsx`), whether the
+// sound is on at all, and every row of OPTIONS (`menu-options.tsx`)
 // — the three faders, the picture (`settings-video.ts`), the keys
 // (`settings-input.ts`), the thumbs, and how much help the sled gives.
 // Nothing is remembered that the player has no way to change: the camera is
@@ -14,7 +15,7 @@
 // storage skin below it is the only part that touches `localStorage`, and it
 // never throws — a browser with storage turned off plays with the defaults.
 
-import type { Assist } from "@engine";
+import { SLED, isSledId, type Assist, type SledId } from "@engine";
 
 import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
@@ -71,6 +72,8 @@ export function assistOf(assist: AssistSettings): Assist {
 export type Settings = {
   /** The run's camera rung (`RUN_CAMERAS`). */
   camera: CameraRung;
+  /** The machine the player races on (`SLEDS`). */
+  sled: SledId;
   /** Whether the game makes a sound at all. */
   sound: boolean;
   audio: AudioLevels;
@@ -85,6 +88,7 @@ export type Settings = {
 export function freshSettings(): Settings {
   return {
     camera: DEFAULT_CAMERA,
+    sled: SLED.id,
     sound: true,
     audio: { master: 1, engine: 1, effects: 1 },
     video: { ...DEFAULT_VIDEO },
@@ -132,6 +136,7 @@ export function mergeSettings(parsed: unknown): Settings {
   if (typeof blob.camera === "string" && RUN_CAMERAS.includes(blob.camera as CameraRung)) {
     out.camera = blob.camera as CameraRung;
   }
+  if (typeof blob.sled === "string" && isSledId(blob.sled)) out.sled = blob.sled;
   if (typeof blob.sound === "boolean") out.sound = blob.sound;
   const audio = record(blob.audio);
   for (const k of ["master", "engine", "effects"] as const) {

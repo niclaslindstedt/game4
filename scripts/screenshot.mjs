@@ -17,6 +17,7 @@
 //   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
 //   ?splash=1 / ?menu=root   the attract card / the front door;
 //   ?menu=options|keys       OPTIONS, and its KEYS page.
+//   ?menu=sled[&sled=id]     the sled card RACE opens, on a machine.
 //   ?video=<tier>    ride at a picture preset (low, medium, high) this visit.
 //   ?probe=0         always sent: the first-visit probe must not move the
 //                    picture under the shutter.
@@ -83,6 +84,14 @@ const SURFACES = {
   // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
   options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
   keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },
+  // THE SLED CARD, straight off the URL; the turntable is its own chunk and
+  // builds the machine on its first frame, so it is given a moment.
+  sled: { params: { menu: "sled" }, wait: ".sled-pick-canvas", settle: 1800 },
+  "sled-mountain": {
+    params: { menu: "sled", sled: "mountain" },
+    wait: ".sled-pick-canvas",
+    settle: 1800,
+  },
 };
 
 /** The reference viewports — and the phone is a TOUCHSCREEN, not a narrow
