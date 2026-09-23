@@ -19,10 +19,18 @@
 // a script that runs clean, dispatches into nothing, and leaves a rider with
 // the picture in their phone's gallery and none in the game's — which is
 // exactly what the feature not existing looks like.
+//
+// The CLOUD SAVE is the same trap with a round trip in it: the page's ask
+// (`SHELL_CLOUD`), the shell's listener (`CLOUD_BRIDGE`) and parser
+// (`parseCloudAsk`), and the answer's script (`cloudReply`) back onto the
+// event the page hears (`SHELL_CLOUD_EVENT`). A rename anywhere is a save
+// that never happens and a game that never says so.
 
 import { describe, expect, it } from "vitest";
 
+import { cloudChanged, cloudReply, parseCloudAsk } from "../native/src/cloud-ask.ts";
 import {
+  CLOUD_BRIDGE,
   NATIVE_FLAG,
   RUMBLE_BRIDGE,
   SHOT_COMMAND,
@@ -30,11 +38,16 @@ import {
 } from "../native/src/injected.ts";
 import { isExternalUrl } from "../native/src/navigation.ts";
 import {
+  SHELL_CLOUD_EVENT,
   SHELL_COMMAND,
   SHELL_COMMANDS,
   SHELL_GLOBAL,
+  askShellCloud,
+  onShellCloud,
   onShellCommand,
   shellHost,
+  type ShellCloudAsk,
+  type ShellCloudReply,
   type ShellCommand,
 } from "../pwa/src/shell-host.ts";
 
@@ -52,7 +65,13 @@ describe("the shell's word", () => {
   });
 
   it("is a script iOS will accept: an IIFE ending in a primitive", () => {
-    for (const script of [NATIVE_FLAG, RUMBLE_BRIDGE, SHOT_COMMAND, VIEWPORT_HARDENING]) {
+    for (const script of [
+      NATIVE_FLAG,
+      RUMBLE_BRIDGE,
+      CLOUD_BRIDGE,
+      SHOT_COMMAND,
+      VIEWPORT_HARDENING,
+    ]) {
       expect(script.trimEnd().endsWith("})();")).toBe(true);
       expect(script).toContain("true;");
     }
@@ -184,6 +203,91 @@ describe("the phone's own shutter, relayed", () => {
       else globals.addEventListener = before.add;
       if (before.remove === undefined) delete globals.removeEventListener;
       else globals.removeEventListener = before.remove;
+    }
+  });
+});
+
+describe("the cloud save, asked and answered", () => {
+  /** Point the page's globals at `bus` for the length of `body`. */
+  function onBus(bus: EventTarget, body: () => void): void {
+    const globals = globalThis as unknown as Record<string, unknown>;
+    const names = ["addEventListener", "removeEventListener", "dispatchEvent"] as const;
+    const before = names.map((n) => globals[n]);
+    for (const n of names) globals[n] = (bus[n] as (...a: unknown[]) => unknown).bind(bus);
+    try {
+      body();
+    } finally {
+      names.forEach((n, i) => {
+        if (before[i] === undefined) delete globals[n];
+        else globals[n] = before[i];
+      });
+    }
+  }
+
+  const ASKS: ShellCloudAsk[] = [
+    { action: "status", requestId: "cloud-1" },
+    { action: "load", requestId: "cloud-2" },
+    { action: "save", requestId: "cloud-3", data: '{"v":1}' },
+  ];
+
+  it("carries every ask the page makes to the shell's parser, word for word", () => {
+    // The page's own ask, the shell's own listener run as the WebView runs
+    // it, and the shell's own parser: a rename in any of the three is an ask
+    // that never reaches the cloud, and a save that silently never happens.
+    const page = new EventTarget();
+    const posted: string[] = [];
+    const window = {
+      addEventListener: page.addEventListener.bind(page),
+      ReactNativeWebView: { postMessage: (raw: string) => posted.push(raw) },
+    };
+    new Function("window", CLOUD_BRIDGE)(window);
+    onBus(page, () => {
+      for (const ask of ASKS) askShellCloud(ask);
+    });
+    expect(posted.map(parseCloudAsk)).toEqual(ASKS);
+  });
+
+  it("hands every answer back on the event the page hears", () => {
+    const bus = new EventTarget();
+    const heard: ShellCloudReply[] = [];
+    const replies = [
+      cloudReply({ event: "status", requestId: "cloud-1", ok: true, available: true }),
+      cloudReply({ event: "load", requestId: "cloud-2", ok: true, data: "x" }),
+      cloudChanged(),
+    ];
+    for (const script of replies) {
+      expect(script.trimEnd().endsWith("})();")).toBe(true);
+      expect(script).toContain("true;");
+    }
+    onBus(bus, () => {
+      const stop = onShellCloud((reply) => heard.push(reply));
+      for (const script of replies) {
+        for (const event of eventsFrom(script)) {
+          expect(event.type).toBe(SHELL_CLOUD_EVENT);
+          bus.dispatchEvent(event);
+        }
+      }
+      stop();
+      // ...and nothing after the hand-back.
+      for (const event of eventsFrom(cloudChanged())) bus.dispatchEvent(event);
+    });
+    expect(heard).toEqual([
+      { event: "status", requestId: "cloud-1", ok: true, available: true },
+      { event: "load", requestId: "cloud-2", ok: true, data: "x" },
+      { event: "changed" },
+    ]);
+  });
+
+  it("lets nothing that is not a cloud ask through to the cloud", () => {
+    for (const raw of [
+      "not json",
+      "null",
+      JSON.stringify({ sh: "rumble", ms: 20, strength: 1 }),
+      JSON.stringify({ sh: "cloud", action: "save", requestId: "r" }),
+      JSON.stringify({ sh: "cloud", action: "wipe", requestId: "r" }),
+      JSON.stringify({ sh: "cloud", action: "load" }),
+    ]) {
+      expect(parseCloudAsk(raw)).toBeNull();
     }
   });
 });

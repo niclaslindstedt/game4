@@ -125,13 +125,14 @@ const SCRIPTS = filesUnder("scripts");
  * phone that simply stops buzzing — so the suite holds them from both ends.
  *
  * The store app's import-free seam modules — the injected script, the
- * navigation rule, the pulse parser — and the case below proves each of them
+ * navigation rule, the pulse parser, the cloud ask — and the case below proves each of them
  * still IMPORTS NOTHING AT ALL: the root suite never installs `native/`'s
  * dependency tree, and a seam module that grew a native import would take
  * the whole suite down with it rather than fail one case. The desktop app's
  * half is Rust and is read as TEXT (`tests/tauri_test.ts`), never imported.
  */
 const SHELL_SEAM = new Set<string>([
+  "native/src/cloud-ask.ts",
   "native/src/injected.ts",
   "native/src/navigation.ts",
   "native/src/rumble.ts",

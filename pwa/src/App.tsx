@@ -88,6 +88,7 @@ import { createLoader, raceOrFallback } from "./game/app-load.ts";
 import { NO_PRESSES, type Presses } from "./game/app-presses.ts";
 import { frontDoorPins, pinnedFor, pinnedPress } from "./game/campaign.ts";
 import { useCampaign } from "./game/campaign-app.ts";
+import { useCloudSync } from "./game/use-cloud-sync.ts";
 import { freeGameOptions } from "./game/free-ride.ts";
 import { snapInput } from "./game/ghost.ts";
 import { createRunBook, type RunBook, type RunTicket } from "./game/ghost-run.ts";
@@ -220,6 +221,7 @@ export function App() {
   /** THE CAMPAIGN: the board, the rig that books a rung, the rung being ridden. */
   const campaign = useCampaign({ mode: modeRef, setPage, setSettings });
   const bookRef = useRef<RunBook | null>(null);
+  useCloudSync({ settings, setSettings, campaign, book: bookRef, shell });
   const [input, setInput] = useState<InputManager | null>(null);
   /** The bar over a recording, and whether there is one worth offering —
    * both refreshed on the HUD's tick, never per frame. */

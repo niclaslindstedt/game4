@@ -108,6 +108,10 @@ export type RunBook = {
   ghost: () => GameState | null;
   /** Take the ghost off the snow and drop the tape being written. */
   clear: () => void;
+  /** Read the book off the store again — after the cloud save merged
+   * another device's rows into it (`use-cloud-sync.ts`), so the next finish
+   * is filed against the union rather than written over it. */
+  reload: () => void;
 };
 
 const STORAGE = { loadBook: loadRecords, saveBook: saveRecords, loadGhost, saveGhost };
@@ -205,5 +209,8 @@ export function createRunBook(world: GhostWorld): RunBook {
     settled: () => settled,
     ghost: () => ghost,
     clear,
+    reload: () => {
+      book = store.loadBook();
+    },
   };
 }

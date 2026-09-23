@@ -6,7 +6,9 @@
 // ringer switch, and the phone's haptics under a game that already knows what
 // it wants felt (src/rumble.ts, src/haptics.ts) — and it hears the phone's own
 // screenshot, which no browser can, so a picture taken with the hardware is
-// filed in the game's gallery too (src/screen-capture.ts). Further platform services
+// filed in the game's gallery too (src/screen-capture.ts) — and it carries the
+// rider's book between their devices through iCloud, which a browser has no
+// way to reach (src/cloud-save.ts). Further platform services
 // (achievements, a share sheet) are bridges to be added one at a time on top
 // of this, each as its own module under src/ and a flag on the message
 // channel below — and each one a thing the website already does first.
@@ -28,9 +30,17 @@ import * as SplashScreen from "expo-splash-screen";
 import { WebView } from "react-native-webview";
 import type { WebViewMessageEvent, WebViewNavigation } from "react-native-webview";
 
+import { cloudChanged, parseCloudAsk } from "./src/cloud-ask";
+import { onCloudChange, serveCloudAsk } from "./src/cloud-save";
 import { BRAND_BG, REMOTE_GAME_URL } from "./src/config";
 import { playRumble } from "./src/haptics";
-import { NATIVE_FLAG, RUMBLE_BRIDGE, SHOT_COMMAND, VIEWPORT_HARDENING } from "./src/injected";
+import {
+  CLOUD_BRIDGE,
+  NATIVE_FLAG,
+  RUMBLE_BRIDGE,
+  SHOT_COMMAND,
+  VIEWPORT_HARDENING,
+} from "./src/injected";
 import { startLocalServer, type LocalServer } from "./src/local-server";
 import { isExternalUrl } from "./src/navigation";
 import { parseRumble } from "./src/rumble";
@@ -135,7 +145,15 @@ export default function App() {
     const raw = event.nativeEvent.data;
     const pulse = parseRumble(raw);
     if (pulse) playRumble(pulse);
+    const ask = parseCloudAsk(raw);
+    // The cloud answers on its own time, so the reply is injected when it
+    // arrives rather than returned (src/cloud-save.ts).
+    if (ask) void serveCloudAsk(ask).then((script) => webRef.current?.injectJavaScript(script));
   }, []);
+
+  // ANOTHER DEVICE WROTE THE STORE. iCloud tells the shell, the shell tells
+  // the page, and the page pulls and merges (pwa/src/game/use-cloud-sync.ts).
+  useEffect(() => onCloudChange(() => webRef.current?.injectJavaScript(cloudChanged())), []);
 
   const reveal = useCallback(() => {
     setLoaded(true);
@@ -210,9 +228,10 @@ export default function App() {
           domStorageEnabled
           javaScriptEnabled
           // The shell flag must exist before the game's scripts read it, and
-          // the rumble listener before the first thing that could ask for a
-          // pulse; the hardening runs once the document is up.
-          injectedJavaScriptBeforeContentLoaded={`${NATIVE_FLAG}\n${RUMBLE_BRIDGE}`}
+          // the rumble and cloud listeners before the first thing that could
+          // ask for a pulse or a save; the hardening runs once the document
+          // is up.
+          injectedJavaScriptBeforeContentLoaded={`${NATIVE_FLAG}\n${RUMBLE_BRIDGE}\n${CLOUD_BRIDGE}`}
           injectedJavaScript={VIEWPORT_HARDENING}
           onMessage={onMessage}
           onNavigationStateChange={onNavStateChange}
