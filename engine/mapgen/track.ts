@@ -9,14 +9,17 @@
 //
 // closes exactly by construction, is smooth everywhere including at θ = 0,
 // and — because r is single-valued in θ — is STAR-SHAPED about its centre,
-// so it cannot cross itself however hard it is warped (R5). Where a
-// harmonic's aₖ·k² passes 1 the curve turns concave and the loop grows a
-// real counter-bend; a seeded stretch and rotation then keep the map from
-// reading as a flower. The unit shape is scaled to the length the attempt
-// aims at, sampled finely, and resampled every `track.step` metres by arc
-// length. A draw whose corners come out too tight (R6), whose parts come
-// too close (R5) or which reaches up the rim (R2) is refused, and the
-// attempt draws again.
+// so the harmonics alone can never cross themselves. Where a harmonic's
+// aₖ·k² passes 1 the curve turns concave and the loop grows a real
+// counter-bend; a seeded stretch and rotation then keep the map from
+// reading as a flower, and a slow noise WARP in metres bends the clean
+// curves into esses and kinks the harmonics cannot make. The warp can in
+// principle fold the loop over itself, so every draw is checked for a
+// crossing (R5). The shape is scaled to the length the attempt aims at,
+// sampled finely, and resampled every `track.step` metres by arc length. A
+// draw whose corners come out too tight (R6), whose parts come too close
+// (R5) or which reaches up the rim (R2) is refused, and the attempt draws
+// again.
 //
 // THE GRADING (R8) is a Lipschitz envelope rather than a blur: the highest
 // profile with no grade over g that stays under the country (`upper`) and
@@ -37,6 +40,7 @@ import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import type { TrackPoint } from "./types.ts";
+import { selfCrossings } from "../analysis/crossings.ts";
 
 /** The loop while the generator is still working on it. */
 export type Loop = {
@@ -48,6 +52,12 @@ export type Loop = {
   readonly cx: number;
   readonly cz: number;
 };
+
+/** The loop as the track queries (`query.ts`) read one. Taken fresh after
+ * `rotateLoop`, which replaces the points array. */
+export function trackOf(loop: Loop): { track: { points: TrackPoint[]; length: number } } {
+  return { track: { points: loop.points, length: loop.length } };
+}
 
 /** How finely the unit shape is sampled before it is resampled by arc
  * length, samples per turn. */
@@ -65,20 +75,19 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   // The harmonics: always the oval's second, then two or three of the
   // higher ones, one of them usually strong enough to turn concave.
   const ks = [2];
-  const pool = [3, 4, 5, 6];
+  const pool = [3, 4, 5, 6, 7];
   const extra = rng.int(2, 3);
   for (let i = 0; i < extra; i++) ks.push(pool.splice(rng.int(0, pool.length - 1), 1)[0]);
-  const amps = ks.map((k) => (k === 2 ? rng.range(0.04, 0.16) : rng.range(0.25, 1.35) / (k * k)));
+  const amps = ks.map((k) => (k === 2 ? rng.range(0.05, 0.22) : rng.range(0.6, 2.8) / (k * k)));
   const phases = ks.map(() => rng.range(0, TAU));
   const stretch = rng.range(1, 1.3);
   const turn = rng.range(0, TAU);
   const ct = Math.cos(turn);
   const st = Math.sin(turn);
 
-  // The unit shape, then the scale that puts its perimeter on the aim.
+  // The unit shape.
   const ux = new Float64Array(SAMPLES + 1);
   const uz = new Float64Array(SAMPLES + 1);
-  let perimeter = 0;
   for (let j = 0; j <= SAMPLES; j++) {
     const th = (j / SAMPLES) * TAU;
     let r = 1;
@@ -88,44 +97,72 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
     const z = r * Math.sin(th);
     ux[j] = x * ct - z * st;
     uz[j] = x * st + z * ct;
-    if (j > 0) perimeter += Math.hypot(ux[j] - ux[j - 1], uz[j] - uz[j - 1]);
   }
+  // Scaled onto the map and WARPED: a slow noise displacement that bends
+  // the harmonics' clean curves into esses, kinks and hairpins. The warp is
+  // a fixed field in metres, so the scale that lands the warped loop on its
+  // aim is found in two passes — the second only corrects the first.
+  const warp = {
+    amount: rng.range(R.track.warp.amount.min, R.track.warp.amount.max),
+    scale: rng.range(R.track.warp.scale.min, R.track.warp.scale.max),
+    seed: rng.int(1, 1 << 30),
+  };
   const aim = inBand(rng, R.track.aim);
-  const scale = aim / perimeter;
+  const wx = new Float64Array(SAMPLES + 1);
+  const wz = new Float64Array(SAMPLES + 1);
+  let perimeter = 0;
+  for (let j = 1; j <= SAMPLES; j++) perimeter += Math.hypot(ux[j] - ux[j - 1], uz[j] - uz[j - 1]);
+  let scale = aim / perimeter;
+  let length = 0;
+  for (let pass = 0; pass < 3; pass++) {
+    length = 0;
+    for (let j = 0; j <= SAMPLES; j++) {
+      const x = cx + ux[j] * scale;
+      const z = cz + uz[j] * scale;
+      wx[j] = x + (valueNoise(x, z, warp.scale, warp.seed) * 2 - 1) * warp.amount;
+      wz[j] = z + (valueNoise(x, z, warp.scale, warp.seed + 77) * 2 - 1) * warp.amount;
+      if (j > 0) length += Math.hypot(wx[j] - wx[j - 1], wz[j] - wz[j - 1]);
+    }
+    scale *= aim / length;
+  }
+  if (length < R.track.length.min || length > R.track.length.max) {
+    return `the warped loop comes out ${length.toFixed(0)} m long`;
+  }
 
   // Resample by arc length, every `track.step` metres.
-  const n = Math.round(aim / R.track.step);
-  const step = aim / n;
+  const n = Math.round(length / R.track.step);
+  const step = length / n;
   const points: TrackPoint[] = [];
   let j = 1;
   let acc = 0;
-  let seg = Math.hypot(ux[1] - ux[0], uz[1] - uz[0]) * scale;
+  let seg = Math.hypot(wx[1] - wx[0], wz[1] - wz[0]);
   for (let i = 0; i < n; i++) {
     const want = i * step;
     while (acc + seg < want && j < SAMPLES) {
       acc += seg;
       j++;
-      seg = Math.hypot(ux[j] - ux[j - 1], uz[j] - uz[j - 1]) * scale;
+      seg = Math.hypot(wx[j] - wx[j - 1], wz[j] - wz[j - 1]);
     }
     const t = seg > 0 ? (want - acc) / seg : 0;
-    const x = cx + (ux[j - 1] + (ux[j] - ux[j - 1]) * t) * scale;
-    const z = cz + (uz[j - 1] + (uz[j] - uz[j - 1]) * t) * scale;
+    const x = wx[j - 1] + (wx[j] - wx[j - 1]) * t;
+    const z = wz[j - 1] + (wz[j] - wz[j - 1]) * t;
     points.push({ x, z, y: 0, s: want, heading: 0, width: 0 });
   }
   setHeadings(points);
 
   // R7 — the width, wandering on a noise read round a circle so it closes.
   const wseed = rng.int(1, 1 << 30);
-  const ring = aim / TAU;
+  const ring = length / TAU;
   for (const p of points) {
-    const a = (p.s / aim) * TAU;
+    const a = (p.s / length) * TAU;
     const v = valueNoise(Math.cos(a) * ring, Math.sin(a) * ring, R.track.widthScale, wseed);
     p.width = R.track.width.min + (R.track.width.max - R.track.width.min) * smoothstep(0.15, 0.85, v);
   }
 
-  const loop: Loop = { points, length: aim, raw: new Float64Array(n), cx, cz };
+  const loop: Loop = { points, length, raw: new Float64Array(n), cx, cz };
   const radius = minRadius(loop);
   if (radius < R.track.minRadius) return `a turn tightens to ${radius.toFixed(0)} m`;
+  if (selfCrossings(points) > 0) return "the warped loop crosses itself";
   const gap = minSeparation(loop);
   if (gap < R.track.separation.plan) return `two stretches of the loop pass ${gap.toFixed(0)} m apart`;
   // R2 — the whole corridor, bank and all, stays on the basin floor.
@@ -211,7 +248,7 @@ export function minSeparation(loop: { points: readonly TrackPoint[]; length: num
 }
 
 /** One box-blur pass round a closed profile, half-window `k` points. */
-function blur(y: Float64Array, k: number): Float64Array {
+function blur(y: Float64Array, k: number): Float64Array<ArrayBuffer> {
   const n = y.length;
   const out = new Float64Array(n);
   let sum = 0;
@@ -267,7 +304,7 @@ export function gradeLoop(loop: Loop, country: Heightfield): string | null {
       lower[a] = Math.max(lower[a], lower[b] - g);
     }
   }
-  let y = new Float64Array(n);
+  let y: Float64Array<ArrayBuffer> = new Float64Array(n);
   for (let i = 0; i < n; i++) y[i] = (upper[i] + lower[i]) / 2;
   const k = Math.round(12 / step);
   y = blur(blur(y, k), k);

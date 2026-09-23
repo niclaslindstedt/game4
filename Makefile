@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs
+.PHONY: build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -38,10 +38,79 @@ install:
 icons:
 	npm run icons
 
-# THE PLATFORM SHELLS' SEAM. The desktop app (tauri/) and the store app
-# (native/) are not built yet; when they land their targets go here — each
-# tree checked by its own peers (`tauri-test`, `native-typecheck`, …), never
-# by `make test` or `make lint`. package.json already names their scripts.
+# ---------------------------------------------------------------------------
+# The desktop app (tauri/)
+# ---------------------------------------------------------------------------
+#
+# A thin wrapper around the same built website, for Windows, macOS and Linux
+# — `tauri/README.md` is the tree, `docs/platforms.md` is where it sits. It is
+# Rust, so it has its own toolchain and its own linter, and none of it is on
+# the root suite's path: `make test` and `make lint` stop at this tree's edge.
+# These targets are how it is checked; `.github/workflows/desktop-tauri.yml`
+# runs them on every push that touches it.
+
+# Build the site into tauri/webroot/, compile the shell, and launch it.
+tauri:
+	npm run tauri -- $(ARGS)
+
+# The decision layer's whole test suite, and DELIBERATELY only that crate:
+# `powderrun-shell` depends on no GUI toolkit, so this target runs on an
+# ordinary CI runner with a Rust toolchain and nothing else. The app crate has
+# no tests of its own by design (every decision lives in the library), and
+# compiling it needs the platform's webview development libraries — which is
+# what `make tauri-lint` and `make tauri` are for.
+tauri-test:
+	npm run tauri:test
+
+# clippy at zero warnings, the peer of `make lint` for this tree. This one DOES
+# need the webview libraries: it checks both crates.
+tauri-lint:
+	npm run tauri:lint
+
+# rustfmt in place, the peer of `make fmt`.
+tauri-fmt:
+	npm run tauri:fmt
+
+# Package this machine's desktop downloads into tauri/release/ — the release
+# workflow's per-platform job, runnable by hand. `ARGS="--target <triple>"`
+# for an explicit target.
+desktop:
+	npm run tauri:package -- $(ARGS)
+
+# ---------------------------------------------------------------------------
+# THE STORE APP (native/): an Expo WebView over a copy of the site bundled
+# inside the app. OUTSIDE the npm workspace with a dependency tree of its own,
+# so it is installed on its own and typechecked on its own — the root lint
+# never sees it. `native/README.md` is the tree, `native/RELEASING.md` the
+# submission run-through.
+#
+# `native-bundle` builds the website and packs it into the zip the app serves.
+# THE APP SHIPS WHATEVER ZIP IS ON DISK, so a stale one silently installs the
+# last change's game: run it before every device build and every EAS build
+# (`native-iphone` and the npm build scripts do it for you).
+# ---------------------------------------------------------------------------
+native-install:
+	npm run native:install
+
+native-bundle:
+	npm run native:bundle
+
+native-typecheck:
+	npm run native:typecheck
+
+native-ios:
+	npm run native:ios
+
+# THE PHONE: build the store app and put it on a REAL iPhone over USB, then
+# launch it. Bundles the site, regenerates ios/, signs, installs — one command
+# from a clean checkout, and the only way to judge the haptics, which a
+# simulator has none of. `make native-iphone ARGS="--device 'my iPhone'"`
+# picks between several; ARGS="--skip-bundle" reuses the packed site.
+native-iphone:
+	npm run native:ios:device -- $(ARGS)
+
+native-android:
+	npm run native:android
 
 # Headless balance sweep: the bot rides generated maps through the real
 # engine and prints the pace / laps / air / hits table, per seed. Also CI's

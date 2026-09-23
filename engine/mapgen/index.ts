@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// THE WORLD GENERATOR's public surface. `engine/index.ts` re-exports all of
+// it; nothing outside `mapgen/` should reach past this file.
+
+export * from "./types.ts";
+export { generateLevel, subSeed } from "./generate.ts";
+export { LEVEL_RULES, inBand, withinBand, type Band } from "./rules.ts";
+export { nearestTrackPoint, nearestWithin, trackPointAt, arcAhead, arcBetween, type HasTrack } from "./query.ts";
+export { kickerProfile } from "./kickers.ts";
+export { declinationOf, sunWindow } from "./sun.ts";
+export { gridAround } from "./spawn.ts";

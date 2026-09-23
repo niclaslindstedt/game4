@@ -94,6 +94,20 @@ function trySegment(
  * (positive to the right of the direction of travel). Pass `out` to reuse
  * an object on a hot path. */
 export function nearestTrackPoint(level: HasTrack, x: number, z: number, out?: TrackHit): TrackHit {
+  return nearestWithin(level, x, z, Infinity, out);
+}
+
+/** `nearestTrackPoint`, but only looking `within` metres of the point: the
+ * answer's `distance` is Infinity when the track is further off than that.
+ * For the question "is the track near here?" asked of every tree on the
+ * map, most of which stand hundreds of metres from it. */
+export function nearestWithin(
+  level: HasTrack,
+  x: number,
+  z: number,
+  within: number,
+  out?: TrackHit,
+): TrackHit {
   const points = level.track.points;
   const length = level.track.length;
   const hit = out ?? { index: 0, s: 0, distance: Infinity, lateral: 0, x: 0, z: 0 };
@@ -101,7 +115,8 @@ export function nearestTrackPoint(level: HasTrack, x: number, z: number, out?: T
   const { cells } = indexOf(points);
   const qc = Math.floor(x / CELL);
   const qr = Math.floor(z / CELL);
-  for (let ring = 0; ring <= MAX_RINGS; ring++) {
+  const rings = within === Infinity ? MAX_RINGS : Math.min(MAX_RINGS, Math.ceil(within / CELL) + 1);
+  for (let ring = 0; ring <= rings; ring++) {
     for (let dc = -ring; dc <= ring; dc++) {
       const edge = dc === -ring || dc === ring;
       for (let dr = -ring; dr <= ring; dr += edge ? 1 : 2 * ring) {
@@ -113,6 +128,10 @@ export function nearestTrackPoint(level: HasTrack, x: number, z: number, out?: T
     // Every segment in the next ring out is at least `ring` whole cells
     // away, whatever corner of its own cell the query stands in.
     if (hit.distance <= ring * CELL) return hit;
+  }
+  if (within !== Infinity) {
+    if (hit.distance > within) hit.distance = Infinity;
+    return hit;
   }
   for (let i = 0; i < points.length; i++) trySegment(points, length, i, x, z, hit);
   return hit;

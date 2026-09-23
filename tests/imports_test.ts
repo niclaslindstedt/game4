@@ -124,14 +124,18 @@ const SCRIPTS = filesUnder("scripts");
  * pairs are load-bearing and silent when they drift — a renamed event is a
  * phone that simply stops buzzing — so the suite holds them from both ends.
  *
- * EMPTY UNTIL THE STORE APP LANDS: `native/` does not exist yet. When it
- * does, its import-free seam modules (the injected script, the navigation
- * rule, the pulse parser) are named here, and the case below proves each of
- * them still IMPORTS NOTHING AT ALL — the root suite never installs
- * `native/`'s dependency tree, and a seam module that grew a native import
- * would take the whole suite down with it rather than fail one case.
+ * The store app's import-free seam modules — the injected script, the
+ * navigation rule, the pulse parser — and the case below proves each of them
+ * still IMPORTS NOTHING AT ALL: the root suite never installs `native/`'s
+ * dependency tree, and a seam module that grew a native import would take
+ * the whole suite down with it rather than fail one case. The desktop app's
+ * half is Rust and is read as TEXT (`tests/tauri_test.ts`), never imported.
  */
-const SHELL_SEAM = new Set<string>([]);
+const SHELL_SEAM = new Set<string>([
+  "native/src/injected.ts",
+  "native/src/navigation.ts",
+  "native/src/rumble.ts",
+]);
 
 describe("the dependency direction (§23.7)", () => {
   it("has a graph to walk", () => {

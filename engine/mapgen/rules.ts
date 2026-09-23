@@ -38,9 +38,10 @@
 //       `kickers.off.clearance` metres of the track's edge, so a kicker is
 //       something a rider leaves the loop to find.
 //   R5  THE TRACK IS ONE CLOSED LOOP. The race is ridden round a single
-//       loop, star-shaped about a point near the basin's middle — so it can
-//       never cross itself — whose length lands in `track.length`
-//       (2.5–4.0 km), sampled every `track.step` (2 m) along its length.
+//       loop that never crosses itself — a star-shaped loop about a point
+//       near the basin's middle, bent by `track.warp` metres of slow noise —
+//       whose length lands in `track.length` (2.5–4.0 km), sampled every
+//       `track.step` (2 m) along its length.
 //       Any two parts of it more than `track.separation.along` metres apart
 //       along the loop stand at least `track.separation.plan` metres apart
 //       on the map, so no two stretches share a corridor or a bank.
@@ -60,12 +61,15 @@
 //       it is cut or filled more than `track.maxCut` metres — the
 //       kickers of R9 are the only stretches allowed steeper.
 //   R9  KICKERS ON THE TRACK. The loop carries `kickers.on.count` (1–3)
-//       crests that make jumps: a ramp of `kickers.on.ramp` metres rising
-//       `kickers.on.height` metres to a lip, steepest at the lip, and a
-//       landing of `kickers.on.landing` metres falling away past it. Each
+//       crests that make jumps: a ramp `kickers.on.ramp` times the lip's
+//       height long rising `kickers.on.height` metres to a lip, steepest at
+//       the lip, and a landing `kickers.on.landing` times the lip's height
+//       long falling away past it. Each
 //       stands on a stretch that turns no more than `kickers.on.straight`
 //       radians from the foot of its ramp to the end of its landing, where
-//       the line past the lip runs level or downhill; two stand at least
+//       the line comes up to the lip no steeper downhill than
+//       `kickers.on.approachGrade` and runs level or downhill past it — a
+//       brow before a descent; two stand at least
 //       `kickers.on.spacing` metres apart along the loop.
 //   R10 PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's
 //       width and fades to 0 over `track.shoulder.packed` metres beyond each
@@ -137,9 +141,9 @@ export const LEVEL_RULES = {
   /** R3 — the hills. */
   hills: {
     /** Peak-to-trough of the rolling hills, m. */
-    amplitude: { min: 22, max: 34 } as Band,
+    amplitude: { min: 30, max: 48 } as Band,
     /** Wavelength of the biggest hills, m. */
-    scale: 340,
+    scale: 320,
   },
   /** R3 — the ridges. */
   ridges: {
@@ -176,16 +180,20 @@ export const LEVEL_RULES = {
       count: { min: 1, max: 3 } as Band,
       /** Lip over the graded line, m. */
       height: { min: 1.4, max: 2.6 } as Band,
-      /** Ramp length, m. */
-      ramp: { min: 14, max: 22 } as Band,
-      /** Landing length, m. */
-      landing: { min: 26, max: 40 } as Band,
+      /** Ramp length as a multiple of the lip's height: 2/ratio is the
+       * ramp's slope at the lip. */
+      ramp: { min: 6.5, max: 9 } as Band,
+      /** Landing length as a multiple of the lip's height: 2/ratio is how
+       * steeply it falls away from the lip. */
+      landing: { min: 11, max: 16 } as Band,
       /** Most the line may turn from ramp foot to landing foot, rad. */
       straight: 0.3,
       /** Least arc length between two lips, m. */
       spacing: 450,
-      /** The line past the lip must run no steeper UP than this. */
+      /** The line past the lip must run no steeper UP than this … */
       landingGrade: 0.02,
+      /** … and the line up to it no steeper DOWN than this. */
+      approachGrade: -0.04,
     },
     /** Width over which a kicker's sides blend into the ground, m. */
     edge: 8,
@@ -199,6 +207,12 @@ export const LEVEL_RULES = {
     aim: { min: 2600, max: 3600 } as Band,
     /** Resampled point spacing, m. */
     step: 2,
+    /** The slow noise that bends the harmonic loop: displacement, m, and
+     * wavelength, m. */
+    warp: {
+      amount: { min: 40, max: 110 } as Band,
+      scale: { min: 140, max: 240 } as Band,
+    },
     separation: {
       /** Least map distance between two parts of the loop, m … */
       plan: 60,

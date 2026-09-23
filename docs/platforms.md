@@ -1,6 +1,6 @@
 # Platforms
 
-The repository is structured after its sibling games, which ship one product through many shells: web/PWA, desktop, and native mobile (App Store / Play Store). Powder Run adopts the same shape deliberately — the engine is headless and shell-agnostic, and every shell wraps the identical built site — and ships **the web today**, with the desktop app and the store app planned and their seams already in place.
+The repository is structured after its sibling games, which ship one product through many shells: web/PWA, desktop, and native mobile (App Store / Play Store). Powder Run adopts the same shape deliberately — the engine is headless and shell-agnostic, and every shell wraps the identical built site — and ships all three from one build: the web, a desktop app, and a store app.
 
 ## Web / PWA (`pwa/`)
 
@@ -14,17 +14,17 @@ The deployed site IS the product. It is installable (home-screen app on iOS/Andr
 
 Each slot is a whole build at its own base path with its own install identity, so the three can be installed side by side without fighting over one service-worker scope.
 
-## Desktop (`tauri/`) — planned
+## Desktop (`tauri/`)
 
-A thin Tauri wrapper around the built website for Windows, macOS and Linux: one window in the platform's own webview, the site bundled inside it and served from a private scheme, so it plays offline and is an app rather than a viewer for a web page. It follows the sibling jet-ski game's shape: two Rust crates, `shell/` for every decision (no GUI, testable on a bare toolchain) and `src-tauri/` for every effect.
+A thin Tauri wrapper around the built website for Windows, macOS and Linux: one window in the platform's own webview, the site bundled inside it and served from a private `game://` scheme, so it plays offline and is an app rather than a viewer for a web page. Two Rust crates, and the split is the design: `shell/` holds every decision (the scheme and host, the window's names, what the window may navigate to, the containment check on a request path, where the window opens and what it remembers, the launch log, the macOS menu bar as data) and needs no GUI to test; `src-tauri/` holds every effect. On macOS the menu bar's rows only press buttons the game already has — **Race** (restart, reset to the last checkpoint, pause), **View** (next camera, full screen) and **Help** (the website, privacy, support, opened in the browser).
 
-**What is already in place for it:** the root `package.json` names its `tauri*` scripts; `release.yml` carries a marked seam where the per-platform packaging matrix goes, between the draft release and its publish; and `pwa/src/shell-host.ts` — the one file of the app that knows a shell can exist — is already the page's side of the bridge. **What it will add:** the `tauri/` tree, its `make tauri*` targets, a `desktop-tauri.yml` workflow, and a `tests/tauri_test.ts` that reads the Rust as text to hold its restatement of the identity to `pwa/src/identity.ts`.
+`make tauri-test` runs the decision layer on a bare Rust toolchain, `make tauri-lint` is clippy over both crates (it needs the webview development libraries), `make tauri` builds and launches it and `make desktop` packages this machine's downloads. None of it is on `make test`'s path: `.github/workflows/desktop-tauri.yml` checks the tree on every push that touches it, and `release.yml`'s `desktop` matrix packages a download per platform onto every release, which stays a draft until all three are attached. `tests/tauri_test.ts` reads the Rust as text to hold its restatement of the identity (the name, the description, `BRAND_COLOR`, the site) and of the page's events and menu words to `pwa/src/identity.ts` and `pwa/src/shell-host.ts`. → [`tauri/README.md`](../tauri/README.md)
 
-## Native mobile (`native/`) — planned
+## Native mobile (`native/`)
 
-A thin Expo / React Native wrapper around the same built website: one full-screen WebView over a copy of the site packed inside the app and served from a local server on launch, so it plays offline and updates through the store, plus the phone's own haptics under the game's vibration table.
+A thin Expo / React Native wrapper around the same built website: one full-screen WebView over a copy of the site packed inside the app (`assets/webroot.zip`) and served from a local server on a fixed port, so it plays offline, keeps its settings' origin between launches and updates through the store. On top of the web game it adds only what a browser cannot give a phone: an audio session that plays through the ringer switch, the phone's haptics under the game's own vibration table, and off-site links handed to the system browser.
 
-**What is already in place for it:** the root `package.json` names its `native*` scripts, `tests/imports_test.ts` carries the (empty) `SHELL_SEAM` list its import-free seam modules will be named in, and `.prettierignore` / `.gitignore` already know its build output. **What it will add:** the `native/` tree outside the npm workspace, its `make native-*` targets, a dispatch-only EAS workflow, and the seam tests that hold the names it restates to the page's.
+Its dependency tree is its own, outside the npm workspace: `make native-install`, `make native-bundle` (before every build — the app ships whatever zip is on disk), `make native-typecheck`, `make native-ios` / `native-android` / `native-iphone`. Store builds go through EAS from `.github/workflows/native.yml`, dispatch-only because a build spends paid minutes and store credentials. The store identifier, the Expo project and the signing team are all read from the environment (`native/.env.example`); nothing personal is committed. The root suite holds its three import-free seam modules (`native/src/injected.ts`, `navigation.ts`, `rumble.ts` — `tests/imports_test.ts`'s `SHELL_SEAM`) through `tests/shell_test.ts` and `tests/rumble_test.ts`. → [`native/README.md`](../native/README.md), [`native/RELEASING.md`](../native/RELEASING.md)
 
 ## What the page knows about a shell
 
@@ -32,6 +32,7 @@ One file: `pwa/src/shell-host.ts`. Each shell's initialization script defines on
 
 ## Deliberate differences from the sibling repos
 
-- **No store listing.** Store metadata, a preflight and a screenshot sweep are out of the slice; they arrive, if ever, with the store app.
+- **No store listing.** Store metadata, a preflight and a screenshot sweep are out of the slice; the store app is built, but its listing is typed into the consoles by hand (`native/RELEASING.md`).
+- **No cloud save, no screenshot bridge.** The sibling jet-ski game's store app syncs a save through iCloud and presses the game's shutter when the phone takes a screenshot; this game's website has neither a save to sync nor a gallery, and a shell may only bridge to something the website already does.
 - **No modding seam.** Content is typed data in `engine/game/defs/` (the sled, the tuning). If content authoring outgrows TypeScript rows, the defs modules are already the seam.
 - **No multiplayer/server.** Maps are deterministic by seed, so the natural first social feature is asynchronous: a shared seed, then ghost times — no server shell until then.

@@ -97,7 +97,9 @@ function fbm(x: number, z: number, scale: number, octaves: number, seed: number)
 function ridged(x: number, z: number, scale: number, seed: number): number {
   const a = 1 - Math.abs(valueNoise(x, z, scale, seed) * 2 - 1);
   const b = 1 - Math.abs(valueNoise(x, z, scale * 0.5, seed + 31) * 2 - 1);
-  return (a * a * 0.7 + b * b * 0.3) ** 1.2;
+  const v = a * a * 0.7 + b * b * 0.3;
+  // v^1.25, sharpening the crests, without a pow.
+  return v * Math.sqrt(Math.sqrt(v));
 }
 
 function smoothstep(a: number, b: number, v: number): number {
@@ -111,6 +113,12 @@ function squareRadius(plan: TerrainPlan, x: number, z: number): number {
   const p = R.basin.rim.squareness;
   const dx = Math.abs(x - plan.cx);
   const dz = Math.abs(z - plan.cz);
+  if (p === 4) {
+    // The rule's own exponent, without a pow: it is asked of every cell.
+    const x2 = dx * dx;
+    const z2 = dz * dz;
+    return Math.sqrt(Math.sqrt(x2 * x2 + z2 * z2));
+  }
   return (dx ** p + dz ** p) ** (1 / p);
 }
 

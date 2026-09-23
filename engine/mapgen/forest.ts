@@ -21,7 +21,7 @@ import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { onKicker } from "./kickers.ts";
-import { nearestTrackPoint, type HasTrack } from "./query.ts";
+import { nearestWithin, type HasTrack } from "./query.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import type { Kicker, Spawn, TrackHit, TreeDef } from "./types.ts";
 
@@ -55,6 +55,7 @@ export function growForest(
   const hit: TrackHit = { index: 0, s: 0, distance: 0, lateral: 0, x: 0, z: 0 };
   const cells = Math.floor(R.world.size / F.spacing);
   const spawnClear2 = R.spawn.clear * R.spawn.clear;
+  const reach = R.track.width.max / 2 + F.corridor;
   for (let r = 0; r < cells; r++) {
     for (let c = 0; c < cells; c++) {
       // Four draws per cell whatever happens, so one refusal never shifts
@@ -81,9 +82,8 @@ export function growForest(
       if (Math.hypot(g.gx, g.gz) > F.maxSlope) continue;
       if ((x - spawn.x) ** 2 + (z - spawn.z) ** 2 < spawnClear2) continue;
       if (segmentDistance(x, z, spawn.x, spawn.z, lane.x, lane.z) < R.spawn.lane / 2) continue;
-      nearestTrackPoint(loop, x, z, hit);
-      const edge = loop.track.points[hit.index].width / 2;
-      if (hit.distance < edge + F.corridor) continue;
+      nearestWithin(loop, x, z, reach, hit);
+      if (hit.distance < loop.track.points[hit.index].width / 2 + F.corridor) continue;
       if (onKicker(kickers, x, z, 4)) continue;
       // Tall in the thick of a wood and low down, short at its edge and up
       // the flanks.

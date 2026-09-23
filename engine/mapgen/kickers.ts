@@ -27,7 +27,7 @@ import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { nearestTrackPoint } from "./query.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
-import type { Loop } from "./track.ts";
+import { trackOf, type Loop } from "./track.ts";
 import type { Kicker } from "./types.ts";
 
 /** The lift a kicker's profile adds `u` metres past its lip (negative on
@@ -63,8 +63,11 @@ export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
   // equally good crests does not always pick the same one.
   type Candidate = { index: number; score: number; ramp: number; landing: number };
   const candidates: Candidate[] = [];
-  const ramp = inBand(rng, K.ramp);
-  const landing = inBand(rng, K.landing);
+  // One size of kicker per map: the lip's height, and the ramp and the
+  // landing as multiples of it, so a taller lip keeps its slopes.
+  const height = inBand(rng, K.height);
+  const ramp = height * inBand(rng, K.ramp);
+  const landing = height * inBand(rng, K.landing);
   const back = Math.ceil((ramp + 10) / step);
   const ahead = Math.ceil((landing + 10) / step);
   for (let i = 0; i < n; i += 3) {
@@ -79,11 +82,15 @@ export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
       if (turned > hi) hi = turned;
     }
     if (hi - lo > K.straight) continue;
+    // A brow: the line comes up to the lip (or at least not down to it) and
+    // runs level or downhill past it.
     const yLip = pts[i].y;
+    const yFoot = pts[(i - Math.round(ramp / step) + n) % n].y;
     const yEnd = pts[(i + Math.round(landing / step)) % n].y;
+    const rise = (yLip - yFoot) / ramp;
     const fall = (yLip - yEnd) / landing;
-    if (-fall > K.landingGrade) continue;
-    candidates.push({ index: i, score: fall + rng.range(0, 0.04), ramp, landing });
+    if (-fall > K.landingGrade || rise < K.approachGrade) continue;
+    candidates.push({ index: i, score: rise + fall + rng.range(0, 0.04), ramp, landing });
   }
   candidates.sort((a, b) => b.score - a.score);
   const chosen: TrackKicker[] = [];
@@ -94,7 +101,7 @@ export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
       return Math.min(ds, loop.length - ds) >= K.spacing;
     });
     if (!clear) continue;
-    chosen.push({ index: c.index, height: inBand(rng, K.height), ramp: c.ramp, landing: c.landing });
+    chosen.push({ index: c.index, height, ramp: c.ramp, landing: c.landing });
   }
   chosen.sort((a, b) => a.index - b.index);
   for (const k of chosen) {
@@ -165,7 +172,7 @@ export function layOffKickers(
     const width = inBand(rng, K.width);
     const reach = Math.max(ramp, landing) + width / 2 + R.kickers.edge;
     if (rimAt(plan, x, z) > 0.02 || rimAt(plan, x, z + reach) > 0.05) continue;
-    const hit = nearestTrackPoint(loop, x, z);
+    const hit = nearestTrackPoint(trackOf(loop), x, z);
     if (hit.distance - reach < R.track.width.max / 2 + K.clearance) continue;
     if (out.some((k) => Math.hypot(k.x - x, k.z - z) < reach + Math.max(k.ramp, k.landing) + 20)) {
       continue;
