@@ -195,10 +195,59 @@ export type InputModel = {
   throttle: number;
   brake: number;
   lean: number;
+  /** The throttle and brake keys as the last step saw them — what a press
+   * IN THE AIR is told apart from a hold carried off the snow by. */
+  wasThrottle: boolean;
+  wasBrake: boolean;
+  /** Whether each of them is leaning the rider this flight (`airLean`). */
+  throttleLeans: boolean;
+  brakeLeans: boolean;
 };
 
 export function createInputModel(): InputModel {
-  return { steer: 0, throttle: 0, brake: 0, lean: 0 };
+  return {
+    steer: 0,
+    throttle: 0,
+    brake: 0,
+    lean: 0,
+    wasThrottle: false,
+    wasBrake: false,
+    throttleLeans: false,
+    brakeLeans: false,
+  };
+}
+
+/**
+ * THE THROTTLE AND THE BRAKE KEYS LEAN IN THE AIR. W is the gas and S the
+ * brake on the snow; off it they are also the rider's weight — W forward
+ * (nose down), S back (nose up) — so the hand already on them can set the
+ * sled's pitch for the landing. The lean keys proper (the arrows, Q / E)
+ * OVERRIDE them: while either is down the throttle and the brake keys lean
+ * nothing.
+ *
+ * ONLY A PRESS MADE IN THE AIR LEANS. Every rider holds the gas over every
+ * crest, and a hold carried off the lip that pitched the nose down would be
+ * a nose-in landing on every jump of a race (and, on a tricks run, a front
+ * flip thrown by accident at the lip). So the key has to go down while the
+ * sled is flying — let go and pressed again, or pressed fresh — and a
+ * landing hands it back to the engine alone.
+ *
+ * S leaning is S NOT BRAKING: the brake's own nose-down in the air
+ * (`flight.ts`'s gyro) would cancel most of the lean back it is asking for.
+ * W leaning keeps the gas on — its gyro is a sixth of the lean — so the
+ * engine is still wound when the snow comes back.
+ *
+ * Returns the lean the two keys ask for, -1..1, screen-space as the lean
+ * keys are (+1 back).
+ */
+export function airLean(model: InputModel, keys: KeysHeld, airborne: boolean): number {
+  const pressedThrottle = keys.throttle && !model.wasThrottle;
+  const pressedBrake = keys.brake && !model.wasBrake;
+  model.wasThrottle = keys.throttle;
+  model.wasBrake = keys.brake;
+  model.throttleLeans = airborne && keys.throttle && (model.throttleLeans || pressedThrottle);
+  model.brakeLeans = airborne && keys.brake && (model.brakeLeans || pressedBrake);
+  return (model.brakeLeans ? 1 : 0) - (model.throttleLeans ? 1 : 0);
 }
 
 /** One step's input: advance the keyboard ramps by `dt`, merge the thumbs
@@ -210,14 +259,19 @@ export function createInputModel(): InputModel {
  * under it would fight the hand. The throttle takes the DEEPER of key and
  * lever, and so does the brake; and then the brake WINS over the throttle,
  * because a rider reaching for the brake is not also asking to go faster,
- * whichever hand the other input came from. */
+ * whichever hand the other input came from.
+ *
+ * `airborne` is whether the sled being ridden is off the snow this step —
+ * the one thing about the run the keyboard's maths reads (`airLean`). */
 export function sampleInput(
   model: InputModel,
   keys: KeysHeld,
   touch: TouchChannel,
   dt: number,
   reset: boolean,
+  airborne = false,
 ): SledInput {
+  const keyAir = airLean(model, keys, airborne);
   const steerTarget = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
   model.steer = rampToward(model.steer, steerTarget, dt, KEY_STEER_ATTACK, KEY_STEER_RELEASE);
   model.throttle = rampToward(
@@ -229,12 +283,15 @@ export function sampleInput(
   );
   model.brake = rampToward(
     model.brake,
-    keys.brake ? 1 : 0,
+    keys.brake && !model.brakeLeans ? 1 : 0,
     dt,
     KEY_BRAKE_ATTACK,
     KEY_BRAKE_RELEASE,
   );
-  const leanTarget = (keys.leanBack ? 1 : 0) - (keys.leanForward ? 1 : 0);
+  const leanTarget =
+    keys.leanBack || keys.leanForward
+      ? (keys.leanBack ? 1 : 0) - (keys.leanForward ? 1 : 0)
+      : keyAir;
   model.lean = rampToward(model.lean, leanTarget, dt, KEY_LEAN_ATTACK, KEY_LEAN_RELEASE);
 
   const steer = touch.bar ? touch.steer : model.steer;

@@ -10,9 +10,10 @@
 // WHICH KEY DOES WHAT is `settings-input.ts`'s table (as shipped; OPTIONS ▸
 // KEYS rebinds it and `setBindings` hands the manager the answer), and
 // nothing in this file knows any particular key:
-//   W / ↑        throttle             S / ↓ / Space   brake
-//   A / ←  D / → steer                E / Shift       lean back (nose up)
-//   Q / Z        lean forward         R               back to the checkpoint
+//   W            throttle             S / Space       brake
+//   A / ←  D / → steer                ↓ / E / Shift   lean back (nose up)
+//   ↑ / Q / Z    lean forward         R               back to the checkpoint
+//   (and in the air, W and S pressed there lean too — `airLean`)
 //   B            restart the race     C               next camera
 //   Escape       hold the race under the pause card (menu-pause.tsx);
 //                pressing it again over the card resumes, because the card's
@@ -44,8 +45,10 @@ import {
 export type { InputAction };
 
 export type InputManager = {
-  /** Produce this step's input; advances the ramps by `dt`. */
-  sample: (dt: number) => SledInput;
+  /** Produce this step's input; advances the ramps by `dt`. `airborne` is
+   * whether the player's sled is off the snow, where the throttle and brake
+   * keys lean (`input-model.ts`'s `airLean`). */
+  sample: (dt: number, airborne?: boolean) => SledInput;
   /** The thumb zones write here at pointer rate (screen-space). */
   touch: TouchChannel;
   /** Queue a reset — the HUD button, the R key and the shell's menu row all
@@ -146,8 +149,8 @@ export function createInputManager(
   target.document.addEventListener("visibilitychange", onBlur);
 
   return {
-    sample: (dt) => {
-      const input = sampleInput(model, keys, touch, dt, reset);
+    sample: (dt, airborne = false) => {
+      const input = sampleInput(model, keys, touch, dt, reset, airborne);
       reset = false;
       return input;
     },

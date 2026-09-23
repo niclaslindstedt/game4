@@ -70,17 +70,17 @@ export function isHeldAction(action: KeyAction): action is HeldAction {
 /**
  * THE KEYBOARD AS IT SHIPS.
  *
- * TWO HANDS, EITHER CLUSTER: WASD and the arrows are the same machine, so
- * a player sits at whichever their hand already knows — W / ↑ is the thumb
- * throttle, S / ↓ the brake lever, A D / ← → the bars. SPACE is a second
- * brake because it is where a hand that has never played this reaches
- * first.
+ * THE LEFT HAND DRIVES, THE RIGHT HAND FLIES. W is the thumb throttle and
+ * S the brake lever (SPACE a second brake, because it is where a hand that
+ * has never played this reaches first); A D and ← → are both the bars.
  *
  * THE LEAN is the rider's own body, and in the air it is the pitch control:
- * E or SHIFT leans BACK (nose up — the landing saved off a big kicker),
- * Q or Z leans forward (nose down). Shift and Z sit under the left hand of
- * an arrow player; Q and E either side of W for the WASD hand. Never Ctrl:
- * Ctrl held beside W is a closed tab.
+ * ↑ leans forward (nose down), ↓ leans back (nose up — the landing saved off
+ * a big kicker), so the hand on the arrows tips the sled the way the key
+ * points. Q / Z forward and E / SHIFT back are the same lean for a hand on
+ * WASD. And W and S pressed IN THE AIR lean too — forward and back — for a
+ * rider who never lifts that hand (`input-model.ts`'s `airLean`); a lean
+ * key held over them wins. Never Ctrl: Ctrl held beside W is a closed tab.
  *
  * THE TRICK BUTTON, held in the air on a tricks run, takes the rider's
  * body off the controls and into a pose: F beside the WASD hand's lean
@@ -93,12 +93,13 @@ export function isHeldAction(action: KeyAction): action is HeldAction {
  * it. C walks the camera ladder; Escape holds the race under the pause card.
  */
 export const DEFAULT_KEYS: KeyBindings = {
-  throttle: ["KeyW", "ArrowUp"],
-  brake: ["KeyS", "ArrowDown", "Space"],
+  throttle: ["KeyW"],
+  brake: ["KeyS", "Space"],
   left: ["KeyA", "ArrowLeft"],
   right: ["KeyD", "ArrowRight"],
-  leanBack: ["KeyE", "ShiftLeft", "ShiftRight"],
-  leanForward: ["KeyQ", "KeyZ"],
+  // The arrow FIRST: it is the one the front door's key line prints.
+  leanBack: ["ArrowDown", "KeyE", "ShiftLeft", "ShiftRight"],
+  leanForward: ["ArrowUp", "KeyQ", "KeyZ"],
   trick: ["KeyF", "KeyX"],
   reset: ["KeyR"],
   restart: ["KeyB"],
@@ -114,7 +115,26 @@ export const DEFAULT_KEYS: KeyBindings = {
   pause: ["Escape"],
 };
 
-/** How many keys one action may carry. The defaults' longest is three; the
+/** THE ROWS AN EARLIER BUILD SHIPPED, where they differ from today's. A
+ * stored blob is the WHOLE layout, rebound or not, so a rider who never
+ * opened OPTIONS ▸ KEYS would otherwise keep the arrows on the throttle
+ * forever; a row that still reads exactly as it shipped is taken to be the
+ * shipped row and moves with it (`mergeKeys`). A row the rider rebound is
+ * theirs and is left alone. */
+const SHIPPED_BEFORE: Partial<Record<KeyAction, readonly (readonly string[])[]>> = {
+  throttle: [["KeyW", "ArrowUp"]],
+  brake: [["KeyS", "ArrowDown", "Space"]],
+  leanBack: [["KeyE", "ShiftLeft", "ShiftRight"]],
+  leanForward: [["KeyQ", "KeyZ"]],
+};
+
+function wasShipped(action: KeyAction, codes: readonly string[]): boolean {
+  return (SHIPPED_BEFORE[action] ?? []).some(
+    (row) => row.length === codes.length && row.every((code, i) => code === codes[i]),
+  );
+}
+
+/** How many keys one action may carry. The defaults' longest is four; the
  * ceiling is only here so a hand-written blob cannot hand the manager a
  * thousand codes to walk on every keystroke. */
 export const KEYS_PER_ACTION = 4;
@@ -174,7 +194,8 @@ export function freshKeys(): KeyBindings {
 
 /** A stored blob's bindings, checked against the actions THIS build has,
  * the `mergeSettings` rule: an action this build dropped is dropped, a code
- * that is not a string is dropped, and anything left over is the default. */
+ * that is not a string is dropped, and anything left over is the default —
+ * as is a row still exactly as an earlier build shipped it (`SHIPPED_BEFORE`). */
 export function mergeKeys(parsed: unknown): KeyBindings {
   const keys = freshKeys() as Record<KeyAction, string[]>;
   if (!parsed || typeof parsed !== "object") return keys;
@@ -185,6 +206,7 @@ export function mergeKeys(parsed: unknown): KeyBindings {
     const clean = codes.filter(
       (code): code is string => typeof code === "string" && code.length > 0,
     );
+    if (wasShipped(action, clean)) continue;
     keys[action] = [...new Set(clean)].slice(0, KEYS_PER_ACTION);
   }
   return keys;

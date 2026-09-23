@@ -442,7 +442,7 @@ export function App() {
     const inputFor = () =>
       preroll || params.bot || !playerRides(shellRef.current)
         ? botInput(state)
-        : manager.sample(TUNING.dt);
+        : manager.sample(TUNING.dt, state.sled.airborne);
 
     // The minimap's payload is left off: it carries the level itself, which
     // a lab would be handed across the page boundary whole.
