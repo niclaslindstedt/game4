@@ -56,7 +56,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "pwa", "dist");
 const outDir = join(root, "previews");
 
-/** Every sky R18 deals, for `--weather all` (`WEATHER_KINDS`). */
+/** Every sky R19 deals, for `--weather all` (`WEATHER_KINDS`). */
 const WEATHERS = ["clear", "fair", "high", "overcast", "snow", "fog"];
 
 /** THE STAGED MOMENTS of a race, as seconds into it — the whole of what a

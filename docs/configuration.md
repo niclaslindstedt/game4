@@ -18,7 +18,7 @@ The running game reads its situation off the URL, which is what makes a map a li
 | `camera`      | The race's camera rung: `hood`, `bars`, `chase`, `far`, `high`.                                                                                                             |
 | `sled`        | The player's machine for this visit — `trail`, `crossover`, `mountain`, `cross` — over the stored pick and never written back (a pick on the sled card replaces it).        |
 | `menu=root`   | Open on the front door rather than the attract card; `menu=sled` the sled card, `menu=start` the free ride's start card, `menu=options` OPTIONS, `menu=keys` its KEYS page. |
-| `weather`     | Ride the map under this sky instead of the one R18 dealt it — `clear`, `fair`, `high`, `overcast`, `snow`, `fog` (`withSky`); the map itself is the seed's.                 |
+| `weather`     | Ride the map under this sky instead of the one R19 dealt it — `clear`, `fair`, `high`, `overcast`, `snow`, `fog` (`withSky`); the map itself is the seed's.                 |
 | `hour`        | ...and from this solar start hour, 0–24 — how a lab stands a race in the dark.                                                                                              |
 | `video`       | Draw this visit at a picture preset — `low`, `medium`, `high` — without storing it: how a lab meters or photographs a rung.                                                 |
 | `probe=0`     | Do not time the machine on this visit: the first-visit probe may move an untouched picture, and a lab wants it held still.                                                  |

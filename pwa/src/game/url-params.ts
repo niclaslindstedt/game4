@@ -30,7 +30,7 @@
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
 //                   the sled card RACE opens; `start` on the free ride's
 //                   start card.
-//   ?weather=<kind> ride the map under this sky instead of the one R18
+//   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
 //   ?hour=<h>       ...and from this solar start hour (0–24), so a lab can

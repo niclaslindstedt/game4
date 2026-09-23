@@ -2,7 +2,7 @@
 // THE DOME — a sphere round the lens painted with `skyColour` (haze.ts),
 // and over it what the weather and the hour put there: the sun's disc, the
 // moon's (lit as its phase says), the stars, and one layer of cloud of the
-// genus R18's sky calls for — fair-weather heaps, high streaks, or a lid.
+// genus R19's sky calls for — fair-weather heaps, high streaks, or a lid.
 // It goes through the same tone mapping and output conversion as every lit
 // surface, which is what lets the haze meet it without a seam.
 //

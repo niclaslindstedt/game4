@@ -1,6 +1,6 @@
 ---
 name: atmosphere
-description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's tight shadow box that follows the lens — and over that the WEATHER R18 deals (clear, fair, high cloud, overcast, falling snow, valley fog), its cloud, its falling snow and spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars, the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, R15 in `mapgen/sun.ts` and R18 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
+description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's tight shadow box that follows the lens — and over that the WEATHER R19 deals (clear, fair, high cloud, overcast, falling snow, valley fog), its cloud, its falling snow and spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars, the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, R15 in `mapgen/sun.ts` and R19 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
 ---
 
 # The atmosphere: the sun, the sky and the haze
@@ -11,7 +11,7 @@ decides the palette, the sky's blue decides what colour a shadow on snow is,
 the haze decides how far the mountains read. A change here moves every
 picture in the game.
 
-**A MAP IS DEALT ONE SKY AT ONE HOUR** (R15, R18): a seeded day at a seeded
+**A MAP IS DEALT ONE SKY AT ONE HOUR** (R15, R19): a seeded day at a seeded
 latitude, one of six weathers off a stream of its own, and on a quarter of
 the maps an evening start that rides from the last of the sun into the dark.
 What changes over a race is the sun's (and the moon's) height alone. A
@@ -31,7 +31,7 @@ engine has an opinion about colour.
 | The map's day: a latitude (46–64°N), a day of the year (mid-January to mid-March) and a starting solar hour (9–16 h) at which the sun is at least `sun.minElevation` up (R15) | `engine/mapgen/sun.ts` (`dealSun`, `declinationOf`), `LEVEL_RULES.sun` |
 | The hour the race has REACHED — TEN MINUTES OF RIDING IS ONE HOUR OF SUN, so the shadows visibly swing over a race | `sunHourAt(level, t)`, `sunAtRun(level, t)`, `SUN_SECONDS_PER_HOUR` in `engine/game/clock.ts` |
 | The moon: its place and its phase off the map's day (a nominal year, so R15's two months carry two lunations) | `moonAtRun(level, t)`, `moonAgeOn` in `clock.ts` over `lib/solar.ts`'s `moonAt` |
-| THE WEATHER (R18): the sky, the fall, the fog, the mean wind and its bearing, the evening — dealt last off its own stream so it moves nothing the map builds | `engine/mapgen/weather.ts` (`dealWeather`, `weatherOf`, `weatherFor`, `withSky`), `LEVEL_RULES.weather` |
+| THE WEATHER (R19): the sky, the fall, the fog, the mean wind and its bearing, the evening — dealt last off its own stream so it moves nothing the map builds | `engine/mapgen/weather.ts` (`dealWeather`, `weatherOf`, `weatherFor`, `withSky`), `LEVEL_RULES.weather` |
 | The wind at a moment: the mean breathing in gusts, veering — a PURE function of (level, t), drawing nothing from `state.rng`, read by nothing in the physics | `windAt` in `engine/game/wind.ts` |
 | The astronomy: the sun's elevation and bearing at an hour, a latitude and a declination | `engine/lib/solar.ts` (`sunAt`) — the generic pool |
 

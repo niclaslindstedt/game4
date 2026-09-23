@@ -4,7 +4,7 @@
 
 export * from "./types.ts";
 export { generateLevel, subSeed } from "./generate.ts";
-export { LEVEL_RULES, inBand, withinBand, type Band } from "./rules.ts";
+export { LEVEL_RULES, bermCrest, bermProfile, inBand, withinBand, type Band } from "./rules.ts";
 export {
   nearestTrackPoint,
   nearestWithin,

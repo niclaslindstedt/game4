@@ -46,7 +46,7 @@ icons:
 world:
 	npm run world -- $(if $(SEED),--seed $(SEED),) $(ARGS)
 
-# THE SKY LAB: every weather (R18) against every three hours of the clock,
+# THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact
 # sheet — previews/sky-<seed>.png. Its own one-off bundle from
 # pwa/sky-preview.html (never deployed); needs a Chromium like `world`.

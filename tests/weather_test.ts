@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// R18 — THE WEATHER, and the night it may bring: which sky a map is dealt,
+// R19 — THE WEATHER, and the night it may bring: which sky a map is dealt,
 // that dealing it moves nothing the map builds, the evening start R15 now
 // allows, the wind as a pure field, the moon — and the sky's colour model
 // answering to all of it (`pwa/src/game/sky.ts`, three-free).
@@ -29,7 +29,7 @@ import { syntheticLevel } from "./support/synthetic.ts";
 const R = LEVEL_RULES.weather;
 const DAY = { hour: 12, dayOfYear: 40, latitude: 58 };
 
-describe("R18 — the weather is dealt", () => {
+describe("R19 — the weather is dealt", () => {
   const N = 4000;
   const dealt = Array.from({ length: N }, (_, i) => dealWeather((i * 2654435761) >>> 0, DAY));
 
@@ -75,13 +75,13 @@ describe("R18 — the weather is dealt", () => {
     for (const d of dealt.filter((x) => !x.weather.evening)) expect(d.hour).toBe(DAY.hour);
   });
 
-  it("publishes a weather on every map, clean under R15 and R18", () => {
+  it("publishes a weather on every map, clean under R15 and R19", () => {
     let dark = 0;
     for (const seed of LEVEL_SEEDS) {
       const level = levelFor(seed);
       expect(WEATHER_KINDS).toContain(level.weather.kind);
       const findings = analyzeLevel(level).findings.filter(
-        (f) => f.rule === "R15" || f.rule === "R18",
+        (f) => f.rule === "R15" || f.rule === "R19",
       );
       expect(findings).toEqual([]);
       if (sunAtRun(level, 0).elevation < -0.1) dark++;

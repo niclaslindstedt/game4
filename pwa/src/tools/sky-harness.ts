@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE SKY LAB's page (driven by `scripts/sky-preview.mjs`): one seed stood
 // up and drawn through the game's own renderer from ONE place, under every
-// weather R18 deals at every few hours of the clock, laid out as a single
+// weather R19 deals at every few hours of the clock, laid out as a single
 // labelled contact sheet — rows the weathers, columns the hours.
 //
 // It exists because a map is dealt ONE sky at ONE hour, so a screenshot of a

@@ -25,7 +25,7 @@
 //   SNOW    how deep the powder is (`SNOW_DIAL`), read as the sink a sled
 //           standing in it takes.
 //
-//   WEATHER the sky (R18): the map's own (AS DEALT), or one of the six at
+//   WEATHER the sky (R19): the map's own (AS DEALT), or one of the six at
 //           its typical numbers (`weatherFor`). It names no hour: the hour
 //           is TIME's alone, so the two rows cannot disagree.
 //
@@ -66,7 +66,7 @@ import { STRINGS } from "./strings.ts";
  * seed the stream takes, and the row clamps what it is typed. */
 export const SEED_RANGE = { min: 1, max: 999_999 } as const;
 
-/** The WEATHER row's stops: the map's own sky, then R18's six. */
+/** The WEATHER row's stops: the map's own sky, then R19's six. */
 const WEATHER_STOPS: { id: "dealt" | WeatherKind; label: string }[] = [
   { id: "dealt", label: STRINGS.weatherDealt },
   ...WEATHER_KINDS.map((kind) => ({ id: kind, label: STRINGS.weatherNames[kind] })),

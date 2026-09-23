@@ -70,7 +70,7 @@ export type CreateGameOptions = {
   /** The day to ride the map on instead of the one R15 dealt: an hour of
    * solar time and a day of the year, either or both (`withDay`). */
   day?: { hour?: number | null; dayOfYear?: number | null };
-  /** Ride the map under this sky instead of the one R18 dealt it
+  /** Ride the map under this sky instead of the one R19 dealt it
    * (`withSky`). Applied AFTER `day`: the day owns the date and the
    * daylight hour a rider picks; `sky.hour` is a lab's or a link's, never
    * held to daylight, and wins over `day.hour` when both are given — so a

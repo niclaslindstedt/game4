@@ -87,15 +87,15 @@ export interface Level {
   /** Every stretch of the loop lying under a drift (R17), in the order they
    * are ridden. */
   drifts?: Drift[];
-  /** The sky the map is ridden under (R18). A hand-built level without one
+  /** The sky the map is ridden under (R19). A hand-built level without one
    * is ridden under `CLEAR_WEATHER` — ask `weatherOf`, never this field. */
   weather?: Weather;
 }
 
-/** The skies R18 deals, lightest first. */
+/** The skies R19 deals, lightest first. */
 export type WeatherKind = "clear" | "fair" | "high" | "overcast" | "snow" | "fog";
 
-/** The weather a map is ridden under (R18): the word and its numbers. What a
+/** The weather a map is ridden under (R19): the word and its numbers. What a
  * sky LOOKS like is the app's; the engine says only what is in the air. */
 export interface Weather {
   kind: WeatherKind;
@@ -107,7 +107,7 @@ export interface Weather {
   wind: number;
   /** The world heading the wind blows FROM (heading convention). */
   windFrom: number;
-  /** Whether R18 sent this map out in the evening (R15's exception). */
+  /** Whether R19 sent this map out in the evening (R15's exception). */
   evening: boolean;
 }
 
@@ -161,7 +161,7 @@ export interface GenerateOptions {
   /** Laps a race on this map is ridden over (default R16's). */
   laps?: number;
   /** Ride the map under this sky and from this hour instead of the ones
-   * R15 and R18 dealt (`withSky`). Applied AFTER the search accepts the
+   * R15 and R19 dealt (`withSky`). Applied AFTER the search accepts the
    * map, so it moves nothing the map builds. */
   sky?: SkyOverride;
 }

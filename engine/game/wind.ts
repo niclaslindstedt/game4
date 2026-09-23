@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE WIND — the air over the snow at run time: the mean R18 dealt, from
+// THE WIND — the air over the snow at run time: the mean R19 dealt, from
 // the bearing it dealt, breathing in gusts and veering a little about it.
 //
 // A PURE FUNCTION OF (level, t). The gusts are a sum of slow sines whose

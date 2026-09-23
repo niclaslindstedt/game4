@@ -166,7 +166,7 @@ export const STRINGS = {
   startWeather: "WEATHER",
   startWeatherHint:
     "The sky over the ride: the map's own, or clear, fair, high cloud, overcast (flat light, the bumps hard to read), falling snow or a valley fog.",
-  /** The WEATHER row's stops: the map's own first, then R18's six. */
+  /** The WEATHER row's stops: the map's own first, then R19's six. */
   weatherDealt: "AS DEALT",
   weatherNames: {
     clear: "CLEAR",

@@ -7,7 +7,7 @@
 // TEN MINUTES OF RIDING IS ONE HOUR OF SUN. A race is a handful of minutes:
 // at ten to one the shadows visibly swing over a race without a run started
 // at three in the afternoon riding into the dark. The dark is the EVENING
-// R18 deals a quarter of the maps (R15's exception) — a start hour after
+// R19 deals a quarter of the maps (R15's exception) — a start hour after
 // sunset, and the moon then the only light in the sky.
 
 import { moonAt, sunAt, type MoonPlace, type SunPlace } from "../lib/solar.ts";

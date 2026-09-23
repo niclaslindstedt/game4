@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// R18 — THE WEATHER: which sky a map is ridden under, how hard it is
+// R19 — THE WEATHER: which sky a map is ridden under, how hard it is
 // snowing out of it, how thick the fog lies, how the wind blows — and
 // whether the race is ridden in the evening (R15's exception).
 //
@@ -52,7 +52,7 @@ export function weatherOf(level: Pick<Level, "weather">): Weather {
   return level.weather ?? CLEAR_WEATHER;
 }
 
-/** Whether this sky has a LID over it — the flat light R18 names. */
+/** Whether this sky has a LID over it — the flat light R19 names. */
 export function hasLid(kind: WeatherKind): boolean {
   return kind === "overcast" || kind === "snow";
 }
@@ -93,7 +93,7 @@ export function sunsetOf(sun: { dayOfYear: number; latitude: number }): number {
   return w ? w.max : 12;
 }
 
-/** R18 — deal the weather, and the evening start it may bring. `sub` is the
+/** R19 — deal the weather, and the evening start it may bring. `sub` is the
  * attempt's sub-seed; `sun` is the day R15 dealt. */
 export function dealWeather(
   sub: number,

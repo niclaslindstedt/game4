@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE SKY LAB — every weather R18 deals against every few hours of the
+// THE SKY LAB — every weather R19 deals against every few hours of the
 // clock, day and night, on ONE seed seen from ONE place, as a single
 // labelled contact sheet: `previews/sky-<seed>.png`.
 //

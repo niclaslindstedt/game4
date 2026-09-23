@@ -52,7 +52,7 @@ export type FreeRide = {
   /** Where on the chart the ride starts, on the seed it was picked on; null
    * is the grid. */
   spot: { seed: number; x: number; z: number } | null;
-  /** The sky to ride under (R18's kinds, at their typical numbers —
+  /** The sky to ride under (R19's kinds, at their typical numbers —
    * `weatherFor`); null is the one the map was dealt. */
   weather: WeatherKind | null;
 };

@@ -26,7 +26,7 @@
 //      own, so they thin the packed field and move nothing else
 //   7. the forest (R14), which keeps clear of everything above
 //   8. the day (R15)
-//   9. the weather (R18) — off a stream of its own, last, so it moves
+//   9. the weather (R19) — off a stream of its own, last, so it moves
 //      nothing above; an evening it deals moves only the day's start hour
 
 import { createRng } from "../lib/prng.ts";

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE WINTER SKY, as numbers. Where the sun and the moon stand at the hour
 // the run has reached (`sunAtRun`, `moonAtRun` — one engine clock), what
-// weather R18 dealt, and what colour everything the sky lights is at that
+// weather R19 dealt, and what colour everything the sky lights is at that
 // hour under that weather: the dome's zenith and horizon, the sun's own
 // colour through the air it has to cross, the key light (the sun by day,
 // the moon by night), the two halves of the hemisphere light, the cloud,
@@ -36,7 +36,7 @@
 //     twilight — and the key light passes to the MOON, as bright as its
 //     phase and its height say. The night is lifted past honest so moonlit
 //     snow reads at racing pace; the sleds' lamps are the rest.
-//   * THE WEATHER (R18). Cloud dims and cools the key; a LID (overcast, a
+//   * THE WEATHER (R19). Cloud dims and cools the key; a LID (overcast, a
 //     fall, a fog) takes the key down to a glow, turns the dome to its own
 //     grey and the hemisphere to a flat, shadowless light — which is what
 //     `flat` tells the snow's shader, so it keeps the bumps readable, but
@@ -109,7 +109,7 @@ export type SkyLook = {
   glitter: number;
   /** How far on the sleds' lamps are, 0 (off: broad day) … 1. */
   lamps: number;
-  /** How hard it is snowing and how thick the fog is (R18), 0..1. */
+  /** How hard it is snowing and how thick the fog is (R19), 0..1. */
   snowfall: number;
   fog: number;
 };

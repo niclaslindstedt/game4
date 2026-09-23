@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE SNOW IN THE AIR: the fall R18 deals, and the spindrift the wind lifts
+// THE SNOW IN THE AIR: the fall R19 deals, and the spindrift the wind lifts
 // off the ridges. Both are carried by the engine's own wind (`windAt`), so
 // the flakes, the drift off a crest and the cloud overhead all go the same
 // way at the same pace.

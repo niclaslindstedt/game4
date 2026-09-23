@@ -30,14 +30,15 @@
 // exactly where it was. A light blur afterwards rounds the joins (a mean of
 // shifted copies keeps the bound). The kickers (R9, kickers.ts) are then
 // added on top of that profile, and `stampCorridor` presses the finished
-// line into the ground: level across the width and the flat shoulder, a bank
-// back into the country past it, and the packed field of R10.
+// line into the ground: level across the width, the flat shoulder and the
+// bench past it, the plough's berm along each edge on that bench (R18), a
+// bank back into the country behind it, and the packed field of R10.
 
 import { TAU, smoothstep } from "../lib/math.ts";
 import { sampleField, createHeightfield, type Heightfield } from "../lib/heightfield.ts";
 import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
-import { LEVEL_RULES as R, inBand } from "./rules.ts";
+import { LEVEL_RULES as R, bermCrest, bermProfile, inBand } from "./rules.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import type { TrackPoint } from "./types.ts";
 import { selfCrossings } from "../analysis/crossings.ts";
@@ -163,7 +164,8 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   if (gap < R.track.separation.plan)
     return `two stretches of the loop pass ${gap.toFixed(0)} m apart`;
   // R2 — the whole corridor, bank and all, stays on the basin floor.
-  const reach = R.track.width.max / 2 + R.track.shoulder.flat + R.track.bank.max + 10;
+  const reach =
+    R.track.width.max / 2 + R.track.shoulder.flat + R.berm.width + R.track.bank.max + 10;
   for (const p of points) {
     const dx = p.x - cx;
     const dz = p.z - cz;
@@ -340,12 +342,14 @@ export type Corridor = {
   readonly along: Float32Array;
 };
 
-/** R8, R10 — press the finished line into the ground: level across the
- * width and the flat shoulder, a bank back to the country past it, and the
- * packed field. Writes `ground` in place. */
+/** R8, R10, R18 — press the finished line into the ground: level across
+ * the width, the flat shoulder and the bench past it, the plough's berm on
+ * that bench, a bank back to the country behind it, and the packed field.
+ * Writes `ground` in place. */
 export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
   const pts = loop.points;
   const n = pts.length;
+  const step = loop.length / n;
   const cols = ground.cols;
   const rows = ground.rows;
   const cell = ground.cell;
@@ -355,7 +359,7 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
   const along = new Float32Array(cells);
   const target = new Float32Array(cells);
   const half = new Float32Array(cells);
-  const reachMax = R.track.width.max / 2 + R.track.shoulder.flat + R.track.bank.max;
+  const reachMax = R.track.width.max / 2 + R.track.shoulder.flat + R.berm.width + R.track.bank.max;
   for (let i = 0; i < n; i++) {
     const a = pts[i];
     const b = pts[(i + 1) % n];
@@ -391,7 +395,10 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
     const d = dist[o];
     if (d === Infinity) continue;
     const hw = half[o];
-    const flat = hw + R.track.shoulder.flat;
+    // R18 — the bench the berm stands on is level too; the bank starts
+    // behind it.
+    const toe = hw + R.track.shoulder.flat;
+    const flat = toe + R.berm.width;
     const delta = target[o] - g[o];
     const bank = Math.min(
       R.track.bank.max,
@@ -399,6 +406,8 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
     );
     const w = d <= flat ? 1 : 1 - smoothstep(flat, flat + bank, d);
     g[o] += w * delta;
+    if (d > toe && d < flat)
+      g[o] += bermProfile(bermCrest((near[o] + along[o]) * step, loop.length), d - toe);
     p[o] = d <= hw ? 1 : 1 - smoothstep(hw, hw + R.track.shoulder.packed, d);
   }
   return { packed, near, along };
