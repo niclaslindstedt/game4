@@ -211,31 +211,3 @@ export function mergeKeys(parsed: unknown): KeyBindings {
   }
   return keys;
 }
-
-/** A code as the front door's key line prints it: short, because six of
- * them share one line — the arrows as arrows, everything else its cap. */
-function capOf(code: string): string {
-  const arrows: Record<string, string> = {
-    ArrowUp: "↑",
-    ArrowDown: "↓",
-    ArrowLeft: "←",
-    ArrowRight: "→",
-  };
-  return arrows[code] ?? keyLabel(code);
-}
-
-/** THE FRONT DOOR'S LINE OF KEYS, off the bindings in force — so a rider
- * who has moved the throttle reads where they moved it to. The first key of
- * each action; a pair where one line stands for two (steer, lean). */
-export function keysLine(keys: KeyBindings): string {
-  const first = (action: KeyAction): string => (keys[action][0] ? capOf(keys[action][0]) : "–");
-  const W = STRINGS.menuKeyWords;
-  return STRINGS.menuKeys([
-    { cap: first("throttle"), does: W.throttle },
-    { cap: first("brake"), does: W.brake },
-    { cap: `${first("left")} ${first("right")}`, does: W.steer },
-    { cap: `${first("leanForward")}/${first("leanBack")}`, does: W.lean },
-    { cap: first("reset"), does: W.reset },
-    { cap: first("camera"), does: W.camera },
-  ]);
-}

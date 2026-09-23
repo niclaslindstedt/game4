@@ -119,10 +119,10 @@ export function isGameMode(value: unknown): value is GameMode {
 }
 
 /** THE TIME TRIAL'S NUMBERS: the race's lights, nobody else on the snow,
- * and the two lengths it is offered at — the race's three laps, or one. */
+ * and the one length it is offered at — the race's three laps. */
 export const TIME_TRIAL = {
   countdown: RACE.countdown,
-  laps: [3, 1] as readonly number[],
+  laps: [3] as readonly number[],
 } as const;
 
 /** The time trial as a rider is dealt it: the lights and the loop, alone. */

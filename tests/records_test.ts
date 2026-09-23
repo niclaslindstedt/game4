@@ -18,7 +18,7 @@ import {
   type RecordKey,
   type RunRecord,
 } from "../pwa/src/game/records.ts";
-import { freshSettings, mergeSettings, nextTrialLaps } from "../pwa/src/game/settings.ts";
+import { freshSettings, mergeSettings } from "../pwa/src/game/settings.ts";
 import { takeSnapshot } from "../pwa/src/game/snapshot.ts";
 import { readParams } from "../pwa/src/game/url-params.ts";
 import { syntheticLevel } from "./support/synthetic.ts";
@@ -49,12 +49,10 @@ describe("the modes", () => {
     expect(run.rules).toEqual(MODE_RULES.race(run.level.laps));
   });
 
-  it("the trial's length is three laps or one, walked on the front door and stored", () => {
-    expect(TIME_TRIAL.laps).toEqual([3, 1]);
+  it("the trial is always three laps; a stored one-lap length is read back as three", () => {
+    expect(TIME_TRIAL.laps).toEqual([3]);
     expect(freshSettings().trialLaps).toBe(3);
-    expect(nextTrialLaps(3)).toBe(1);
-    expect(nextTrialLaps(1)).toBe(3);
-    expect(mergeSettings({ trialLaps: 1 }).trialLaps).toBe(1);
+    expect(mergeSettings({ trialLaps: 1 }).trialLaps).toBe(3);
     expect(mergeSettings({ trialLaps: 2 }).trialLaps).toBe(3);
     expect(mergeSettings({ trialLaps: "1" }).trialLaps).toBe(3);
   });

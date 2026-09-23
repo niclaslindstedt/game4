@@ -187,18 +187,6 @@ export const STRINGS = {
   pauseSubTricks: (seed: number, points: number): string =>
     `SEED ${seed} · TRICKS · ${points.toLocaleString("en-US")} PTS`,
   menuSound: (on: boolean): string => (on ? "SOUND ON" : "SOUND OFF"),
-  /** The front door's line of keys, off the bindings the rider has: each
-   * part is a key's cap and what it does. */
-  menuKeys: (parts: readonly { cap: string; does: string }[]): string =>
-    parts.map((p) => `${p.cap} ${p.does}`).join(" · "),
-  menuKeyWords: {
-    throttle: "throttle",
-    brake: "brake",
-    steer: "steer",
-    lean: "lean",
-    reset: "reset",
-    camera: "camera",
-  },
 
   menuOptions: "OPTIONS",
   menuBack: "BACK",
@@ -430,7 +418,6 @@ export const STRINGS = {
     `BEST ${formatTime(seconds)} · ${sled.toUpperCase()}`,
   menuTrialNoBest: "NO TIME SET YET",
   /** The chip that walks the trial's length. */
-  menuTrialLaps: (laps: number): string => `TRIAL ${laps} ${laps === 1 ? "LAP" : "LAPS"}`,
   /** The gap to the record at a crossing: `-0.42` ahead, `+1.30` behind. */
   gap: (seconds: number): string => `${seconds < 0 ? "−" : "+"}${Math.abs(seconds).toFixed(2)}`,
   gapLabel: "VS BEST",
