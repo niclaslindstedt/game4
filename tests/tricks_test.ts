@@ -15,6 +15,7 @@ import {
   TUNING,
   airPointsPerSecond,
   analyzeLevel,
+  botInput,
   createGame,
   generateLevel,
   lengthPointsPerMetre,
@@ -27,9 +28,11 @@ import {
   type RunMoment,
   type SledInput,
 } from "@engine";
+import { snapInput } from "../pwa/src/game/ghost.ts";
+import { createReplayRig, keepsReplay } from "../pwa/src/game/replay.ts";
 import { comboLine } from "../pwa/src/game/strings.ts";
 import { comboTile } from "../pwa/src/game/trick-tile.ts";
-import { flatLevel } from "./support/synthetic.ts";
+import { flatLevel, syntheticLevel } from "./support/synthetic.ts";
 
 /** A flight a kicker would have thrown: 1.2 m up, climbing 8.5 m/s, at
  * 80 km/h over packed snow — about 1.9 s in the air. */
@@ -298,5 +301,31 @@ describe("the score as read (strings.ts, trick-tile.ts)", () => {
     expect(after?.combo).toBeNull();
     expect(after?.last?.points).toBe(state.tricks.score);
     expect(after?.left).toBeCloseTo(state.rules.limit - state.progress.time, 6);
+  });
+});
+
+describe("a tricks run watched back", () => {
+  it("is recorded, the trick button with it, and replays to the same score", () => {
+    expect(keepsReplay("tricks")).toBe(true);
+    const state = createGame({ level: syntheticLevel(), mode: "tricks", quiet: true });
+    const rig = createReplayRig();
+    rig.arm(state, "tricks");
+    let posed = 0;
+    for (let i = 0; i < 130 * TUNING.physicsHz && state.phase !== "finished"; i++) {
+      // The bot's ride, with the trick button held through the first half
+      // second of every flight: a pose, let go before the landing.
+      const c = state.sled;
+      const input = snapInput({ ...botInput(state), trick: c.airborne && c.airTime < 0.5 });
+      if (input.trick) posed += 1;
+      step(state, input);
+      rig.step(input, state);
+    }
+    expect(state.phase).toBe("finished");
+    expect(posed).toBeGreaterThan(0);
+    const replay = rig.open();
+    expect(replay).not.toBeNull();
+    while (!replay!.over()) step(replay!.state, replay!.input());
+    expect(replay!.state.tricks.score).toBe(state.tricks.score);
+    expect(state.tricks.score).toBeGreaterThan(0);
   });
 });
