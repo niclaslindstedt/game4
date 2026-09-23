@@ -45,9 +45,15 @@ The HUD shows the **SCORE** and the seconds **LEFT** where a race keeps its laps
 
 **NEXT** is the sled card, and **RIDE** there stands the ride up. The HUD keeps the speed, the air clock and the minimap, and in place of the race's place, lap and checkpoint count shows the ride's clock, its **BEST AIR** and the distance **RIDDEN**; the minimap shows the loop without a checkpoint on it. **R** stands you back on the nearest point of the track. The pause card's **START AGAIN** rides the same map from where you started. Everything on the start card is remembered.
 
-At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **RESTART RACE**, **SOUND**, **WATCH REPLAY**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
+At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **TAKE PICTURE**, **SOUND**, **RESTART RACE**, **WATCH REPLAY**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
 
 **The replay.** Every race, time trial and tricks run is recorded as the controls that rode it, and **WATCH REPLAY** — on the finish plate, or on the pause card, where it ends the race — plays it back: the same race rebuilt, the rivals ridden again by the same bot, the trails cut again from clean snow. It opens on the **BROADCAST** camera, which is the chase camera until the run reaches a moment it marked (a flight, a place taken, a trunk or a rival met, a wipeout, the flag); for those it cuts to a lens planted at the edge of the wood beside the kicker, the banner or the spot, before the sled gets there, and runs the moment in slow motion (the bar says **SLOW**). **C** walks the other cameras, **Escape** or **EXIT** leaves for the front door. A free ride keeps no replay.
+
+## Pictures and the gallery
+
+**Enter** takes a picture of the race as it stands — the snow, the sled, the sky and the HUD over them, signed in the corner with the game's mark — and says **PICTURE SAVED** in the news column (**· COPIED** where the browser also put it on the clipboard). On a touchscreen, pause and press **TAKE PICTURE**: the picture is the frozen race under the card, never the card. **Enter** works while a replay is being watched too — the broadcast camera's frame, without the replay's bar. **H** (or OPTIONS ▸ PICTURE ▸ **HUD**) takes the readouts down — the thumbs and the corner presses stay — and a picture taken then is the snow alone. The desktop app's **View ▸ Take Screenshot** presses the same shutter, and in the store app a screenshot taken with the phone's own buttons is filed here too. Each picture is captioned with the map's seed, the lap, the speed and the sled.
+
+**GALLERY**, along the front door's foot, is the roll: the newest picture first, an arrow either side to flip (or the filmstrip under it), and **SHARE** (the phone's own share sheet, where the browser has one), **COPY**, **SAVE** and a two-step **DELETE**. The roll keeps the last forty pictures on this device (`docs/configuration.md`); the oldest falls off.
 
 ## Riding
 
@@ -75,6 +81,8 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 | R                  | Back onto the track at the last checkpoint taken |
 | B                  | Restart the race from the grid                   |
 | C                  | Next camera                                      |
+| H                  | HUD on / off                                     |
+| Enter              | Take a picture (filed in the GALLERY)            |
 | Escape             | Pause                                            |
 | Arrows, Enter, Esc | Walk a card, press a row, go back                |
 
@@ -84,7 +92,7 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 
 ## Options
 
-**OPTIONS** on the front door, over the same live race, in four groups. **CONTROLS**: **KEYS** opens a page with every action on it — press a row, then the key to put on it (Escape leaves it as it was); a key on two actions says so. On a touchscreen, **LEVER SIDE** swaps the lever and the handlebar, **TRAVEL** shortens or lengthens every thumb's throw, and **INVERT LEAN** makes pushing the bar away the lean back. **ASSIST**: **STEER HOLD** (the arcade's hand keeping the nose on the line the skis ask for) and **AIR LEVEL** (the rider's body keeping the sled level side to side in the air), each FULL, HALF or OFF, and **DAMAGE** (on, a trunk or a hard landing bends a ski or hurts the suspension and the sled rides it for the rest of the race, with an instrument beside the speed; off by default), all from the next race. **SOUND**: the switch, and faders for everything, the engine and the effects. **PICTURE**: a **PRESET** that moves every row at once, then RESOLUTION, DISTANCE, TERRAIN, TRAILS, FOREST, SHADOWS, SPRAY and SMOOTH EDGES one at a time — each applied at once, so it is judged against the race behind the card (SMOOTH EDGES alone waits for the next visit). A first visit picks its own preset by timing the machine (`docs/configuration.md`). The caption at the foot says what the row under the pointer does.
+**OPTIONS** on the front door, over the same live race, in four groups. **CONTROLS**: **KEYS** opens a page with every action on it — press a row, then the key to put on it (Escape leaves it as it was); a key on two actions says so. On a touchscreen, **LEVER SIDE** swaps the lever and the handlebar, **TRAVEL** shortens or lengthens every thumb's throw, and **INVERT LEAN** makes pushing the bar away the lean back. **ASSIST**: **STEER HOLD** (the arcade's hand keeping the nose on the line the skis ask for) and **AIR LEVEL** (the rider's body keeping the sled level side to side in the air), each FULL, HALF or OFF, and **DAMAGE** (on, a trunk or a hard landing bends a ski or hurts the suspension and the sled rides it for the rest of the race, with an instrument beside the speed; off by default), all from the next race. **SOUND**: the switch, and faders for everything, the engine and the effects. **PICTURE**: the **HUD** switch (H mid-race), a **PRESET** that moves every row at once, then RESOLUTION, DISTANCE, TERRAIN, TRAILS, FOREST, SHADOWS, SPRAY and SMOOTH EDGES one at a time — each applied at once, so it is judged against the race behind the card (SMOOTH EDGES alone waits for the next visit). A first visit picks its own preset by timing the machine (`docs/configuration.md`). The caption at the foot says what the row under the pointer does.
 
 ## What the game remembers
 

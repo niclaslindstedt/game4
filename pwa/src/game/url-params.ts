@@ -32,7 +32,8 @@
 //                   the sled card RACE opens; `start` on the free ride's
 //                   start card; `campaign` on the campaign card; `levels` on
 //                   the level card a RACE (or, with `mode=trial`, a TIME
-//                   TRIAL) picks its pinned map on.
+//                   TRIAL) picks its pinned map on; `gallery` on the pictures
+//                   kept.
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -65,7 +66,8 @@ import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels";
+export type MenuPage =
+  "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels" | "gallery";
 const MENU_PAGES: readonly MenuPage[] = [
   "root",
   "sled",
@@ -74,6 +76,7 @@ const MENU_PAGES: readonly MenuPage[] = [
   "start",
   "campaign",
   "levels",
+  "gallery",
 ];
 
 export type UrlParams = {

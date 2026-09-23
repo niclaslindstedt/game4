@@ -133,6 +133,21 @@ export function pinnedFor(
   return levelForMode(chosen, mode) ?? CAMPAIGN_LEVELS[0];
 }
 
+/** WHAT A RIDE PRESS STANDS UP ON A PINNED MAP, as the arguments of the
+ * app's `pinned` press: the rung the campaign card opened, in its own mode —
+ * or the map `pinnedFor` puts a measured run on — or null where the run is
+ * choosing its own seed. */
+export function pinnedPress(
+  rung: CampaignLevel | null,
+  chosen: string | null,
+  mode: GameMode,
+  linkSeed: number | null,
+): [CampaignLevel, CampaignLevel["mode"], boolean] | null {
+  if (rung) return [rung, rung.mode, true];
+  const pin = pinnedFor(chosen, mode, linkSeed);
+  return pin ? [pin, mode === "timeTrial" ? "timeTrial" : "race", false] : null;
+}
+
 /** Whether `level` is the very map `pin` builds — the same seed on the same
  * generator — so a run on it can reuse a map already standing rather than
  * build it again. */

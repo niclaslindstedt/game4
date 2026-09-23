@@ -107,6 +107,10 @@ export type Settings = {
    * (`menu-levels.tsx`, `pinnedFor`) — a campaign map's id, or null for the
    * first rung. */
   level: string | null;
+  /** Whether the readouts are over the snow (H, OPTIONS ▸ HUD). Off keeps
+   * the thumbs and the corner presses, and a picture is then the snow
+   * alone (`shot-hud.ts`). */
+  hud: boolean;
 };
 
 export function freshSettings(): Settings {
@@ -124,6 +128,7 @@ export function freshSettings(): Settings {
     trialLaps: TIME_TRIAL.laps[0],
     ride: freshRide(),
     level: null,
+    hud: true,
   };
 }
 
@@ -187,6 +192,7 @@ export function mergeSettings(parsed: unknown): Settings {
   }
   out.ride = mergeRide(blob.ride);
   if (typeof blob.level === "string" && findLevel(blob.level) !== null) out.level = blob.level;
+  if (typeof blob.hud === "boolean") out.hud = blob.hud;
   return out;
 }
 

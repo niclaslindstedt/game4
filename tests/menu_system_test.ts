@@ -205,6 +205,7 @@ describe("the URL (url-params.ts, splash.ts)", () => {
     expect(readParams("?menu=root")).toMatchObject({ menu: true, page: "root" });
     expect(readParams("?menu=options").page).toBe("options");
     expect(readParams("?menu=keys").page).toBe("keys");
+    expect(readParams("?menu=gallery").page).toBe("gallery");
     expect(readParams("?menu=cellar").page).toBe("root");
     expect(readParams("?video=low").video).toBe("low");
     expect(readParams("?video=ultra").video).toBe(null);
@@ -269,6 +270,12 @@ describe("what the game remembers (settings.ts)", () => {
     expect(freshSettings().damage).toBe(false);
     expect(mergeSettings({ damage: true }).damage).toBe(true);
     expect(mergeSettings({ damage: "yes" }).damage).toBe(false);
+  });
+
+  it("keeps the readouts up unless they were taken down, and only as a switch", () => {
+    expect(freshSettings().hud).toBe(true);
+    expect(mergeSettings({ hud: false }).hud).toBe(false);
+    expect(mergeSettings({ hud: "off" }).hud).toBe(true);
   });
 
   it("folds the master and the switch into both faders the mixer is handed", () => {
@@ -349,6 +356,8 @@ describe("the game's own buttons (run-actions.ts)", () => {
       camera: () => did.push("camera"),
       reset: () => did.push("reset"),
       leave: () => did.push("leave"),
+      shoot: () => did.push("shot"),
+      toggleHud: () => did.push("hud"),
     });
     return { did, act };
   }
@@ -373,11 +382,29 @@ describe("the game's own buttons (run-actions.ts)", () => {
     expect(did).toEqual(["resume"]);
   });
 
-  it("over a replay walks the camera and leaves on PAUSE, and nothing else", () => {
+  // The shutter and the HUD's switch are about the PICTURE, so they answer
+  // wherever a race is on screen — the frame held under the pause card and a
+  // replay included — and nowhere a card stands over the bot's race.
+  it("takes a picture and walks the HUD over a race on screen only", () => {
+    for (const shell of ["run", "pause", "replay"] as Shell[]) {
+      const { did, act } = rig(shell);
+      act("shot");
+      act("hud");
+      expect(did, shell).toEqual(["shot", "hud"]);
+    }
+    for (const shell of ["splash", "menu", "loading"] as Shell[]) {
+      const { did, act } = rig(shell);
+      act("shot");
+      act("hud");
+      expect(did, shell).toEqual([]);
+    }
+  });
+
+  it("over a replay walks the camera, leaves on PAUSE and takes a picture, and nothing else", () => {
     const { did, act } = rig("replay");
     for (const command of SHELL_COMMANDS) act(command as RunPress);
     act("reset");
-    expect(did.sort()).toEqual(["camera", "leave"]);
+    expect(did.sort()).toEqual(["camera", "leave", "shot"]);
   });
 });
 

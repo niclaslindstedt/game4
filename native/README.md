@@ -121,8 +121,13 @@ missing before a first submission.
   personal and nothing secret is committed here, not even as a default a
   contributor could override.
 
-- **No cloud save and no screenshot bridge.** The sibling jet-ski game's shell
-  carries both — an iCloud key-value bridge and the phone's own shutter
-  pressing the game's — because its website has a save to sync and a gallery
-  to file a picture in. This game's website has neither, and a shell may only
-  carry a bridge to something the website already does.
+- **No cloud save.** The sibling jet-ski game's shell carries an iCloud
+  key-value bridge because its website has a save to sync. This game's website
+  has none, and a shell may only carry a bridge to something the website
+  already does.
+- **The phone's own shutter IS bridged.** A screenshot taken with the
+  hardware buttons is heard by `src/screen-capture.ts` (expo-screen-capture:
+  iOS everywhere, Android 14+ on the install-time `DETECT_SCREEN_CAPTURE`;
+  the photo-library permissions its older API would declare are blocked in
+  `app.config.js`) and the shell injects `SHOT_COMMAND`, pressing the game's
+  own shutter — the same picture, signed and filed in the gallery.

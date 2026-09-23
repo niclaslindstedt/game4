@@ -8,6 +8,9 @@
 //   RESTART RACE  the race again from the grid, on the same map — the B
 //                 key's own line. Over a free ride, START AGAIN: the same
 //                 ride from where it started.
+//   TAKE PICTURE  the held frame filed in the gallery — the race under the
+//                 card, never the card (`shot-hud.ts`): the one shutter a
+//                 thumb can reach, and the moment a rider stops to keep.
 //   SOUND         the one setting worth stopping for, and it applies to
 //                 the frame in front of you the moment it moves.
 //   WATCH REPLAY  the race so far, from the outside (`replay-run.ts`) —
@@ -33,6 +36,7 @@ export function PauseMenu({
   snap,
   sound,
   onResume,
+  onPicture,
   onRestart,
   onSound,
   onMainMenu,
@@ -42,6 +46,7 @@ export function PauseMenu({
   snap: HudSnapshot;
   sound: boolean;
   onResume: () => void;
+  onPicture: () => void;
   onRestart: () => void;
   onSound: () => void;
   onMainMenu: () => void;
@@ -80,6 +85,10 @@ export function PauseMenu({
           >
             <Glyph name="play" />
             <span class="menu-item-name">{STRINGS.pauseResume}</span>
+          </button>
+          <button type="button" class="menu-item" data-menu="picture" onClick={onPicture}>
+            <Glyph name="camera" />
+            <span class="menu-item-name">{STRINGS.pausePicture}</span>
           </button>
           <button type="button" class="menu-item" aria-pressed={sound} onClick={onSound}>
             <Glyph name={sound ? "speaker" : "mute"} />

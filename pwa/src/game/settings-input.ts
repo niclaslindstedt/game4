@@ -21,7 +21,7 @@ export type HeldAction = keyof KeysHeld;
  * edge that is not here: it reaches the engine as an input flag on the step
  * it arrives in, which is the whole difference between putting the sled
  * back and changing the camera. */
-export type InputAction = "restart" | "camera" | "pause";
+export type InputAction = "restart" | "camera" | "pause" | "shot" | "hud";
 
 /** An action taken on the PRESS, not held. */
 export type EdgeAction = "reset" | InputAction;
@@ -45,6 +45,8 @@ export const KEY_ACTIONS: readonly { id: KeyAction; label: string }[] = [
   { id: "reset", label: STRINGS.keyReset },
   { id: "restart", label: STRINGS.keyRestart },
   { id: "camera", label: STRINGS.keyCamera },
+  { id: "hud", label: STRINGS.keyHud },
+  { id: "shot", label: STRINGS.keyShot },
   { id: "pause", label: STRINGS.keyPause },
 ];
 
@@ -101,6 +103,14 @@ export const DEFAULT_KEYS: KeyBindings = {
   reset: ["KeyR"],
   restart: ["KeyB"],
   camera: ["KeyC"],
+  // H FOR THE READOUTS, beside C for what the camera looks at: the two
+  // presses about the PICTURE rather than the sled. The same switch as
+  // OPTIONS ▸ HUD, so the snow can be cleared for a photograph mid-race.
+  hud: ["KeyH"],
+  // ENTER IS THE SHUTTER (`screenshots.ts`): a picture is the press a rider
+  // makes while everything is still going well, on the key the hand beside
+  // the arrows is already resting near.
+  shot: ["Enter"],
   pause: ["Escape"],
 };
 

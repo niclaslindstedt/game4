@@ -12,6 +12,7 @@
 
 import type { GameEvent, GameState } from "@engine";
 
+import { lapOf } from "./snapshot.ts";
 import { STRINGS } from "./strings.ts";
 
 /** A line in the news column: what it says, its colour, and an id the list
@@ -67,4 +68,19 @@ export function newsFor(e: GameEvent, state: GameState): NewsLine | null {
     default:
       return null;
   }
+}
+
+/** WHAT A PICTURE IS CALLED: the map it was taken on, where in the race —
+ * the lap, or the free ride that has none — how fast, and on which machine.
+ * It is the gallery's caption and most of the file's name
+ * (`screenshots.ts`), read at the SHUTTER'S press, so it is the moment the
+ * button went down rather than the frame that served it. */
+export function shotLabel(state: GameState): string {
+  return STRINGS.shotLabel({
+    seed: state.seed,
+    lap: state.rules.course ? lapOf(state.progress, state.rules.laps) : null,
+    laps: state.rules.laps,
+    kmh: state.sled.speed * 3.6,
+    sled: state.sled.spec.name,
+  });
 }
