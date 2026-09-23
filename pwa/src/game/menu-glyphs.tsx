@@ -6,7 +6,7 @@
 //
 // Only the marks this slice's cards use: the flag on RACE, the stopwatch on
 // the TIME TRIAL, the kicker on FREE RIDE, the flip on TRICKS, the shutter on
-// the GALLERY chip and the pause card's TAKE PICTURE, the speaker on the sound switch,
+// the GALLERY chip, the speaker on the sound switch,
 // the three the pause card is read by — carry on, start again, leave — the
 // sliders on the OPTIONS chip, and the three more its groups are headed with
 // (the keys, the dial, the screen; SOUND takes the speaker). Each group mark

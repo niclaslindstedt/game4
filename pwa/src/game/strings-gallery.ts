@@ -33,8 +33,6 @@ export const GALLERY_STRINGS = {
   shotKept: "PICTURE SAVED",
   shotCopied: "PICTURE SAVED · COPIED",
   shotFailed: "PICTURE FAILED",
-  /** The pause card's shutter: the held frame, without the card over it. */
-  pausePicture: "TAKE PICTURE",
   /** The front door's chip. */
   menuGallery: "GALLERY",
   /** The gallery. The subtitle counts the roll against its cap, because the
@@ -47,7 +45,7 @@ export const GALLERY_STRINGS = {
    * told for a frame that they have none. */
   galleryReading: "Reading the roll…",
   galleryEmpty:
-    "Nothing here yet. Press ENTER during a race — or TAKE PICTURE on the pause card — and the picture lands here.",
+    "Nothing here yet. Press ENTER during a race — or take a screenshot on a phone — and the picture lands here.",
   /** The three ways a picture leaves the game, offered only where the
    * browser will actually do them (lib/share-image.ts), and the two-step
    * delete beside them — a stray press must not destroy a picture that

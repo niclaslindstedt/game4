@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// TAKING A PICTURE OF THE GAME — what the SCREENSHOT bind (ENTER, the pause
-// card's PICTURE, the desktop menu bar's row, the phone's own shutter in the
+// TAKING A PICTURE OF THE GAME — what the SCREENSHOT bind (ENTER, the
+// desktop menu bar's row, the phone's own shutter in the
 // store app) actually does, and the one place the frame, the roll and the gallery meet. What is
 // DECIDED about a picture — its size, its name, where the mark goes — is
 // next door in shot-plan.ts; this module is the canvas work.
