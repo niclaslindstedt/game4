@@ -38,6 +38,7 @@ export function ResultPlate({
   onAgain,
   onNew,
   onMenu,
+  onReplay = null,
 }: {
   /** The race, or null while the plate is not the player's to press. */
   snap: HudSnapshot | null;
@@ -47,6 +48,9 @@ export function ResultPlate({
   onAgain: () => void;
   onNew: () => void;
   onMenu: () => void;
+  /** The race watched back (`replay-run.ts`), or null where there is no
+   * recording of it. */
+  onReplay?: (() => void) | null;
 }) {
   if (!snap?.result || !snap.standings) return null;
   const { result, standings, best } = snap;
@@ -102,6 +106,11 @@ export function ResultPlate({
             <button type="button" class="hud-mini hud-result-act" onClick={onNew}>
               {STRINGS.resultNew}
             </button>
+            {onReplay && (
+              <button type="button" class="hud-mini hud-result-act" onClick={onReplay}>
+                {STRINGS.replayWatch}
+              </button>
+            )}
             <button type="button" class="hud-mini hud-result-act" onClick={onMenu}>
               {STRINGS.pauseMainMenu}
             </button>
