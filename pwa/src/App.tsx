@@ -141,7 +141,7 @@ import { splashSkipped } from "./game/splash.ts";
 import { readHudLayer } from "./game/shot-hud.ts";
 import { createShotRequest } from "./game/shot-request.ts";
 import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
-import { dealSeed, readParams, type MenuPage } from "./game/url-params.ts";
+import { dealSeed, linkWorld, overLink, readParams, type MenuPage } from "./game/url-params.ts";
 import { applyVerdict, createVideoProbe } from "./game/video-probe.ts";
 import { UpdateButton } from "./game/update-button.tsx";
 import { clamp } from "./lib/util.ts";
@@ -334,8 +334,8 @@ export function App() {
       const s = settingsRef.current;
       const seed = params.seed ?? s.ride.seed ?? raceSeed;
       const ride = freeGameOptions(s.ride, seed, specOf(s), assistOf(s.assist));
-      // A link's sky (`?weather=` / `?hour=`) over the card's, as on a race.
-      const opts = params.sky ? { ...ride, sky: { ...ride.sky, ...params.sky } } : ride;
+      // A link's sky (`?weather=` / `?hour=`) and region over the card's.
+      const opts = overLink(ride, params);
       try {
         const game = createGame(opts);
         freeAgain = { ...opts, level: game.level };
@@ -364,7 +364,7 @@ export function App() {
                 laps: settingsRef.current.trialLaps,
               }
             : null,
-          params.sky ?? undefined,
+          linkWorld(params),
         );
     /** The mode the player's runs are ridden in, until a tile says otherwise. */
     let mode: GameMode = params.mode;
@@ -375,7 +375,7 @@ export function App() {
         // A tricks run needs its map's trick field (R20): the race's won't do.
         level: mode === "tricks" && !level?.kickers?.some((k) => k.trick) ? undefined : level,
         seed,
-        sky: params.sky ?? undefined,
+        ...linkWorld(params),
         mode,
         laps: mode === "timeTrial" ? settingsRef.current.trialLaps : undefined,
         spec: specOf(settingsRef.current),

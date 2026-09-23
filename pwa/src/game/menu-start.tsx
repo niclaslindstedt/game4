@@ -25,6 +25,9 @@
 //   SNOW    how deep the powder is (`SNOW_DIAL`), read as the sink a sled
 //           standing in it takes.
 //
+//   COUNTRY the kind of snow country the map is built in (R21): the same seed
+//           raised as boreal forest, high alpine, tundra or a birch valley.
+//
 //   WEATHER the sky (R19): the map's own (AS DEALT), or one of the six at
 //           its typical numbers (`weatherFor`). It names no hour: the hour
 //           is TIME's alone, so the two rows cannot disagree.
@@ -38,6 +41,7 @@
 // one a `?start=free` link boots into are the same ride read the same way.
 
 import {
+  REGION_IDS,
   SNOW_DIAL,
   WEATHER_KINDS,
   dayOfYearOf,
@@ -71,6 +75,9 @@ const WEATHER_STOPS: { id: "dealt" | WeatherKind; label: string }[] = [
   { id: "dealt", label: STRINGS.weatherDealt },
   ...WEATHER_KINDS.map((kind) => ({ id: kind, label: STRINGS.weatherNames[kind] })),
 ];
+
+/** The COUNTRY row's stops: R21's regions. */
+const REGION_STOPS = REGION_IDS.map((id) => ({ id, label: STRINGS.regionNames[id] }));
 
 /** The hour row's travel before the chart has said where the sun is: R15's
  * own band, which every dealt map's hour lies in. */
@@ -106,7 +113,7 @@ export function StartPage({
   const setRide = (patch: Partial<FreeRide>): void =>
     onSettings({ ...settings, ride: { ...ride, ...patch } });
 
-  const chart = useSeedPreview(seed);
+  const chart = useSeedPreview(seed, ride.region);
   const deal = dealOf(chart);
   const day = ride.day ?? (deal ? dayOnTravel(deal.dayOfYear) : 30);
   const daylight = deal !== null ? freeHours(deal.latitude, dayOfYearOf(day)) : null;
@@ -145,6 +152,14 @@ export function StartPage({
               min={SEED_RANGE.min}
               max={SEED_RANGE.max}
               onValue={(next) => setRide({ seed: next })}
+              onHint={setHint}
+            />
+            <StepRow
+              label={STRINGS.startRegion}
+              hint={STRINGS.startRegionHint}
+              stops={REGION_STOPS}
+              value={ride.region}
+              onPick={(region) => setRide({ region })}
               onHint={setHint}
             />
           </div>

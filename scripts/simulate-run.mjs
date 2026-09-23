@@ -28,9 +28,17 @@ import process from "node:process";
 import { parseArgs } from "./lib/cli.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const { simulateRun, SIM_SECONDS, engineVersion, TUNING, SLEDS, sledById, isSledId } = await import(
-  join(root, "engine/index.ts")
-);
+const {
+  simulateRun,
+  SIM_SECONDS,
+  engineVersion,
+  TUNING,
+  SLEDS,
+  sledById,
+  isSledId,
+  isRegionId,
+  REGION_IDS,
+} = await import(join(root, "engine/index.ts"));
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -46,10 +54,20 @@ const args = parseArgs(
       help: `the machine (${SLEDS.map((s) => s.id).join(", ")}), or all for the roster`,
     },
     tricks: { kind: "flag", help: "ride each seed's map with its trick field laid (R20)" },
+    region: {
+      kind: "string",
+      default: "boreal",
+      help: `the kind of snow country each map is built in (R21: ${REGION_IDS.join(", ")})`,
+    },
     json: { kind: "string", help: "also write the rows (events dropped) to this file" },
   },
-  "usage: npm run sim -- [--count n | --seeds a,b,c] [--sled id|all] [--laps n] [--rivals n] [--max s] [--tricks] [--json path]",
+  "usage: npm run sim -- [--count n | --seeds a,b,c] [--sled id|all] [--laps n] [--rivals n] [--max s] [--tricks] [--region id] [--json path]",
 );
+
+if (!isRegionId(args.region)) {
+  console.error(`unknown region "${args.region}" (${REGION_IDS.join(", ")})`);
+  process.exit(2);
+}
 
 if (args.sled !== "all" && !isSledId(args.sled)) {
   console.error(`unknown sled "${args.sled}" (${SLEDS.map((s) => s.id).join(", ")}, all)`);
@@ -71,7 +89,8 @@ const kmh = (ms) => (ms * 3.6).toFixed(0);
 console.log(
   `sim — engine ${engineVersion} at ${TUNING.physicsHz} Hz · sled ${args.sled} · seeds ${seeds.join(",")} · ` +
     `laps ${args.laps ?? "map"} · rivals ${args.rivals} · max ${args.max} s` +
-    (args.tricks ? " · trick field" : ""),
+    (args.tricks ? " · trick field" : "") +
+    (args.region !== "boreal" ? ` · ${args.region}` : ""),
 );
 const header = [
   pad("seed", 5),
@@ -108,6 +127,7 @@ for (const spec of roster) {
       maxSeconds: args.max,
       spec,
       tricks: args.tricks,
+      region: args.region === "boreal" ? undefined : args.region,
     });
     rows.push(r);
     console.log(

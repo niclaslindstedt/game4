@@ -81,7 +81,7 @@ CAMPAIGN=1` can step down under a bare `rateLevel`. The audit is the
 measurement; the test suite does not ride the bot on every rung.
 
 **A map is named for what it is like, never for where it is** — the snow,
-the light, the shape of the ask. There is one nature and no places in it.
+the light, the shape of the ask. Every pinned map is BOREAL (R21) and names no place; a shelf per region is a deliberate curation for later, never a side effect of `add-region`.
 
 ## The version contract, and the digest
 

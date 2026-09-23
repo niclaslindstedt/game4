@@ -31,6 +31,16 @@
 //   8. the day (R15)
 //   9. the weather (R19) — off a stream of its own, last, so it moves
 //      nothing above; an evening it deals moves only the day's start hour
+//
+// THE REGION (R21) scales the numbers steps 1, 5, 7 and 8 draw with and
+// draws nothing in their place, and adds two steps of its own, each off a
+// stream of its own and each skipped in a region whose row lays none — so
+// the boreal, whose row is all ones and lays neither, builds the map it
+// always built:
+//
+//   1a the frozen river, cut into the country before the loop is drawn
+//   6c the wind crust, laid on the finished country, and both folded into
+//      the packed field clear of the loop (R10 holds)
 
 import { createRng } from "../lib/prng.ts";
 import { sampleField } from "../lib/heightfield.ts";
@@ -46,6 +56,8 @@ import { chooseStart, gridOnTrack, layCheckpoints } from "./spawn.ts";
 import { dealSun } from "./sun.ts";
 import { bakeCountry, planTerrain } from "./terrain.ts";
 import { dealWeather, withSky } from "./weather.ts";
+import { regionRow, type Region } from "./regions.ts";
+import { carveRiver, foldSurface, layCrust, planRiver } from "./surface.ts";
 import {
   drawLoop,
   gradeLoop,
@@ -74,10 +86,14 @@ function attemptLevel(
   laps: number,
   version: GeneratorVersion,
   tricks: boolean,
+  region: Region,
 ): GeneratedLevel | string {
-  const rng = createRng(subSeed(seed, attempt));
-  const plan = planTerrain(rng);
+  const sub = subSeed(seed, attempt);
+  const rng = createRng(sub);
+  const plan = planTerrain(rng, region);
   const ground = bakeCountry(plan);
+  const river = planRiver(sub, plan, ground);
+  const ice = river ? carveRiver(ground, river) : null;
 
   let loop: Loop | null = null;
   let why = "";
@@ -97,8 +113,8 @@ function attemptLevel(
   if (!loop) return `no loop fits this country (last: ${why})`;
 
   const trackKickers = layTrackKickers(rng, loop);
-  const { packed, near, along } = stampCorridor(loop, ground);
-  const offKickers = layOffKickers(rng, plan, ground, loop);
+  const { packed, near, along, dist } = stampCorridor(loop, ground);
+  const offKickers = layOffKickers(rng, plan, ground, loop, ice);
 
   const start = chooseStart(rng, loop, trackKickers);
   if (typeof start === "string") return start;
@@ -117,13 +133,15 @@ function attemptLevel(
   }
   const checkpoints = layCheckpoints(trackOf(loop));
   const { spawn, grid } = gridOnTrack(trackOf(loop));
-  const drifts = dealDrifts(subSeed(seed, attempt), loop.length, kickers);
+  const drifts = dealDrifts(sub, loop.length, kickers);
   const n = loop.points.length;
   stampDrifts(packed, near, along, drifts, start, n, loop.length / n);
+  const crust = layCrust(sub, region, ground);
+  if (crust || ice) foldSurface(packed, dist, region, crust, ice);
 
-  const trees = growForest(rng, plan, ground, trackOf(loop), kickers);
-  const day = dealSun(rng);
-  const { weather, hour } = dealWeather(subSeed(seed, attempt), day);
+  const trees = growForest(rng, plan, ground, trackOf(loop), kickers, ice);
+  const day = dealSun(rng, region.sun);
+  const { weather, hour } = dealWeather(sub, day);
   const sun = { ...day, hour };
 
   return compileLevel({
@@ -145,6 +163,9 @@ function attemptLevel(
     drifts,
     weather,
     version,
+    region: region.id,
+    crust,
+    ice,
   });
 }
 
@@ -155,9 +176,10 @@ export function generateLevel(seed: number, opts: GenerateOptions = {}): Generat
   // Every row of `versions.ts` builds by these rules today; a legacy row's
   // traits are read at the one place its behaviour differs.
   const { version } = generatorTraits(opts.version);
+  const region = regionRow(opts.region);
   const reasons: string[] = [];
   for (let a = 0; a < attempts; a++) {
-    const built = attemptLevel(seed, a, laps, version, opts.tricks === true);
+    const built = attemptLevel(seed, a, laps, version, opts.tricks === true, region);
     if (typeof built === "string") {
       reasons.push(`#${a}: ${built}`);
       continue;

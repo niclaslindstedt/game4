@@ -29,8 +29,13 @@ const args = parseArgs(
     seed: { kind: "number", help: "analyze this one seed only" },
     from: { kind: "number", default: 1, help: "first seed of the sweep" },
     count: { kind: "number", default: 20, help: "how many seeds to sweep" },
+    region: {
+      kind: "string",
+      default: "boreal",
+      help: "the kind of snow country (R21): boreal, alpine, tundra, birch",
+    },
   },
-  "usage: npm run analyze -- [--seed n | --from n --count k]",
+  "usage: npm run analyze -- [--seed n | --from n --count k] [--region id]",
 );
 
 const seeds =
@@ -48,7 +53,7 @@ for (const seed of seeds) {
   const t0 = performance.now();
   let level;
   try {
-    level = generateLevel(seed);
+    level = generateLevel(seed, { region: args.region });
   } catch (e) {
     broken++;
     console.log(`${String(seed).padStart(4)}  FAILED  ${String(e.message ?? e).slice(0, 300)}`);

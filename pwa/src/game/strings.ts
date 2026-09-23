@@ -222,6 +222,11 @@ export const STRINGS = {
   startMap: "MAP",
   startMapHint: "Which map: every seed is another basin. Type one, or step through them.",
   startReroll: "ANOTHER MAP",
+  startRegion: "COUNTRY",
+  startRegionHint:
+    "What kind of snow country the map is built in: boreal forest, high alpine bowls above the tree line, a wind-crusted tundra plateau, or a birch valley with a frozen river through it.",
+  /** The REGION row's stops (R21) — a kind of country, never a place. */
+  regionNames: { boreal: "BOREAL", alpine: "ALPINE", tundra: "TUNDRA", birch: "BIRCH VALLEY" },
   startDate: "DATE",
   startDateHint:
     "The day of the year: how high the sun climbs and how long the shadows are. Starts on the map's own.",

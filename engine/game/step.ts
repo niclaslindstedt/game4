@@ -13,6 +13,7 @@
 
 import { createRng } from "../lib/prng.ts";
 import { generateLevel, withDay, withSky } from "../mapgen/index.ts";
+import type { RegionId } from "../mapgen/regions.ts";
 import type { Level, SkyOverride } from "../mapgen/types.ts";
 import { status } from "../output.ts";
 import { freeSpawn, freshProgress, standSled } from "./course.ts";
@@ -39,6 +40,9 @@ export type CreateGameOptions = {
   seed?: number;
   /** A map to ride instead of the one the seed generates (tests, labs). */
   level?: Level;
+  /** The kind of snow country the seed's map is built in (R21); the boreal
+   * when left out. Ignored when `level` is given. */
+  region?: RegionId;
   /** The mode whose rules the run is dealt (`MODE_RULES`); a race when left
    * out. Each option below still overrides its own rule. */
   mode?: GameMode;
@@ -99,7 +103,11 @@ export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
 export function createGame(options: CreateGameOptions = {}): GameState {
   // A tricks run is ridden on the seed's map with its trick field laid (R20).
   const built =
-    options.level ?? generateLevel(options.seed ?? 1, { tricks: options.mode === "tricks" });
+    options.level ??
+    generateLevel(options.seed ?? 1, {
+      tricks: options.mode === "tricks",
+      region: options.region,
+    });
   const dayed = options.day ? withDay(built, options.day) : built;
   const level = options.sky ? withSky(dayed, options.sky) : dayed;
   const seed = options.seed ?? level.seed;

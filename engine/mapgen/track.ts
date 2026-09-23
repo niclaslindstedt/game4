@@ -340,6 +340,10 @@ export type Corridor = {
    * it stood when stamped, before `rotateLoop`. */
   readonly near: Int32Array;
   readonly along: Float32Array;
+  /** Per cell, the plan distance to the loop's centreline, m (Infinity past
+   * the corridor's reach) — how far the region's own snow keeps off it
+   * (R21). */
+  readonly dist: Float32Array;
 };
 
 /** R8, R10, R18 — press the finished line into the ground: level across
@@ -410,5 +414,5 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
       g[o] += bermProfile(bermCrest((near[o] + along[o]) * step, loop.length), d - toe);
     p[o] = d <= hw ? 1 : 1 - smoothstep(hw, hw + R.track.shoulder.packed, d);
   }
-  return { packed, near, along };
+  return { packed, near, along, dist };
 }

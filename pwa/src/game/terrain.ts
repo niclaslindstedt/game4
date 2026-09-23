@@ -26,16 +26,20 @@
 // (`uHole`) up to half a finer cell inside the finer level's edge — a thin
 // strip where both draw the same surface, so the seam has no pinholes.
 //
-// Three textures carry the map to the GPU, built once per level: the
+// Four textures carry the map to the GPU, built once per level: the
 // heights (R32F, read with texelFetch in the vertex shader), a GROUND map
-// (the slope's gradient, the packed track, how wooded it is — half floats,
+// (the slope's gradient, the GROOMED share, how wooded it is — half floats,
 // linearly filtered, which is what gives the shading smooth normals with
-// no two-metre facets), and the TRACK DIRECTION the corduroy runs along.
+// no two-metre facets), the TRACK DIRECTION the corduroy runs along, and
+// the region's own SURFACE (R21: the wind crust and the river's ice, which
+// the engine folds into `packed` and which this map keeps apart, so a
+// crust is painted as a crust and not as the groomer).
 
 import * as THREE from "three";
-import { LEVEL_RULES, bermProfile, type Level } from "@engine";
+import { LEVEL_RULES, bermProfile, regionOf, weatherOf, type Level } from "@engine";
 
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
+import { regionLookOf } from "./region-look.ts";
 import {
   SNOW_FRAGMENT_COLOUR,
   SNOW_FRAGMENT_LIGHT,
@@ -196,6 +200,7 @@ function groundTextures(level: Level) {
   height.needsUpdate = true;
 
   const forest = forestDensity(level);
+  const support = regionOf(level).crust?.packed ?? 0;
   const ground = new Uint16Array(f.cols * f.rows * 4);
   const h = THREE.DataUtils.toHalfFloat;
   for (let r = 0; r < f.rows; r++) {
@@ -211,7 +216,14 @@ function groundTextures(level: Level) {
       const z = f.originZ + r * f.cell;
       ground[k * 4] = h(gx);
       ground[k * 4 + 1] = h(gz);
-      ground[k * 4 + 2] = h(level.packed ? level.packed.data[k] : level.packedAt(x, z));
+      // The GROOMED share: the packed field less what the region laid
+      // itself (R21), which the surface map carries instead.
+      const packed = level.packed ? level.packed.data[k] : level.packedAt(x, z);
+      const wild = Math.max(
+        level.crust ? level.crust.data[k] * support : 0,
+        level.ice ? level.ice.data[k] : 0,
+      );
+      ground[k * 4 + 2] = h(wild > 0 ? Math.max(0, packed - wild) : packed);
       ground[k * 4 + 3] = h(forest[k]);
     }
   }
@@ -230,7 +242,29 @@ function groundTextures(level: Level) {
   dir.minFilter = THREE.LinearFilter;
   dir.magFilter = THREE.LinearFilter;
   dir.needsUpdate = true;
-  return { height, ground: groundTex, dir };
+  return { height, ground: groundTex, dir, surface: surfaceTexture(level) };
+}
+
+/** R21 — the wind crust (R) and the river's ice (G) on the ground's grid; a
+ * single black texel where the region lays neither. */
+function surfaceTexture(level: Level): THREE.DataTexture {
+  const f = level.ground;
+  const { crust, ice } = level;
+  if (!crust && !ice) {
+    const none = new THREE.DataTexture(new Uint8Array(4), 1, 1, THREE.RGBAFormat);
+    none.needsUpdate = true;
+    return none;
+  }
+  const data = new Uint8Array(f.cols * f.rows * 4);
+  for (let k = 0; k < f.cols * f.rows; k++) {
+    data[k * 4] = Math.round((crust ? crust.data[k] : 0) * 255);
+    data[k * 4 + 1] = Math.round((ice ? ice.data[k] : 0) * 255);
+  }
+  const tex = new THREE.DataTexture(data, f.cols, f.rows, THREE.RGBAFormat);
+  tex.minFilter = THREE.LinearFilter;
+  tex.magFilter = THREE.LinearFilter;
+  tex.needsUpdate = true;
+  return tex;
 }
 
 export function createTerrain(
@@ -242,10 +276,20 @@ export function createTerrain(
   const group = new THREE.Group();
   const tex = groundTextures(level);
   const f = level.ground;
+  const look = regionLookOf(regionOf(level).id);
+  const wind = weatherOf(level).windFrom;
   const shared = {
     uHeight: { value: tex.height },
     uGround: { value: tex.ground },
     uTrackDir: { value: tex.dir },
+    uSurface: { value: tex.surface },
+    uForestTint: { value: new THREE.Vector3(...look.forestTint) },
+    uCrustTone: { value: new THREE.Vector3(...look.crust) },
+    uIceTone: { value: new THREE.Vector3(...look.ice) },
+    uRock: { value: new THREE.Vector4(...(look.rock?.tone ?? [0, 0, 0]), look.rock ? 1 : 0) },
+    uRockSlope: { value: new THREE.Vector2(look.rock?.from ?? 1, look.rock?.to ?? 2) },
+    uSastrugi: { value: look.sastrugi },
+    uWindDir: { value: new THREE.Vector2(Math.sin(wind), Math.cos(wind)) },
     uHeightOrigin: { value: new THREE.Vector2(f.originX, f.originZ) },
     uHeightCount: { value: new THREE.Vector2(f.cols, f.rows) },
     uCell: { value: f.cell },
@@ -336,6 +380,7 @@ export function createTerrain(
       tex.height.dispose();
       tex.ground.dispose();
       tex.dir.dispose();
+      tex.surface.dispose();
     },
   };
 }

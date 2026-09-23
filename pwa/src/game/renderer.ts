@@ -48,6 +48,7 @@ import { createGates, type Gates } from "./gates.ts";
 import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
+import { createRegionPicture } from "./region-picture.ts";
 import type { CameraRung, WorldRenderer } from "./renderer-api.ts";
 import type { ReplayShot } from "./replay-shots.ts";
 import {
@@ -173,6 +174,9 @@ export function createWorldRenderer(
   };
 
   const scene = new THREE.Scene();
+  // THE REGION'S GRADE (R21, `region-picture.ts`): the frame straight onto
+  // the canvas, or through the region's grade; the samples go with it.
+  const picture = createRegionPicture(gl, video.antialias ? 4 : 0);
   const lens: Lens = createLens(NEAR, FAR);
   scene.add(lens.camera);
   /** THE BROADCAST (`camera-tv.ts`): the moment a replay is cut to, or null
@@ -387,12 +391,16 @@ export function createWorldRenderer(
       lens.camera.lookAt(sled.x, sled.y, sled.z);
       terrain.follow(sled.x, sled.z);
       // Asynchronously where the driver can; three warns and falls back to
-      // a blocking compile anyway where it cannot, so ask first.
+      // a blocking compile anyway where it cannot, so ask first. Against the
+      // target the frame will be drawn into: a graded region's programs are
+      // compiled for linear output, not the canvas's.
+      gl.setRenderTarget(picture.load(lv));
       if (gl.extensions.has("KHR_parallel_shader_compile")) {
         await gl.compileAsync(scene, lens.camera);
       } else {
         gl.compile(scene, lens.camera);
       }
+      gl.setRenderTarget(null);
     },
 
     draw(state: GameState, alpha: number, dt: number, present = true) {
@@ -513,7 +521,7 @@ export function createWorldRenderer(
       snowfall.setScale(pixels);
       snowfall.update(look, wind, lens.camera, level, dt);
 
-      if (present) gl.render(scene, lens.camera);
+      if (present) picture.draw(scene, lens.camera);
     },
 
     setGhost(run) {
@@ -580,12 +588,12 @@ export function createWorldRenderer(
       return performance.now() - at;
     },
     info() {
-      const r = gl.info.render;
-      return { calls: r.calls, triangles: r.triangles, points: r.points };
+      return picture.info();
     },
     dispose() {
       unload();
       snowfall.dispose();
+      picture.dispose();
       env.dispose();
       gl.dispose();
     },

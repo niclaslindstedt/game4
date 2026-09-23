@@ -3,6 +3,7 @@
 // everything that rides, draws or measures one. Extend it; never rename a
 // field without moving every reader with it.
 import type { Heightfield } from "../lib/heightfield.ts";
+import type { RegionId, TreeKind } from "./regions.ts";
 import type { GeneratorVersion } from "./versions.ts";
 
 export interface Vec3 {
@@ -22,6 +23,9 @@ export interface TreeDef {
   radius: number;
   /** Crown radius at its widest, m. */
   crown: number;
+  /** What grows here (R21) — a spruce when left out. Drawn only: a trunk
+   * is a trunk to the sled. */
+  kind?: TreeKind;
 }
 
 /** A gate across the track. Index 0 of `Level.checkpoints` is the start/finish line. */
@@ -94,6 +98,18 @@ export interface Level {
   /** WHICH GENERATOR built the map (`versions.ts`): the current rules unless
    * a campaign map pinned an older row. */
   version?: GeneratorVersion;
+  /** The kind of snow country the map was built in (R21) — ask `regionOf`,
+   * which reads a hand-built map without one as the boreal. */
+  region?: RegionId;
+  /** THE REGION'S OWN SNOW (R21), on the ground's grid: the wind crust's
+   * share of the country, 0..1, before it is folded into `packed` — what
+   * the picture draws a crust with. Absent where the region lays none. */
+  crust?: Heightfield;
+  /** The frozen river's ice, 0..1, on the ground's grid (R21), and its
+   * sample; absent where the region has no river. The physics reads
+   * `iceAt` for the grip a sled has left on it. */
+  ice?: Heightfield;
+  iceAt?(x: number, z: number): number;
 }
 
 /** The skies R19 deals, lightest first. */
@@ -134,7 +150,10 @@ export interface Drift {
 /** A level as `generateLevel` hands it out: every optional field set. */
 export type GeneratedLevel = Level &
   Required<
-    Pick<Level, "packed" | "kickers" | "basin" | "attempt" | "drifts" | "weather" | "version">
+    Pick<
+      Level,
+      "packed" | "kickers" | "basin" | "attempt" | "drifts" | "weather" | "version" | "region"
+    >
   >;
 
 /** A crest shaped to kick a sled into the air (R4, R9). `x, z` is the LIP. */
@@ -179,6 +198,9 @@ export interface GenerateOptions {
   /** Lay the TRICK FIELD on the loop (R20) — a map for a tricks run. Left
    * out, the map carries none and is exactly the seed's race map. */
   tricks?: boolean;
+  /** The kind of snow country to build in (R21, `regions.ts`); the boreal
+   * when left out, which is the map the seed has always built. */
+  region?: RegionId;
 }
 
 /** The answer to "where on the track is this point nearest?" */

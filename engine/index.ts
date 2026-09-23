@@ -107,7 +107,15 @@ export {
 export { freshSled, skiLockAt, derive } from "./game/sled.ts";
 export { probesOf, hullOf, type Probe, type HullPoint } from "./game/suspension.ts";
 export { footprintOf, pressureOf, skiShare, type Footprint } from "./game/footprint.ts";
-export { sinkTarget, snowDrag, powderFloor, gripAt, restSinkOf, type Grip } from "./game/snow.ts";
+export {
+  sinkTarget,
+  snowDrag,
+  powderFloor,
+  gripAt,
+  onIce,
+  restSinkOf,
+  type Grip,
+} from "./game/snow.ts";
 export { powerShare, driveForce, maxDriveForce, rpmAtTop } from "./game/traction.ts";
 export { landingLoss } from "./game/flight.ts";
 export { noseDown, wipeoutCause, crashOver } from "./game/crash.ts";

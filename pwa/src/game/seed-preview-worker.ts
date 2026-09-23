@@ -11,13 +11,13 @@
 // arrives. The engine is framework-free and `minimap-bake.ts` and
 // `seed-chart.ts` are DOM-free, so all three run here unchanged.
 
-import { generateLevel } from "@engine";
+import { generateLevel, type RegionId } from "@engine";
 
 import { MAP_QUALITY, MAP_TYPE, bakeMinimap, minimapSource } from "./minimap-bake.ts";
 import { CHART_PX, seedSchematic, type SeedSchematic } from "./seed-chart.ts";
 
-/** What the card asks for: one seed. */
-export type PreviewRequest = { seed: number };
+/** What the card asks for: one seed, in one kind of snow country (R21). */
+export type PreviewRequest = { seed: number; region: RegionId };
 
 /** THE DAY THIS SEED DEALS (R15) — what the start card's date and time rows
  * stand on until they are moved, and the latitude the hour row's travel is
@@ -30,6 +30,7 @@ export type SeedDeal = { hour: number; dayOfYear: number; latitude: number };
 export type PreviewReply =
   | {
       seed: number;
+      region: RegionId;
       ok: true;
       picture: Blob | { px: number; rgba: Uint8ClampedArray<ArrayBuffer> };
       schematic: SeedSchematic;
@@ -37,18 +38,19 @@ export type PreviewReply =
       /** The loop, m. */
       length: number;
     }
-  | { seed: number; ok: false; error: string };
+  | { seed: number; region: RegionId; ok: false; error: string };
 
 const post = (reply: PreviewReply, transfer: Transferable[] = []): void =>
   (self as unknown as Worker).postMessage(reply, transfer);
 
 self.onmessage = async (e: MessageEvent<PreviewRequest>) => {
-  const { seed } = e.data;
+  const { seed, region } = e.data;
   try {
-    const level = generateLevel(seed);
+    const level = generateLevel(seed, { region });
     const rgba = bakeMinimap(minimapSource(level), CHART_PX);
     const base = {
       seed,
+      region,
       ok: true as const,
       schematic: seedSchematic(level),
       deal: { ...level.sun },
@@ -66,6 +68,6 @@ self.onmessage = async (e: MessageEvent<PreviewRequest>) => {
     }
     post({ ...base, picture: { px: CHART_PX, rgba } }, [rgba.buffer]);
   } catch (err) {
-    post({ seed, ok: false, error: err instanceof Error ? err.message : String(err) });
+    post({ seed, region, ok: false, error: err instanceof Error ? err.message : String(err) });
   }
 };

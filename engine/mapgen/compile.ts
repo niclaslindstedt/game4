@@ -40,7 +40,16 @@ export type LevelParts = {
   drifts: GeneratedLevel["drifts"];
   weather: GeneratedLevel["weather"];
   version: GeneratedLevel["version"];
+  region: GeneratedLevel["region"];
+  /** The region's own snow (R21), where it lays any. */
+  crust: Heightfield | null;
+  ice: Heightfield | null;
 };
+
+/** A frozen river's field, published with its sample (R21). */
+function iceOf(ice: Heightfield): Pick<Level, "ice" | "iceAt"> {
+  return { ice, iceAt: (x, z) => sampleField(ice, x, z) };
+}
 
 /** Bind the parts into a level. */
 export function compileLevel(parts: LevelParts): GeneratedLevel {
@@ -76,5 +85,8 @@ export function compileLevel(parts: LevelParts): GeneratedLevel {
     drifts: parts.drifts,
     version: parts.version,
     weather: parts.weather,
+    region: parts.region,
+    ...(parts.crust ? { crust: parts.crust } : {}),
+    ...(parts.ice ? iceOf(parts.ice) : {}),
   };
 }

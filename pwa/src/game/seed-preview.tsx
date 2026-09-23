@@ -30,6 +30,7 @@
 //     the plate is a square the CARD sizes, so nothing moves under a press
 //     already aimed at a button.
 
+import type { RegionId } from "@engine";
 import { useEffect, useRef, useState } from "preact/hooks";
 
 import { MAP_QUALITY, MAP_TYPE } from "./minimap-bake.ts";
@@ -74,14 +75,17 @@ function pixelsToUrl(
   canvas.toBlob((blob) => blob && done(URL.createObjectURL(blob)), MAP_TYPE, MAP_QUALITY);
 }
 
-export function useSeedPreview(seed: number): SeedChart {
+/** What names an answer: the seed, in its region (R21). */
+const keyOf = (a: { seed: number; region: RegionId }): string => `${a.region}:${a.seed}`;
+
+export function useSeedPreview(seed: number, region: RegionId): SeedChart {
   const [shown, setShown] = useState<SeedAnswer | null>(null);
-  const cache = useRef(new Map<number, SeedAnswer>());
+  const cache = useRef(new Map<string, SeedAnswer>());
   const worker = useRef<Worker | null>(null);
-  /** The seed on screen RIGHT NOW, for the reply handler — a ref, because
+  /** The map on screen RIGHT NOW, for the reply handler — a ref, because
    * the handler outlives the render it was created in. */
-  const wanted = useRef(seed);
-  wanted.current = seed;
+  const wanted = useRef(keyOf({ seed, region }));
+  wanted.current = keyOf({ seed, region });
 
   useEffect(() => {
     const kept = cache.current;
@@ -90,13 +94,13 @@ export function useSeedPreview(seed: number): SeedChart {
     });
     const keep = (answer: SeedAnswer): void => {
       if (kept.size >= KEPT) {
-        const oldest = kept.keys().next().value as number;
+        const oldest = kept.keys().next().value as string;
         const out = kept.get(oldest);
         if (out?.ok && out.url) URL.revokeObjectURL(out.url);
         kept.delete(oldest);
       }
-      kept.set(answer.seed, answer);
-      if (answer.seed === wanted.current) setShown(answer);
+      kept.set(keyOf(answer), answer);
+      if (keyOf(answer) === wanted.current) setShown(answer);
     };
     w.onmessage = (e: MessageEvent<PreviewReply>) => {
       const reply = e.data;
@@ -113,7 +117,7 @@ export function useSeedPreview(seed: number): SeedChart {
         const answer: SeedAnswer = { ...reply, url: null };
         keep(answer);
         pixelsToUrl(picture.px, picture.rgba, (url) => {
-          if (kept.get(reply.seed) === answer) keep({ ...answer, url });
+          if (kept.get(keyOf(reply)) === answer) keep({ ...answer, url });
           else URL.revokeObjectURL(url);
         });
       }
@@ -128,17 +132,20 @@ export function useSeedPreview(seed: number): SeedChart {
   }, []);
 
   useEffect(() => {
-    const kept = cache.current.get(seed);
+    const kept = cache.current.get(keyOf({ seed, region }));
     if (kept) {
       setShown(kept);
       return;
     }
-    const ask: PreviewRequest = { seed };
+    const ask: PreviewRequest = { seed, region };
     const timer = window.setTimeout(() => worker.current?.postMessage(ask), SETTLE_MS);
     return () => window.clearTimeout(timer);
-  }, [seed]);
+  }, [seed, region]);
 
-  return { shown, fresh: shown !== null && shown.seed === seed };
+  return {
+    shown,
+    fresh: shown !== null && keyOf(shown) === keyOf({ seed, region }),
+  };
 }
 
 /** A kicker's mark: a chevron pointing the way it throws, at its lip. */

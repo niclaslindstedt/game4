@@ -13,10 +13,14 @@ horizon. The snow's own light — the glitter, the blue shadows, the groomed
 grain, the furrows — is `snow-look`'s; the rules that shape the country and
 the loop are `mapgen-improvement`'s.
 
-**ONE NATURE.** This slice has one kind of country — snowy hills, mountain
-flanks, forests of snow-covered conifers, open powder meadows. There are no
-biomes, no water, no animals, no birds and no rocks, and nothing here should
-grow a table keyed by a biome id until a second kind of country is asked for.
+**FOUR KINDS OF COUNTRY (R21).** The boreal forest — snowy hills, mountain
+flanks, snow-covered conifers, open powder meadows — is the country every
+rule and every paint was written against; the high alpine, the tundra plateau
+and the birch valley are rows over it (`engine/mapgen/regions.ts`: the woods'
+density, height, tree line and roster; `pwa/src/game/region-look.ts`: the
+needles, the bough load, the birch's bark and twigs, the far woods' tint). A
+new one is `add-region`'s checklist. There is no water but a frozen river, and
+no animals, birds or rocks as objects.
 
 **Read this skill's lessons first** —
 `node scripts/skill-lessons.mjs nature --list`. Load **`skill-reflection`**

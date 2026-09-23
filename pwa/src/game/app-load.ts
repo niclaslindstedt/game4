@@ -31,7 +31,7 @@ import {
   error,
   type GameMode,
   type GameState,
-  type SkyOverride,
+  type CreateGameOptions,
   type SledSpec,
 } from "@engine";
 
@@ -195,7 +195,7 @@ export function createLoader(
 export function raceOrFallback(
   seed: number,
   rider: { assist: Settings["assist"]; spec: SledSpec; mode: GameMode; laps: number } | null,
-  sky?: SkyOverride,
+  world: Pick<CreateGameOptions, "sky" | "region"> = {},
 ): GameState {
   const help = {
     ...(rider
@@ -206,7 +206,7 @@ export function raceOrFallback(
           laps: rider.mode === "timeTrial" ? rider.laps : undefined,
         }
       : {}),
-    sky,
+    ...world,
   };
   try {
     return createGame({ seed, ...help });

@@ -34,7 +34,7 @@ import { inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingLoss } from "./flight.ts";
 import { chassisContacts } from "./chassis.ts";
-import { gripAt, sinkTarget, snowDrag, type Grip } from "./snow.ts";
+import { gripAt, onIce, sinkTarget, snowDrag, type Grip } from "./snow.ts";
 import { cornerGrip, harshSpeedOf } from "./limits.ts";
 import { footprintOf } from "./footprint.ts";
 import { probesOf } from "./suspension.ts";
@@ -250,6 +250,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const dx = -up.x;
     const dz = -up.z;
     const packed = level.packedAt(ax, az);
+    const ice = level.iceAt ? level.iceAt(ax, az) : 0;
     // A trenched tread (`trench.ts`) hangs in the hole it has dug.
     const target =
       sinkTarget(packed, speed0, p.sinkScale, p.planeScale, state.snowDepth) +
@@ -347,6 +348,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const vf = pvx * tx + pvy * ty + pvz * tz;
     const vl = pvx * side.x + pvy * side.y + pvz * side.z;
     gripAt(packed, grip, fit.powderDrive, fit.packedSide);
+    if (ice > 0) onIce(grip, ice);
     let along = 0;
     let across = 0;
     if (p.kind === "tread") {
