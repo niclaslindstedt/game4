@@ -2688,18 +2688,6 @@ canvas {
   opacity: 0.5;
 }
 
-/* THE KEYS, on a machine that has them: one quiet line in the foot strip,
-   so a first race is not a race spent finding the throttle. */
-.menu-keys {
-  flex: 1 1 12rem;
-  min-width: 0;
-  font-size: clamp(0.6rem, 1.7vmin, 0.78rem);
-  letter-spacing: 0.04em;
-  color: var(--hud-info);
-  opacity: 0.85;
-  text-align: center;
-}
-
 /* ── A PAGE UNDER THE FRONT DOOR (menu-options.tsx, menu-keys.tsx) ─────────
    A head with the way out in it, then the rows (menu-knobs.tsx). OPTIONS is
    the longest card in the game, so the CARD scrolls — see `.menu-card`. */

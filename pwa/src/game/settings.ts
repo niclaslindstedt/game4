@@ -70,12 +70,6 @@ export const ASSIST_LEVELS: readonly AssistLevel[] = ["off", "half", "full"];
 const ASSIST_SHARE: Record<AssistLevel, number> = { off: 0, half: 0.5, full: 1 };
 export type AssistSettings = { steer: AssistLevel; air: AssistLevel };
 
-/** The time trial's length after `laps`, wrapping — the front door's chip. */
-export function nextTrialLaps(laps: number): number {
-  const L = TIME_TRIAL.laps;
-  return L[(L.indexOf(laps) + 1) % L.length];
-}
-
 /** The engine's dials for a pair of rows. */
 export function assistOf(assist: AssistSettings): Assist {
   return { yaw: ASSIST_SHARE[assist.steer], air: ASSIST_SHARE[assist.air] };

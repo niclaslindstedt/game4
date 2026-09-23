@@ -44,7 +44,6 @@ import {
   clashesWith,
   freshKeys,
   keyLabel,
-  keysLine,
   mergeKeys,
   type KeyAction,
 } from "../pwa/src/game/settings-input.ts";
@@ -361,11 +360,6 @@ describe("the keys page (settings-input.ts)", () => {
     expect(merged.throttle).toEqual(["KeyI"]);
     expect(merged.brake).toEqual(DEFAULT_KEYS.brake);
     expect("hover" in merged).toBe(false);
-  });
-
-  it("prints the front door's line off the keys in force", () => {
-    expect(keysLine(freshKeys())).toContain("W throttle");
-    expect(keysLine(bindKey(freshKeys(), "throttle", "KeyI"))).toContain("I throttle");
   });
 });
 

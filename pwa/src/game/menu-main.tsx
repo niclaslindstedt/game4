@@ -18,18 +18,16 @@
 // that pinned a seed says so instead, because that visit rides the seed.
 // The race is three laps against three riders; the trial is the same loop
 // alone against the clock, the record book's row for that map, sled and
-// length, and the ghost of the run that set it (`ghost-run.ts`). Its length
-// is the chip along the foot.
+// length, and the ghost of the run that set it (`ghost-run.ts`) — always
+// the race's three laps.
 // TRICKS beside them: two minutes on the map's trick field (R20), alone, the
 // score the run — on the map the menu stands over.
 // THE FREE RIDE beside it, unlit: the whole map and nobody on it, set up on
 // its own start card (`menu-start.tsx`) — a second way onto the snow, so a
 // tile, but never a second red one.
 //
-// EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, OPTIONS
-// (`menu-options.tsx`), the GALLERY of pictures kept (`menu-gallery.tsx`),
-// the keys on a machine that has them — read off the
-// bindings the rider actually has — and the build. And DEVELOPER, once it
+// EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, the
+// GALLERY of pictures kept (`menu-gallery.tsx`) and the build. And DEVELOPER, once it
 // has been let out: the title HELD for seven seconds (`menu-hold.ts`) is the
 // one door to it, and the chip appearing is the receipt. Low, and not tile-shaped at
 // all, because a thing that does not start a race should not wear the shape
@@ -76,14 +74,11 @@ export function MainMenu({
   laps,
   riders,
   sound,
-  keys,
   trial,
   onRace,
   onFree,
   onTrial,
-  onTrialLaps,
   onSound,
-  onOptions,
   onGallery,
   tricks,
   onTricks,
@@ -105,17 +100,13 @@ export function MainMenu({
   laps: number;
   riders: number;
   sound: boolean;
-  /** The keys line, on a machine that has keys worth listing. */
-  keys: string | null;
   /** The TIME TRIAL tile: its seed, its length, and the row standing. */
   trial: { seed: number; laps: number; best: { time: number; sled: string } | null };
   onRace: () => void;
   onTrial: () => void;
-  onTrialLaps: () => void;
   /** Onto the free ride's start card. */
   onFree: () => void;
   onSound: () => void;
-  onOptions: () => void;
   onGallery: () => void;
   /** The TRICKS tile: its seed and how long the run lasts, s. */
   tricks?: { seed: number; seconds: number };
@@ -230,14 +221,6 @@ export function MainMenu({
             <Glyph name={sound ? "speaker" : "mute"} />
             <span class="menu-tile-name">{STRINGS.menuSound(sound)}</span>
           </button>
-          <button type="button" class="menu-chip" data-menu="trial-laps" onClick={onTrialLaps}>
-            <Glyph name="clock" />
-            <span class="menu-tile-name">{STRINGS.menuTrialLaps(trial.laps)}</span>
-          </button>
-          <button type="button" class="menu-chip" data-menu="options" onClick={onOptions}>
-            <Glyph name="sliders" />
-            <span class="menu-tile-name">{STRINGS.menuOptions}</span>
-          </button>
           <button type="button" class="menu-chip" data-menu="gallery" onClick={onGallery}>
             <Glyph name="camera" />
             <span class="menu-tile-name">{STRINGS.menuGallery}</span>
@@ -248,7 +231,6 @@ export function MainMenu({
               <span class="menu-tile-name">{STRINGS.devTitle}</span>
             </button>
           )}
-          {keys !== null && <span class="menu-keys">{keys}</span>}
           <VersionStamp />
         </div>
       </div>

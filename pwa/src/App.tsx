@@ -111,11 +111,9 @@ import {
   loadSettings,
   mixOf,
   nextCamera,
-  nextTrialLaps,
   saveSettings,
   type Settings,
 } from "./game/settings.ts";
-import { keysLine } from "./game/settings-input.ts";
 import { withPreset, type VideoSettings } from "./game/settings-video.ts";
 import {
   appDraws,
@@ -887,7 +885,6 @@ export function App() {
           laps={laps}
           riders={riders}
           sound={settings.sound}
-          keys={keys ? keysLine(settings.keys) : null}
           trial={{
             seed: trialSeed,
             laps: settings.trialLaps,
@@ -898,9 +895,7 @@ export function App() {
           onFree={() => campaign.openCard("free", "start")}
           tricks={{ seed: trialSeed, seconds: TRICKS_RUN.limit }}
           onTricks={() => campaign.openCard("tricks", "sled")}
-          onTrialLaps={() => setSettings((s) => ({ ...s, trialLaps: nextTrialLaps(s.trialLaps) }))}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
-          onOptions={() => setPage("options")}
           onGallery={() => setPage("gallery")}
           developer={settings.developer}
           onDeveloper={() => setPage("dev")}
