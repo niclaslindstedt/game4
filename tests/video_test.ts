@@ -12,7 +12,7 @@ import {
   FOREST_LOOK,
   RESOLUTION_SHARE,
   SHADOW_LEVELS,
-  SHADOW_SIZE,
+  SHADOW_LOOK,
   SPRAY_SHARE,
   TERRAIN_REACH,
   TIERS,
@@ -50,9 +50,12 @@ describe("the picture's ladders (settings-video.ts)", () => {
     expect(sprays).toEqual([...sprays].sort((a, b) => a - b));
     expect(SPRAY_SHARE.high).toBe(1);
 
-    const shadows = SHADOW_LEVELS.map((s) => SHADOW_SIZE[s]);
+    const shadows = SHADOW_LEVELS.map((s) => SHADOW_LOOK[s].size);
     expect(shadows).toEqual([...shadows].sort((a, b) => a - b));
-    expect(SHADOW_SIZE.off).toBe(0);
+    const reaches = SHADOW_LEVELS.map((s) => SHADOW_LOOK[s].reach);
+    expect(reaches).toEqual([...reaches].sort((a, b) => a - b));
+    expect(SHADOW_LOOK.off.size).toBe(0);
+    expect(SHADOW_LOOK.high.casters).toBe("full");
 
     const fine = TRAIL_LEVELS.map((t) => TRAIL_LOOK[t].fineSize * TRAIL_LOOK[t].coarseSize);
     expect(fine).toEqual([...fine].sort((a, b) => a - b));
@@ -83,16 +86,12 @@ describe("the picture's ladders (settings-video.ts)", () => {
     for (let i = 1; i < TIERS.length; i++) {
       const lo = FOREST_LOOK[TIERS[i - 1]];
       const hi = FOREST_LOOK[TIERS[i]];
-      expect(lo.near).toBeLessThanOrEqual(hi.near);
-      expect(lo.mid).toBeLessThanOrEqual(hi.mid);
+      expect(lo.full).toBeLessThanOrEqual(hi.full);
       expect(lo.farShare).toBeLessThanOrEqual(hi.farShare);
     }
-    // The near and mid bands draw EVERY tree — the thinning is the far
-    // band's sketches alone — so a trunk in reach of the sled is always drawn.
-    for (const t of TIERS) {
-      expect(FOREST_LOOK[t].near).toBeLessThan(FOREST_LOOK[t].mid);
-      expect(FOREST_LOOK[t].mid).toBeLessThan(DISTANCE_LOOK.low.far);
-    }
+    // The full band draws EVERY tree — the thinning is the far band's
+    // sketches alone — so a trunk in reach of the sled is always drawn.
+    for (const t of TIERS) expect(FOREST_LOOK[t].full).toBeLessThan(DISTANCE_LOOK.low.far);
     expect(FOREST_LOOK.high.farShare).toBe(1);
   });
 

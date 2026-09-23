@@ -28,6 +28,11 @@ export type HazeUniforms = {
   uGlow: { value: THREE.Color };
   uSunCol: { value: THREE.Color };
   uHaze: { value: number };
+  /** Where the sun's shadow stands (`shadow-box.ts`): the circle's centre
+   * in plan, and the plan distances the fade runs between. Written by
+   * `environment.ts`; not the sky's, but it rides the same shared object
+   * because every world material already carries it. */
+  uShadowFade: { value: THREE.Vector4 };
 };
 
 export function createHazeUniforms(): HazeUniforms {
@@ -38,6 +43,7 @@ export function createHazeUniforms(): HazeUniforms {
     uGlow: { value: new THREE.Color() },
     uSunCol: { value: new THREE.Color() },
     uHaze: { value: 1 / 1500 },
+    uShadowFade: { value: new THREE.Vector4(0, 0, 1e9, 2e9) },
   };
 }
 
@@ -117,6 +123,36 @@ export const HAZE_FRAGMENT = /* glsl */ `
 }
 `;
 
+/** The sun's shadow faded out over the rim of the circle it is drawn in
+ * (`shadow-box.ts`), so the edge of the shadow map is a gradient that
+ * travels with the lens rather than a line shadows pop across. */
+const SHADOW_FADE_GLSL = /* glsl */ `
+uniform vec4 uShadowFade;
+float shadowFaded(float shadow) {
+  float d = length(vHazeWorld.xz - uShadowFade.xy);
+  return mix(shadow, 1.0, smoothstep(uShadowFade.z, uShadowFade.w, d));
+}
+`;
+
+const DIR_SHADOW_OPEN = "? getShadow( directionalShadowMap[ i ]";
+const DIR_SHADOW_CLOSE = "vDirectionalShadowCoord[ i ] ) : 1.0;";
+
+/** Three's `lights_fragment_begin` with the directional light's shadow
+ * passed through `shadowFaded`. Built once, and loudly: a three that moved
+ * the line would otherwise leave the rim a hard edge with nothing said. */
+let fadedLights: string | null = null;
+export function lightsWithFade(): string {
+  if (fadedLights !== null) return fadedLights;
+  const chunk = THREE.ShaderChunk.lights_fragment_begin;
+  if (!chunk.includes(DIR_SHADOW_OPEN) || !chunk.includes(DIR_SHADOW_CLOSE)) {
+    throw new Error("haze.ts: three's directional shadow line moved; re-graft shadowFaded");
+  }
+  fadedLights = chunk
+    .replace(DIR_SHADOW_OPEN, "? shadowFaded( getShadow( directionalShadowMap[ i ]")
+    .replace(DIR_SHADOW_CLOSE, "vDirectionalShadowCoord[ i ] ) ) : 1.0;");
+  return fadedLights;
+}
+
 /** Hook the shared uniforms into a compiled shader. */
 export function bindHaze(
   shader: { uniforms: Record<string, THREE.IUniform> },
@@ -144,7 +180,11 @@ export function hazeMaterial<M extends THREE.Material>(
       .replace("#include <common>", `#include <common>\n${HAZE_VERTEX}`)
       .replace("#include <fog_vertex>", `#include <fog_vertex>\n${HAZE_VERTEX_MAIN}`);
     shader.fragmentShader = shader.fragmentShader
-      .replace("#include <common>", `#include <common>\n${SKY_GLSL}\n${HAZE_VERTEX}`)
+      .replace(
+        "#include <common>",
+        `#include <common>\n${SKY_GLSL}\n${HAZE_VERTEX}\n${SHADOW_FADE_GLSL}`,
+      )
+      .replace("#include <lights_fragment_begin>", lightsWithFade())
       .replace("#include <fog_fragment>", HAZE_FRAGMENT);
     extra?.(shader);
   };

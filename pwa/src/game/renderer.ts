@@ -5,7 +5,7 @@
 //   environment.ts  the sun, the sky's light, the dome and the haze
 //   terrain.ts      the ground: a clipmap round the lens, shaded as snow
 //   trail-map.ts    every furrow any rider has cut, lowering that snow
-//   forest.ts       the snow-loaded conifers, in three bands of distance
+//   forest.ts       the snow-loaded conifers, two bands and their casters
 //   gates.ts        the checkpoints' poles and flags, the start banner
 //   sled-body.ts    the four machines and their riders
 //   spray.ts        the roost, the ski spray and the landing puff
@@ -49,7 +49,7 @@ import {
   DISTANCE_LOOK,
   FOREST_LOOK,
   RESOLUTION_SHARE,
-  SHADOW_SIZE,
+  SHADOW_LOOK,
   SPRAY_SHARE,
   TRAIL_LOOK,
   terrainLook,
@@ -125,13 +125,13 @@ export function createWorldRenderer(
   gl.outputColorSpace = THREE.SRGBColorSpace;
   gl.toneMapping = THREE.ACESFilmicToneMapping;
   gl.toneMappingExposure = 1.05;
-  gl.shadowMap.enabled = SHADOW_SIZE[video.shadows] > 0;
+  gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
   gl.shadowMap.type = THREE.PCFSoftShadowMap;
 
   const scene = new THREE.Scene();
   const lens: Lens = createLens(NEAR, FAR);
   scene.add(lens.camera);
-  const env: Environment = createEnvironment(scene, SHADOW_SIZE[video.shadows], FAR * 0.9);
+  const env: Environment = createEnvironment(scene, SHADOW_LOOK[video.shadows], FAR * 0.9);
   env.setDistance(video.distance);
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
 
@@ -203,6 +203,7 @@ export function createWorldRenderer(
   const forestOptions = () => ({
     ...FOREST_LOOK[video.forest],
     far: DISTANCE_LOOK[video.distance].far,
+    casters: SHADOW_LOOK[video.shadows].casters,
   });
 
   function riderFor(i: number, spec: SledSpec): Rider {
@@ -365,11 +366,11 @@ export function createWorldRenderer(
 
       trail.update(gl, stamps, sled.x, sled.z);
       terrain.follow(lens.camera.position.x, lens.camera.position.z);
-      if (present) forest?.update(lens.camera);
+      const look = skyLookAt(level, state.t);
+      env.update(look, lens.camera, d.y);
+      if (present) forest?.update(lens.camera, env.shadow());
       gates?.update(state.progress.nextCheckpoint, state.t);
 
-      const look = skyLookAt(level, state.t);
-      env.update(look, lens.camera, d.x, d.y, d.z);
       const h = gl.domElement.height;
       spray.setScale(h / (2 * Math.tan(THREE.MathUtils.degToRad(lens.camera.fov) / 2)));
       spray.update(Math.min(dt, 0.1), look, level);
@@ -399,8 +400,8 @@ export function createWorldRenderer(
       const was = video;
       video = { ...next };
       if (was.resolution !== video.resolution) api.resize(box.width, box.height, box.pixelRatio);
-      gl.shadowMap.enabled = SHADOW_SIZE[video.shadows] > 0;
-      env.setShadow(SHADOW_SIZE[video.shadows]);
+      gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
+      env.setShadow(SHADOW_LOOK[video.shadows]);
       env.setDistance(video.distance);
       spray?.setBudget(SPRAY_SHARE[video.spray]);
       forest?.setOptions(forestOptions());

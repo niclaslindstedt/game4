@@ -20,11 +20,11 @@
 //   TRAILS      the trail maps (`trail-map.ts`): the fine window's texels and
 //               span, the coarse map's texels — or OFF, which stamps nothing
 //               and leaves the snow untouched.
-//   FOREST      how close a tree is drawn whole (and casts), how far the
-//               full-detail band runs, and how many of the far band's sketches
-//               stand at all. Never WHICH trunks exist: the physics hits every
+//   FOREST      how far the full-detail band runs, and how many of the far
+//               band's sketches stand at all. Never WHICH trunks exist: the physics hits every
 //               one of them, and a tree the rider can hit is always drawn.
-//   SHADOWS     the key light's shadow map, or none.
+//   SHADOWS     the key light's shadow map, how far round the lens it
+//               reaches, and what the trees cast into it — or none.
 //   SPRAY       the share of the roost, the ski spray and the puffs thrown.
 //   ANTIALIAS   the canvas's multisampling. The one row that cannot be
 //               changed under a running context: it is read when the canvas
@@ -130,18 +130,18 @@ export const TRAIL_LOOK: Record<TrailLevel, TrailLook> = {
 };
 
 export type ForestLook = {
-  /** Trees nearer than this are drawn whole and cast into the shadow map, m. */
-  near: number;
-  /** ...and the full-detail tree runs out to here, m. */
-  mid: number;
+  /** The full-detail tree runs out to here, m; past it, the sketch. What a
+   * tree CASTS is not this row's — it is the SHADOWS row's (`SHADOW_LOOK`),
+   * so the woods' shadows do not change with how the trees are drawn. */
+  full: number;
   /** The share of the far band's sketches that stand, 0..1. */
   farShare: number;
 };
 
 export const FOREST_LOOK: Record<Tier, ForestLook> = {
-  low: { near: 20, mid: 90, farShare: 0.5 },
-  medium: { near: 30, mid: 130, farShare: 0.75 },
-  high: { near: 45, mid: 160, farShare: 1 },
+  low: { full: 90, farShare: 0.5 },
+  medium: { full: 130, farShare: 0.75 },
+  high: { full: 160, farShare: 1 },
 };
 
 export type DistanceLook = {
@@ -159,8 +159,28 @@ export const DISTANCE_LOOK: Record<Tier, DistanceLook> = {
   high: { far: 1100, hazeFloor: 0 },
 };
 
-/** SHADOWS: the key light's map, texels a side; 0 is no shadow at all. */
-export const SHADOW_SIZE: Record<ShadowLevel, number> = { off: 0, low: 1024, high: 2048 };
+export type ShadowLook = {
+  /** The key light's map, texels a side; 0 is no shadow at all. */
+  size: number;
+  /** How far round the shadow box's centre a shadow stands, m. The box is
+   * this a side each way in the light's own frame; a shadow fades out over
+   * the last `SHADOW_FADE` of it rather than stopping at a line. */
+  reach: number;
+  /** What every tree in reach casts: its own full-detail crown, or the
+   * far band's sketch drawn a touch inside it (a quarter of the triangles in
+   * the shadow pass). */
+  casters: "full" | "sketch";
+};
+
+/** SHADOWS. EVERY tree whose shadow can land in reach casts, whatever band
+ * it is drawn in — so a shadow is never switched on by riding closer to its
+ * tree. What a cheaper stop saves is the map's texels, the reach, and the
+ * trees' triangles in the shadow pass. */
+export const SHADOW_LOOK: Record<ShadowLevel, ShadowLook> = {
+  off: { size: 0, reach: 0, casters: "sketch" },
+  low: { size: 1024, reach: 55, casters: "sketch" },
+  high: { size: 2048, reach: 80, casters: "full" },
+};
 
 /** SPRAY: the share of every emission rate, and of the particle pool. */
 export const SPRAY_SHARE: Record<Tier, number> = { low: 0.35, medium: 0.65, high: 1 };

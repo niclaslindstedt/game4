@@ -100,8 +100,9 @@ function vista(): LensPose {
   };
 }
 
-/** The densest stand of trees, seen from its edge at head height. */
-function forestView(): LensPose {
+/** The densest stand of trees, seen from `distance` m out over open snow
+ * at head height. */
+function forestView(distance = 34): LensPose {
   const trees = level.trees;
   let best = trees[0];
   let most = -1;
@@ -131,8 +132,8 @@ function forestView(): LensPose {
       bestDir = a;
     }
   }
-  const ex = best.x + Math.sin(bestDir) * 34;
-  const ez = best.z + Math.cos(bestDir) * 34;
+  const ex = best.x + Math.sin(bestDir) * distance;
+  const ez = best.z + Math.cos(bestDir) * distance;
   return {
     eye: { x: ex, y: level.groundAt(ex, ez) + 2.2, z: ez },
     target: { x: best.x, y: best.y + 5, z: best.z },
@@ -187,6 +188,9 @@ function furrow(): LensPose {
 }
 
 let trackAt = -1;
+
+/** How far out the approach views stand from the wood, m. */
+const APPROACH = [140, 90, 60, 40];
 
 const shots: Record<string, () => string> = {
   spawn() {
@@ -269,6 +273,21 @@ const shots: Record<string, () => string> = {
     renderer.setOverride(null);
     return "the edge of the densest wood";
   },
+  // THE APPROACH: the forest view's own line walked in toward the wood, so
+  // what a shadow does as the lens closes on its tree is four pictures side
+  // by side — one that appears between two of them was switched on by the
+  // lens coming nearer.
+  ...Object.fromEntries(
+    APPROACH.map((d) => [
+      `approach-${d}`,
+      () => {
+        renderer.setOverride(forestView(d));
+        still();
+        renderer.setOverride(null);
+        return `the densest wood from ${d} m out`;
+      },
+    ]),
+  ),
   orbit() {
     renderer.setCamera("orbit", true);
     settle(30);
