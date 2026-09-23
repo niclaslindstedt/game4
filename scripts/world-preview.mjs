@@ -72,6 +72,11 @@ const args = parseArgs(
       default: "high",
       help: "the picture preset (low, medium, high — settings-video.ts)",
     },
+    shadows: {
+      kind: "string",
+      default: "",
+      help: "the SHADOWS row over the preset (off, sleds, all)",
+    },
     width: { kind: "number", default: 1280, help: "picture width, px" },
     height: { kind: "number", default: 720, help: "picture height, px" },
     frames: {
@@ -82,7 +87,7 @@ const args = parseArgs(
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 900, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/world-preview.mjs [--seed=n] [--views=a,b] [--quality=low] [--skip-build]",
+  "usage: node scripts/world-preview.mjs [--seed=n] [--views=a,b] [--quality=low] [--shadows=sleds] [--skip-build]",
 );
 
 mkdirSync(outDir, { recursive: true });
@@ -158,10 +163,13 @@ page.setDefaultTimeout(args.timeout * 1000);
 const query = new URLSearchParams({
   seed: String(args.seed),
   quality: args.quality,
+  ...(args.shadows ? { shadows: args.shadows } : {}),
   w: String(args.width),
   h: String(args.height),
 }).toString();
-console.log(`world — seed ${args.seed}, ${args.quality} quality, ${args.width}×${args.height}`);
+console.log(
+  `world — seed ${args.seed}, ${args.quality} quality${args.shadows ? `, shadows ${args.shadows}` : ""}, ${args.width}×${args.height}`,
+);
 await page.goto(`${server.url}world-preview.html?${query}`);
 await page.waitForFunction("window.__world !== undefined");
 await page.evaluate("window.__world.ready");

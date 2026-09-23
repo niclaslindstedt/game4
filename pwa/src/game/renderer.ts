@@ -35,7 +35,7 @@ import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
 import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
-import { createForest, type Forest } from "./forest.ts";
+import { createForest, type Forest, type ForestOptions } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
 import { hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
@@ -53,6 +53,7 @@ import {
   SPRAY_SHARE,
   TRAIL_LOOK,
   terrainLook,
+  type ShadowLook,
   type VideoSettings,
 } from "./settings-video.ts";
 import { createTerrain, type Terrain } from "./terrain.ts";
@@ -128,10 +129,16 @@ export function createWorldRenderer(
   gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
   gl.shadowMap.type = THREE.PCFSoftShadowMap;
 
+  /** The SHADOWS row's stop, its map no bigger than this GPU can hold. */
+  const shadowLook = (): ShadowLook => {
+    const look = SHADOW_LOOK[video.shadows];
+    return { ...look, size: Math.min(look.size, gl.capabilities.maxTextureSize) };
+  };
+
   const scene = new THREE.Scene();
   const lens: Lens = createLens(NEAR, FAR);
   scene.add(lens.camera);
-  const env: Environment = createEnvironment(scene, SHADOW_LOOK[video.shadows], FAR * 0.9);
+  const env: Environment = createEnvironment(scene, shadowLook(), FAR * 0.9);
   env.setDistance(video.distance);
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
 
@@ -200,10 +207,10 @@ export function createWorldRenderer(
     scene.add(ground.group);
     return ground;
   }
-  const forestOptions = () => ({
+  const forestOptions = (): ForestOptions => ({
     ...FOREST_LOOK[video.forest],
     far: DISTANCE_LOOK[video.distance].far,
-    casters: SHADOW_LOOK[video.shadows].casters,
+    casters: SHADOW_LOOK[video.shadows].trees ? FOREST_LOOK[video.forest].casters : "none",
   });
 
   function riderFor(i: number, spec: SledSpec): Rider {
@@ -401,7 +408,7 @@ export function createWorldRenderer(
       video = { ...next };
       if (was.resolution !== video.resolution) api.resize(box.width, box.height, box.pixelRatio);
       gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
-      env.setShadow(SHADOW_LOOK[video.shadows]);
+      env.setShadow(shadowLook());
       env.setDistance(video.distance);
       spray?.setBudget(SPRAY_SHARE[video.spray]);
       forest?.setOptions(forestOptions());

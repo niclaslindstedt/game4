@@ -15,7 +15,14 @@ import { botInput, createGame, step, type GameState } from "@engine";
 
 import type { LensPose } from "../game/camera-rigs.ts";
 import { createWorldRenderer } from "../game/renderer.ts";
-import { DEFAULT_VIDEO, TIERS, withPreset, type Tier } from "../game/settings-video.ts";
+import {
+  DEFAULT_VIDEO,
+  SHADOW_LEVELS,
+  TIERS,
+  withPreset,
+  type ShadowLevel,
+  type Tier,
+} from "../game/settings-video.ts";
 
 type Shot = { name: string; note: string };
 
@@ -35,6 +42,10 @@ const seed = Number(params.get("seed") ?? 38);
 const tier = (TIERS as readonly string[]).includes(params.get("quality") ?? "")
   ? (params.get("quality") as Tier)
   : "high";
+/** The SHADOWS row over the preset, when one is named. */
+const shadows = (SHADOW_LEVELS as readonly string[]).includes(params.get("shadows") ?? "")
+  ? (params.get("shadows") as ShadowLevel)
+  : null;
 const width = Number(params.get("w") ?? 1280);
 const height = Number(params.get("h") ?? 720);
 
@@ -44,7 +55,7 @@ canvas.style.height = `${height}px`;
 const label = document.getElementById("label") as HTMLDivElement;
 
 const renderer = createWorldRenderer(canvas, {
-  video: withPreset(DEFAULT_VIDEO, tier),
+  video: { ...withPreset(DEFAULT_VIDEO, tier), ...(shadows ? { shadows } : {}) },
   preserveDrawingBuffer: true,
 });
 renderer.resize(width, height, 1);

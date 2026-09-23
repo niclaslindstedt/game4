@@ -133,6 +133,8 @@ export const STRINGS = {
   optLow: "LOW",
   optMedium: "MEDIUM",
   optHigh: "HIGH",
+  optShadowSleds: "SLEDS",
+  optShadowAll: "ALL",
   optCustom: "CUSTOM",
   optUnset: "—",
   optPrev: "previous",
@@ -199,7 +201,7 @@ export const STRINGS = {
   optForestHint: "How far out trees are drawn in full, and how thick the far woods stand.",
   optShadows: "SHADOWS",
   optShadowsHint:
-    "The sun's shadows — the sleds', the riders' and every tree's — and how far out they reach.",
+    "The sun's shadows: SLEDS casts the machines and their riders alone; ALL adds every tree's.",
   optSpray: "SPRAY",
   optSprayHint: "How much snow the sleds throw.",
   optAntialias: "SMOOTH EDGES",

@@ -30,14 +30,17 @@ import type { Level } from "@engine";
 
 import { PALETTE } from "../identity.ts";
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
-import type { ForestLook, ShadowLook } from "./settings-video.ts";
+import type { ForestLook, TreeCasters } from "./settings-video.ts";
 import { castsInto, shadowLength, type ShadowBox } from "./shadow-box.ts";
 
 /** Where the two bands end (the FOREST row's `full`, the DISTANCE row's
  * `far`, both m), the share of the far band's sketches that stand, and what
- * the trees cast (the SHADOWS row's) — `settings-video.ts` says what each
+ * the trees cast (the FOREST row's shape, or none unless SHADOWS is ALL) — `settings-video.ts` says what each
  * stop buys. */
-export type ForestOptions = ForestLook & { far: number; casters: ShadowLook["casters"] };
+export type ForestOptions = Omit<ForestLook, "casters"> & {
+  far: number;
+  casters: TreeCasters | "none";
+};
 
 const CELL = 64;
 
@@ -331,7 +334,12 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
   function fillCasters(shadow: ShadowBox | null) {
     const sets = [casterSets.full, casterSets.sketch];
     let n = [0, 0];
-    const into = shadow ? (options.casters === "full" ? casterSets.full : casterSets.sketch) : null;
+    const into =
+      !shadow || options.casters === "none"
+        ? null
+        : options.casters === "full"
+          ? casterSets.full
+          : casterSets.sketch;
     if (shadow && into) {
       // The cells the circle, and the shadows reaching into it, can touch.
       const plan = Math.hypot(shadow.sx, shadow.sz);
