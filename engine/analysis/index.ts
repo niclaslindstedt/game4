@@ -24,6 +24,7 @@ import { WEATHER_KINDS, sunsetOf, weatherOf } from "../mapgen/weather.ts";
 import { maxGradeOf, minRadius, minSeparation } from "../mapgen/track.ts";
 import type { Level } from "../mapgen/types.ts";
 import { selfCrossings } from "./crossings.ts";
+import { checkTrickField } from "./trick-field.ts";
 
 export type Severity = "error" | "warn";
 
@@ -193,19 +194,17 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   }
 
   // R9 — the kickers on the track: how many, how far apart, and that each
-  // is a crest.
-  if (
-    trackKickers.length < R.kickers.on.count.min ||
-    trackKickers.length > R.kickers.on.count.max
-  ) {
+  // is a crest. The trick field's are R20's, and held below.
+  const crests = trackKickers.filter((k) => !k.trick);
+  if (crests.length < R.kickers.on.count.min || crests.length > R.kickers.on.count.max) {
     add(
       "R9",
       "error",
-      `${trackKickers.length} kicker(s) on the track (band ${bandText(R.kickers.on.count)})`,
+      `${crests.length} kicker(s) on the track (band ${bandText(R.kickers.on.count)})`,
     );
   }
-  for (let a = 0; a < trackKickers.length; a++) {
-    const k = trackKickers[a];
+  for (let a = 0; a < crests.length; a++) {
+    const k = crests[a];
     // A crest: the line's grade breaks downward across the lip, read off
     // the ground three metres either side of it along the loop.
     const s0 = k.s ?? 0;
@@ -217,13 +216,13 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     const kick = (lip - at(-3)) / 3 - (at(3) - lip) / 3;
     if (kick < KICK)
       add("R9", "warn", `${k.id} at s ${fmt(s0, 0)} m breaks only ${fmt(kick, 2)} over its lip`);
-    for (let b = a + 1; b < trackKickers.length; b++) {
-      const ds = Math.abs((k.s ?? 0) - (trackKickers[b].s ?? 0));
+    for (let b = a + 1; b < crests.length; b++) {
+      const ds = Math.abs((k.s ?? 0) - (crests[b].s ?? 0));
       if (Math.min(ds, L - ds) < R.kickers.on.spacing - 1) {
         add(
           "R9",
           "error",
-          `${k.id} and ${trackKickers[b].id} stand ${fmt(Math.min(ds, L - ds), 0)} m apart`,
+          `${k.id} and ${crests[b].id} stand ${fmt(Math.min(ds, L - ds), 0)} m apart`,
         );
       }
     }
@@ -239,6 +238,9 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   if (offKickers.length < R.kickers.off.count.min) {
     add("R4", "warn", `only ${offKickers.length} kicker(s) off the track`);
   }
+
+  // R20 — the trick field, when the map carries one.
+  checkTrickField(level, trackKickers, add);
 
   // R10 — packed on the line, powder off it — outside the drifts (R17),
   // each read with its ease either side, which is what they published.

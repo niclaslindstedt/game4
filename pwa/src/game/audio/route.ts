@@ -98,6 +98,20 @@ export function soundForEvent(event: GameEvent): { id: string; shape?: PlayShape
     case "go":
       return { id: "go" };
 
+    // THE SCORE (`tricks.ts`): an element won is the checkpoint's bell,
+    // pitched up a step for every step of multiplier the combo now stands
+    // at, so a combo climbing is heard climbing; the air's own rung is the
+    // element beside it and says nothing of its own. A combo banked is the
+    // lap's phrase — a sketchy one, banked at its base, gets none — and a
+    // combo lost is the missed checkpoint's fall.
+    case "trick":
+      if (event.trick === "air") return null;
+      return { id: "checkpoint", shape: { pitch: 1 + 0.06 * Math.min(event.mult - 1, 10) } };
+    case "combo":
+      return event.sketchy ? null : { id: "lap" };
+    case "bail":
+      return { id: "missed" };
+
     default:
       return null;
   }

@@ -36,7 +36,7 @@
 
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { SLED, type SledSpec, type SledState } from "@engine";
+import { SLED, type SledSpec, type SledState, type TrickPose } from "@engine";
 
 import type { Pose } from "./interp.ts";
 import { mergePosed } from "./posed-merge.ts";
@@ -81,7 +81,8 @@ export type SledModel = {
   /** Pose from the engine's state, drawn at `at` (the interpolated place);
    * `sink` lowers the machine into the snow by the drawn furrow's extra
    * depth, m. */
-  pose(sled: SledState, at: Pose, sink: number): void;
+  /** `trick` is a tricks run's pose held in the air, if any. */
+  pose(sled: SledState, at: Pose, sink: number, trick?: TrickPose | null): void;
   setRiderVisible(visible: boolean): void;
   /** The lamps' glow, 0 (off) … 1 (full night) — `SkyLook.lamps` — seen
    * from `facing`: the cosine between the machine's nose and the way to
@@ -490,7 +491,7 @@ export function createSledModel(
 
   return {
     root,
-    pose(sled, at, sink) {
+    pose(sled, at, sink, trick = null) {
       root.position.set(at.x, at.y - sink, at.z);
       root.quaternion.set(at.q.x, at.q.y, at.q.z, at.q.w);
       for (let i = 0; i < 2; i++) {
@@ -537,6 +538,7 @@ export function createSledModel(
           steer: sled.steer,
           airborne: sled.airborne,
           landing: sled.landing,
+          trick,
         });
       }
       bars.rotation.y = sled.steer * 0.42;

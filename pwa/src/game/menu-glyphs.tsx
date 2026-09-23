@@ -6,7 +6,8 @@
 //
 // Only the marks this slice's cards use: the peaks on the CAMPAIGN and the
 // padlock on what it has not opened, the flag on RACE, the stopwatch on the
-// TIME TRIAL, the kicker on FREE RIDE, the speaker on the sound switch,
+// TIME TRIAL, the kicker on FREE RIDE, the flip on TRICKS, the speaker on the
+// sound switch,
 // the three the pause card is read by — carry on, start again, leave — the
 // sliders on the OPTIONS chip, and the three more its groups are headed with
 // (the keys, the dial, the screen; SOUND takes the speaker). Each group mark
@@ -30,6 +31,7 @@ export const GLYPH_NAMES = [
   "clock",
   "peaks",
   "lock",
+  "flip",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -127,6 +129,16 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <path d="M3 19.5h18" />
       <path d="M13 13.2c2.2-4.6 5.4-6 7.6-3.8" />
       <circle cx="20.4" cy="12.4" r="1.2" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // A LIP AND A LOOP OFF IT: the tricks run — the same wedge as the free
+  // ride's, and what is turned over it rather than how far it throws.
+  flip: (
+    <>
+      <path d="M2.5 20h8L10.5 16Z" fill="currentColor" stroke="none" />
+      <path d="M2.5 20h19" />
+      <path d="M12.6 14.6a4.6 4.6 0 1 1 5.6 2" />
+      <path d="M19.6 13.4l-1.4 3.2-3.2-1.2" />
     </>
   ),
   // A STOPWATCH: the time trial — the loop alone, against the clock. The

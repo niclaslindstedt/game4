@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// ONE RIDER'S STEP — the sled, the trees and the edge, the wipeout (or the
+// ONE RIDER'S STEP — the sled (and, on a tricks run, the strokes thrown in
+// the air, `strokes.ts`), the trees and the edge, the wipeout (or the
 // rider's own tumble once he is off, `crash.ts`), the damage it cost
-// (`damage.ts`), the air record, the clock and the odometer, the course (when
+// (`damage.ts`), the air record, the clock and the odometer, the buzzer
+// (`RunRules.limit`), the course (when
 // the rules count one — a free ride does not) and the automatic reset, in
 // that order, for ONE run:
 // the player's, or one of the rivals' (`rivals.ts`), which is a run of its
@@ -18,6 +20,7 @@ import { resetSled, stepCourse } from "./course.ts";
 import { stepSled } from "./sled.ts";
 import { crashOver, quietClocks, stepThrown, throwRider, wipeoutCause } from "./crash.ts";
 import { takeDamage } from "./damage.ts";
+import { poseInput, stepStrokes } from "./strokes.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledInput } from "./state.ts";
 
 /** What the rider holds under the lights: the brake, and nothing else. */
@@ -40,7 +43,10 @@ export function stepRun(run: GameState, input: SledInput, events: GameEvent[]): 
   // the controls let go, and he tumbles on his own.
   const off = c.thrown;
   const held = off || !racing ? (run.phase === "countdown" ? HOLD : NEUTRAL_INPUT) : input;
-  stepSled(run, held, events);
+  const tricks = run.rules.tricks && held === input;
+  stepSled(run, tricks ? poseInput(run, held) : held, events);
+  // THE STROKES (`strokes.ts`), on a sled whose flight is now current.
+  if (tricks) stepStrokes(run, input);
   collideTrees(run, events);
   keepInBounds(run);
   if (off) {
@@ -61,6 +67,14 @@ export function stepRun(run: GameState, input: SledInput, events: GameEvent[]): 
   if (p.finished) return;
   p.time += TUNING.dt;
   p.distance += Math.hypot(c.x - x0, c.z - z0);
+  // THE BUZZER (`RunRules.limit`): the run is over wherever it stands.
+  if (run.rules.limit > 0 && p.time >= run.rules.limit) {
+    p.finished = true;
+    p.missed = null;
+    run.phase = "finished";
+    events.push({ kind: "finish", t: run.t, time: p.time, place: 1 });
+    return;
+  }
   if (off) {
     // A sled without its rider takes no checkpoint; he is stood back up
     // once he has lain long enough.

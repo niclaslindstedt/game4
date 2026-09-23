@@ -22,7 +22,8 @@
 //                   back — how a lab photographs a sled it did not pick.
 //   ?mode=trial     the run a link boots into (or the next one pressed) is
 //                   a TIME TRIAL — alone, against the record and the ghost —
-//                   rather than a race.
+//                   rather than a race; ?mode=tricks, a TRICKS run on the
+//                   seed's trick field.
 //   ?bot=1          the player's own sled ridden by the bot for the whole
 //                   run, not just the pre-roll — a race watched from the
 //                   saddle to its finish plate with nobody's hands on it.
@@ -141,7 +142,14 @@ export function readParams(search: string): UrlParams {
     camera:
       camera !== null && RUN_CAMERAS.includes(camera as CameraRung) ? (camera as CameraRung) : null,
     sled: sled !== null && isSledId(sled) ? sled : null,
-    mode: start === "free" ? "free" : q.get("mode") === "trial" ? "timeTrial" : "race",
+    mode:
+      start === "free"
+        ? "free"
+        : q.get("mode") === "trial"
+          ? "timeTrial"
+          : q.get("mode") === "tricks"
+            ? "tricks"
+            : "race",
     bot: q.get("bot") === "1",
 
     menu: q.get("menu") !== null,

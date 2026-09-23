@@ -17,7 +17,7 @@
 import { createGame, type GameMode, type GameState, type SledSpec } from "@engine";
 
 import type { Loader } from "./app-load.ts";
-import { isPinnedMap, pinnedRun, type CampaignLevel } from "./campaign.ts";
+import { isPinnedMap, pinnedFor, pinnedRun, type CampaignLevel } from "./campaign.ts";
 import type { CampaignRig } from "./campaign-run.ts";
 import { assistOf, type Settings } from "./settings.ts";
 import type { MenuPage } from "./url-params.ts";
@@ -82,7 +82,8 @@ export function createPinnedRuns(world: {
 
 /** Where BACK on the sled card goes: the card that opened it — the free
  * ride's start card, the campaign card for a rung, the level card for a
- * pinned map — or the front door, where a link pinned a seed instead. */
+ * pinned map — or the front door, for a mode that rides no pinned map (a
+ * tricks run) or where a link pinned a seed instead. */
 export function sledBack(
   rung: CampaignLevel | null,
   mode: GameMode,
@@ -90,5 +91,5 @@ export function sledBack(
 ): MenuPage {
   if (mode === "free") return "start";
   if (rung) return "campaign";
-  return linkSeed === null ? "levels" : "root";
+  return pinnedFor(null, mode, linkSeed) ? "levels" : "root";
 }

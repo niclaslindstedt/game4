@@ -10,6 +10,8 @@
 //                 ride from where it started.
 //   SOUND         the one setting worth stopping for, and it applies to
 //                 the frame in front of you the moment it moves.
+//   WATCH REPLAY  the race so far, from the outside (`replay-run.ts`) —
+//                 which ENDS it, and the row says so.
 //   MAIN MENU     out of the race and back to the front door. Nothing is
 //                 torn down: the same sled carries on under the bot.
 //
@@ -34,6 +36,7 @@ export function PauseMenu({
   onRestart,
   onSound,
   onMainMenu,
+  onReplay = null,
 }: {
   /** THE HELD RACE, as the HUD behind this card reads it. */
   snap: HudSnapshot;
@@ -42,6 +45,8 @@ export function PauseMenu({
   onRestart: () => void;
   onSound: () => void;
   onMainMenu: () => void;
+  /** Watch the race so far, or null where there is no recording of it. */
+  onReplay?: (() => void) | null;
 }) {
   return (
     <div
@@ -58,9 +63,11 @@ export function PauseMenu({
         <div class="menu-pause-head">
           <div class="menu-title">{STRINGS.pauseHead}</div>
           <div class="menu-sub">
-            {snap.free
-              ? STRINGS.pauseSubFree(snap.seed)
-              : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
+            {snap.tricks
+              ? STRINGS.pauseSubTricks(snap.seed, snap.tricks.score)
+              : snap.free
+                ? STRINGS.pauseSubFree(snap.seed)
+                : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
           </div>
         </div>
         <div class="menu-items">
@@ -84,6 +91,13 @@ export function PauseMenu({
               {snap.free ? STRINGS.pauseRestartFree : STRINGS.pauseRestart}
             </span>
           </button>
+          {onReplay && (
+            <button type="button" class="menu-item" onClick={onReplay}>
+              <Glyph name="play" />
+              <span class="menu-item-name">{STRINGS.replayWatch}</span>
+              <span class="menu-item-note">{STRINGS.replayWatchNote}</span>
+            </button>
+          )}
           <button type="button" class="menu-item menu-item-leave" onClick={onMainMenu}>
             <Glyph name="exit" />
             <span class="menu-item-name">{STRINGS.pauseMainMenu}</span>

@@ -9,7 +9,7 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 ## A first race
 
 1. **The attract card.** The publisher's name while the first map is built behind the card, then the app's two trails lay themselves, POWDER RUN rises under them, and the card asks for a press. Any key or a tap clears it.
-2. **The front door.** One lit tile, **CAMPAIGN** (below), with how far up the ladder you have got and the map it would ride next. Under it, **RACE**: three laps against three riders, and **TIME TRIAL**: the same loop alone under the lights, against the clock and the record book's best for that map, sled and length. Both ride one of the campaign's pinned maps, picked on a **level card** out of the shelves the campaign has opened — its name is on the tile — so a record is a record round a loop anyone can ride; a link that names `?seed=<n>` rides that seed instead. Each opens the sled card. Under them, **FREE RIDE** (below). Along the foot: the sound switch, the trial's length (**TRIAL 3 LAPS** / **TRIAL 1 LAP**), **OPTIONS**, the keys you ride on, the build. Behind the card a bot is already racing the map and the camera circles its sled; nothing is paused.
+2. **The front door.** One lit tile, **CAMPAIGN** (below), with how far up the ladder you have got and the map it would ride next. Under it, **RACE**: three laps against three riders, and **TIME TRIAL**: the same loop alone under the lights, against the clock and the record book's best for that map, sled and length. Both ride one of the campaign's pinned maps, picked on a **level card** out of the shelves the campaign has opened — its name is on the tile — so a record is a record round a loop anyone can ride; a link that names `?seed=<n>` rides that seed instead. Each opens the sled card. Then **TRICKS** — on the map the menu is standing over — and **FREE RIDE** (both below). Along the foot: the sound switch, the trial's length (**TRIAL 3 LAPS** / **TRIAL 1 LAP**), **OPTIONS**, the keys you ride on, the build. Behind the card a bot is already racing the map and the camera circles its sled; nothing is paused.
 3. **The sled card.** Which machine: the sled itself turning on a stand of snow, an arrow either side of it to step through the four — **TRAIL** (short tread, low lugs: quickest on the groomer, lost in a drift), **CROSSOVER** (the middle of every band), **MOUNTAIN** (a long belt of tall paddles: floats where the others bog, pushes wide on a groomed bend) and **CROSS** (light, stiff, long travel: lands what the others bottom on) — its top speed, 0–100 and power beside it, and five bars saying where it stands against the other three: ACCELERATION, TOP SPEED, CORNERING, POWDER, LANDINGS. The pick is remembered. **RIDE** stands the race up; the three rivals are each dealt a machine of their own.
 4. **The loading card.** The map generated from its seed, the field stood on the grid, the terrain, the forest and the checkpoints built, every shader compiled — a second or two, shown as a bar per phase.
 5. **The lights.** You stand in deep powder beside the track with the field abreast of you. Three lights, then GO.
@@ -23,6 +23,17 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 
 **CAMPAIGN** is three shelves of six pinned maps — the **Foothills** (bright days, open hills), the **Timberline** (steeper country, closer woods, the light going) and the **Summit** (fog, falling snow and the night) — each shelf a race, a time trial, two races, a time trial and a race, every rung asking a little more than the one before. A race rung is ridden against the same three rivals, who never lean on you, and pays the podium **3**, **2** and **1** points for the whole field — fourth pays nothing. A time trial rung is ridden alone and pays a **medal**: bronze, silver or gold against the times on its box. A podium or a medal opens the next map; clearing every map on a shelf AND standing top of its table opens the next shelf. Every box shows the map's loop, its day (the sky and the hour it starts at) and what you have got out of it; the ring is on the rung the campaign would ride next, and **RIDE** in the card's head takes it. Nothing is ever spent: ride a map again whenever you like, and the board keeps your better afternoon. The finish plate on a rung says what it paid and what it opened, and **NEXT MAP** rides the rung after it.
 
+## A tricks run
+
+**TRICKS** on the front door is the map the menu is standing over with its **trick field** laid on the loop (R20): groomed kickers in three sizes — small, medium, large and round again — at every straight stretch of the track. It opens the sled card; **RIDE** stands it up, and after the lights you have two minutes alone on it, the course counting nothing. The score is the run:
+
+- **The air pays** by the second and by the metre, more the longer you hang.
+- **Flips**: carry the lean all the way back off the lip (**E** / **Shift**) and the sled throws a **BACKFLIP**; all the way forward (**Q** / **Z**) a **FRONT FLIP** — the brake's gyro helps it over. **360s**: throw the bars all the way over. One full press is one throw; tap it again for more rotation, out of what the flight allows. You cannot start one on the way down. Short of full lean, the lean is the usual air control — how you check a flip for the landing.
+- **Poses**: hold the trick button (**F** / **X**, or the **TRICK** press on a touchscreen) in the air: with the bars over, a **ONE-FOOTER**; with the lean back, a **CAN-CAN**; otherwise a **TUCK**. While you pose the lean and the bars move you, not the sled — and let go before you land.
+- **The combo**: everything turned in one flight, and in flights linked by landing and taking the next kicker within a second or so, is one combo: its points × its multiplier, over the nose while it is in hand, banked when you have been back on the snow a moment. A second revolution in one flight is worth more than two single ones; a flip and a 360 in one flight is a **TWIST**. Land it hard (**SKETCHY**) and you are paid the points without the multiplier; land on the nose, get thrown, reset, or come down still in a pose and the combo is lost.
+
+The HUD shows the **SCORE** and the seconds **LEFT** where a race keeps its laps; the finish plate is the score. The record book keeps no tricks scores.
+
 ## A free ride
 
 **FREE RIDE** on the front door is the whole map with nobody else on it: no lights, no laps, no checkpoint owed, no clock to beat — the hills, the kickers out in the country, the deep powder. It opens the **start card** first:
@@ -34,7 +45,9 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 
 **NEXT** is the sled card, and **RIDE** there stands the ride up. The HUD keeps the speed, the air clock and the minimap, and in place of the race's place, lap and checkpoint count shows the ride's clock, its **BEST AIR** and the distance **RIDDEN**; the minimap shows the loop without a checkpoint on it. **R** stands you back on the nearest point of the track. The pause card's **START AGAIN** rides the same map from where you started. Everything on the start card is remembered.
 
-At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **RESTART RACE**, **SOUND**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
+At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **RESTART RACE**, **SOUND**, **WATCH REPLAY**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
+
+**The replay.** Every race, time trial and tricks run is recorded as the controls that rode it, and **WATCH REPLAY** — on the finish plate, or on the pause card, where it ends the race — plays it back: the same race rebuilt, the rivals ridden again by the same bot, the trails cut again from clean snow. It opens on the **BROADCAST** camera, which is the chase camera until the run reaches a moment it marked (a flight, a place taken, a trunk or a rival met, a wipeout, the flag); for those it cuts to a lens planted at the edge of the wood beside the kicker, the banner or the spot, before the sled gets there, and runs the moment in slow motion (the bar says **SLOW**). **C** walks the other cameras, **Escape** or **EXIT** leaves for the front door. A free ride keeps no replay.
 
 ## Riding
 
@@ -58,13 +71,14 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 | A D / ← →          | Steer                                            |
 | E / Shift          | Lean back — in the air, nose up                  |
 | Q / Z              | Lean forward — in the air, nose down             |
+| F / X              | Hold in the air on a tricks run: a pose          |
 | R                  | Back onto the track at the last checkpoint taken |
 | B                  | Restart the race from the grid                   |
 | C                  | Next camera                                      |
 | Escape             | Pause                                            |
 | Arrows, Enter, Esc | Walk a card, press a row, go back                |
 
-**Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it is WIDE OPEN the moment your thumb lands; slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera.
+**Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it is WIDE OPEN the moment your thumb lands; slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera. On a tricks run a **TRICK** press over the speed is held for a pose.
 
 **Cameras** (C, or the camera press): **hood** and **bars** are bolted to the sled and pitch and roll with it; **chase** (the default), **far** and **high** stand behind on a boom. The game remembers the one you chose.
 

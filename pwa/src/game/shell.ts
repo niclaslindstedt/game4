@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// WHICH SURFACE IS UP, and everything that follows from it. Five surfaces
+// WHICH SURFACE IS UP, and everything that follows from it. Six surfaces
 // over ONE canvas and ONE engine state — the shell never tears a run down,
 // it only decides who rides it and what is drawn over the top:
 //
@@ -8,6 +8,11 @@
 //   loading  a race being stood up (`loading-screen.tsx`).
 //   pause    the race HELD for the player to read (`menu-pause.tsx`).
 //   run      the player's hands on the bars, with the HUD over the top.
+//   replay   a run that already happened, being WATCHED (`replay.ts`): the
+//            same engine over the same map, ridden off the controls the run
+//            was ridden on, with nobody's hands on it — a surface of its own
+//            rather than a flag on `run`, because nothing a rider presses
+//            may reach it and nothing it does is booked.
 //
 // THE SNOW NEVER STOPS BEHIND A CARD — with exactly one exception, and the
 // difference between the two is the whole reason this module exists. The
@@ -25,7 +30,7 @@
 
 import type { CameraRung } from "./renderer-api.ts";
 
-export const SHELLS = ["splash", "menu", "loading", "pause", "run"] as const;
+export const SHELLS = ["splash", "menu", "loading", "pause", "run", "replay"] as const;
 
 export type Shell = (typeof SHELLS)[number];
 
@@ -35,11 +40,18 @@ export function playerRides(shell: Shell): boolean {
   return shell === "run";
 }
 
+/** Whether what is on screen is a RECORDING rather than a race being
+ * ridden. Not the opposite of `playerRides`: nobody rides a replay, and yet
+ * everything a rider would hear and read is on — it is the race again. */
+export function watching(shell: Shell): boolean {
+  return shell === "replay";
+}
+
 /** Whether the sound is the FULL mix rather than a bed ducked under a card,
- * and whether the race's events make a noise and a pulse at all: a
- * checkpoint the bot takes under the front door is not news. */
+ * and whether the race's events make a noise at all: a checkpoint the bot
+ * takes under the front door is not news, and one in a replay is. */
 export function soundsLive(shell: Shell): boolean {
-  return playerRides(shell);
+  return playerRides(shell) || watching(shell);
 }
 
 /** Whether the engine takes steps at all — every surface but the pause
@@ -53,7 +65,7 @@ export function simulates(shell: Shell): boolean {
  * the race, and its clock, its lap and its place are part of what they
  * stopped to read. */
 export function hudOver(shell: Shell): boolean {
-  return shell === "run" || shell === "pause";
+  return shell === "run" || shell === "pause" || shell === "replay";
 }
 
 /** Whether the pause card can be reached from here. Only out of a run: a

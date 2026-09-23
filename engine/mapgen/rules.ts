@@ -147,6 +147,24 @@
 //       `weather.wind` — a heavier fall a harder wind — and a bearing it
 //       blows from. The same stream sends `weather.evening` of the maps out
 //       in the EVENING of R15. `Level.weather` publishes all of it.
+//   R20 THE TRICK FIELD. A map built for a TRICKS run — and only one: a
+//       map built for any other ride carries no field — has groomed kickers
+//       laid on its loop in the direction of travel, from `trick.lead`
+//       metres past the start line to `trick.lead` metres short of it
+//       again: as many as fit, up to `trick.count.max` and never fewer than
+//       `trick.count.min`. They are GRADED: their lips stand
+//       `trick.heights` metres high in turn — small, medium, large and round
+//       again — each with a ramp `trick.ramp` times its lip's height long
+//       and a landing `trick.landing` times it, the profile of R9, steepest
+//       at the lip, at full height across the track, its flat shoulders and
+//       its berms (R8, R18), so the berms ride up and over with it. Each
+//       stands on a stretch that turns no more than
+//       `trick.straight` radians over its footprint and whose line past the
+//       lip climbs no steeper than `trick.landingGrade`, with `trick.gap`
+//       metres of track between one kicker's landing and the next one's
+//       ramp, and as much between any of them and one of R9's. The field
+//       draws nothing from any stream: the country, the loop, the start and
+//       the checkpoints are the seed's own.
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };
@@ -403,6 +421,27 @@ export const LEVEL_RULES = {
     } as Record<string, Band>,
     /** The share of maps ridden in the evening (R15). */
     evening: 0.25,
+  },
+  /** R20 — the trick field. */
+  trick: {
+    count: { min: 4, max: 12 } as Band,
+    /** The lips, m, laid in this order and round again. */
+    heights: [1.4, 2, 2.6] as readonly number[],
+    /** Ramp and landing, as multiples of the lip's height: 2/ratio is each
+     * one's slope at the lip — a 20° kick off the ramp, where R9's are
+     * 11–14°, and a landing falling away at 7°. */
+    ramp: 5.5,
+    landing: 16,
+    /** Track between one kicker's landing and the next one's ramp, m: the
+     * run-out a sled lands into and the run-up it takes the next lip at. */
+    gap: 60,
+    /** Clear track after the start line before the first ramp, and before
+     * the line after the last landing, m. */
+    lead: 150,
+    /** Most the line may turn over one kicker's footprint, rad. */
+    straight: 0.12,
+    /** The line past the lip may climb no steeper than this. */
+    landingGrade: 0.02,
   },
 } as const;
 

@@ -20,6 +20,8 @@
 // alone against the clock, the record book's row for that map, sled and
 // length, and the ghost of the run that set it (`ghost-run.ts`). Its length
 // is the chip along the foot.
+// TRICKS beside them: two minutes on the map's trick field (R20), alone, the
+// score the run — on the map the menu stands over.
 // THE FREE RIDE beside it, unlit: the whole map and nobody on it, set up on
 // its own start card (`menu-start.tsx`) — a second way onto the snow, so a
 // tile, but never a second red one.
@@ -75,6 +77,8 @@ export function MainMenu({
   onTrialLaps,
   onSound,
   onOptions,
+  tricks,
+  onTricks,
 }: {
   /** THE CAMPAIGN tile's face: how far up the ladder, and the rung next. */
   campaign: { cleared: number; of: number; next: string | null };
@@ -101,6 +105,9 @@ export function MainMenu({
   onFree: () => void;
   onSound: () => void;
   onOptions: () => void;
+  /** The TRICKS tile: its seed and how long the run lasts, s. */
+  tricks?: { seed: number; seconds: number };
+  onTricks?: () => void;
 }) {
   return (
     <div class="menu">
@@ -170,6 +177,22 @@ export function MainMenu({
               </span>
             </span>
           </button>
+          {tricks && (
+            <button
+              type="button"
+              class="menu-tile menu-tile-wide"
+              data-menu="tricks"
+              onClick={onTricks}
+            >
+              <Glyph name="flip" />
+              <span class="menu-tile-words">
+                <span class="menu-tile-name">{STRINGS.menuTricks}</span>
+                <span class="menu-tile-line">
+                  {STRINGS.menuTricksLine(tricks.seed, tricks.seconds)}
+                </span>
+              </span>
+            </button>
+          )}
           <button type="button" class="menu-tile menu-tile-wide" data-menu="free" onClick={onFree}>
             <Glyph name="kicker" />
             <span class="menu-tile-words">

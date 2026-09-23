@@ -8,7 +8,9 @@
 // checkpoint somewhere else. So every pinned map carries the digest it was
 // curated with, and the suite rebuilds it and compares. The digest reads
 // what a RIDER meets — the loop (a station every twenty metres: where it
-// runs, how high, how wide), every checkpoint, the grid, every kicker, the
+// runs, how high, how wide), every checkpoint, the grid, every kicker (the
+// trick field's among them on a map built for a tricks run, R20 — no
+// campaign map is, so asking for one is asking for a different map), the
 // drifts, every trunk, the day and the sky — and the ground under every
 // checkpoint and every lip, so the country moving under an unmoved loop is
 // caught too. It reads none of the heightfields whole: a million samples of

@@ -31,6 +31,7 @@
 import { REPO_URL } from "../identity.ts";
 import { formatTime } from "../lib/util.ts";
 import { HudActions } from "./hud-actions.tsx";
+import { ComboTile, TrickPress, TricksChips } from "./hud-combo.tsx";
 import { DamageGauge } from "./hud-damage.tsx";
 import { RevBar } from "./hud-dial.tsx";
 import { BarZone, LeverZone, type ZoneSide } from "./hud-touch.tsx";
@@ -110,13 +111,15 @@ export function Hud({
           </div>
           {/* THE FREE RIDE'S TWO: the longest flight so far — keyed on it,
               so a new best lands with its own beat — and the odometer. */}
-          {snap.free && (
+          {/* A TRICKS RUN'S TWO in their place: the score and the buzzer. */}
+          {snap.tricks && <TricksChips tile={snap.tricks} />}
+          {snap.free && !snap.tricks && (
             <div class="hud-chip hud-best-air" key={snap.bestAir}>
               <span>{STRINGS.air(snap.bestAir)}</span>
               <span class="hud-chip-sub">{STRINGS.bestAirLabel}</span>
             </div>
           )}
-          {snap.free && (
+          {snap.free && !snap.tricks && (
             <div class="hud-chip">
               <span>{STRINGS.distance(snap.distance)}</span>
               <span class="hud-chip-sub">{STRINGS.distanceLabel}</span>
@@ -245,6 +248,9 @@ export function Hud({
         </div>
       )}
 
+      {/* THE COMBO, over the nose (`hud-combo.tsx`). */}
+      {snap.tricks && <ComboTile tile={snap.tricks} />}
+
       <div class="hud-right">
         <div class="hud-flashes">
           {flashes.map((f) => (
@@ -286,6 +292,7 @@ export function Hud({
           {lever === "right" && <LeverZone touch={input.touch} feel={feel} side="right" />}
         </div>
       )}
+      {touch && snap.tricks && <TrickPress input={input} />}
     </div>
   );
 }

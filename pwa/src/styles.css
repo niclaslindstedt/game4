@@ -1198,6 +1198,91 @@ canvas {
   padding: 0.45rem 0.9rem;
 }
 
+/* THE REPLAY BAR (hud-replay.tsx): bottom centre, where the thumbs would be
+   on a race somebody is riding. Over the HUD, and clear of the chips along
+   the top; it gives up its key note before it gives up the ways out. */
+.hud-replay-layer {
+  z-index: 2;
+}
+
+.hud-replay {
+  position: absolute;
+  left: 50%;
+  bottom: max(0.8rem, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(30rem, calc(100% - 2rem));
+  box-sizing: border-box;
+  padding: 0.6rem 1rem;
+  gap: 0.4rem;
+}
+
+.hud-replay-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  width: 100%;
+}
+
+.hud-replay-label {
+  font-size: clamp(0.65rem, 1.8vmin, 0.85rem);
+  letter-spacing: 0.3em;
+  color: var(--hud-info);
+}
+
+.hud-replay-slow {
+  margin-left: 0.8em;
+  padding: 0 0.4em;
+  border-radius: 0.25rem;
+  background: rgb(255 255 255 / 85%);
+  color: rgb(var(--hud-plate));
+  letter-spacing: 0.15em;
+}
+
+.hud-replay-title {
+  font-size: clamp(0.9rem, 2.8vmin, 1.25rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.hud-replay-line {
+  font-size: clamp(0.7rem, 2vmin, 0.95rem);
+  color: var(--hud-info);
+}
+
+/* The gauge is a TRANSFORM, so the fill never lays the page out again. */
+.hud-replay-bar {
+  width: 100%;
+  height: 0.25rem;
+  margin-top: 0.25rem;
+  border-radius: 0.2rem;
+  background: rgb(255 255 255 / 20%);
+  overflow: hidden;
+}
+
+.hud-replay-fill {
+  width: 100%;
+  height: 100%;
+  background: var(--hud-track);
+  transform-origin: left center;
+}
+
+.hud-replay-acts {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.hud-replay-act {
+  font-size: clamp(0.72rem, 2.2vmin, 1rem);
+  padding: 0.4rem 0.9rem;
+}
+
+@media (max-height: 30rem) {
+  .hud-replay-note {
+    display: none;
+  }
+}
+
 /* THE SPLIT: the clock at the checkpoint just taken, landing with the
    place chip's own thump, in the flag's colour so it reads as news. */
 .hud-split {
@@ -1971,6 +2056,17 @@ canvas {
    pushed out to the far end of the same line rather than onto a second one. */
 .menu-card-pause .menu-item-name {
   flex: 1 1 auto;
+}
+
+.menu-card-pause .menu-item-name:has(+ .menu-item-note) {
+  white-space: nowrap;
+}
+
+.menu-card-pause .menu-item-note {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  opacity: 0.7;
+  white-space: nowrap;
 }
 
 /* The way out of the run, held apart from the three above it and given the
@@ -3696,4 +3792,89 @@ canvas {
    place chip's thump, in the flag's colour so it reads as news. */
 .hud-best-air {
   animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+/* ── THE TRICKS RUN (hud-combo.tsx) ──────────────────────────────────────
+   THE COMBO OVER THE NOSE: a column on the centreline, a little under the
+   air clock, so the seconds, what was turned in them and what they are
+   worth read down one line. Its figure is keyed on the multiplier, so every
+   element won lands with a beat. */
+.hud-combo {
+  position: absolute;
+  z-index: 1;
+  top: 22%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  line-height: 1.05;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  max-width: min(90vw, 40rem);
+}
+
+.hud-combo-line {
+  font-size: clamp(0.85rem, 2.6vmin, 1.3rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.hud-combo-points {
+  font-size: clamp(1.2rem, 4.4vmin, 2.2rem);
+  font-weight: 700;
+  color: var(--hud-good);
+  font-variant-numeric: tabular-nums;
+  animation: hud-combo-beat 260ms ease-out;
+}
+
+.hud-combo-closed .hud-combo-points {
+  color: var(--hud-info);
+}
+
+.hud-combo-bailed,
+.hud-combo-bailed .hud-combo-points {
+  color: var(--hud-bad);
+}
+
+@keyframes hud-combo-beat {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* The buzzer's last ten seconds. */
+.hud-score-late {
+  color: var(--hud-bad);
+}
+
+/* THE TRICK PRESS for a thumb: bottom centre over the speed panel, between
+   the two thumbs, where either can reach it without leaving its zone. */
+.hud-trick-press {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 5.5rem);
+  transform: translateX(-50%);
+  font: inherit;
+  font-size: clamp(0.8rem, 2.4vmin, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--hud-ink);
+  background: rgb(var(--hud-plate) / 70%);
+  border: 2px solid var(--hud-edge);
+  border-radius: 999px;
+  padding: 0.7rem 1.4rem;
+  touch-action: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-combo-points {
+    animation: none;
+  }
 }

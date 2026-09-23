@@ -304,6 +304,7 @@ describe("which map a run is on", () => {
       expect(fitsMode(level, "race")).toBe(true);
       expect(fitsMode(level, "timeTrial")).toBe(true);
       expect(fitsMode(level, "free")).toBe(false);
+      expect(fitsMode(level, "tricks")).toBe(false);
     }
   });
 
@@ -356,6 +357,7 @@ describe("which map a run is on", () => {
     expect(sledBack(FIRST.levels[0], "race", null)).toBe("campaign");
     expect(sledBack(null, "race", null)).toBe("levels");
     expect(sledBack(null, "timeTrial", 7)).toBe("root");
+    expect(sledBack(null, "tricks", null)).toBe("root");
   });
 });
 

@@ -15,7 +15,8 @@
 // WHICH MODES KEEP A BOOK is `keepsRecords` — the race and the time trial.
 // The FREE RIDE keeps none: its runs are not comparable (a map on a day and
 // a depth of snow of the rider's own choosing, and no course to time), which
-// is the case the predicate exists for.
+// is the case the predicate exists for. Nor does a TRICKS run: its figure is
+// a score, higher the better, and this book is a book of times.
 //
 // Two halves, the way `settings.ts` is split: everything above the storage
 // line is PURE — a key, a comparison, a book laid over a book — so
@@ -61,7 +62,7 @@ export function recordId(key: RecordKey): string {
 
 /** WHETHER A MODE KEEPS A BOOK AT ALL (see the header). */
 export function keepsRecords(mode: GameMode): boolean {
-  return isGameMode(mode) && mode !== "free";
+  return isGameMode(mode) && mode !== "free" && mode !== "tricks";
 }
 
 /** Whether `value` beats the row standing — outright, never on a tie — or
