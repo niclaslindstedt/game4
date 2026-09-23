@@ -16,7 +16,7 @@ Every map is **generated from a seed** by a rules engine: a basin of rolling hil
 
 One sled ships, an invented trail sled with no real brand behind it, with its rider on the seat. Every hill, every tree and every sled is written in code; the game ships no asset files, and every sound is synthesized.
 
-**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock and your place, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night, more modes and more sleds are planned, not built.
+**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock, your place and a heading-up minimap, keyboard and touch controls, and a shell of attract card, front door, OPTIONS (the picture's cost row by row, the sound, the keys, the thumbs and how much the sled helps), loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night, more modes and more sleds are planned, not built.
 
 ## Why
 

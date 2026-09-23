@@ -22,6 +22,7 @@ import {
 } from "@engine";
 
 import { SCREEN_TO_ENGINE } from "./input-model.ts";
+import { buildMinimap, type HudMinimap } from "./minimap-view.ts";
 
 /** The brake's share past which the rev bar says the brake is on. */
 const BRAKE_SHOWN = 0.05;
@@ -92,6 +93,9 @@ export type HudSnapshot = {
    * home behind the rider. Null until then. */
   result: { place: number; time: number } | null;
   standings: Standing[] | null;
+  /** THE MINIMAP: the plate's pose and every mark on it
+   * (`minimap-view.ts`). */
+  minimap: HudMinimap;
 };
 
 /** The lap a run is on, 1-based, and never past the last: the final
@@ -158,5 +162,6 @@ export function takeSnapshot(state: GameState): HudSnapshot {
     seed: state.seed,
     result: p.finished ? { place: racePlace(state), time: p.time } : null,
     standings: p.finished ? standingsOf(state) : null,
+    minimap: buildMinimap(state),
   };
 }

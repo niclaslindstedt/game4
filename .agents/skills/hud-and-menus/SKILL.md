@@ -23,7 +23,7 @@ the loading card, the pause card and what the game remembers. `input.ts` sits
 on the seam — the keys that ride a sled are here, the keys that walk a card
 are there.
 
-**Not built:** a minimap, a replay bar, a screenshot shutter. The sibling
+**Not built:** a replay bar, a screenshot shutter. The sibling
 `game3` has all of them; port from there when one is asked for. OPTIONS and
 its KEYS page are built and are `menu-system`'s; what they change HERE is
 the layout the manager rides (`setBindings`) and how the thumbs read
@@ -37,6 +37,7 @@ the layout the manager rides (`setBindings`) and how the thumbs read
 | What the HUD READS, ~12×/s | `pwa/src/game/snapshot.ts` — DOM-free; nothing in it decides, it reads the engine's `speed`, the rev share against the engine's redline, `progress`, `racePlace`, `bearingToNext` |
 | The REV BAR (a CVT has no gears and no needle) | `pwa/src/game/hud-dial.tsx` — handed a share, paints it |
 | The three presses: PAUSE, RESET, CAMERA — marks, not words, on every device | `pwa/src/game/hud-actions.tsx`; the action each one runs is `run-actions.ts`'s (`menu-system`) |
+| THE MINIMAP: a round plate under the presses, the map turned HEADING-UP about the rider, the window opening with the speedo, the loop, every checkpoint (the owed one red, a missed one the warning red, a chevron on the rim once it is off the plate) and the field in its grid colours | `pwa/src/game/minimap-view.ts` (DOM-free: the pose, the continuous turn, the zoom, every mark — `tests/minimap_test.ts`), `minimap-bake.ts` (the ground painted ONCE per map, DOM-free, run in `minimap-worker.ts` and started as the map is loaded — `prepareMinimap`), `minimap.tsx` (one world group posed by one tweened CSS transform); colours from `sled-colours.ts` |
 | What an event SAYS in the news column | `pwa/src/game/run-news.ts` (pure: an event and the state in, a line out); words from `strings.ts` |
 | The FINISH PLATE: the place and the time, then the whole field's table, live, while the rest race home | `pwa/src/game/hud-result.tsx` |
 | Every word | `pwa/src/game/strings.ts` (§39.1) — templates, never concatenations at the call site |

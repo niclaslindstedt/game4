@@ -270,6 +270,108 @@ canvas {
   gap: 0.5rem;
 }
 
+/* THE MINIMAP: a round plate under the presses, as wide as their row, with
+   the map turned heading-up about the rider (minimap.tsx). Round because the
+   map turns: a square window would swing its corners through the country
+   every bend. It takes no pointer — a thumb landing here on a phone held
+   sideways belongs to the lever's zone under it. The plate's own ground is
+   the grey of rock past the map's edge, which is what the corners of the
+   baked picture give way to. */
+.hud-minimap {
+  width: var(--hud-map, var(--hud-cluster));
+  height: var(--hud-map, var(--hud-cluster));
+  border-radius: 50%;
+  overflow: hidden;
+  background: #5d6670;
+  border: 2px solid var(--hud-edge);
+  box-shadow:
+    0 2px 0 rgb(var(--hud-plate) / 60%),
+    inset 0 0 0.6rem rgb(var(--hud-plate) / 45%);
+  pointer-events: none;
+}
+
+.hud-minimap-face {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* The world group is posed by one transform written out whole, from the
+   origin (minimap.tsx's `pose`), and tweened between two snapshots — so a
+   map read twelve times a second turns and slides like one drawn every
+   frame. The angle it tweens through is kept continuous by the payload, so
+   a heading crossing south never spins the map the long way round. */
+.hud-minimap-world {
+  transform-origin: 0 0;
+  transition: transform 90ms linear;
+}
+
+.hud-minimap-world image {
+  image-rendering: auto;
+}
+
+/* The loop over the baked ground: the payload hands the width in metres,
+   floored so the loop is never a hair at the widest window. */
+.hud-minimap-track {
+  fill: none;
+  stroke: rgb(255 255 255 / 55%);
+  stroke-linejoin: round;
+}
+
+.hud-minimap-checkpoint {
+  vector-effect: non-scaling-stroke;
+  stroke: rgb(var(--hud-plate) / 55%);
+  stroke-width: 1.6;
+  stroke-linecap: round;
+}
+
+.hud-minimap-checkpoint-start {
+  stroke: var(--hud-ink);
+  stroke-width: 2.4;
+}
+
+/* THE ONE THE RUN OWES, in the flag's red and wider than the rest — the
+   place on the map the rider has to reach next. */
+.hud-minimap-checkpoint-owed {
+  stroke: var(--hud-good);
+  stroke-width: 4;
+}
+
+.hud-minimap-checkpoint-missed {
+  stroke: var(--hud-bad);
+  stroke-width: 4.5;
+}
+
+.hud-minimap-rival {
+  stroke: rgb(var(--hud-plate) / 85%);
+  stroke-width: 1.4;
+  vector-effect: non-scaling-stroke;
+  transition:
+    cx 90ms linear,
+    cy 90ms linear;
+}
+
+.hud-minimap-chevron {
+  fill: var(--hud-good);
+  stroke: var(--hud-ink);
+  stroke-width: 0.8;
+  transition: transform 90ms linear;
+}
+
+.hud-minimap-chevron-missed {
+  fill: var(--hud-bad);
+}
+
+.hud-minimap-plinth {
+  fill: rgb(var(--hud-plate) / 55%);
+}
+
+.hud-minimap-rider {
+  stroke: var(--hud-ink);
+  stroke-width: 1.2;
+  stroke-linejoin: round;
+}
+
 /* THE NOTICE STANDING OVER A CARD (App.tsx): the front door is a layer of
    its own with a wash across the whole screen, so the corner the new-build
    mark stands in has to be lifted over it — under it the one thing the app
@@ -1319,6 +1421,13 @@ canvas {
 /* A short landscape (a phone on its side) has no height to spare: the
    panel tightens vertically. */
 @media (orientation: landscape) and (max-height: 30rem) {
+  /* The plate gives the height back: under the presses at the cluster's
+     width it would reach half-way down a phone on its side, into the
+     lever's glass. */
+  .hud {
+    --hud-map: calc(var(--hud-cluster) * 0.72);
+  }
+
   .hud-speed {
     gap: 0.1rem;
   }

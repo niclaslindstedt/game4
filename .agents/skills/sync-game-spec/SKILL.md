@@ -27,7 +27,7 @@ is an opinion.
 
 **This repository is a vertical slice**, and the ledger should say so
 honestly rather than round every unbuilt chapter up. Options, the campaign,
-weather and night, the minimap, replays and screenshots are not built (the
+weather and night, replays and screenshots are not built (the
 router's intro is the list). A chapter whose subject is not built is **"not
 yet built"**, with what stands in its place as the evidence — not N/A (the
 condition WILL apply) and not conformant (nothing is there to conform).

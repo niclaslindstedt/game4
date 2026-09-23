@@ -16,9 +16,8 @@
 //     their riser, the SEAT on the tunnel, the running boards the rider's
 //     feet stand on — and the rider himself (`rider.ts`).
 //
-// Four colour schemes (`SLED_STYLES`), one per grid slot: the player's is the
-// checkpoint-flag red, the field's three are chosen to be told apart at a
-// hundred metres against white.
+// Four colour schemes (`SLED_STYLES`), one per grid slot, their body paint
+// read off `sled-colours.ts` so the minimap's dot is the same colour.
 
 import * as THREE from "three";
 import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -27,7 +26,7 @@ import { SLED, type SledState } from "@engine";
 import type { Pose } from "./interp.ts";
 import { mergePosed } from "./posed-merge.ts";
 import { createRider, type RiderFigure, type RiderStyle } from "./rider.ts";
-import { PALETTE } from "../identity.ts";
+import { SLED_BODY } from "./sled-colours.ts";
 
 export type SledStyle = {
   body: number;
@@ -37,22 +36,22 @@ export type SledStyle = {
 
 export const SLED_STYLES: SledStyle[] = [
   {
-    body: Number.parseInt(PALETTE.flag.slice(1), 16),
+    body: SLED_BODY[0],
     accent: 0xf4f4f4,
     rider: { jacket: 0x1f2a36, pants: 0x14181e, helmet: 0xe8412c, visor: 0x16222e },
   },
   {
-    body: 0x2a6fd6,
+    body: SLED_BODY[1],
     accent: 0xf2f5f8,
     rider: { jacket: 0x2a6fd6, pants: 0x1a1d24, helmet: 0xf2f2f2, visor: 0x18222c },
   },
   {
-    body: 0xf2bf22,
+    body: SLED_BODY[2],
     accent: 0x151515,
     rider: { jacket: 0x252525, pants: 0x151515, helmet: 0xf2bf22, visor: 0x101418 },
   },
   {
-    body: 0x22a06a,
+    body: SLED_BODY[3],
     accent: 0x0e1a14,
     rider: { jacket: 0x0f6b48, pants: 0x1b1f1d, helmet: 0x0e1a14, visor: 0x2b5a6e },
   },
