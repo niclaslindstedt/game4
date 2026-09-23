@@ -1,6 +1,6 @@
 ---
 name: atmosphere
-description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's tight shadow box that follows the lens — and over that the WEATHER R19 deals (clear, fair, high cloud, overcast, falling snow, valley fog), its cloud, its falling snow and spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars, the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, R15 in `mapgen/sun.ts` and R19 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
+description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's one shadow map over a circle ahead of the lens that every shadow fades out at the rim of — and over that the WEATHER R19 deals (clear, fair, high cloud, overcast, falling snow, valley fog), its cloud, its falling snow and spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars, the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, R15 in `mapgen/sun.ts` and R19 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
 ---
 
 # The atmosphere: the sun, the sky and the haze
@@ -43,7 +43,8 @@ engine has an opinion about colour.
 | `pwa/src/game/haze.ts` | ONE SKY FUNCTION IN GLSL (`SKY_GLSL`, `skyColour(dir)`) and the haze every world material fades into, drawn from it along that surface's own direction (`HAZE_FRAGMENT`, `hazeMaterial`) — replacing three's one-colour fog; the uniforms ONE object shared by reference (`createHazeUniforms`, `writeHaze`) |
 | `pwa/src/game/sky-dome.ts` | The dome: `skyColour` painted on a sphere round the lens with the sun's disc on it, through the same tone mapping and output conversion as every lit surface, so the haze meets it with no seam |
 | `pwa/src/game/snowfall.ts` | THE SNOW IN THE AIR: a wrapped box of flakes round the lens moved by one vector a frame (how hard it snows is the draw range; the SPRAY row caps the pool; a flake in the player's beam lights up), and the spindrift lifted off the crests on the CPU when the wind can lift dry snow |
-| `pwa/src/game/environment.ts` | Hangs it in the scene: the key light and the hemisphere light, the dome, the haze, re-read EVERY FRAME off the run's own clock; the key light's shadow box a few dozen metres across that FOLLOWS the lens's aim point, snapped to whole texels so a tree's shadow edge does not crawl |
+| `pwa/src/game/environment.ts` | Hangs it in the scene: the key light and the hemisphere light, the dome, the haze, re-read EVERY FRAME off the run's own clock; the key light's shadow box, aimed at a circle `SHADOW_LOOK[row].reach` (SLEDS: tight and sharp, the machines alone; ALL: every tree's too) round a point ahead of the lens and snapped to whole texels so a tree's shadow edge does not crawl, its normal bias scaled with the texel |
+| `pwa/src/game/shadow-box.ts` | WHERE THE SHADOW STANDS, three-free: the circle ahead of the lens (`aimShadow`), its fade (`shadowFade`), how long a tree's shadow is at this sun (`shadowLength`) and whether it reaches the circle (`castsInto` — what `forest.ts` picks its casters by). The fade itself is a graft on three's `lights_fragment_begin` inside `hazeMaterial`, so every world material fades the same shadow at the same rim |
 
 ## The rules
 
@@ -72,9 +73,21 @@ engine has an opinion about colour.
   bright as authored — which reads as a far slope glowing brighter than the
   sky, never as "too dark". Every custom one ends with
   `#include <colorspace_fragment>` (and the tone mapping the dome shares).
-- **The shadow box follows the lens, not the sled.** Far trees cast nothing;
-  the haze and the terrain's forest tint carry the woods out there. Widening
-  the box to shadow the whole basin is a blurred shadow for every tree.
+- **The shadow stands ahead of the lens, not round the sled**, and FADES at
+  its rim. A chase camera puts the sled at the bottom of the frame, so a
+  box round the sled spends half its texels behind the lens; and a map that
+  simply stops is a straight line across the snow that shadows pop over as
+  it travels. Past the circle the haze and the terrain's forest tint carry
+  the woods. Widening it to shadow the whole basin is a blurred shadow for
+  every tree.
+- **What casts is decided by where the shadow falls**, never by how near
+  its tree is to the lens (`castsInto`). A caster set cut by distance to the
+  lens, or by the view frustum, is a shadow that appears as the rider
+  closes on a wood, and one that vanishes when the lens turns away from the
+  tree standing behind it. The casters are their own shadow-only set —
+  three picks its shadow pass off the MAIN camera's layers, so a layer
+  cannot hide them from the picture; their material clips every vertex
+  instead.
 
 ## The loop
 

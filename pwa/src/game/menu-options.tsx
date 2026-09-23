@@ -80,7 +80,15 @@ const stopsOf = <T extends Tier | "off">(ladder: readonly T[]): Stop<T>[] =>
 
 const TIER_STOPS = stopsOf(TIERS);
 const TRAIL_STOPS = stopsOf<TrailLevel>(TRAIL_LEVELS);
-const SHADOW_STOPS = stopsOf<ShadowLevel>(SHADOW_LEVELS);
+const SHADOW_WORD: Record<ShadowLevel, string> = {
+  off: STRINGS.optOff,
+  sleds: STRINGS.optShadowSleds,
+  all: STRINGS.optShadowAll,
+};
+const SHADOW_STOPS: Stop<ShadowLevel>[] = SHADOW_LEVELS.map((id) => ({
+  id,
+  label: SHADOW_WORD[id],
+}));
 
 const LEVER_STOPS: Stop<LeverSide>[] = LEVER_SIDES.map((id) => ({
   id,

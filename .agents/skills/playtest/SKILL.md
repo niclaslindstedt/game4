@@ -1,6 +1,6 @@
 ---
 name: playtest
-description: "Use to verify gameplay changes in the running game and to evaluate game feel and look. Two photographers: `make world` (one seed ridden by the bot, drawn through the game's own renderer at named views — spawn, powder, lookback, furrow, track, hood, bars, far, jump, landing, vista, forest, orbit — no build needed) and `make screenshots` (the BUILT app at moments of a race — grid, go, race, lap — and its cards, at the three reference viewports). Closes the loop the sim numbers can't: does it LOOK and READ right on the snow."
+description: "Use to verify gameplay changes in the running game and to evaluate game feel and look. Two photographers: `make world` (one seed ridden by the bot, drawn through the game's own renderer at named views — spawn, powder, lookback, furrow, track, hood, bars, far, jump, landing, vista, forest, approach-140…40, orbit — no build needed) and `make screenshots` (the BUILT app at moments of a race — grid, go, race, lap — and its cards, at the three reference viewports). Closes the loop the sim numbers can't: does it LOOK and READ right on the snow."
 ---
 
 # Playtesting
@@ -50,6 +50,7 @@ photographs the last change. `make world` builds its own bundle.
 | `hood`, `bars`, `far` | The bolted and far rungs of the camera ladder |
 | `jump`, `landing` | Off a kicker — the hang; the puff coming down |
 | `vista`, `forest` | The country from above; in the woods |
+| `approach-140`, `-90`, `-60`, `-40` | The forest view's line walked in toward the wood: what a tree's shadow does as the lens closes on it. A shadow that appears between two of them was switched on by distance to the lens — the fault the caster set exists to prevent |
 | `orbit` | Round the sled — the menu's camera |
 
 | `make screenshots` scene | Seconds in |

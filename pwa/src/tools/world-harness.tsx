@@ -15,7 +15,14 @@ import { botInput, createGame, NEUTRAL_INPUT, placeRun, step, type GameState } f
 
 import type { LensPose } from "../game/camera-rigs.ts";
 import { createWorldRenderer } from "../game/renderer.ts";
-import { DEFAULT_VIDEO, TIERS, withPreset, type Tier } from "../game/settings-video.ts";
+import {
+  DEFAULT_VIDEO,
+  SHADOW_LEVELS,
+  TIERS,
+  withPreset,
+  type ShadowLevel,
+  type Tier,
+} from "../game/settings-video.ts";
 
 type Shot = { name: string; note: string };
 
@@ -35,6 +42,10 @@ const seed = Number(params.get("seed") ?? 38);
 const tier = (TIERS as readonly string[]).includes(params.get("quality") ?? "")
   ? (params.get("quality") as Tier)
   : "high";
+/** The SHADOWS row over the preset, when one is named. */
+const shadows = (SHADOW_LEVELS as readonly string[]).includes(params.get("shadows") ?? "")
+  ? (params.get("shadows") as ShadowLevel)
+  : null;
 const width = Number(params.get("w") ?? 1280);
 const height = Number(params.get("h") ?? 720);
 
@@ -44,7 +55,7 @@ canvas.style.height = `${height}px`;
 const label = document.getElementById("label") as HTMLDivElement;
 
 const renderer = createWorldRenderer(canvas, {
-  video: withPreset(DEFAULT_VIDEO, tier),
+  video: { ...withPreset(DEFAULT_VIDEO, tier), ...(shadows ? { shadows } : {}) },
   preserveDrawingBuffer: true,
 });
 renderer.resize(width, height, 1);
@@ -100,8 +111,9 @@ function vista(): LensPose {
   };
 }
 
-/** The densest stand of trees, seen from its edge at head height. */
-function forestView(): LensPose {
+/** The densest stand of trees, seen from `distance` m out over open snow
+ * at head height. */
+function forestView(distance = 34): LensPose {
   const trees = level.trees;
   let best = trees[0];
   let most = -1;
@@ -131,8 +143,8 @@ function forestView(): LensPose {
       bestDir = a;
     }
   }
-  const ex = best.x + Math.sin(bestDir) * 34;
-  const ez = best.z + Math.cos(bestDir) * 34;
+  const ex = best.x + Math.sin(bestDir) * distance;
+  const ez = best.z + Math.cos(bestDir) * distance;
   return {
     eye: { x: ex, y: level.groundAt(ex, ez) + 2.2, z: ez },
     target: { x: best.x, y: best.y + 5, z: best.z },
@@ -187,6 +199,9 @@ function furrow(): LensPose {
 }
 
 let trackAt = -1;
+
+/** How far out the approach views stand from the wood, m. */
+const APPROACH = [140, 90, 60, 40];
 
 const shots: Record<string, () => string> = {
   spawn() {
@@ -269,6 +284,21 @@ const shots: Record<string, () => string> = {
     renderer.setOverride(null);
     return "the edge of the densest wood";
   },
+  // THE APPROACH: the forest view's own line walked in toward the wood, so
+  // what a shadow does as the lens closes on its tree is four pictures side
+  // by side — one that appears between two of them was switched on by the
+  // lens coming nearer.
+  ...Object.fromEntries(
+    APPROACH.map((d) => [
+      `approach-${d}`,
+      () => {
+        renderer.setOverride(forestView(d));
+        still();
+        renderer.setOverride(null);
+        return `the densest wood from ${d} m out`;
+      },
+    ]),
+  ),
   orbit() {
     renderer.setCamera("orbit", true);
     settle(30);

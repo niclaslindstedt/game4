@@ -20,11 +20,14 @@
 //   TRAILS      the trail maps (`trail-map.ts`): the fine window's texels and
 //               span, the coarse map's texels — or OFF, which stamps nothing
 //               and leaves the snow untouched.
-//   FOREST      how close a tree is drawn whole (and casts), how far the
-//               full-detail band runs, and how many of the far band's sketches
-//               stand at all. Never WHICH trunks exist: the physics hits every
+//   FOREST      how far the full-detail band runs, how many of the far
+//               band's sketches stand at all, and — under SHADOWS ALL —
+//               whether a tree casts its own crown or the sketch. Never WHICH trunks exist: the physics hits every
 //               one of them, and a tree the rider can hit is always drawn.
-//   SHADOWS     the key light's shadow map, or none.
+//   SHADOWS     OFF, SLEDS (the machines, the riders and the flags on a
+//               tight, sharp map) or ALL (every tree's too, as far as the
+//               eye needs them — each tree casting the shape the FOREST row
+//               draws it in).
 //   SPRAY       the share of the roost, the ski spray and the puffs thrown.
 //   ANTIALIAS   the canvas's multisampling. The one row that cannot be
 //               changed under a running context: it is read when the canvas
@@ -40,8 +43,10 @@
 export type Tier = "low" | "medium" | "high";
 export const TIERS: readonly Tier[] = ["low", "medium", "high"];
 
-export type ShadowLevel = "off" | "low" | "high";
-export const SHADOW_LEVELS: readonly ShadowLevel[] = ["off", "low", "high"];
+/** SHADOWS is three MODES rather than three qualities: none, the machines
+ * alone, or the machines and every tree. */
+export type ShadowLevel = "off" | "sleds" | "all";
+export const SHADOW_LEVELS: readonly ShadowLevel[] = ["off", "sleds", "all"];
 
 export type TrailLevel = "off" | Tier;
 export const TRAIL_LEVELS: readonly TrailLevel[] = ["off", ...TIERS];
@@ -130,18 +135,24 @@ export const TRAIL_LOOK: Record<TrailLevel, TrailLook> = {
 };
 
 export type ForestLook = {
-  /** Trees nearer than this are drawn whole and cast into the shadow map, m. */
-  near: number;
-  /** ...and the full-detail tree runs out to here, m. */
-  mid: number;
+  /** The full-detail tree runs out to here, m; past it, the sketch. WHICH
+   * trees cast is the SHADOWS row's (`SHADOW_LOOK`), never this band's, so
+   * no shadow is switched on by riding closer to its tree. */
+  full: number;
   /** The share of the far band's sketches that stand, 0..1. */
   farShare: number;
+  /** What a tree casts under SHADOWS ALL: its own full-detail crown, or the
+   * far band's sketch drawn a touch inside it (a quarter of the triangles
+   * in the shadow pass, and it reads the same on the snow). */
+  casters: TreeCasters;
 };
 
+export type TreeCasters = "full" | "sketch";
+
 export const FOREST_LOOK: Record<Tier, ForestLook> = {
-  low: { near: 20, mid: 90, farShare: 0.5 },
-  medium: { near: 30, mid: 130, farShare: 0.75 },
-  high: { near: 45, mid: 160, farShare: 1 },
+  low: { full: 90, farShare: 0.5, casters: "sketch" },
+  medium: { full: 130, farShare: 0.75, casters: "sketch" },
+  high: { full: 160, farShare: 1, casters: "full" },
 };
 
 export type DistanceLook = {
@@ -159,8 +170,27 @@ export const DISTANCE_LOOK: Record<Tier, DistanceLook> = {
   high: { far: 1100, hazeFloor: 0 },
 };
 
-/** SHADOWS: the key light's map, texels a side; 0 is no shadow at all. */
-export const SHADOW_SIZE: Record<ShadowLevel, number> = { off: 0, low: 1024, high: 2048 };
+export type ShadowLook = {
+  /** The key light's map, texels a side; 0 is no shadow at all. */
+  size: number;
+  /** How far round the shadow box's centre a shadow stands, m. The box is
+   * this a side each way in the light's own frame; a shadow fades out over
+   * the last `SHADOW_FADE` of it rather than stopping at a line. */
+  reach: number;
+  /** Whether the trees cast — every one whose shadow can land in reach. */
+  trees: boolean;
+};
+
+/** SHADOWS. Under ALL, EVERY tree whose shadow can land in reach casts,
+ * whatever band it is drawn in — so a shadow is never switched on by
+ * riding closer to its tree. */
+export const SHADOW_LOOK: Record<ShadowLevel, ShadowLook> = {
+  off: { size: 0, reach: 0, trees: false },
+  // The machines on a tight map: the sharpest sled shadow there is for
+  // almost nothing in the pass, and the snow under the woods left bare.
+  sleds: { size: 1024, reach: 30, trees: false },
+  all: { size: 2048, reach: 75, trees: true },
+};
 
 /** SPRAY: the share of every emission rate, and of the particle pool. */
 export const SPRAY_SHARE: Record<Tier, number> = { low: 0.35, medium: 0.65, high: 1 };
@@ -192,7 +222,7 @@ export const VIDEO_PRESETS: Record<Tier, Omit<VideoSettings, "antialias">> = {
     terrain: "medium",
     trails: "medium",
     forest: "medium",
-    shadows: "low",
+    shadows: "all",
     spray: "medium",
   },
   high: {
@@ -201,7 +231,7 @@ export const VIDEO_PRESETS: Record<Tier, Omit<VideoSettings, "antialias">> = {
     terrain: "high",
     trails: "high",
     forest: "high",
-    shadows: "high",
+    shadows: "all",
     spray: "high",
   },
 };
@@ -239,7 +269,10 @@ export function mergeVideo(parsed: unknown): VideoSettings {
   out.terrain = pick(blob.terrain, TIERS, out.terrain);
   out.trails = pick(blob.trails, TRAIL_LEVELS, out.trails);
   out.forest = pick(blob.forest, TIERS, out.forest);
-  out.shadows = pick(blob.shadows, SHADOW_LEVELS, out.shadows);
+  // A picture stored when the row was a quality ladder: both its stops that
+  // drew shadows drew the trees'.
+  const shadows = blob.shadows === "low" || blob.shadows === "high" ? "all" : blob.shadows;
+  out.shadows = pick(shadows, SHADOW_LEVELS, out.shadows);
   out.spray = pick(blob.spray, TIERS, out.spray);
   if (typeof blob.antialias === "boolean") out.antialias = blob.antialias;
   return out;

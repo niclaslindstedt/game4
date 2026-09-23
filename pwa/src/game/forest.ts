@@ -10,25 +10,37 @@
 // fir; each tree is one of them, scaled to its own height and crown, turned
 // and tinted by a hash of where it stands.
 //
-// TENS OF THOUSANDS OF THEM, so they are instanced, and in THREE bands of
-// distance: NEAR (the full tree, casting into the shadow map), MID (the
-// same tree, no shadow), FAR (a two-tier sketch of it at a tenth of the
-// triangles). The trees are binned into 64 m cells once; each frame the
-// cells in reach are tested against the view frustum and their trees are
-// copied into the three bands' instance buffers. Past the far band the
-// terrain's own forest tint (`snow-glsl.ts`) carries the woods to the rim.
+// TENS OF THOUSANDS OF THEM, so they are instanced, and in two bands of
+// distance: FULL (the whole tree) and FAR (a three-tier sketch of it at a
+// quarter of the triangles). The trees are binned into 64 m cells once; when
+// the lens moves, the cells in reach are tested against the view frustum
+// and their trees are copied into the bands' instance buffers. Past the far
+// band the terrain's own forest tint (`snow-glsl.ts`) carries the woods to
+// the rim.
+//
+// THE SHADOWS ARE A THIRD SET, NOT A BAND. No band casts. Every tree whose
+// shadow can land in the sun's circle (`shadow-box.ts`'s `castsInto`) is
+// copied into a CASTER set drawn only into the shadow map — whatever band
+// the picture draws it in, in front of the lens or behind it. So a wood's
+// shadows are all there or fading out at the circle's rim together, and
+// none of them is switched on by riding closer to its tree.
 
 import * as THREE from "three";
 import type { Level } from "@engine";
 
 import { PALETTE } from "../identity.ts";
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
-import type { ForestLook } from "./settings-video.ts";
+import type { ForestLook, TreeCasters } from "./settings-video.ts";
+import { castsInto, shadowLength, type ShadowBox } from "./shadow-box.ts";
 
-/** Where the three bands end (the FOREST row's `near` and `mid`, the
- * DISTANCE row's `far`, all m) and the share of the far band's sketches that
- * stand — `settings-video.ts` says what each stop buys. */
-export type ForestOptions = ForestLook & { far: number };
+/** Where the two bands end (the FOREST row's `full`, the DISTANCE row's
+ * `far`, both m), the share of the far band's sketches that stand, and what
+ * the trees cast (the FOREST row's shape, or none unless SHADOWS is ALL) — `settings-video.ts` says what each
+ * stop buys. */
+export type ForestOptions = Omit<ForestLook, "casters"> & {
+  far: number;
+  casters: TreeCasters | "none";
+};
 
 const CELL = 64;
 
@@ -167,9 +179,19 @@ function atLens(t: Level["trees"][number], d: number, y: number): boolean {
   return d - Math.max(t.radius, crown) < LENS_CLEAR;
 }
 
+/** A sketch caster stands this much inside the full tree's crown, so the
+ * full tree drawn over it is not shaded blotchy by its own stand-in. */
+const SKETCH_INSET = 0.85;
+
+/** How far the lens has to stand from a tree before it cannot be inside
+ * it, m — past this, `atLens` is not asked. */
+const LENS_REACH = 24;
+
 export type Forest = {
   group: THREE.Group;
-  update(camera: THREE.PerspectiveCamera): void;
+  /** Refill the bands for `camera`, and the casters for `shadow` (null:
+   * nothing casts). */
+  update(camera: THREE.PerspectiveCamera, shadow: ShadowBox | null): void;
   /** Force the next update to recompute (a new frame of reference). */
   invalidate(): void;
   /** New bands (a picture row moved); takes effect on the next update. */
@@ -240,15 +262,15 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     conifer(tiersOf(3, 0.08, 0.7, 0.95), 5, false, 4),
   ];
 
-  // Six instanced meshes: two shapes × three bands.
+  // Two shapes × two bands, and the casters.
   type Band = { meshes: THREE.InstancedMesh[]; fill: number[] };
-  const makeBand = (geos: THREE.BufferGeometry[], cast: boolean): Band => {
+  const makeBand = (geos: THREE.BufferGeometry[]): Band => {
     const meshes = geos.map((g) => {
       const im = new THREE.InstancedMesh(g, material, count);
       im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       im.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
       im.instanceColor.setUsage(THREE.DynamicDrawUsage);
-      im.castShadow = cast;
+      im.castShadow = false;
       im.receiveShadow = true;
       im.frustumCulled = false;
       im.count = 0;
@@ -257,20 +279,37 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     });
     return { meshes, fill: [0, 0] };
   };
-  const near = makeBand(detailed, true);
-  const mid = makeBand(detailed, false);
-  const far = makeBand(sketch, false);
-  // THE TREES AT THE LENS: a crown a metre or two off the lens is not a tree
-  // but a wall of green across a third of the frame, so a tree the lens
-  // stands that close to is taken out of the picture — and kept in the
-  // shadow map, through a band whose material writes nothing, so the snow
-  // under it does not light up as the lens goes by.
-  const ghostMaterial = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
-  const ghost = makeBand(detailed, true);
-  for (const im of ghost.meshes) {
-    im.material = ghostMaterial;
-    im.receiveShadow = false;
-  }
+  const full = makeBand(detailed);
+  const far = makeBand(sketch);
+  // THE CASTERS are drawn into the shadow map and nowhere else. Three picks
+  // its shadow pass off the MAIN camera's layers, so a layer cannot keep
+  // them out of the picture; instead their own material puts every vertex
+  // outside the clip volume — the picture's pass culls them before a pixel
+  // is shaded — while the shadow pass draws them with three's own depth
+  // material, which never runs this one.
+  const casterMaterial = new THREE.ShaderMaterial({
+    vertexShader: "void main() { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); }",
+    fragmentShader: "void main() { gl_FragColor = vec4(0.0); }",
+    side: material.side,
+  });
+  const insetSketch = sketch.map((g) => g.clone().scale(SKETCH_INSET, 1, SKETCH_INSET));
+  const makeCasters = (geos: THREE.BufferGeometry[]): THREE.InstancedMesh[] =>
+    geos.map((g) => {
+      const im = new THREE.InstancedMesh(g, casterMaterial, count);
+      im.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+      im.castShadow = true;
+      im.receiveShadow = false;
+      im.frustumCulled = false;
+      im.count = 0;
+      group.add(im);
+      return im;
+    });
+  const casterSets = { full: makeCasters(detailed), sketch: makeCasters(insetSketch) };
+  /** The tallest tree, for how far up-sun a caster can stand. */
+  let tallest = 0;
+  for (const t of trees) tallest = Math.max(tallest, t.height);
+  let widest = 0;
+  for (const t of trees) widest = Math.max(widest, t.crown);
 
   const frustum = new THREE.Frustum();
   const box = new THREE.Box3();
@@ -279,6 +318,9 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
   const lastAt = new THREE.Vector3(Infinity, 0, 0);
   const lastLook = new THREE.Vector3();
   let lastFov = 0;
+  /** Where the casters were last filled for. */
+  const lastShadow: ShadowBox = { x: Infinity, y: 0, z: 0, reach: 0, sx: 0, sy: 0, sz: 0 };
+  let castersOn = false;
 
   function place(band: Band, i: number) {
     const sh = shapeOf[i];
@@ -288,10 +330,78 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     (im.instanceColor!.array as Float32Array).set(colours.subarray(i * 3, i * 3 + 3), k * 3);
   }
 
+  /** Refill the casters: every tree whose shadow can reach the circle. */
+  function fillCasters(shadow: ShadowBox | null) {
+    const sets = [casterSets.full, casterSets.sketch];
+    let n = [0, 0];
+    const into =
+      !shadow || options.casters === "none"
+        ? null
+        : options.casters === "full"
+          ? casterSets.full
+          : casterSets.sketch;
+    if (shadow && into) {
+      // The cells the circle, and the shadows reaching into it, can touch.
+      const plan = Math.hypot(shadow.sx, shadow.sz);
+      const tail = plan > 1e-6 ? shadowLength(shadow, tallest) : 0;
+      const ux = plan > 1e-6 ? shadow.sx / plan : 0;
+      const uz = plan > 1e-6 ? shadow.sz / plan : 0;
+      const r = shadow.reach + widest;
+      const x0 = Math.min(shadow.x, shadow.x + ux * tail) - r;
+      const x1 = Math.max(shadow.x, shadow.x + ux * tail) + r;
+      const z0 = Math.min(shadow.z, shadow.z + uz * tail) - r;
+      const z1 = Math.max(shadow.z, shadow.z + uz * tail) + r;
+      const cMin = Math.max(0, Math.floor(x0 / CELL));
+      const cMax = Math.min(cols - 1, Math.floor(x1 / CELL));
+      const rMin = Math.max(0, Math.floor(z0 / CELL));
+      const rMax = Math.min(cols - 1, Math.floor(z1 / CELL));
+      n = [0, 0];
+      for (let row = rMin; row <= rMax; row++) {
+        for (let c = cMin; c <= cMax; c++) {
+          for (const i of bins[row * cols + c]) {
+            const t = trees[i];
+            if (!castsInto(shadow, t.x, t.z, t.height, t.crown)) continue;
+            const sh = shapeOf[i];
+            const k = n[sh]++;
+            (into[sh].instanceMatrix.array as Float32Array).set(
+              matrices.subarray(i * 16, i * 16 + 16),
+              k * 16,
+            );
+          }
+        }
+      }
+    }
+    for (const set of sets) {
+      set.forEach((im, k) => {
+        const used = set === into ? n[k] : 0;
+        im.count = used;
+        if (used === 0) return;
+        im.instanceMatrix.clearUpdateRanges();
+        im.instanceMatrix.addUpdateRange(0, used * 16);
+        im.instanceMatrix.needsUpdate = true;
+      });
+    }
+  }
+
   return {
     group,
-    update(camera) {
-      // Only when the lens has moved or turned enough to change the answer.
+    update(camera, shadow) {
+      // The casters, when the circle has moved, turned with the sun or
+      // changed size — a metre, or a few hundredths of a degree.
+      if (
+        (shadow !== null) !== castersOn ||
+        (shadow &&
+          ((shadow.x - lastShadow.x) ** 2 + (shadow.z - lastShadow.z) ** 2 > 1 ||
+            shadow.sx * lastShadow.sx + shadow.sy * lastShadow.sy + shadow.sz * lastShadow.sz <
+              0.99999 ||
+            shadow.reach !== lastShadow.reach))
+      ) {
+        castersOn = shadow !== null;
+        if (shadow) Object.assign(lastShadow, shadow);
+        fillCasters(shadow);
+      }
+      // The bands, only when the lens has moved or turned enough to change
+      // the answer.
       camera.getWorldDirection(look);
       if (
         camera.position.distanceToSquared(lastAt) < 0.5 &&
@@ -308,12 +418,12 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       const cx = camera.position.x;
       const cy = camera.position.y;
       const cz = camera.position.z;
-      for (const b of [near, mid, far, ghost]) b.fill = [0, 0];
+      for (const b of [full, far]) b.fill = [0, 0];
       const reach = Math.ceil(options.far / CELL) + 1;
       const c0 = Math.floor(cx / CELL);
       const r0 = Math.floor(cz / CELL);
-      const near2 = options.near * options.near;
-      const mid2 = options.mid * options.mid;
+      const lens2 = LENS_REACH * LENS_REACH;
+      const full2 = options.full * options.full;
       const far2 = options.far * options.far;
       for (let r = Math.max(0, r0 - reach); r <= Math.min(cols - 1, r0 + reach); r++) {
         for (let c = Math.max(0, c0 - reach); c <= Math.min(cols - 1, c0 + reach); c++) {
@@ -321,24 +431,24 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
           if (bins[b].length === 0) continue;
           box.min.set(c * CELL - 8, binLow[b] - 2, r * CELL - 8);
           box.max.set((c + 1) * CELL + 8, binTop[b] + 2, (r + 1) * CELL + 8);
-          // The near band always draws (shadows come from behind the lens).
           const dx = Math.max(box.min.x - cx, 0, cx - box.max.x);
           const dz = Math.max(box.min.z - cz, 0, cz - box.max.z);
-          const d2 = dx * dx + dz * dz;
-          if (d2 > far2) continue;
-          const seen = frustum.intersectsBox(box);
-          if (!seen && d2 > near2) continue;
+          if (dx * dx + dz * dz > far2) continue;
+          if (!frustum.intersectsBox(box)) continue;
           for (const i of bins[b]) {
             const t = trees[i];
             const e2 = (t.x - cx) ** 2 + (t.z - cz) ** 2;
-            if (e2 < near2) place(atLens(t, Math.sqrt(e2), cy) ? ghost : near, i);
-            else if (!seen) continue;
-            else if (e2 < mid2) place(mid, i);
+            // THE TREES AT THE LENS: a crown a metre or two off the lens is
+            // not a tree but a wall of green across a third of the frame, so
+            // it is taken out of the picture. Its caster stays, so the snow
+            // under it does not light up as the lens goes by.
+            if (e2 < lens2 && atLens(t, Math.sqrt(e2), cy)) continue;
+            if (e2 < full2) place(full, i);
             else if (e2 < far2 && thin[i] < options.farShare) place(far, i);
           }
         }
       }
-      for (const b of [near, mid, far, ghost]) {
+      for (const b of [full, far]) {
         b.meshes.forEach((im, k) => {
           const n = b.fill[k];
           im.count = n;
@@ -354,15 +464,17 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     },
     invalidate() {
       lastAt.set(Infinity, 0, 0);
+      lastShadow.x = Infinity;
     },
     setOptions(next) {
       options = { ...next };
       lastAt.set(Infinity, 0, 0);
+      lastShadow.x = Infinity;
     },
     dispose() {
-      for (const g of [...detailed, ...sketch]) g.dispose();
+      for (const g of [...detailed, ...sketch, ...insetSketch]) g.dispose();
       material.dispose();
-      ghostMaterial.dispose();
+      casterMaterial.dispose();
     },
   };
 }

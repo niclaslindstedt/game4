@@ -18,9 +18,12 @@
 //   node scripts/world-preview.mjs --skip-build --frames=30   # time 30 frames
 //
 // The views, in the order the run reaches them: spawn, powder, powder-high,
-// lookback, furrow, track, hood, bars, far, jump, landing, vista, forest, orbit,
-// and last, staged rather than ridden to: wipeout and wipeout-lie (the player
-// put into the nearest trunk flat out, then where the rider came to rest).
+// lookback, furrow, track, hood, bars, far, jump, landing, vista, forest,
+// approach-140, approach-90, approach-60, approach-40 (the forest view's line
+// walked in toward the wood — a shadow that appears between two of them was
+// switched on by the lens coming nearer), orbit, and last, staged rather
+// than ridden to: wipeout and wipeout-lie (the player put into the nearest
+// trunk flat out, then where the rider came to rest).
 
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -50,6 +53,10 @@ const VIEWS = [
   "landing",
   "vista",
   "forest",
+  "approach-140",
+  "approach-90",
+  "approach-60",
+  "approach-40",
   "orbit",
   "wipeout",
   "wipeout-lie",
@@ -69,6 +76,11 @@ const args = parseArgs(
       default: "high",
       help: "the picture preset (low, medium, high — settings-video.ts)",
     },
+    shadows: {
+      kind: "string",
+      default: "",
+      help: "the SHADOWS row over the preset (off, sleds, all)",
+    },
     width: { kind: "number", default: 1280, help: "picture width, px" },
     height: { kind: "number", default: 720, help: "picture height, px" },
     frames: {
@@ -79,7 +91,7 @@ const args = parseArgs(
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 900, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/world-preview.mjs [--seed=n] [--views=a,b] [--quality=low] [--skip-build]",
+  "usage: node scripts/world-preview.mjs [--seed=n] [--views=a,b] [--quality=low] [--shadows=sleds] [--skip-build]",
 );
 
 mkdirSync(outDir, { recursive: true });
@@ -155,10 +167,13 @@ page.setDefaultTimeout(args.timeout * 1000);
 const query = new URLSearchParams({
   seed: String(args.seed),
   quality: args.quality,
+  ...(args.shadows ? { shadows: args.shadows } : {}),
   w: String(args.width),
   h: String(args.height),
 }).toString();
-console.log(`world — seed ${args.seed}, ${args.quality} quality, ${args.width}×${args.height}`);
+console.log(
+  `world — seed ${args.seed}, ${args.quality} quality${args.shadows ? `, shadows ${args.shadows}` : ""}, ${args.width}×${args.height}`,
+);
 await page.goto(`${server.url}world-preview.html?${query}`);
 await page.waitForFunction("window.__world !== undefined");
 await page.evaluate("window.__world.ready");

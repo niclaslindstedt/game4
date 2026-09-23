@@ -5,7 +5,7 @@
 //   environment.ts  the sun, the sky's light, the dome and the haze
 //   terrain.ts      the ground: a clipmap round the lens, shaded as snow
 //   trail-map.ts    every furrow any rider has cut, lowering that snow
-//   forest.ts       the snow-loaded conifers, in three bands of distance
+//   forest.ts       the snow-loaded conifers, two bands and their casters
 //   gates.ts        the checkpoints' poles and flags, the start banner
 //   sled-body.ts    the four machines and their riders
 //   spray.ts        the roost, the ski spray and the landing puff
@@ -42,7 +42,7 @@ import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
 import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
-import { createForest, type Forest } from "./forest.ts";
+import { createForest, type Forest, type ForestOptions } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
 import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
@@ -64,10 +64,11 @@ import {
   DISTANCE_LOOK,
   FOREST_LOOK,
   RESOLUTION_SHARE,
-  SHADOW_SIZE,
+  SHADOW_LOOK,
   SPRAY_SHARE,
   TRAIL_LOOK,
   terrainLook,
+  type ShadowLook,
   type VideoSettings,
 } from "./settings-video.ts";
 import { createTerrain, type Terrain } from "./terrain.ts";
@@ -160,13 +161,19 @@ export function createWorldRenderer(
   gl.outputColorSpace = THREE.SRGBColorSpace;
   gl.toneMapping = THREE.ACESFilmicToneMapping;
   gl.toneMappingExposure = 1.05;
-  gl.shadowMap.enabled = SHADOW_SIZE[video.shadows] > 0;
+  gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
   gl.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  /** The SHADOWS row's stop, its map no bigger than this GPU can hold. */
+  const shadowLook = (): ShadowLook => {
+    const look = SHADOW_LOOK[video.shadows];
+    return { ...look, size: Math.min(look.size, gl.capabilities.maxTextureSize) };
+  };
 
   const scene = new THREE.Scene();
   const lens: Lens = createLens(NEAR, FAR);
   scene.add(lens.camera);
-  const env: Environment = createEnvironment(scene, SHADOW_SIZE[video.shadows], FAR * 0.9);
+  const env: Environment = createEnvironment(scene, shadowLook(), FAR * 0.9);
   env.setDistance(video.distance);
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
   const snowfall = createSnowfall(env.haze);
@@ -250,9 +257,10 @@ export function createWorldRenderer(
     scene.add(ground.group);
     return ground;
   }
-  const forestOptions = () => ({
+  const forestOptions = (): ForestOptions => ({
     ...FOREST_LOOK[video.forest],
     far: DISTANCE_LOOK[video.distance].far,
+    casters: SHADOW_LOOK[video.shadows].trees ? FOREST_LOOK[video.forest].casters : "none",
   });
 
   function riderFor(i: number, spec: SledSpec): Rider {
@@ -473,19 +481,18 @@ export function createWorldRenderer(
 
       trail.update(gl, stamps, sled.x, sled.z);
       terrain.follow(lens.camera.position.x, lens.camera.position.z);
-      if (present) forest?.update(lens.camera);
-      gates?.update(state.progress.nextCheckpoint, state.t);
-
       const sky = skyLevel ?? level;
       const look = skyLookAt(sky, state.t);
       windAt(sky, state.t, wind);
       // The cloud goes with the MEAN wind — its gusts are the air down here.
       const weather = weatherOf(sky);
       const carried = (weather.wind * state.t) / CLOUD_HEIGHT;
-      env.update(look, lens.camera, d.x, d.y, d.z, {
+      env.update(look, lens.camera, d.y, {
         x: -Math.sin(weather.windFrom) * carried,
         z: -Math.cos(weather.windFrom) * carried,
       });
+      if (present) forest?.update(lens.camera, env.shadow());
+      gates?.update(state.progress.nextCheckpoint, state.t);
       lightLamps(look.lamps);
       const h = gl.domElement.height;
       const pixels = h / (2 * Math.tan(THREE.MathUtils.degToRad(lens.camera.fov) / 2));
@@ -528,8 +535,8 @@ export function createWorldRenderer(
       const was = video;
       video = { ...next };
       if (was.resolution !== video.resolution) api.resize(box.width, box.height, box.pixelRatio);
-      gl.shadowMap.enabled = SHADOW_SIZE[video.shadows] > 0;
-      env.setShadow(SHADOW_SIZE[video.shadows]);
+      gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
+      env.setShadow(shadowLook());
       env.setDistance(video.distance);
       spray?.setBudget(SPRAY_SHARE[video.spray]);
       snowfall.setBudget(SPRAY_SHARE[video.spray]);
