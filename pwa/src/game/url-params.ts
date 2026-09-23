@@ -29,7 +29,7 @@
 //   ?menu=root      open on the front door rather than the attract card;
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
 //                   the sled card RACE opens; `start` on the free ride's
-//                   start card.
+//                   start card; `gallery` on the pictures kept.
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -62,8 +62,8 @@ import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "sled" | "options" | "keys" | "start";
-const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys", "start"];
+export type MenuPage = "root" | "sled" | "options" | "keys" | "start" | "gallery";
+const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys", "start", "gallery"];
 
 export type UrlParams = {
   seed: number | null;

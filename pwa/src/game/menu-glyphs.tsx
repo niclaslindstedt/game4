@@ -5,7 +5,8 @@
 // failed; a mark is found without reading.
 //
 // Only the marks this slice's cards use: the flag on RACE, the stopwatch on
-// the TIME TRIAL, the kicker on FREE RIDE, the speaker on the sound switch,
+// the TIME TRIAL, the kicker on FREE RIDE, the shutter on the GALLERY chip
+// and the pause card's TAKE PICTURE, the speaker on the sound switch,
 // the three the pause card is read by — carry on, start again, leave — the
 // sliders on the OPTIONS chip, and the three more its groups are headed with
 // (the keys, the dial, the screen; SOUND takes the speaker). Each group mark
@@ -27,6 +28,7 @@ export const GLYPH_NAMES = [
   "display",
   "kicker",
   "clock",
+  "camera",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -134,6 +136,15 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <path d="M10 2.8h4M12 2.8v3" />
       <path d="M12 13.4V9.2" />
       <path d="M18.2 6.4l1.4-1.4" />
+    </>
+  ),
+  // THE SHUTTER: the pictures a rider took, and the press that takes one — a
+  // stills camera, never the HUD's movie camera, which walks the ladder.
+  camera: (
+    <>
+      <rect x="2.6" y="7.4" width="18.8" height="12.4" rx="2.4" />
+      <path d="M8.4 7.4 9.9 5h4.2l1.5 2.4" />
+      <circle cx="12" cy="13.6" r="3.6" />
     </>
   ),
 };

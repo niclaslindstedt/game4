@@ -101,6 +101,10 @@ export type Settings = {
   /** THE START CARD's answers: the free ride's map, day and snow
    * (`free-ride.ts`). */
   ride: FreeRide;
+  /** Whether the readouts are over the snow (H, OPTIONS ▸ HUD). Off keeps
+   * the thumbs and the corner presses, and a picture is then the snow
+   * alone (`shot-hud.ts`). */
+  hud: boolean;
 };
 
 export function freshSettings(): Settings {
@@ -117,6 +121,7 @@ export function freshSettings(): Settings {
     damage: false,
     trialLaps: TIME_TRIAL.laps[0],
     ride: freshRide(),
+    hud: true,
   };
 }
 
@@ -179,6 +184,7 @@ export function mergeSettings(parsed: unknown): Settings {
     out.trialLaps = blob.trialLaps;
   }
   out.ride = mergeRide(blob.ride);
+  if (typeof blob.hud === "boolean") out.hud = blob.hud;
   return out;
 }
 

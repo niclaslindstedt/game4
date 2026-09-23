@@ -25,7 +25,8 @@
 // tile, but never a second red one.
 //
 // EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, OPTIONS
-// (`menu-options.tsx`), the keys on a machine that has them — read off the
+// (`menu-options.tsx`), the GALLERY of pictures kept (`menu-gallery.tsx`),
+// the keys on a machine that has them — read off the
 // bindings the rider actually has — and the build. Low, and not tile-shaped at
 // all, because a thing that does not start a race should not wear the shape
 // of one.
@@ -71,6 +72,7 @@ export function MainMenu({
   onTrialLaps,
   onSound,
   onOptions,
+  onGallery,
 }: {
   /** The seed RACE will build. */
   seed: number;
@@ -90,6 +92,7 @@ export function MainMenu({
   onFree: () => void;
   onSound: () => void;
   onOptions: () => void;
+  onGallery: () => void;
 }) {
   return (
     <div class="menu">
@@ -163,6 +166,10 @@ export function MainMenu({
           <button type="button" class="menu-chip" data-menu="options" onClick={onOptions}>
             <Glyph name="sliders" />
             <span class="menu-tile-name">{STRINGS.menuOptions}</span>
+          </button>
+          <button type="button" class="menu-chip" data-menu="gallery" onClick={onGallery}>
+            <Glyph name="camera" />
+            <span class="menu-tile-name">{STRINGS.menuGallery}</span>
           </button>
           {keys !== null && <span class="menu-keys">{keys}</span>}
           <VersionStamp />

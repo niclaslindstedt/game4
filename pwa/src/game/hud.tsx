@@ -23,6 +23,11 @@
 //                 the DAMAGE instrument beside it (hud-damage.tsx)
 //   bottom right  the news column — a checkpoint's clock, a lap, a tree
 //
+// WITH THE READOUTS OFF (H, OPTIONS ▸ HUD) it is `data-bare`: the thumbs and
+// the corner presses stay — a rider still has to steer and still has to get
+// out — and everything that READS goes, so the snow is clear for a look or
+// a picture (`shot-hud.ts` then leaves the chrome out of the frame).
+//
 // The thumb zones it hangs under all that are next door in hud-touch.tsx:
 // they are the one part of this screen that does NOT run off the snapshot
 // (they write into the input manager at pointer rate). Every word here comes
@@ -77,6 +82,7 @@ export function Hud({
   onReset,
   onCamera,
   onPause,
+  bare = false,
 }: {
   snap: HudSnapshot;
   flashes: HudFlash[];
@@ -94,7 +100,34 @@ export function Hud({
   onReset: () => void;
   onCamera: () => void;
   onPause: () => void;
+  /** The readouts are off: the presses and the thumbs alone. */
+  bare?: boolean;
 }) {
+  const actions = (
+    <HudActions
+      onPause={onPause}
+      onReset={onReset}
+      onCamera={onCamera}
+      missed={snap.missed !== null}
+    />
+  );
+  const thumbs = touch && (
+    <div class="hud-touch">
+      {/* In reading order, so the zone on the left is the first child
+          whichever of the two it is. */}
+      {lever === "left" && <LeverZone touch={input.touch} feel={feel} side="left" />}
+      <BarZone touch={input.touch} feel={feel} side={lever === "left" ? "right" : "left"} />
+      {lever === "right" && <LeverZone touch={input.touch} feel={feel} side="right" />}
+    </div>
+  );
+  if (bare) {
+    return (
+      <div class="hud" data-bare="1" data-touch={touch ? "1" : undefined}>
+        <div class="hud-topright">{actions}</div>
+        {thumbs}
+      </div>
+    );
+  }
   return (
     <div
       class="hud"
@@ -170,12 +203,7 @@ export function Hud({
       </div>
 
       <div class="hud-topright">
-        <HudActions
-          onPause={onPause}
-          onReset={onReset}
-          onCamera={onCamera}
-          missed={snap.missed !== null}
-        />
+        {actions}
         <Minimap map={snap.minimap} />
       </div>
 
@@ -277,15 +305,7 @@ export function Hud({
         </div>
       )}
 
-      {touch && (
-        <div class="hud-touch">
-          {/* In reading order, so the zone on the left is the first child
-              whichever of the two it is. */}
-          {lever === "left" && <LeverZone touch={input.touch} feel={feel} side="left" />}
-          <BarZone touch={input.touch} feel={feel} side={lever === "left" ? "right" : "left"} />
-          {lever === "right" && <LeverZone touch={input.touch} feel={feel} side="right" />}
-        </div>
-      )}
+      {thumbs}
     </div>
   );
 }

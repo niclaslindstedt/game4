@@ -203,6 +203,7 @@ describe("the URL (url-params.ts, splash.ts)", () => {
     expect(readParams("?menu=root")).toMatchObject({ menu: true, page: "root" });
     expect(readParams("?menu=options").page).toBe("options");
     expect(readParams("?menu=keys").page).toBe("keys");
+    expect(readParams("?menu=gallery").page).toBe("gallery");
     expect(readParams("?menu=cellar").page).toBe("root");
     expect(readParams("?video=low").video).toBe("low");
     expect(readParams("?video=ultra").video).toBe(null);
@@ -267,6 +268,12 @@ describe("what the game remembers (settings.ts)", () => {
     expect(freshSettings().damage).toBe(false);
     expect(mergeSettings({ damage: true }).damage).toBe(true);
     expect(mergeSettings({ damage: "yes" }).damage).toBe(false);
+  });
+
+  it("keeps the readouts up unless they were taken down, and only as a switch", () => {
+    expect(freshSettings().hud).toBe(true);
+    expect(mergeSettings({ hud: false }).hud).toBe(false);
+    expect(mergeSettings({ hud: "off" }).hud).toBe(true);
   });
 
   it("folds the master and the switch into both faders the mixer is handed", () => {
@@ -346,6 +353,8 @@ describe("the game's own buttons (run-actions.ts)", () => {
       restart: () => did.push("restart"),
       camera: () => did.push("camera"),
       reset: () => did.push("reset"),
+      shoot: () => did.push("shot"),
+      toggleHud: () => did.push("hud"),
     });
     return { did, act };
   }
@@ -368,6 +377,24 @@ describe("the game's own buttons (run-actions.ts)", () => {
     act("pause");
     act("restart");
     expect(did).toEqual(["resume"]);
+  });
+
+  // The shutter and the HUD's switch are about the PICTURE, so they answer
+  // wherever the race is on screen — the frame held under the pause card
+  // included — and nowhere a card stands over the bot's race.
+  it("takes a picture and walks the HUD over the race and the held frame only", () => {
+    for (const shell of ["run", "pause"] as Shell[]) {
+      const { did, act } = rig(shell);
+      act("shot");
+      act("hud");
+      expect(did, shell).toEqual(["shot", "hud"]);
+    }
+    for (const shell of ["splash", "menu", "loading"] as Shell[]) {
+      const { did, act } = rig(shell);
+      act("shot");
+      act("hud");
+      expect(did, shell).toEqual([]);
+    }
   });
 });
 

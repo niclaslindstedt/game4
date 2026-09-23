@@ -7,8 +7,12 @@
 // (§39.2). Developer diagnostics are deliberately not here.
 
 import { formatTime, ordinal } from "../lib/util.ts";
+import { GALLERY_STRINGS } from "./strings-gallery.ts";
 
 export const STRINGS = {
+  /* ── THE SHUTTER AND THE GALLERY — stated in strings-gallery.ts ─────── */
+  ...GALLERY_STRINGS,
+
   /* ── THE HUD (hud.tsx) ─────────────────────────────────────────────── */
   speedUnit: "km/h",
   revs: "RPM",

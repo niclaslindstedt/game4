@@ -98,13 +98,22 @@ export const SHELL_COMMAND = "sh-shell-command";
 /** What a menu row may ask the game to do. Every word is a key the player
  * can already press without a menu bar: B stands the race back up on the
  * grid, R puts the sled back at the last checkpoint, Escape holds the race
- * under the pause card, C walks the camera ladder. `tauri/shell/src/menu.rs`
- * spells the same four and `tests/tauri_test.ts` holds the two lists
- * together — a word added on one side alone is a row that does nothing. */
-export type ShellCommand = "restart" | "reset" | "pause" | "camera";
+ * under the pause card, C walks the camera ladder, ENTER takes a picture.
+ * `tauri/shell/src/menu.rs` spells the same five and `tests/tauri_test.ts`
+ * holds the two lists together — a word added on one side alone is a row
+ * that does nothing. The store app presses `shot` too, when the phone takes
+ * a screenshot of its own (`SHOT_COMMAND` in `native/src/injected.ts`,
+ * held by `tests/shell_test.ts`). */
+export type ShellCommand = "restart" | "reset" | "pause" | "camera" | "shot";
 
 /** The words above, as a value, so a shell's list can be held to them. */
-export const SHELL_COMMANDS: readonly ShellCommand[] = ["restart", "reset", "pause", "camera"];
+export const SHELL_COMMANDS: readonly ShellCommand[] = [
+  "restart",
+  "reset",
+  "pause",
+  "camera",
+  "shot",
+];
 
 /** Hear every menu row the shell presses, until the hand-back is called. A
  * no-op in a browser, where no menu bar exists to press one. */

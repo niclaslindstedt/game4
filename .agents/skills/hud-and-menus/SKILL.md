@@ -23,8 +23,16 @@ the loading card, the pause card and what the game remembers. `input.ts` sits
 on the seam — the keys that ride a sled are here, the keys that walk a card
 are there.
 
-**Not built:** a replay bar, a screenshot shutter. The sibling
-`game3` has all of them; port from there when one is asked for. OPTIONS and
+**Not built:** a replay bar. The sibling `game3` has it; port from there
+when one is asked for. **The shutter is built** (`shot-request.ts`,
+`screenshots.ts`, `shot-hud.ts`; `menu-system` owns the roll and the
+gallery): ENTER and H are two of `InputAction`'s presses, and the HUD's
+`bare` form (`data-bare`) keeps the thumbs and the corner presses with the
+readouts down — which is also what tells `readHudLayer` to leave the chrome
+out of a picture. A new HUD element is in every picture from the day it
+lands; an ANIMATED one is stilled at its computed value by `shot-hud.ts`,
+so check a picture taken mid-animation (`make screenshots ARGS="--surface
+gallery-roll"`). OPTIONS and
 its KEYS page are built and are `menu-system`'s; what they change HERE is
 the layout the manager rides (`setBindings`) and how the thumbs read
 (`TouchFeel`, the lever's side).

@@ -11,8 +11,9 @@
 //   menu     the front door (`menu-main.tsx`), over a bot-ridden race — and
 //            its pages: the SLED card RACE opens (`menu-sled.tsx`), the last
 //            card before the grid; the FREE RIDE's start card before it
-//            (`menu-start.tsx`); OPTIONS (`menu-options.tsx`) and OPTIONS ▸
-//            KEYS (`menu-keys.tsx`). All the same surface: the race behind
+//            (`menu-start.tsx`); OPTIONS (`menu-options.tsx`), OPTIONS ▸
+//            KEYS (`menu-keys.tsx`) and the GALLERY of pictures kept
+//            (`menu-gallery.tsx`). All the same surface: the race behind
 //            them is the one the picture rows are judged against.
 //   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
 //            paid for in slices so the page stays a page.
@@ -90,6 +91,7 @@ import { LoadingScreen } from "./game/loading-screen.tsx";
 import { KeysPage } from "./game/menu-keys.tsx";
 import { MainMenu } from "./game/menu-main.tsx";
 import { createMenuNav, walkCardsOnKeys } from "./game/menu-nav.ts";
+import { GalleryPage } from "./game/menu-gallery.tsx";
 import { OptionsPage } from "./game/menu-options.tsx";
 import { SledPage } from "./game/menu-sled.tsx";
 import { StartPage } from "./game/menu-start.tsx";
@@ -98,7 +100,7 @@ import type { WorldRenderer } from "./game/renderer-api.ts";
 import { createRunActions } from "./game/run-actions.ts";
 import type { LoadPhase } from "./game/run-loader.ts";
 import { createRunClock } from "./game/run-loop.ts";
-import { newsFor } from "./game/run-news.ts";
+import { newsFor, shotLabel } from "./game/run-news.ts";
 import {
   assistOf,
   loadSettings,
@@ -121,6 +123,8 @@ import {
 } from "./game/shell.ts";
 import { SplashScreen } from "./game/splash-screen.tsx";
 import { splashSkipped } from "./game/splash.ts";
+import { readHudLayer } from "./game/shot-hud.ts";
+import { createShotRequest } from "./game/shot-request.ts";
 import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
 import { dealSeed, readParams, type MenuPage } from "./game/url-params.ts";
 import { applyVerdict, createVideoProbe } from "./game/video-probe.ts";
@@ -160,6 +164,7 @@ type Presses = {
   toMenu: () => void;
   abandonLoad: () => void;
   camera: () => void;
+  shot: () => void;
 };
 
 const NO_PRESSES: Presses = {
@@ -171,6 +176,7 @@ const NO_PRESSES: Presses = {
   toMenu: () => {},
   abandonLoad: () => {},
   camera: () => {},
+  shot: () => {},
 };
 
 /** A whole race on `seed` — or, where the generator refuses it, the map the
@@ -422,6 +428,15 @@ export function App() {
     const tally: Record<string, number> = {};
     let hudClock = HUD_TICK;
     let wall = 0;
+    /** THE SHUTTER (`shot-request.ts`): asked for at the press, served in the
+     * frame loop right after the draw that filled the buffer. */
+    const shots = createShotRequest({
+      canvas: () => canvasRef.current,
+      answers: () => hudOver(shellRef.current),
+      label: () => shotLabel(state),
+      hud: readHudLayer,
+      say: (text, tone) => live.push({ id: flashId++, text, tone, until: wall + FLASH_LIFE }),
+    });
 
     const setShellNow = (next: Shell): void => {
       shellRef.current = next;
@@ -600,6 +615,7 @@ export function App() {
         setSettings((s) => ({ ...s, camera: next }));
         if (hudOver(shellRef.current)) renderer.setCamera(next);
       },
+      shot: () => shots.take(),
     };
 
     /** One of the game's own buttons, wherever the press came from. */
@@ -610,6 +626,8 @@ export function App() {
       restart,
       camera: () => pressRef.current.camera(),
       reset: () => manager.requestReset(),
+      shoot: shots.take,
+      toggleHud: () => setSettings((s) => ({ ...s, hud: !s.hud })),
     });
     manager.onAction(act);
     // A MENU ROW, PRESSED: the desktop shell's menu bar reaches the game by
@@ -670,6 +688,7 @@ export function App() {
       const timing = probe !== null && !playerRides(shellRef.current) && !loader.busy() && !still;
       const drawAt = performance.now();
       renderer.draw(state, clock.alpha(), still ? 0 : dtFrame);
+      shots.serve();
       if (timing && probe) {
         const verdict = probe.frame(frameMs, performance.now() - drawAt + renderer.drain());
         if (verdict !== null) {
@@ -809,6 +828,7 @@ export function App() {
           onReset={() => input?.requestReset()}
           onCamera={() => pressRef.current.camera()}
           onPause={() => pressRef.current.pause()}
+          bare={!settings.hud}
         />
       )}
       {/* THE NEW-BUILD NOTICE over the front door: a deploy most often lands
@@ -832,6 +852,7 @@ export function App() {
           snap={snap}
           sound={settings.sound}
           onResume={() => pressRef.current.resume()}
+          onPicture={() => pressRef.current.shot()}
           onRestart={() => pressRef.current.restart()}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onMainMenu={() => pressRef.current.toMenu()}
@@ -865,6 +886,7 @@ export function App() {
           onTrialLaps={() => setSettings((s) => ({ ...s, trialLaps: nextTrialLaps(s.trialLaps) }))}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onOptions={() => setPage("options")}
+          onGallery={() => setPage("gallery")}
         />
       )}
       {shell === "menu" && page !== "root" && (
@@ -890,6 +912,8 @@ export function App() {
               onBack={() => setPage("root")}
               onNext={() => setPage("sled")}
             />
+          ) : page === "gallery" ? (
+            <GalleryPage onBack={() => setPage("root")} />
           ) : page === "options" ? (
             <OptionsPage
               settings={settings}

@@ -106,10 +106,13 @@ export function createInputManager(
         keys[action] = true;
         took = true;
       } else if (!e.repeat) {
-        if (action === "reset") {
-          if (!claiming()) continue;
-          reset = true;
-        } else onAction(action);
+        // Every press but PAUSE is the race's, and only while it is being
+        // ridden: over a card ENTER is the focused button's (the shutter's
+        // key is the browser's confirm), and a press taken here would be
+        // the button never pressed.
+        if (action !== "pause" && !claiming()) continue;
+        if (action === "reset") reset = true;
+        else onAction(action);
         took = true;
       }
     }

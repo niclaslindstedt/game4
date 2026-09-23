@@ -270,6 +270,15 @@ export function OptionsPage({
               machine can be short of pixels and rich in triangles. PRESET
               moves all of them and reads back which one they still are. */}
           <KnobGroup title={STRINGS.optPicture} glyph="display">
+            {/* The readouts over the snow — H mid-race is the same switch. */}
+            <StepRow
+              label={STRINGS.optHud}
+              hint={STRINGS.optHudHint}
+              stops={ON_OFF}
+              value={onOff(settings.hud)}
+              onPick={(id) => onSettings({ ...settings, hud: id === "on" })}
+              onHint={setHint}
+            />
             <StepRow
               label={STRINGS.optPreset}
               hint={STRINGS.optPresetHint}

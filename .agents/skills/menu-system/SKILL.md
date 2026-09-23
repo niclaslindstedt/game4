@@ -1,6 +1,6 @@
 ---
 name: menu-system
-description: "Use when changing the SHELL the game lives inside — the attract card the app opens on, the front door and its RACE and TIME TRIAL tiles (with the seed on each), the sound switch and the OPTIONS chip, OPTIONS and its KEYS page (the picture ladder, the faders, the thumbs, the assist, rebinding a key), the first-visit probe that picks a picture, the loading card over a race being stood up, the pause card that holds a race mid-ride (RESUME, RESTART RACE, SOUND, leave), the finish plate's way on, how a card is walked on the keys, one of the game's own buttons wherever the press came from (`run-actions.ts`), the URL a surface is reached by (`url-params.ts`), or anything the game REMEMBERS between visits (`settings.ts`: the camera, the sound, and every OPTIONS row). Owns the five-surface state machine in `shell.ts` and `App.tsx`, the DOM-free-payload split every card is built on, the rule that the snow never stops behind a card and the one card it does not hold for, and the `make screenshots --surface` loop. Not the readouts over a race — that is `hud-and-menus`."
+description: "Use when changing the SHELL the game lives inside — the attract card the app opens on, the front door and its RACE and TIME TRIAL tiles (with the seed on each), the sound switch, the OPTIONS chip and the GALLERY chip (the roll of pictures, shared, copied, saved), OPTIONS and its KEYS page (the picture ladder, the faders, the thumbs, the assist, rebinding a key), the first-visit probe that picks a picture, the loading card over a race being stood up, the pause card that holds a race mid-ride (RESUME, TAKE PICTURE, RESTART RACE, SOUND, leave), the finish plate's way on, how a card is walked on the keys, one of the game's own buttons wherever the press came from (`run-actions.ts`), the URL a surface is reached by (`url-params.ts`), or anything the game REMEMBERS between visits (`settings.ts`: the camera, the sound, and every OPTIONS row). Owns the five-surface state machine in `shell.ts` and `App.tsx`, the DOM-free-payload split every card is built on, the rule that the snow never stops behind a card and the one card it does not hold for, and the `make screenshots --surface` loop. Not the readouts over a race — that is `hud-and-menus`."
 ---
 
 # The menu system: the shell the game lives inside
@@ -30,7 +30,14 @@ menu-system --list`. Load **`skill-reflection`** at both ends,
 a RACE, and **`ui-review`** for the sweep at the reference viewports.
 
 **Not built:** a developer page (and the hold that lets it out), a campaign,
-other modes beyond RACE and FREE RIDE, a gallery, a replay, a benchmark.
+other modes beyond RACE and FREE RIDE, a replay, a benchmark. **The
+GALLERY is built** (`menu-gallery.tsx` over `lib/shot-store.ts`, the policy
+in `lib/shot-roll.ts`; `?menu=gallery`), reached from a CHIP on the front
+door's foot — it is not a way onto the snow, so it does not wear a tile's
+shape — and the pause card's TAKE PICTURE is the thumb's shutter. The roll
+is IndexedDB and never load-bearing; `--surface gallery` photographs the
+empty state a fresh browser sees, `--surface gallery-roll` rides a race,
+presses ENTER and opens the roll in the same tab.
 The sibling `game3` has every one of them, and its `menu-system` skill the
 rules they were built under; port from there, and never add a row whose
 setting nothing reads (below). OPTIONS is built — ported from game3's, and
@@ -133,7 +140,7 @@ all.
 
 ```sh
 make build
-CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots ARGS="--surface all"   # splash, menu, loading, pause, options, keys
+CHROMIUM_PATH=/opt/pw-browsers/chromium make screenshots ARGS="--surface all"   # splash, menu, loading, pause, options, keys, gallery…
 CHROMIUM_PATH=/opt/pw-browsers/chromium make profile ARGS="--video all"          # a picture row: every rung, draws and triangles
 make screenshots SCENE=race                                                      # the race behind them
 npx vitest run tests/menu_system_test.ts tests/video_test.ts
