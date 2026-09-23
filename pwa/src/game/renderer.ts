@@ -49,6 +49,7 @@ import { createForest, type Forest, type ForestOptions } from "./forest.ts";
 import { createGates, type Gates } from "./gates.ts";
 import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
+import { createHeroShadow } from "./hero-shadow.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
 import { createRegionPicture } from "./region-picture.ts";
 import type { CameraRung, DevRenderer, WorldRenderer } from "./renderer-api.ts";
@@ -174,7 +175,8 @@ export function createWorldRenderer(
   /** The SHADOWS row's stop, its map no bigger than this GPU can hold. */
   const shadowLook = (): ShadowLook => {
     const look = SHADOW_LOOK[video.shadows];
-    return { ...look, size: Math.min(look.size, gl.capabilities.maxTextureSize) };
+    const most = gl.capabilities.maxTextureSize;
+    return { ...look, size: Math.min(look.size, most), hero: Math.min(look.hero, most) };
   };
 
   const scene = new THREE.Scene();
@@ -189,6 +191,9 @@ export function createWorldRenderer(
   let shot: ReplayShot | null = null;
   const env: Environment = createEnvironment(scene, shadowLook(), FAR * 0.9);
   env.setDistance(video.distance);
+  /** Under SHADOWS HIGH every rider casts into a map of his own. */
+  const hero = createHeroShadow(env.haze, shadowLook().hero);
+  const heroModels: SledModel[] = [];
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
   const snowfall = createSnowfall(env.haze);
   snowfall.setBudget(SPRAY_SHARE[video.spray]);
@@ -544,6 +549,11 @@ export function createWorldRenderer(
         z: -Math.cos(weather.windFrom) * carried,
       });
       if (present) forest?.update(lens.camera, env.shadow());
+      if (present) {
+        heroModels.length = 0;
+        for (const r of riders) heroModels.push(r.model);
+        hero.render(gl, scene, heroModels, env.shadow());
+      }
       gates?.update(state.progress.nextCheckpoint, state.t);
       lightLamps(look.lamps);
       const h = gl.domElement.height;
@@ -626,6 +636,7 @@ export function createWorldRenderer(
       if (was.resolution !== video.resolution) api.resize(box.width, box.height, box.pixelRatio);
       gl.shadowMap.enabled = SHADOW_LOOK[video.shadows].size > 0;
       env.setShadow(shadowLook());
+      hero.setSize(shadowLook().hero);
       env.setDistance(video.distance);
       spray?.setBudget(SPRAY_SHARE[video.spray]);
       snowfall.setBudget(SPRAY_SHARE[video.spray]);
@@ -661,6 +672,7 @@ export function createWorldRenderer(
       snowfall.dispose();
       picture.dispose();
       env.dispose();
+      hero.dispose();
       gl.dispose();
     },
   };

@@ -84,6 +84,11 @@ export type SledModel = {
   /** `trick` is a tricks run's pose held in the air, if any. */
   pose(sled: SledState, at: Pose, sink: number, trick?: TrickPose | null): void;
   setRiderVisible(visible: boolean): void;
+  /** Every mesh that draws the machine and its rider — what casts. */
+  casters: THREE.Mesh[];
+  /** The draw's bound in the world, at the last pose: grown while the
+   * rider lies away from the machine. */
+  bound(out: THREE.Sphere): THREE.Sphere;
   /** The lamps' glow, 0 (off) … 1 (full night) — `SkyLook.lamps` — seen
    * from `facing`: the cosine between the machine's nose and the way to
    * the lens (1 head-on, −1 from dead astern). A lamp is a lens that shines
@@ -491,6 +496,13 @@ export function createSledModel(
 
   return {
     root,
+    casters: [merged.mesh, shield],
+    bound(out) {
+      out.center.copy(bound.center);
+      root.localToWorld(out.center);
+      out.radius = bound.radius;
+      return out;
+    },
     pose(sled, at, sink, trick = null) {
       root.position.set(at.x, at.y - sink, at.z);
       root.quaternion.set(at.q.x, at.q.y, at.q.z, at.q.w);

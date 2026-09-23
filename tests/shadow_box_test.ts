@@ -7,6 +7,9 @@ import { describe, expect, it } from "vitest";
 import {
   aimShadow,
   castsInto,
+  HERO_BACK,
+  HERO_DEPTH,
+  heroFrame,
   SHADOW_AHEAD,
   SHADOW_MARGIN,
   SHADOW_TAIL,
@@ -76,11 +79,42 @@ describe("the shadow box (shadow-box.ts)", () => {
   });
 });
 
+describe("the riders' own shadow maps (shadow-box.ts heroFrame)", () => {
+  it("draws every rider at millimetres a texel on the stops that give him a map", () => {
+    for (const level of SHADOW_LEVELS) {
+      const { size, reach, hero } = SHADOW_LOOK[level];
+      if (hero === 0) continue;
+      // The machine's bound (`sled-body.ts` / `posed-merge.ts`) is 3.2 m.
+      const own = heroFrame(3.2, hero).texel;
+      const wide = (2 * (reach + SHADOW_MARGIN)) / size;
+      expect(own).toBeLessThan(0.01);
+      expect(own).toBeLessThan(wide / 5);
+    }
+  });
+
+  it("grows with a thrown rider's bound, and keeps its offsets under a few centimetres", () => {
+    const near = heroFrame(3.2, 2048);
+    const thrown = heroFrame(12, 2048);
+    expect(thrown.half).toBeGreaterThan(near.half);
+    expect(thrown.texel).toBeGreaterThan(near.texel);
+    expect(near.normalBias).toBeLessThan(0.02);
+    expect(near.depthBias * (HERO_BACK + HERO_DEPTH)).toBeLessThanOrEqual(0.03);
+  });
+});
+
 describe("the shadow's fade, grafted into every world material (haze.ts)", () => {
   it("wraps the directional light's shadow, and only it, in shadowFaded", async () => {
     const { lightsWithFade } = await import("../pwa/src/game/haze.ts");
     const chunk = lightsWithFade();
     expect(chunk.match(/shadowFaded\(/g)?.length).toBe(1);
     expect(chunk).toContain("shadowFaded( getShadow( directionalShadowMap[ i ]");
+  });
+
+  it("takes the rider's own map with the wide one, once", async () => {
+    const { lightsWithFade } = await import("../pwa/src/game/haze.ts");
+    const chunk = lightsWithFade();
+    expect(chunk.match(/heroShadowed\(/g)?.length).toBe(1);
+    expect(chunk).toContain("heroShadowed( shadowFaded( getShadow(");
+    expect(chunk).toContain("), geometryNormal ) : 1.0;");
   });
 });

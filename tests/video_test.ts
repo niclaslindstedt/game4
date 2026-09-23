@@ -55,10 +55,15 @@ describe("the picture's ladders (settings-video.ts)", () => {
     const reaches = SHADOW_LEVELS.map((s) => SHADOW_LOOK[s].reach);
     expect(reaches).toEqual([...reaches].sort((a, b) => a - b));
     expect(SHADOW_LOOK.off.size).toBe(0);
-    // Three modes: nothing, the machines alone, and every tree's too.
-    expect(SHADOW_LEVELS).toEqual(["off", "sleds", "all"]);
+    // Nothing, the machines alone, every tree's too, and that again with
+    // every rider sharp in a map of his own — and only HIGH draws those.
+    expect(SHADOW_LEVELS).toEqual(["off", "sleds", "medium", "high"]);
     expect(SHADOW_LOOK.sleds.trees).toBe(false);
-    expect(SHADOW_LOOK.all.trees).toBe(true);
+    expect(SHADOW_LOOK.medium.trees).toBe(true);
+    expect(SHADOW_LOOK.high.trees).toBe(true);
+    expect(SHADOW_LEVELS.filter((s) => SHADOW_LOOK[s].hero > 0)).toEqual(["high"]);
+    expect(VIDEO_PRESETS.medium.shadows).toBe("medium");
+    expect(VIDEO_PRESETS.high.shadows).toBe("high");
     // What a tree casts follows how the FOREST row draws it.
     expect(FOREST_LOOK.low.casters).toBe("sketch");
     expect(FOREST_LOOK.high.casters).toBe("full");
@@ -140,9 +145,11 @@ describe("the picture's ladders (settings-video.ts)", () => {
       antialias: false,
     });
     expect(mergeVideo({ terrain: "ultra", shadows: "max", spray: 3 })).toEqual(DEFAULT_VIDEO);
-    // The row's old quality stops that drew shadows read back as ALL.
-    expect(mergeVideo({ shadows: "low" }).shadows).toBe("all");
-    expect(mergeVideo({ shadows: "high" }).shadows).toBe("all");
+    // The row's old stops: the quality ladder's LOW is MEDIUM now, and the
+    // mode ladder's ALL is HIGH, its riders sharp.
+    expect(mergeVideo({ shadows: "low" }).shadows).toBe("medium");
+    expect(mergeVideo({ shadows: "all" }).shadows).toBe("high");
+    expect(mergeVideo({ shadows: "high" }).shadows).toBe("high");
   });
 });
 

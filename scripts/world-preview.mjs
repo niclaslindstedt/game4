@@ -90,7 +90,7 @@ const args = parseArgs(
     shadows: {
       kind: "string",
       default: "",
-      help: "the SHADOWS row over the preset (off, sleds, all)",
+      help: "the SHADOWS row over the preset (off, sleds, medium, high)",
     },
     width: { kind: "number", default: 1280, help: "picture width, px" },
     height: { kind: "number", default: 720, help: "picture height, px" },

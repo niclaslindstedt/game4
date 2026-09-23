@@ -84,7 +84,8 @@ const TRAIL_STOPS = stopsOf<TrailLevel>(TRAIL_LEVELS);
 const SHADOW_WORD: Record<ShadowLevel, string> = {
   off: STRINGS.optOff,
   sleds: STRINGS.optShadowSleds,
-  all: STRINGS.optShadowAll,
+  medium: STRINGS.optMedium,
+  high: STRINGS.optHigh,
 };
 const SHADOW_STOPS: Stop<ShadowLevel>[] = SHADOW_LEVELS.map((id) => ({
   id,
