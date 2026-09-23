@@ -109,6 +109,22 @@ export const STRINGS = {
   menuOptions: "OPTIONS",
   menuBack: "BACK",
 
+  /* ── THE SLED CARD (menu-sled.tsx, sled-picker.tsx, sled-stats.ts) ─── */
+  sledTitle: "SLED",
+  sledRide: "RIDE",
+  sledPrev: "Previous sled",
+  sledNext: "Next sled",
+  sledOf: (at: number, of: number): string => `${at} / ${of}`,
+  sledFacts: { top: "TOP SPEED", sprint: "0–100", power: "POWER" },
+  sledUnits: { speed: "KM/H", seconds: "S", power: "HP" },
+  sledBars: {
+    accel: "ACCELERATION",
+    top: "TOP SPEED",
+    corner: "CORNERING",
+    powder: "POWDER",
+    landing: "LANDINGS",
+  },
+
   /* ── OPTIONS (menu-options.tsx) and its rows (menu-knobs.tsx) ──────── */
   optCaption: "Point at a row to read what it does",
   optRestore: "RESTORE DEFAULTS",

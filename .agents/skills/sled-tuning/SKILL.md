@@ -1,14 +1,14 @@
 ---
 name: sled-tuning
-description: "Use when changing THE MACHINE'S OWN NUMBERS — the spec in `engine/game/defs/sled.ts` (mass, envelope, stance, the tread's footprint, the springs, the engine, the CVT, the brake, the rider's reach), the documented expectations a test holds the physics to (`topSpeed`, `accel0to100`), what separates one rival from another in the field (`Rival.pace`), or the day a second sled is added to the catalog. Owns what every per-sled knob buys, the real-machine bands each number must stay inside, and the `make ride` + `make sim` sweep that is the only honest test of a retune. Not the LOOK of the sled (`sled-design`) and not the shared model every sled inherits (`sled-physics`)."
+description: "Use when changing THE MACHINE'S OWN NUMBERS — the spec in `engine/game/defs/sled.ts` (mass, envelope, stance, the tread's footprint, the springs, the engine, the CVT, the brake, the rider's reach), the documented expectations a test holds the physics to (`topSpeed`, `accel0to100`), what separates one rival from another in the field (`Rival.pace`), or adding a machine to the catalog of four. Owns what every per-sled knob buys, the real-machine bands each number must stay inside, and the `make ride` + `make sim` sweep that is the only honest test of a retune. Not the LOOK of the sled (`sled-design`) and not the shared model every sled inherits (`sled-physics`)."
 ---
 
 # Tuning the machine
 
-This skill owns **one question**: is the sled a believable trail sled — does
-it get going, top out, stop, turn and land the way its numbers say it will?
-And, the day there is more than one, is each an ANSWER to a kind of snow
-rather than a point on one scale with a winner?
+This skill owns **two questions**: is each sled a believable machine of its
+kind — does it get going, top out, stop, turn and land the way its numbers
+say it will? And is each of the four an ANSWER to a kind of snow rather
+than a point on one scale with a winner?
 
 The answer is measured, never asserted. **Any change to `defs/sled.ts` owes
 `make ride` and `make sim`, before and after.**
@@ -25,16 +25,34 @@ The answer is measured, never asserted. **Any change to `defs/sled.ts` owes
 
 ## The catalog
 
-ONE sled in this slice: `SLED` (id `trail`), an invented trail/cross machine
-with no real brand behind it — two steerable skis on independent front
-suspension, a rubber tread on a slide-rail rear, a two-stroke twin through a
-CVT, a rider on the saddle. Every host reads it through `@engine`.
+FOUR machines, `SLEDS` in `defs/sled.ts`, in the order the sled card turns
+through them: `TRAIL_SLED`, `SLED` (the CROSSOVER — the reference every
+shared number in `TUNING` was tuned on, and the default), `MOUNTAIN_SLED`
+and `CROSS_SLED`. Each is the crossover's row spread with what differs —
+two steerable skis on independent front suspension, a rubber tread on a
+slide-rail rear, a two-stroke 850 through a CVT, a rider on the saddle.
+Every host reads them through `@engine` (`SLEDS`, `sledById`, `isSledId`).
+
+| Machine | Its answer | What buys it |
+| --- | --- | --- |
+| trail | quickest on the groomer, bogs in a drift | a short 3.28 m belt of 32 mm lugs (the least belt to turn), a wide 1.09 m stance, firm springs, early engagement |
+| crossover | the middle of every band | 3.71 m of 44 mm lugs, 1.04 m stance — every `footprint.ts` multiplier exactly 1 |
+| mountain | floats and paddles in powder, pushes wide on a packed bend | 3.94 m of 66 mm paddles, the lightest machine, a 0.89 m stance, a turbo, geared low |
+| cross | lands what the others bottom on, sinks in deep powder | stiff springs on the longest travel, a short 3.48 m belt, geared short, revs higher |
 
 Real-machine BANDS, so the numbers stay honest (a band, never a make and a
-model — the router's rule): a 600-class trail sled is 210–240 kg dry, 90–125
-kW, stance 1.0–1.1 m centre to centre, a belt of 3.2–3.5 m by 0.38 m, a CVT
-ratio span of 3–4, and 110–130 km/h flat out on a groomed trail. A sled
-outside those bands is a different vehicle and says so in its comment.
+model — the router's rule): an 850-class sled is 190–235 kg dry, 123–134 kW,
+stance 0.89–1.09 m centre to centre, a belt of 3.2–4.0 m by 0.38 m with
+25–75 mm lugs, a CVT ratio span of 3–4, and 145–170 km/h flat out on a
+groomed trail. A machine outside those bands is a different vehicle and
+says so in its comment.
+
+The per-sled half of the snow model is `engine/game/footprint.ts`: each
+machine's ground pressure and lug height turned into multipliers on the
+shared numbers (the sink, the planing speed, the powder paddle, the packed
+side grip, the belt's own losses) — all exactly 1 on the crossover. A knob
+that should change how a machine meets snow goes through there, never
+through a branch on its id.
 
 ## Where the numbers live
 
@@ -79,19 +97,21 @@ flat out is this row.
 
 ## The field
 
-The rivals ride the same `SLED`. What tells one from the next is `Rival.pace`
-— the throttle its bot is allowed — dealt off the run's own stream at the
-grid (`rivals.ts`), so the same seed deals the same field. A field that is
+The player rides the machine picked on the sled card (`settings.sled`,
+`createGame({ spec })`); each rival is DEALT one of `SLEDS` off the run's own
+stream at the grid (`rivals.ts`), and `Rival.pace` — the throttle its bot is
+allowed — beside it, so the same seed deals the same field. A field that is
 too fast or too slow is a `RACE` / pace change measured with
-`make sim ARGS="--rivals 3"`, not a spec change: a rival on a different
-machine is a rival in a different game.
+`make sim ARGS="--rivals 3"`, not a spec change.
 
 ## The workflow
 
 1. **State the target** as a figure and a band: "0–100 km/h in 4–5 s on the
    groomer, and the sled planes by 40 km/h in powder".
-2. **Baseline**: `make ride` on `rest`, `rest-powder`, `accel`,
-   `accel-powder`, `brake`, `turn`, `kicker`; `make sim`.
+2. **Baseline**: `make ride ARGS="--sled all"` on `rest`, `rest-powder`,
+   `accel`, `accel-powder`, `brake`, `turn`, `kicker`; `make sim ARGS="--sled
+   all"` — the roster table, one column a machine, `*` on the quickest per
+   seed, and the `pow` column saying how much of each loop is drifted.
 3. **Move the one knob** that owns the figure (table above). Stay in the
    real bands.
 4. **Re-run both labs**, `npx vitest run tests/sled_test.ts
@@ -102,14 +122,36 @@ machine is a rival in a different game.
    the same spec, so a stance or a length moved moves the picture
    (`make world SEED=38 ARGS=--views=hood,orbit`).
 
-## Adding a second sled (not yet built)
+## The roster is judged as a roster
 
-The day a roster exists: a `SLED`-shaped row per machine, a catalog array
-exported from `defs/sled.ts`, `createGame({ spec })` already takes one, and
-each machine an ANSWER to a kind of snow (a light short-track sled that is
-nimble on the groomer and bogs in powder, a long-track mountain sled that
-floats and turns badly) — never four points on one scale. `make sim` then
-owes a row per machine, and the start card a picker (`menu-system`).
+`make sim ARGS="--sled all" COUNT=12` is the verdict: NO machine best
+everywhere — the mountain sled wins the powder-heavy seeds (a high `pow`),
+the trail sled the packed ones, and every machine wins somewhere or has a
+reason in its blurb not to. A retune that makes one machine sweep the table
+has collapsed the catalog back to one sled, whatever `tests/catalog_test.ts`
+says about each row alone.
+
+## What the card says about a machine
+
+The sled card (`menu-sled.tsx`) bills each machine off `sled-stats.ts`, and
+EVERY number there is derived: the figures are the row's own `topSpeed`,
+`accel0to100` and `powerKw`; the bars are the engine's own answers —
+`cornerGrip(spec, 1)`, the footprint's paddle over its sink (`powderOf`),
+`harshSpeedOf` — each scaled across the catalog's spread. So a retune is
+billed correctly the moment it lands, and `tests/sled_card_test.ts` holds
+the sheet to the catalog's claim: every specialist best at something, the
+crossover in the middle of every band, the mountain sled best in powder and
+the trail sled worst. A retune that breaks one of those has changed what a
+machine IS, and its `blurb` moves with it.
+
+## Adding a fifth machine
+
+A row spread from `SLED` with what differs, added to `SLEDS` (the card turns
+through it in that order) and to `SledId`; its own ANSWER to a kind of snow,
+never a point between two others. It owes a `tests/catalog_test.ts` row, a
+column in the roster table, and a LOOK at the card and in the race: the
+builder draws it off the spec (`sled-design`), so a tread or a stance out of
+the drawn cowl's reach shows there first.
 
 ## Skill self-improvement
 

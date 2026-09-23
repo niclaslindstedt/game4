@@ -9,8 +9,9 @@
 //   splash   the attract card (`splash-screen.tsx`) — the house's name while
 //            the first map is built, then the title and an invitation.
 //   menu     the front door (`menu-main.tsx`), over a bot-ridden race — and
-//            its pages, OPTIONS (`menu-options.tsx`) and OPTIONS ▸ KEYS
-//            (`menu-keys.tsx`), which are the same surface: the race behind
+//            its pages: the SLED card RACE opens (`menu-sled.tsx`), the last
+//            card before the grid; OPTIONS (`menu-options.tsx`) and OPTIONS ▸
+//            KEYS (`menu-keys.tsx`). All the same surface: the race behind
 //            them is the one the picture rows are judged against.
 //   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
 //            paid for in slices so the page stays a page.
@@ -49,7 +50,17 @@
 // the bot takes under the menu is not news.
 
 import { useEffect, useRef, useState } from "preact/hooks";
-import { TUNING, botInput, createGame, error, step, type GameState, type Level } from "@engine";
+import {
+  TUNING,
+  botInput,
+  createGame,
+  error,
+  sledById,
+  step,
+  type GameState,
+  type Level,
+  type SledSpec,
+} from "@engine";
 
 import { connectOutput } from "./output-bridge.ts";
 import { onShellCommand } from "./shell-host.ts";
@@ -65,6 +76,7 @@ import { KeysPage } from "./game/menu-keys.tsx";
 import { MainMenu } from "./game/menu-main.tsx";
 import { createMenuNav, walkCardsOnKeys } from "./game/menu-nav.ts";
 import { OptionsPage } from "./game/menu-options.tsx";
+import { SledPage } from "./game/menu-sled.tsx";
 import { PauseMenu } from "./game/menu-pause.tsx";
 import type { WorldRenderer } from "./game/renderer-api.ts";
 import { createRunActions } from "./game/run-actions.ts";
@@ -143,9 +155,14 @@ const NO_PRESSES: Presses = {
 };
 
 /** A whole race on `seed` — or, where the generator refuses it, the map the
- * game falls back on, so the page ALWAYS mounts over something. */
-function raceOrFallback(seed: number, assist: Settings["assist"] | null): GameState {
-  const help = assist ? { assist: assistOf(assist) } : {};
+ * game falls back on, so the page ALWAYS mounts over something. `rider` is
+ * the player's help and machine for a race a link boots into; the race under
+ * the front door is the bot's, on the default machine with every hand on. */
+function raceOrFallback(
+  seed: number,
+  rider: { assist: Settings["assist"]; spec: SledSpec } | null,
+): GameState {
+  const help = rider ? { assist: assistOf(rider.assist), spec: rider.spec } : {};
   try {
     return createGame({ seed, ...help });
   } catch (e) {
@@ -182,6 +199,13 @@ export function App() {
   });
   /** Which page of the front door is up. */
   const [page, setPage] = useState<MenuPage>(params.page);
+  /** A link's machine for this visit (`?sled=`), never written back — until
+   * the rider picks one on the sled card, which is theirs to keep. */
+  const [linkSled, setLinkSled] = useState(params.sled);
+  const linkSledRef = useRef(linkSled);
+  linkSledRef.current = linkSled;
+  /** The machine the player rides. */
+  const specOf = (s: Settings): SledSpec => sledById(linkSledRef.current ?? s.sled);
   /** The picture drawn: the stored one, or a lab's preset for this visit —
    * `?video=` is never written back. */
   const videoOf = (s: Settings): VideoSettings =>
@@ -287,11 +311,19 @@ export function App() {
     // one under the front door is the bot's, with every hand on.
     let state: GameState = raceOrFallback(
       raceSeed,
-      params.rides ? settingsRef.current.assist : null,
+      params.rides
+        ? { assist: settingsRef.current.assist, spec: specOf(settingsRef.current) }
+        : null,
     );
-    /** The race the player is about to ride, with the help they asked for. */
-    const playerGame = (level: Level, seed: number): GameState =>
-      createGame({ level, seed, assist: assistOf(settingsRef.current.assist) });
+    /** The race the player is about to ride, on the machine they picked and
+     * with the help they asked for — on this map, or on a fresh one. */
+    const playerGame = (level: Level | undefined, seed: number): GameState =>
+      createGame({
+        level,
+        seed,
+        spec: specOf(settingsRef.current),
+        assist: assistOf(settingsRef.current.assist),
+      });
     const drawable = (): boolean => standing !== null && standing === state.level;
     let frozen = params.shot;
     let preroll = false;
@@ -339,6 +371,7 @@ export function App() {
       x: state.sled.x,
       z: state.sled.z,
       heading: state.sled.heading,
+      sled: state.sled.spec.id,
       input: { ...state.input },
       shell: shellRef.current,
       camera: renderer.camera(),
@@ -414,10 +447,7 @@ export function App() {
         loader.begin({
           // THE MAP UNDER THE MENU IS REUSED when it is the one asked for —
           // the race the player presses RACE over is the race they ride.
-          build: () =>
-            state.level.seed === seed
-              ? playerGame(state.level, seed)
-              : createGame({ seed, assist: assistOf(settingsRef.current.assist) }),
+          build: () => playerGame(state.level.seed === seed ? state.level : undefined, seed),
           camera: settingsRef.current.camera,
           done: lift,
         });
@@ -605,6 +635,8 @@ export function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => rendererRef.current?.setVideo(videoOf(settings)), [renderKit, settings.video]);
 
+  /** Onto the snow: the race on the seed the tile named, on the machine the
+   * sled card holds. */
   const race = (): void => {
     setPage("root");
     pressRef.current.race(nextSeed);
@@ -664,14 +696,24 @@ export function App() {
           riders={riders}
           sound={settings.sound}
           keys={keys ? keysLine(settings.keys) : null}
-          onRace={race}
+          onRace={() => setPage("sled")}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onOptions={() => setPage("options")}
         />
       )}
       {shell === "menu" && page !== "root" && (
         <div class="menu">
-          {page === "options" ? (
+          {page === "sled" ? (
+            <SledPage
+              sled={specOf(settings).id}
+              onPick={(sled) => {
+                setLinkSled(null);
+                setSettings((s) => ({ ...s, sled }));
+              }}
+              onBack={() => setPage("root")}
+              onRide={race}
+            />
+          ) : page === "options" ? (
             <OptionsPage
               settings={settings}
               keys={keys}

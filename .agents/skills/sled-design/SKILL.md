@@ -8,9 +8,17 @@ description: "Use when designing or changing how the SLED LOOKS — its silhouet
 The sled is not modelled in a DCC tool: it is **generated**.
 `pwa/src/game/sled-body.ts` builds it from extruded profiles and boxes in the
 engine's own BODY FRAME — x right, y up, z forward, the origin at the centre
-of gravity of machine and rider, the snow `SLED.cogHeight` under it — so
-every dimension reads against `engine/game/defs/sled.ts` and the drawn skis
-stand where the physics' ski probes are. Designing the sled means editing
+of gravity of machine and rider — OFF EACH MACHINE'S OWN SPEC
+(`createSledModel(spec, style, wrap)`), so every dimension reads against
+`engine/game/defs/sled.ts` and the drawn skis stand where the physics' ski
+probes are. Two snow lines: the RUNNING GEAR (skis, spindles, tread) stands
+`spec.cogHeight` under the origin, and the CHASSIS (cowl, seat, boards,
+bars) where the crossover's does, because that is where the rider's hands
+and feet are fixed (`MOUNTS`); a machine carried higher on its springs is
+drawn with its running gear further under it. The tunnel, the tail and the
+flap run back to the tread's end (the mountain sled's long tail, the trail
+sled's stubby one), the cowl is as wide as the envelope, and the lugs stand
+at `lugHeight`. Designing the sled means editing
 the builder or a style and LOOKING, never guessing from numbers.
 
 **Before starting, read this skill's lessons** —
@@ -25,13 +33,17 @@ at both ends, and `write-code` beside this skill for any code change.
 | `pwa/src/game/posed-merge.ts` | ONE DRAW PER POSED FIGURE: the sled and its rider are posed as a tree of small meshes (a group a ski, a capsule a limb), but every part is taken off the picture and what is drawn is one vertex-coloured mesh per machine, its vertices re-laid each frame through each part's matrix — forty parts in four riders were most of a frame's draws. A new part goes into the tree and is merged like the rest, never drawn on its own |
 | `pwa/src/game/rider.ts`, `rider-pose.ts` | The rider — the `rider` skill's. His hands and feet are fixed to this builder's grips and boards through `MOUNTS` in `rider-pose.ts`, so moving the bars, the seat or the boards moves him |
 | `engine/game/defs/sled.ts` | NOT this skill's file — the physics' spec. The builder READS `skiStance`, `skiForward`, `skiWidth`, `treadLength`/`Width`/`Front`/`Rear`, `length`, `width`, `height`, `cogHeight`, the suspensions' travel; a style never restates them |
-| `pwa/src/game/renderer.ts` | Places each model off its `SledState` (interpolated in `interp.ts`) — the mesh's origin is the CoG, so it pitches and rolls about the point the physics does |
+| `pwa/src/game/renderer.ts` | Places each model off its `SledState` (interpolated in `interp.ts`) — the mesh's origin is the CoG, so it pitches and rolls about the point the physics does. A slot whose run is on another machine than its model was built off is REBUILT (a new pick raced on the same map) |
+| `pwa/src/game/sled-turntable.ts` | The sled card's stand: the same builder, the player's colours, at rest at the springs' sag on a disc of snow, turning. The quickest look at all four machines side by side: `make screenshots ARGS="--surface sled,sled-mountain"`, or `?menu=sled&sled=<id>` |
 | `pwa/src/identity.ts` | The PALETTE — the player's sled is `PALETTE.flag`, the brand's red |
 | `scripts/world-preview.mjs` | `make world` — one map ridden by the bot, photographed through the game's own renderer at named views (`hood`, `bars`, `far`, `orbit`, `jump`, `landing`, …). Its own bundle, no `make build` |
 
 ## The loop: world → LOOK → iterate → the built app
 
-1. **Shoot the current state**: `make world SEED=38
+1. **Shoot the current state**: the four machines on the sled card
+   (`make screenshots ARGS="--surface sled,sled-mountain"`, or
+   `?menu=sled&sled=trail|cross` by hand) for the silhouettes side by side,
+   then `make world SEED=38
    ARGS=--views=orbit,far,jump,landing` (with
    `CHROMIUM_PATH=/opt/pw-browsers/chromium` in a web session). `orbit` walks
    round the machine; `far` is its read at range; `jump` and `landing` show
