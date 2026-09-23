@@ -25,6 +25,7 @@ import {
 import { SCREEN_TO_ENGINE } from "./input-model.ts";
 import { buildMinimap, type HudMinimap } from "./minimap-view.ts";
 import { splitGap, type RunLedger } from "./records.ts";
+import { comboTile, type TrickTile } from "./trick-tile.ts";
 
 /** The brake's share past which the rev bar says the brake is on. */
 const BRAKE_SHOWN = 0.05;
@@ -118,6 +119,9 @@ export type HudSnapshot = {
   /** THE DAMAGE INSTRUMENT: each part 0 sound … 1 wrecked, or null on a
    * race run without damage (`GameState.damage`). */
   damage: { skiLeft: number; skiRight: number; suspension: number } | null;
+  /** THE SCORE over the nose (`trick-tile.ts`), on a tricks run; null on
+   * any other. */
+  tricks: TrickTile | null;
 };
 
 /** The lap a run is on, 1-based, and never past the last: the final
@@ -205,5 +209,6 @@ export function takeSnapshot(state: GameState, ledger: RunLedger = NO_LEDGER): H
           suspension: c.damage.suspension,
         }
       : null,
+    tricks: comboTile(state),
   };
 }

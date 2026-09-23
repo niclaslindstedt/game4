@@ -151,6 +151,8 @@ export type GhostRun = GhostStage &
   };
 
 const FLAG_RESET = 1;
+/** ...and the trick button held (a tricks run's poses, `strokes.ts`). */
+const FLAG_TRICK = 2;
 
 /** `String.fromCharCode` takes its bytes as arguments, and a whole run's
  * worth at once overflows the call stack. */
@@ -228,7 +230,7 @@ export function createControlRecorder(): ControlRecorder {
       lean.push(Math.round(clamp(input.lean, -1, 1) * STEER_STEPS) + STEER_STEPS);
       throttle.push(Math.round(clamp(input.throttle, 0, 1) * LEVER_STEPS));
       brake.push(Math.round(clamp(input.brake, 0, 1) * LEVER_STEPS));
-      flags.push(input.reset ? FLAG_RESET : 0);
+      flags.push((input.reset ? FLAG_RESET : 0) | (input.trick ? FLAG_TRICK : 0));
     },
     steps: () => steer.length,
     seal: () => ({
@@ -268,6 +270,8 @@ export function readControls(tape: ControlTape): GhostTape {
       input.throttle = throttle[step] / LEVER_STEPS;
       input.brake = brake[step] / LEVER_STEPS;
       input.reset = (flags[step] & FLAG_RESET) !== 0;
+      // Left off when it is not held, so a tape reads back as the input it was.
+      input.trick = (flags[step] & FLAG_TRICK) !== 0 ? true : undefined;
       return input;
     },
   };

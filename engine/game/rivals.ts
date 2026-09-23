@@ -30,6 +30,7 @@ import { SLEDS } from "./defs/sled.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledState } from "./state.ts";
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
+import { freshTricks } from "./tricks.ts";
 
 /** How far behind the level's grid an extra row stands, m. */
 const ROW_BACK = 8;
@@ -64,6 +65,7 @@ export function createRivals(state: GameState, count: number): void {
       // ...and so is his damage: a rival's machine is never bent.
       damage: false,
       progress: freshProgress(state.level),
+      tricks: freshTricks(),
       rivals: [],
       events: [],
     };

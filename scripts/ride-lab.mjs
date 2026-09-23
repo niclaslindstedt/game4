@@ -16,6 +16,9 @@
 //   npm run ride -- accel --seconds 30
 //   npm run ride -- --sled mountain    one machine of the catalog
 //   npm run ride -- --sled all         every scenario on every machine, one table
+//   npm run ride -- backflip           a trick scenario (backflip, frontflip,
+//                                      spin, pose, kicker-flip), ridden in a
+//                                      tricks run and scored
 //
 // Writes previews/ride-<scenario>.png. Required before and after any change
 // to the suspension, the snow, the drive, the steering or the air.
@@ -67,7 +70,14 @@ const chosen = wanted ? SCENARIOS.filter((s) => s.id === wanted) : SCENARIOS;
 /** Ride a scenario and keep a frame every step. */
 function record(scenario, spec) {
   const level = scenario.level(S);
-  const state = E.createGame({ level, rivals: 0, countdown: 0, spec, quiet: true });
+  const state = E.createGame({
+    level,
+    mode: scenario.mode,
+    rivals: 0,
+    countdown: 0,
+    spec,
+    quiet: true,
+  });
   E.placeRun(state, scenario.place(S));
   const seconds = args.seconds ?? scenario.seconds;
   const frames = [];

@@ -30,7 +30,9 @@
 // race, and a press that does nothing is the better failure.
 //
 // WHICH RUNS KEEP ONE: the ones the record book keeps (`keepsRecords` — the
-// race and the time trial), armed on their very first step. A free ride's
+// race and the time trial) and the TRICKS run, whose flips are the most
+// worth watching back of anything the game has, armed on their very first
+// step (`keepsReplay`). A free ride's
 // day and snow are the rider's own and it has no flag to end on. The offer
 // is made on the finish plate and the pause card; taken mid-ride it ENDS the
 // run, which the row says rather than leaving to be discovered.
@@ -80,6 +82,11 @@ export function recipeOf(state: GameState, mode: GameMode): CreateGameOptions {
     snowDepth: state.snowDepth,
     quiet: true,
   };
+}
+
+/** Whether a run in `mode` is recorded to be watched back. */
+export function keepsReplay(mode: GameMode): boolean {
+  return isGameMode(mode) && (keepsRecords(mode) || mode === "tricks");
 }
 
 /** A FINGERPRINT OF A RUN AT ITS FIRST STEP: where every sled stands, on
@@ -174,7 +181,7 @@ export function createReplayRig(): ReplayRig {
     offers: () => tape !== null && tape.steps() > 0,
     arm: (state, mode) => {
       clear();
-      if (mode === null || !isGameMode(mode) || !keepsRecords(mode)) return;
+      if (mode === null || !keepsReplay(mode)) return;
       // A tape has to start at the run's first step, or step 0 would not be
       // the same moment in the rebuild — a link's pre-rolled run is not
       // recorded at all.

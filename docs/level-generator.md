@@ -17,20 +17,20 @@ holds the two copies together, word for word.
 
 `generateLevel(seed, opts?)` returns a `Level` (`engine/mapgen/types.ts`):
 
-| Field                      | What it is                                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `size`, `cell`             | The map is `[0, size] × [0, size]` metres (1600), heights on a grid of `cell` (2 m) cells               |
-| `ground`                   | The baked heightfield, the track's grading and every kicker included                                    |
-| `groundAt`, `normalAt`     | Bilinear height and unit normal off `ground`                                                            |
-| `packedAt`                 | 0 = virgin powder … 1 = packed track, off the baked `packed` field                                      |
-| `track`                    | The closed loop: points every ~2 m with `x, z, y, s, heading, width`; `length`; `closed`                |
-| `checkpoints`              | Gates every 120–200 m; index 0 is the start/finish line at arc length 0                                 |
-| `spawn`, `grid`            | The grid's anchor on the centreline behind the start line, and four slots in rows of two (player first) |
-| `trees`                    | Every trunk: position, ground height, height, trunk radius, crown radius                                |
-| `kickers`                  | Every crest shaped to throw a sled: `K1…` on the track (with their arc length), `X1…` off it            |
-| `sun`                      | Solar hour, day of the year and latitude of a clear winter day                                          |
-| `laps`                     | 3                                                                                                       |
-| `basin`, `attempt`, `seed` | The basin's middle and rim radius; which sub-seed attempt was accepted; the seed                        |
+| Field                      | What it is                                                                                                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `size`, `cell`             | The map is `[0, size] × [0, size]` metres (1600), heights on a grid of `cell` (2 m) cells                                                                                      |
+| `ground`                   | The baked heightfield, the track's grading and every kicker included                                                                                                           |
+| `groundAt`, `normalAt`     | Bilinear height and unit normal off `ground`                                                                                                                                   |
+| `packedAt`                 | 0 = virgin powder … 1 = packed track, off the baked `packed` field                                                                                                             |
+| `track`                    | The closed loop: points every ~2 m with `x, z, y, s, heading, width`; `length`; `closed`                                                                                       |
+| `checkpoints`              | Gates every 120–200 m; index 0 is the start/finish line at arc length 0                                                                                                        |
+| `spawn`, `grid`            | The grid's anchor on the centreline behind the start line, and four slots in rows of two (player first)                                                                        |
+| `trees`                    | Every trunk: position, ground height, height, trunk radius, crown radius                                                                                                       |
+| `kickers`                  | Every crest shaped to throw a sled: `K1…` on the track (with their arc length), `X1…` off it, and on a map built for a tricks run the trick field's `T1…` (`trick: true`, R20) |
+| `sun`                      | Solar hour, day of the year and latitude of a clear winter day                                                                                                                 |
+| `laps`                     | 3                                                                                                                                                                              |
+| `basin`, `attempt`, `seed` | The basin's middle and rim radius; which sub-seed attempt was accepted; the seed                                                                                               |
 
 Two queries answer what every reader of a loop asks (`engine/mapgen/query.ts`):
 
@@ -71,6 +71,11 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    search climbs to, well clear of the corridor.
 7. **The start** (`spawn.ts`, R11–R13) — a station on the loop searched for the start line, the
    loop re-indexed to begin there, the checkpoints from it, and the grid behind it on the track.
+   Then, only on a map asked for one (`GenerateOptions.tricks` — what a TRICKS run is ridden on),
+   **the trick field** (`trick-field.ts`, R20): graded kickers stamped onto the finished loop at its
+   straight stretches, from the lead past the start line round to the lead before it. It draws
+   nothing, so the loop, the start and the checkpoints are the race map's own; the analysis holds
+   the field it finds (`Kicker.trick`, `T1…`) to R20, and R9 no longer counts it.
 8. **The forest** (`forest.ts`, R14) — a jittered candidate per cell, kept by a forest noise, and
    refused near the track, on steep ground, up the rim, on a kicker, or within `forest.gap` of a
    tree already standing, so there is always room to ride between two trunks.
@@ -136,3 +141,4 @@ A map builds in about half a second on Node.
 - **R18** THE BERMS. The groomer's plough leaves the snow it pushed off the line in a windrow along each edge, and that is what marks the track out of the country round it. The ground stays level for `berm.width` metres past the flat shoulder (R8) — the bank back into the country starts behind the berm, never under it — and on that bench a ridge stands `berm.height` (0.7–1.0 m) over the line, its crest halfway across, its faces a half-sine no steeper than `berm.maxSlope`. Its height wanders along the loop, never below `berm.height.min`, as a windrow does. No tree stands on a berm (R14's corridor reaches past it). The berms draw nothing from any stream.
 
 - **R19** THE WEATHER. Every map is dealt one sky off a stream of its own — the attempt's sub-seed, salted — so its weather moves nothing else the map draws: `clear`, `fair` (fair-weather cumulus), `high` (a sheet of high cloud), `overcast` (a lid of stratus and its flat light), `snow` (a fall, from light to a blizzard) or `fog` (a valley fog lying in the basin), at the odds in `weather.odds`. A fall is dealt an intensity in `weather.snowfall` and a fog a density in `weather.fog`; the wind is dealt a mean speed in that sky's band of `weather.wind` — a heavier fall a harder wind — and a bearing it blows from. The same stream sends `weather.evening` of the maps out in the EVENING of R15. `Level.weather` publishes all of it.
+- **R20** THE TRICK FIELD. A map built for a TRICKS run — and only one: a map built for any other ride carries no field — has groomed kickers laid on its loop in the direction of travel, from `trick.lead` metres past the start line to `trick.lead` metres short of it again: as many as fit, up to `trick.count.max` and never fewer than `trick.count.min`. They are GRADED: their lips stand `trick.heights` metres high in turn — small, medium, large and round again — each with a ramp `trick.ramp` times its lip's height long and a landing `trick.landing` times it, the profile of R9, steepest at the lip, at full height across the track, its flat shoulders and its berms (R8, R18), so the berms ride up and over with it. Each stands on a stretch that turns no more than `trick.straight` radians over its footprint and whose line past the lip climbs no steeper than `trick.landingGrade`, with `trick.gap` metres of track between one kicker's landing and the next one's ramp, and as much between any of them and one of R9's. The field draws nothing from any stream: the country, the loop, the start and the checkpoints are the seed's own.

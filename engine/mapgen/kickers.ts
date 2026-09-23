@@ -204,7 +204,7 @@ export function layOffKickers(
 }
 
 /** Add one kicker's profile to the ground in plan. */
-function stampKicker(
+export function stampKicker(
   ground: Heightfield,
   x: number,
   z: number,

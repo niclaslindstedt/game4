@@ -9,6 +9,7 @@
 import { SLED, type SledSpec } from "../game/defs/sled.ts";
 import { TUNING } from "../game/defs/tuning.ts";
 import { createGame, step } from "../game/step.ts";
+import { generateLevel } from "../mapgen/generate.ts";
 import type { GameEvent } from "../game/state.ts";
 import type { Level } from "../mapgen/types.ts";
 import { botInput, RIDER_BOT, type BotProfile } from "./bot.ts";
@@ -28,6 +29,9 @@ export type SimOptions = {
   maxSeconds?: number;
   /** Keep every event in the report. */
   keepEvents?: boolean;
+  /** Ride the seed's map with its TRICK FIELD laid (R20) — the same race,
+   * on the map a tricks run is ridden on. Ignored when `level` is given. */
+  tricks?: boolean;
 };
 
 export type RunReport = {
@@ -65,6 +69,10 @@ export type RunReport = {
   missed: number;
   /** Where the bot finished against the field (1 on a solo run). */
   place: number;
+  /** THE SCORE the run banked (`tricks.ts`). The bot turns nothing, so this
+   * is its air and the ground its flights covered, combo by combo — what a
+   * map's kickers are worth to a rider who only rides them. */
+  score: number;
   events: GameEvent[];
   /** FNV-1a over sampled positions and speeds — the determinism fingerprint. */
   digest: string;
@@ -80,7 +88,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
   const maxSeconds = options.maxSeconds ?? SIM_SECONDS;
   const state = createGame({
     seed,
-    level: options.level,
+    level: options.level ?? (options.tricks ? generateLevel(seed, { tricks: true }) : undefined),
     laps: options.laps,
     rivals: options.rivals ?? 0,
     countdown: 0,
@@ -167,6 +175,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
     wipeouts,
     missed,
     place,
+    score: state.tricks.score,
     events,
     digest: hash.toString(16).padStart(8, "0"),
   };

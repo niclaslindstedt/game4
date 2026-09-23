@@ -438,7 +438,7 @@ export function createWorldRenderer(
         // With the trails off there is no furrow to sit in.
         const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled, run.snowDepth) : 0;
         r.sink += (want - r.sink) * (1 - Math.exp(-dt * 10));
-        r.model.pose(sled, r.drawn, r.sink);
+        r.model.pose(sled, r.drawn, r.sink, run.tricks.pose);
         if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
           stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps, run.snowDepth);
         }

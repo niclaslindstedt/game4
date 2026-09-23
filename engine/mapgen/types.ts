@@ -152,6 +152,9 @@ export interface Kicker {
   onTrack: boolean;
   /** Arc length of the lip along the track (on-track kickers only), m. */
   s?: number;
+  /** One of the TRICK FIELD's (R20, `T1…`), laid on the track only on a
+   * map built for a tricks run. */
+  trick?: boolean;
 }
 
 /** What a caller may ask of the generator beyond the seed. */
@@ -164,6 +167,9 @@ export interface GenerateOptions {
    * R15 and R19 dealt (`withSky`). Applied AFTER the search accepts the
    * map, so it moves nothing the map builds. */
   sky?: SkyOverride;
+  /** Lay the TRICK FIELD on the loop (R20) — a map for a tricks run. Left
+   * out, the map carries none and is exactly the seed's race map. */
+  tricks?: boolean;
 }
 
 /** The answer to "where on the track is this point nearest?" */

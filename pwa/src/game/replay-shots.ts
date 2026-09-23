@@ -21,7 +21,8 @@
 // WHAT EARNS ONE. The list is short on purpose: a shot is an interruption,
 // and an interruption every few seconds is the programme.
 //
-//   air      a flight off a kicker or a crest that stayed up (`air`/`land`).
+//   air      a flight off a kicker or a crest that stayed up (`air`/`land`),
+//            weighted up for every trick turned in it (`trick`, `tricks.ts`).
 //   pass     a place taken off the field (`racePlace` improving, and holding).
 //   bump     another sled met at speed (`bump`).
 //   hit      a trunk met at speed (`hit`).
@@ -78,6 +79,9 @@ export const SHOTS = {
    * at `contactHard` it is worth the top of the scale. */
   contactLeast: 4,
   contactHard: 14,
+  /** What each trick turned in a flight adds to its weight — a flip off a
+   * small lip outranks a long plain jump. */
+  trick: 0.35,
   /** What a wipeout, a pass and the flag are worth. The flag is worth the
    * whole scale: it is the one moment every replay has and ends on. */
   wipeout: 0.7,
@@ -163,6 +167,8 @@ export function createShotCollector(): ShotCollector {
    * the air. Reused: this runs 120 times a second. */
   const ground = emptyPose();
   let flight: Pose | null = null;
+  /** Tricks turned in the flight that is up (`trick`, bar the air's rung). */
+  let turned = 0;
   /** The place held, and a better one waiting to have held long enough. */
   let place = 0;
   let pending: { place: number; pose: Pose } | null = null;
@@ -174,10 +180,14 @@ export function createShotCollector(): ShotCollector {
   return {
     plan: () => planShots(found),
     step: (state, at) => {
+      // The tricks first: a revolution the touchdown finished is won on the
+      // landing's own step, after its `land`.
+      for (const e of state.events) if (e.kind === "trick" && e.trick !== "air") turned += 1;
       for (const e of state.events) {
         switch (e.kind) {
           case "air":
             flight = { ...ground };
+            turned = 0;
             break;
           case "land": {
             const open = flight;
@@ -187,8 +197,9 @@ export function createShotCollector(): ShotCollector {
               "air",
               open,
               Math.min(steps(SHOTS.longest), Math.max(1, at - open.at)),
-              Math.min(1, e.airTime / SHOTS.airBig),
+              Math.min(1, e.airTime / SHOTS.airBig + turned * SHOTS.trick),
             );
+            turned = 0;
             break;
           }
           case "hit":

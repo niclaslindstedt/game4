@@ -16,6 +16,7 @@
 //   ?paused=1        ...held under the pause card instead.
 //   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
 //   ?mode=trial      the run is a TIME TRIAL rather than a race (--trial).
+//   ?mode=tricks     ...or a TRICKS run on the seed's trick field (--tricks).
 //   ?splash=1 / ?menu=root   the attract card / the front door;
 //   ?menu=options|keys       OPTIONS, and its KEYS page.
 //   ?menu=sled[&sled=id]     the sled card RACE opens, on a machine.
@@ -159,6 +160,7 @@ const args = parseArgs(
     weather: { kind: "string", help: `ride under this sky (${WEATHERS.join(", ")}, all)` },
     hour: { kind: "number", help: "the race's solar start hour, 0–24" },
     trial: { kind: "flag", help: "a time trial rather than a race (?mode=trial)" },
+    tricks: { kind: "flag", help: "a tricks run on the trick field (?mode=tricks)" },
     viewport: {
       kind: "string",
       default: "all",
@@ -167,7 +169,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
   },
   "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
-    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--trial] [--viewport v] [--timeout s]",
+    "[--camera rung] [--video tier] [--weather kind] [--hour h] [--update] [--trial] [--tricks] [--viewport v] [--timeout s]",
 );
 const viewports =
   args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
@@ -327,8 +329,9 @@ if (args.surface) {
       if (sky !== undefined) params.weather = sky;
       if (args.hour !== undefined) params.hour = String(args.hour);
       if (args.trial) params.mode = "trial";
+      if (args.tricks) params.mode = "tricks";
       const name =
-        `${scene}${args.trial ? "-trial" : ""}${sky !== undefined ? `-${sky}` : ""}` +
+        `${scene}${args.trial ? "-trial" : ""}${args.tricks ? "-tricks" : ""}${sky !== undefined ? `-${sky}` : ""}` +
         `${args.hour !== undefined ? `-h${args.hour}` : ""}` +
         `${args.t !== undefined ? `-t${args.t}` : ""}` +
         `${args.camera !== undefined ? `-${args.camera}` : ""}` +

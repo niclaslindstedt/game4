@@ -13,6 +13,7 @@
 //   npm run sim -- --rivals 3            a whole race, the bot on the grid's first slot
 //   npm run sim -- --sled mountain       one machine of the catalog
 //   npm run sim -- --sled all            the whole roster, seed by seed, and who won each
+//   npm run sim -- --tricks              the maps with their trick field laid (R20)
 //   npm run sim -- --laps 1 --json out.json
 //
 // Exits non-zero when the bot finishes NO seed at all — a sled that cannot
@@ -44,9 +45,10 @@ const args = parseArgs(
       default: "crossover",
       help: `the machine (${SLEDS.map((s) => s.id).join(", ")}), or all for the roster`,
     },
+    tricks: { kind: "flag", help: "ride each seed's map with its trick field laid (R20)" },
     json: { kind: "string", help: "also write the rows (events dropped) to this file" },
   },
-  "usage: npm run sim -- [--count n | --seeds a,b,c] [--sled id|all] [--laps n] [--rivals n] [--max s] [--json path]",
+  "usage: npm run sim -- [--count n | --seeds a,b,c] [--sled id|all] [--laps n] [--rivals n] [--max s] [--tricks] [--json path]",
 );
 
 if (args.sled !== "all" && !isSledId(args.sled)) {
@@ -68,7 +70,8 @@ const kmh = (ms) => (ms * 3.6).toFixed(0);
 
 console.log(
   `sim — engine ${engineVersion} at ${TUNING.physicsHz} Hz · sled ${args.sled} · seeds ${seeds.join(",")} · ` +
-    `laps ${args.laps ?? "map"} · rivals ${args.rivals} · max ${args.max} s`,
+    `laps ${args.laps ?? "map"} · rivals ${args.rivals} · max ${args.max} s` +
+    (args.tricks ? " · trick field" : ""),
 );
 const header = [
   pad("seed", 5),
@@ -90,6 +93,7 @@ const header = [
   pad("auto", 4),
   pad("miss", 4),
   pad("plc", 4),
+  pad("score", 6),
   pad("digest", 9),
 ].join(" ");
 
@@ -103,6 +107,7 @@ for (const spec of roster) {
       rivals: args.rivals,
       maxSeconds: args.max,
       spec,
+      tricks: args.tricks,
     });
     rows.push(r);
     console.log(
@@ -126,6 +131,7 @@ for (const spec of roster) {
         pad(r.autoResets, 4),
         pad(r.missed, 4),
         pad(r.place, 4),
+        pad(r.score, 6),
         pad(r.digest, 9),
       ].join(" "),
     );
@@ -163,7 +169,8 @@ console.log(
   )} km/h · air ${(sum((r) => r.airTime) / rows.length).toFixed(1)} s/run · ` +
     `jumps ${sum((r) => r.jumps)} · harsh ${sum((r) => r.harshLandings)} · trees ${sum((r) => r.treeHits)} · ` +
     `wipeouts ${sum((r) => r.wipeouts)} · ` +
-    `resets ${sum((r) => r.resets)} (auto ${sum((r) => r.autoResets)}) · missed ${sum((r) => r.missed)}`,
+    `resets ${sum((r) => r.resets)} (auto ${sum((r) => r.autoResets)}) · missed ${sum((r) => r.missed)} · ` +
+    `score ${Math.round(sum((r) => r.score) / rows.length)}/run`,
 );
 
 if (args.json) {

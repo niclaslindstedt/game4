@@ -16,6 +16,8 @@
 //                   "plan" (the path from above)
 //   measure(run)    the scenario's own numbers, as [label, value] pairs,
 //                   off the recorded run (see `ride-lab.mjs`'s `record`)
+//   mode            optional: the mode whose rules the run is dealt — the
+//                   trick scenarios ride "tricks", so the strokes are read
 
 const FULL = { steer: 0, throttle: 1, brake: 0, lean: 0, reset: false };
 const IDLE = { steer: 0, throttle: 0, brake: 0, lean: 0, reset: false };
@@ -130,6 +132,49 @@ function trench(run) {
     ["out at s", out ? fmt(out.t) : "—"],
     ["resets", run.events.filter((e) => e.kind === "reset").length],
   ];
+}
+
+/** THE SCORE's numbers (`tricks.ts`): what was won, how the flight ended,
+ * and what the combo came to. */
+function tricked(run) {
+  const land = run.events.find((e) => e.kind === "land");
+  const won = run.events.filter((e) => e.kind === "trick").map((e) => e.trick);
+  const combo = run.events.find((e) => e.kind === "combo");
+  const bail = run.events.find((e) => e.kind === "bail");
+  const touch = land ? run.frames.find((f) => f.t >= land.t) : null;
+  return [
+    ["air s", land ? fmt(land.airTime) : "—"],
+    ["won", won.length ? won.join("+") : "nothing"],
+    ["land pitch deg", touch ? fmt(touch.pitch * 57.3, 1) : "—"],
+    ["impact m/s", land ? `${fmt(land.impact)}${land.harsh ? " harsh" : ""}` : "—"],
+    [
+      "combo",
+      bail
+        ? `lost ${bail.lost} (${bail.cause})`
+        : combo
+          ? `${combo.base} × ${combo.mult} = ${combo.points}${combo.sketchy ? " sketchy" : ""}`
+          : "—",
+    ],
+  ];
+}
+
+/** A flight a kicker would have thrown, staged in the air over packed snow:
+ * 1.2 m up, climbing 8.5 m/s, at 80 km/h — about 1.9 s up. */
+const LAUNCH = { x: 1500, z: 200, heading: 0, speed: 22, height: 1.2, vy: 8.5 };
+
+/** A trick scenario: the staged launch, ridden in a tricks run. */
+function trick(id, title, input) {
+  return {
+    id,
+    title,
+    mode: "tricks",
+    level: (S) => S.flatLevel({ packed: 1 }),
+    place: () => LAUNCH,
+    seconds: 4,
+    view: "profile",
+    input: (t) => ({ ...FULL, ...input(t) }),
+    measure: tricked,
+  };
 }
 
 export const SCENARIOS = [
@@ -456,6 +501,40 @@ export const SCENARIOS = [
     view: "profile",
     input: () => FULL,
     measure: trench,
+  },
+  trick("backflip", "a backflip off a staged launch over flat snow", (t) => ({
+    lean: t < 1.2 ? 1 : 0,
+  })),
+  trick("frontflip", "a front flip over flat snow: the lean forward, a stab of brake", (t) => ({
+    lean: t < 1 ? -1 : 0,
+    throttle: 0,
+    brake: t < 0.55 ? 1 : 0,
+  })),
+  trick("spin", "a 360 over flat snow: the bars thrown over", (t) => ({ steer: t < 0.4 ? 1 : 0 })),
+  trick("pose", "a can-can over flat snow, let go before the landing", (t) => ({
+    trick: t < 0.8,
+    lean: t < 0.8 ? 1 : 0,
+  })),
+  {
+    id: "kicker-flip",
+    title: "the stadium's kicker at 75 km/h, a backflip off it",
+    mode: "tricks",
+    level: (S) => S.syntheticLevel(),
+    place: (S) => ({
+      x: S.STADIUM.kickerX + 70,
+      z: S.STADIUM.zMid + S.STADIUM.radius,
+      heading: -Math.PI / 2,
+      speed: 75 / 3.6,
+    }),
+    seconds: 6,
+    view: "profile",
+    // The lean held from the foot of the ramp — one stroke at the lip — and
+    // let go past half a turn; the brake's gyro checks the last quarter.
+    input: (t, st) => {
+      const turned = st.tricks.rotation;
+      return { ...FULL, lean: turned < 3.5 && t < 3.2 ? 1 : 0, brake: turned > 5 ? 1 : 0 };
+    },
+    measure: tricked,
   },
 ];
 

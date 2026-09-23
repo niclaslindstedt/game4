@@ -31,6 +31,11 @@ export type SledInput = {
    * checkpoint it took — on a free ride, at the nearest point of the
    * track (`course.ts`). */
   reset: boolean;
+  /** HELD: the rider's body is off the controls and into a POSE
+   * (`strokes.ts`) — which one the lean and the bars say. Read only on a
+   * run whose rules count tricks, and only in the air; left out, it is
+   * off. */
+  trick?: boolean;
 };
 
 export const NEUTRAL_INPUT: SledInput = { steer: 0, throttle: 0, brake: 0, lean: 0, reset: false };
@@ -195,6 +200,82 @@ export type SledDamage = {
   suspension: number;
 };
 
+/** WHAT A RIDER CAN BE PAID FOR (`tricks.ts`) — the engine names the
+ * thing and never the word (`pwa/src/game/strings.ts` owns those):
+ * - `air` — the flight itself as an element, credited only beside a trick;
+ * - `backflip` / `frontflip` — a revolution nose over tail, either way;
+ * - `spin` — a revolution about the sled's own up axis (the 360);
+ * - `twist` — a flip and a spin both come round in ONE flight;
+ * - the three POSES (`TrickPose`), a rider's body held off the sled. */
+export type TrickKind = "air" | "backflip" | "frontflip" | "spin" | "twist" | TrickPose;
+
+/** THE RIDER'S POSES, picked with the trick button held in the air by what
+ * the lean and the bars say (`strokes.ts`'s `poseOf`): a foot off to the
+ * side (the bars over), both legs kicked out over the seat (the lean back),
+ * or tucked up over the bars (the lean forward, or nothing). */
+export type TrickPose = "oneFoot" | "canCan" | "tuck";
+
+/** One element of a combo: what it was, which revolution of its flight
+ * (1 for everything that is not a revolution), and which flight of the
+ * combo won it (1-based). */
+export type TrickPart = { kind: TrickKind; spins: number; flight: number };
+
+/** THE SCORE AND ITS COMBO, and the strokes' per-flight bookkeeping
+ * (`tricks.ts`, `strokes.ts` — every rule is theirs). Written only there. */
+export type TrickState = {
+  /** Points banked this run. */
+  score: number;
+  /** The combo in hand: its base, points, and its multiplier. */
+  base: number;
+  mult: number;
+  /** Seconds left on the snow before the combo banks. */
+  link: number;
+  /** This flight's rotation, rad, nose-up positive, and about the up axis
+   * (either way), and the whole revolutions of each already paid. */
+  rotation: number;
+  spins: number;
+  yaw: number;
+  turns: number;
+  /** Where this flight left the snow, and the metres of it already paid. */
+  fromX: number;
+  fromZ: number;
+  paidLength: number;
+  /** This flight has lasted `airElement`; its rung has been sold; a flip
+   * and a spin have both come round in it. */
+  aired: boolean;
+  airPaid: boolean;
+  twisted: boolean;
+  /** THE POSE held now, or null, how long it has been held, and the poses
+   * already bought this flight. */
+  pose: TrickPose | null;
+  poseTime: number;
+  posed: TrickPose[];
+  /** THE STROKES: rad/s already spent this flight on each axis, which way
+   * each input is still across its gate from the last stroke (0 back at
+   * trim, ±1 the side it crossed to), and whether this flight is a trick
+   * (a first stroke thrown going up latches it). */
+  pumped: number;
+  twirled: number;
+  flipCrossed: number;
+  spinCrossed: number;
+  tricking: boolean;
+  /** The sled was in the air at the last step this module saw. */
+  inAir: boolean;
+  /** The combo's elements, and which flight of it this is. */
+  parts: TrickPart[];
+  flight: number;
+  /** The last combo closed: its points, when, whether it was lost, and its
+   * elements — what a readout holds up after the fact. */
+  last: number;
+  lastAt: number;
+  lastBailed: boolean;
+  lastParts: TrickPart[];
+};
+
+/** Why a combo was lost (`tricks.ts`): the rider thrown off, the sled put
+ * back on the track, or a landing taken still in a pose. */
+export type BailCause = "wipeout" | "reset" | "pose";
+
 /** The engine's name for the ridden machine, kept for the vocabulary the
  * sibling games share. */
 export type CraftState = SledState;
@@ -285,7 +366,15 @@ export type GameEvent =
   | { kind: "finish"; t: number; time: number; place: number }
   /** Stood back on the track at `checkpoint` (-1: behind the start line);
    * `auto` when the engine did it rather than the rider. */
-  | { kind: "reset"; t: number; checkpoint: number; auto: boolean };
+  | { kind: "reset"; t: number; checkpoint: number; auto: boolean }
+  /** AN ELEMENT WON (`tricks.ts`): which, which revolution of its flight,
+   * what it added to the base, and the multiplier now. */
+  | { kind: "trick"; t: number; trick: TrickKind; spins: number; points: number; mult: number }
+  /** THE COMBO BANKED: `points` (= `base × mult`) went into the score; a
+   * `sketchy` landing banked it at its base alone. */
+  | { kind: "combo"; t: number; points: number; base: number; mult: number; sketchy: boolean }
+  /** THE COMBO LOST, and what it would have been worth. */
+  | { kind: "bail"; t: number; lost: number; cause: BailCause };
 
 /** `countdown` is the lights: the engines idle, nothing is steered and the
  * clock reads 0. `racing` runs the clock; `finished` coasts. */
@@ -315,6 +404,9 @@ export type GameState = {
   snowDepth: number;
   /** THE FIELD: every other rider, in grid order; empty on a solo run. */
   rivals: Rival[];
+  /** THE SCORE (`tricks.ts`): kept on every run — the sim reads it — and
+   * worked for (`strokes.ts`) only on one whose rules count tricks. */
+  tricks: TrickState;
   /** Seconds of the lights still to run; 0 once they are out. */
   countdown: number;
   phase: GamePhase;
