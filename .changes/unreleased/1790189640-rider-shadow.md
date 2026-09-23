@@ -1,6 +1,6 @@
 ---
 type: Fixed
-title: A sharp, steady shadow under your own sled
+title: Sharp, steady shadows under every sled, and SHADOWS as OFF · SLEDS · MEDIUM · HIGH
 ---
 
-Your sled and your rider now cast into a shadow map of their own that follows them, a few millimetres to a texel instead of several centimetres, so their shadow on the snow is crisp — arms, helmet, skis — and no longer flickers as you ride. It is on whenever SHADOWS is SLEDS or ALL; the trees and the rivals are shadowed as before.
+On SHADOWS **HIGH** every rider — you and the three rivals — now casts into a shadow map of their own that follows them, a few millimetres to a texel instead of several centimetres, so each sled's shadow on the snow is crisp — arms, helmet, skis — and no longer flickers as it rides. The SHADOWS row is now OFF, SLEDS, MEDIUM and HIGH: MEDIUM is the old ALL (every tree, and the sleds on the wide map), HIGH is MEDIUM with the sharp riders. A picture saved on ALL opens on HIGH, and the HIGH preset now picks it.

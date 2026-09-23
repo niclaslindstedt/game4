@@ -23,6 +23,9 @@ import type { SkyLook } from "./sky.ts";
 
 /** How many sleds' lamps the snow is lit by: the player and the field. */
 export const LAMP_SLOTS = 4;
+/** How many riders cast into a map of their own (`hero-shadow.ts`): the
+ * player and the field, a quadrant of one atlas each. */
+export const HERO_SLOTS = 4;
 
 export type HazeUniforms = {
   /** Toward the KEY light — the sun by day, the moon by night: what the
@@ -40,11 +43,15 @@ export type HazeUniforms = {
    * `environment.ts`; not the sky's, but it rides the same shared object
    * because every world material already carries it. */
   uShadowFade: { value: THREE.Vector4 };
-  /** THE RIDER'S OWN MAP (`hero-shadow.ts`): its packed depths, the matrix
-   * from the world into it, and `x` on (1) or off (0), `y` one texel in
-   * the map's own 0..1, `z` the normal offset, m, `w` the depth bias. */
+  /** THE RIDERS' OWN MAPS (`hero-shadow.ts`): the atlas of packed depths,
+   * a quadrant a rider; each slot's matrix from the world into its
+   * quadrant's own 0..1, whether it is drawn this frame and its normal
+   * offset, m; and `x` any drawn (1) or none (0), `y` one texel in a
+   * quadrant's own 0..1, `z` the depth bias. */
   uHeroMap: { value: THREE.Texture | null };
-  uHeroMatrix: { value: THREE.Matrix4 };
+  uHeroMatrix: { value: THREE.Matrix4[] };
+  uHeroOn: { value: THREE.Vector4 };
+  uHeroBias: { value: THREE.Vector4 };
   uHero: { value: THREE.Vector4 };
   /** The haze's thinning height, m, and the share of it left up there. */
   uHazeLift: { value: number };
@@ -73,7 +80,9 @@ export function createHazeUniforms(): HazeUniforms {
     uHaze: { value: 1 / 1500 },
     uShadowFade: { value: new THREE.Vector4(0, 0, 1e9, 2e9) },
     uHeroMap: { value: null },
-    uHeroMatrix: { value: new THREE.Matrix4() },
+    uHeroMatrix: { value: Array.from({ length: HERO_SLOTS }, () => new THREE.Matrix4()) },
+    uHeroOn: { value: new THREE.Vector4(0, 0, 0, 0) },
+    uHeroBias: { value: new THREE.Vector4(0, 0, 0, 0) },
     uHero: { value: new THREE.Vector4(0, 1, 0, 0) },
     uHazeLift: { value: 700 },
     uHazeFloor: { value: 0.55 },
@@ -183,47 +192,60 @@ float shadowFaded(float shadow) {
 }
 `;
 
-/** The rider's own shadow (`shadow-box.ts`, `hero-shadow.ts`), looked up
- * in his map and taken with the wide map's, the darker of the two. Four
- * compares blended bilinearly per tap and nine taps a texel and a quarter
- * apart: an edge a few millimetres soft, as the sun's own disc makes it,
- * that slides smoothly rather than stepping a texel at a time. Only the
- * pixels inside his map pay for it. Needs three's `packing` chunk, so it
- * goes in after `shadowmap_pars_fragment`. */
+/** The riders' own shadows (`shadow-box.ts`, `hero-shadow.ts`), each looked
+ * up in its quadrant of the atlas and taken with the wide map's, the
+ * darkest of them. Four compares blended bilinearly per tap and nine taps a
+ * texel and a quarter apart: an edge a few millimetres soft, as the sun's
+ * own disc makes it, that slides smoothly rather than stepping a texel at a
+ * time; the taps are held inside the quadrant, so a neighbour never bleeds
+ * in. Only the pixels inside a rider's box pay for his. Needs three's
+ * `packing` chunk, so it goes in after `shadowmap_pars_fragment`. */
 const HERO_SHADOW_GLSL = /* glsl */ `
 #ifdef USE_SHADOWMAP
 uniform sampler2D uHeroMap;
-uniform mat4 uHeroMatrix;
+uniform mat4 uHeroMatrix[${HERO_SLOTS}];
+uniform vec4 uHeroOn;
+uniform vec4 uHeroBias;
 uniform vec4 uHero;
 float heroLit(vec2 uv, float z) {
   return step(z, unpackRGBAToDepth(texture2D(uHeroMap, uv)));
 }
-float heroLerp(vec2 uv, float z) {
+// \`uv\` in the quadrant's own 0..1; \`corner\` where it sits in the atlas.
+float heroLerp(vec2 uv, vec2 corner, float z) {
   float t = uHero.y;
+  uv = clamp(uv, vec2(0.5 * t), vec2(1.0 - 1.5 * t));
   vec2 st = uv / t - 0.5;
   vec2 f = fract(st);
-  vec2 at = (floor(st) + 0.5) * t;
+  vec2 at = corner + 0.5 * (floor(st) + 0.5) * t;
+  float h = 0.5 * t;
   float a = heroLit(at, z);
-  float b = heroLit(at + vec2(t, 0.0), z);
-  float c = heroLit(at + vec2(0.0, t), z);
-  float d = heroLit(at + vec2(t, t), z);
+  float b = heroLit(at + vec2(h, 0.0), z);
+  float c = heroLit(at + vec2(0.0, h), z);
+  float d = heroLit(at + vec2(h, h), z);
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }
-float heroShadowed(float shadow, vec3 viewNormal) {
-  if (uHero.x < 0.5) return shadow;
-  vec3 n = inverseTransformDirection(viewNormal, viewMatrix);
-  vec4 hc = uHeroMatrix * vec4(vHazeWorld + n * uHero.z, 1.0);
+float heroSlot(vec3 n, mat4 m, float normalBias, vec2 corner) {
+  vec4 hc = m * vec4(vHazeWorld + n * normalBias, 1.0);
   vec3 p = hc.xyz / hc.w;
-  if (p.x <= 0.0 || p.x >= 1.0 || p.y <= 0.0 || p.y >= 1.0 || p.z >= 1.0) return shadow;
-  p.z -= uHero.w;
+  if (p.x <= 0.0 || p.x >= 1.0 || p.y <= 0.0 || p.y >= 1.0 || p.z >= 1.0) return 1.0;
+  p.z -= uHero.z;
   float gap = uHero.y * 1.25;
   float lit = 0.0;
   for (int j = -1; j <= 1; j++) {
     for (int i = -1; i <= 1; i++) {
-      lit += heroLerp(p.xy + vec2(float(i), float(j)) * gap, p.z);
+      lit += heroLerp(p.xy + vec2(float(i), float(j)) * gap, corner, p.z);
     }
   }
-  return min(shadow, lit / 9.0);
+  return lit / 9.0;
+}
+float heroShadowed(float shadow, vec3 viewNormal) {
+  if (uHero.x < 0.5) return shadow;
+  vec3 n = inverseTransformDirection(viewNormal, viewMatrix);
+  if (uHeroOn.x > 0.5) shadow = min(shadow, heroSlot(n, uHeroMatrix[0], uHeroBias.x, vec2(0.0, 0.0)));
+  if (uHeroOn.y > 0.5) shadow = min(shadow, heroSlot(n, uHeroMatrix[1], uHeroBias.y, vec2(0.5, 0.0)));
+  if (uHeroOn.z > 0.5) shadow = min(shadow, heroSlot(n, uHeroMatrix[2], uHeroBias.z, vec2(0.0, 0.5)));
+  if (uHeroOn.w > 0.5) shadow = min(shadow, heroSlot(n, uHeroMatrix[3], uHeroBias.w, vec2(0.5, 0.5)));
+  return shadow;
 }
 #endif
 `;
@@ -232,7 +254,7 @@ const DIR_SHADOW_OPEN = "? getShadow( directionalShadowMap[ i ]";
 const DIR_SHADOW_CLOSE = "vDirectionalShadowCoord[ i ] ) : 1.0;";
 
 /** Three's `lights_fragment_begin` with the directional light's shadow
- * passed through `shadowFaded`, and the rider's own map taken with it
+ * passed through `shadowFaded`, and the riders' own maps taken with it
  * (`heroShadowed`). Built once, and loudly: a three that moved the line
  * would otherwise leave the rim a hard edge with nothing said. */
 let fadedLights: string | null = null;

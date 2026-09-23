@@ -191,8 +191,9 @@ export function createWorldRenderer(
   let shot: ReplayShot | null = null;
   const env: Environment = createEnvironment(scene, shadowLook(), FAR * 0.9);
   env.setDistance(video.distance);
-  /** The player's machine and rider cast into a map of their own. */
+  /** Under SHADOWS HIGH every rider casts into a map of his own. */
   const hero = createHeroShadow(env.haze, shadowLook().hero);
+  const heroModels: SledModel[] = [];
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
   const snowfall = createSnowfall(env.haze);
   snowfall.setBudget(SPRAY_SHARE[video.spray]);
@@ -294,8 +295,6 @@ export function createWorldRenderer(
   function riderFor(i: number, spec: SledSpec): Rider {
     const model = createSledModel(spec, SLED_STYLES[i % SLED_STYLES.length], wrap);
     model.root.name = "field";
-    // Slot 0 is the player's: every frame has him in it.
-    if (i === 0) hero.adopt(model);
     scene.add(model.root);
     return {
       model,
@@ -550,7 +549,11 @@ export function createWorldRenderer(
         z: -Math.cos(weather.windFrom) * carried,
       });
       if (present) forest?.update(lens.camera, env.shadow());
-      if (present) hero.render(gl, scene, player.model, env.shadow());
+      if (present) {
+        heroModels.length = 0;
+        for (const r of riders) heroModels.push(r.model);
+        hero.render(gl, scene, heroModels, env.shadow());
+      }
       gates?.update(state.progress.nextCheckpoint, state.t);
       lightLamps(look.lamps);
       const h = gl.domElement.height;

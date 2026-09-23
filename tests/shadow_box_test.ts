@@ -79,14 +79,11 @@ describe("the shadow box (shadow-box.ts)", () => {
   });
 });
 
-describe("the rider's own shadow map (shadow-box.ts heroFrame)", () => {
-  it("draws the rider at millimetres a texel on every stop that draws shadows", () => {
+describe("the riders' own shadow maps (shadow-box.ts heroFrame)", () => {
+  it("draws every rider at millimetres a texel on the stops that give him a map", () => {
     for (const level of SHADOW_LEVELS) {
       const { size, reach, hero } = SHADOW_LOOK[level];
-      if (size === 0) {
-        expect(hero).toBe(0);
-        continue;
-      }
+      if (hero === 0) continue;
       // The machine's bound (`sled-body.ts` / `posed-merge.ts`) is 3.2 m.
       const own = heroFrame(3.2, hero).texel;
       const wide = (2 * (reach + SHADOW_MARGIN)) / size;

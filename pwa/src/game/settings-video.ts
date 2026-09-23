@@ -21,13 +21,15 @@
 //               span, the coarse map's texels — or OFF, which stamps nothing
 //               and leaves the snow untouched.
 //   FOREST      how far the full-detail band runs, how many of the far
-//               band's sketches stand at all, and — under SHADOWS ALL —
+//               band's sketches stand at all, and — under SHADOWS MEDIUM
+//               and HIGH —
 //               whether a tree casts its own crown or the sketch. Never WHICH trunks exist: the physics hits every
 //               one of them, and a tree the rider can hit is always drawn.
 //   SHADOWS     OFF, SLEDS (the machines, the riders and the flags on a
-//               tight, sharp map) or ALL (every tree's too, as far as the
-//               eye needs them — each tree casting the shape the FOREST row
-//               draws it in).
+//               tight map), MEDIUM (every tree's too, as far as the eye
+//               needs them — each tree casting the shape the FOREST row
+//               draws it in) or HIGH (MEDIUM, with every rider and his
+//               machine cast into a fine map of their own).
 //   SPRAY       the share of the roost, the ski spray and the puffs thrown.
 //   ANTIALIAS   the canvas's multisampling. The one row that cannot be
 //               changed under a running context: it is read when the canvas
@@ -43,10 +45,10 @@
 export type Tier = "low" | "medium" | "high";
 export const TIERS: readonly Tier[] = ["low", "medium", "high"];
 
-/** SHADOWS is three MODES rather than three qualities: none, the machines
- * alone, or the machines and every tree. */
-export type ShadowLevel = "off" | "sleds" | "all";
-export const SHADOW_LEVELS: readonly ShadowLevel[] = ["off", "sleds", "all"];
+/** SHADOWS: none, the machines alone, the machines and every tree, and
+ * that again with every rider sharp in a map of his own. */
+export type ShadowLevel = "off" | "sleds" | "medium" | "high";
+export const SHADOW_LEVELS: readonly ShadowLevel[] = ["off", "sleds", "medium", "high"];
 
 export type TrailLevel = "off" | Tier;
 export const TRAIL_LEVELS: readonly TrailLevel[] = ["off", ...TIERS];
@@ -179,21 +181,25 @@ export type ShadowLook = {
   reach: number;
   /** Whether the trees cast — every one whose shadow can land in reach. */
   trees: boolean;
-  /** THE RIDER'S OWN MAP (`hero-shadow.ts`), texels a side: the player's
-   * machine and rider cast into a map a few metres across that follows
-   * them, never into the wide one, whose texels are wider than an arm. */
+  /** THE RIDERS' OWN MAPS (`hero-shadow.ts`), texels a side each: every
+   * rider and his machine cast into a map a few metres across that follows
+   * them, not into the wide one, whose texels are wider than an arm; 0
+   * leaves them in the wide one. */
   hero: number;
 };
 
-/** SHADOWS. Under ALL, EVERY tree whose shadow can land in reach casts,
+/** SHADOWS. Under MEDIUM and HIGH, EVERY tree whose shadow can land in reach casts,
  * whatever band it is drawn in — so a shadow is never switched on by
  * riding closer to its tree. */
 export const SHADOW_LOOK: Record<ShadowLevel, ShadowLook> = {
   off: { size: 0, reach: 0, trees: false, hero: 0 },
   // The machines on a tight map: the sharpest sled shadow there is for
   // almost nothing in the pass, and the snow under the woods left bare.
-  sleds: { size: 1024, reach: 30, trees: false, hero: 1024 },
-  all: { size: 2048, reach: 75, trees: true, hero: 2048 },
+  sleds: { size: 1024, reach: 30, trees: false, hero: 0 },
+  medium: { size: 2048, reach: 75, trees: true, hero: 0 },
+  // The riders sharp: millimetres a texel, where the wide map's are
+  // centimetres — the one shadow in every frame.
+  high: { size: 2048, reach: 75, trees: true, hero: 1024 },
 };
 
 /** SPRAY: the share of every emission rate, and of the particle pool. */
@@ -226,7 +232,7 @@ export const VIDEO_PRESETS: Record<Tier, Omit<VideoSettings, "antialias">> = {
     terrain: "medium",
     trails: "medium",
     forest: "medium",
-    shadows: "all",
+    shadows: "medium",
     spray: "medium",
   },
   high: {
@@ -235,7 +241,7 @@ export const VIDEO_PRESETS: Record<Tier, Omit<VideoSettings, "antialias">> = {
     terrain: "high",
     trails: "high",
     forest: "high",
-    shadows: "all",
+    shadows: "high",
     spray: "high",
   },
 };
@@ -273,9 +279,10 @@ export function mergeVideo(parsed: unknown): VideoSettings {
   out.terrain = pick(blob.terrain, TIERS, out.terrain);
   out.trails = pick(blob.trails, TRAIL_LEVELS, out.trails);
   out.forest = pick(blob.forest, TIERS, out.forest);
-  // A picture stored when the row was a quality ladder: both its stops that
-  // drew shadows drew the trees'.
-  const shadows = blob.shadows === "low" || blob.shadows === "high" ? "all" : blob.shadows;
+  // A picture stored under an older row: its quality ladder's LOW, and the
+  // mode ladder's ALL — which is HIGH now, the rider's own map added.
+  const shadows =
+    blob.shadows === "low" ? "medium" : blob.shadows === "all" ? "high" : blob.shadows;
   out.shadows = pick(shadows, SHADOW_LEVELS, out.shadows);
   out.spray = pick(blob.spray, TIERS, out.spray);
   if (typeof blob.antialias === "boolean") out.antialias = blob.antialias;
