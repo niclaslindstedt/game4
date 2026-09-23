@@ -8,6 +8,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bermCrest,
+  bermProfile,
   dealDrifts,
   generateLevel,
   LEVEL_RULES as R,
@@ -169,6 +171,29 @@ describe("the loop (R5–R8)", () => {
         expect(level.packedAt(p.x - rx * off, p.z - rz * off)).toBeLessThan(0.02);
       }
     }
+  });
+});
+
+describe("the berms (R18)", () => {
+  it("stands a ridge along both edges the whole way round, no steeper than the rule", () => {
+    for (const level of corpus()) {
+      const s = analysisFor(level.seed).stats;
+      expect(s.bermLow).toBeGreaterThan(0.6 * R.berm.height.min);
+      expect(s.bermLow).toBeLessThan(R.berm.height.max);
+      expect(s.bermSteep).toBeLessThanOrEqual(R.berm.maxSlope + 0.05);
+    }
+  });
+
+  it("wanders inside its band and meets itself round the loop", () => {
+    for (const length of [2517, 2929, 3990]) {
+      for (let s = 0; s < length; s += 7) {
+        expect(withinBand(bermCrest(s, length), R.berm.height)).toBe(true);
+      }
+      expect(bermCrest(length, length)).toBeCloseTo(bermCrest(0, length), 9);
+    }
+    expect(bermProfile(1, 0)).toBe(0);
+    expect(bermProfile(1, R.berm.width / 2)).toBeCloseTo(1, 9);
+    expect(bermProfile(1, R.berm.width)).toBe(0);
   });
 });
 

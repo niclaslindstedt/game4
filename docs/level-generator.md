@@ -64,8 +64,9 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    country where it was.
 4. **The track's kickers** (`kickers.ts`, R9) — added to the graded profile on the straightest
    brows before a descent: a t² ramp steepest at its lip, a (1 − u)² landing falling away past it.
-5. **The corridor** (`track.ts`, R8, R10) — the finished line pressed into the ground: level across
-   the width and a flat shoulder, a bank back into the country, and the packed field beside it.
+5. **The corridor** (`track.ts`, R8, R10, R18) — the finished line pressed into the ground: level
+   across the width, a flat shoulder and the bench past it, the plough's berm along each edge on
+   that bench, a bank back into the country, and the packed field beside it.
 6. **The kickers off the track** (`kickers.ts`, R4) — the same profile stamped on hilltops the
    search climbs to, well clear of the corridor.
 7. **The start** (`spawn.ts`, R11–R13) — a station on the loop searched for the start line, the
@@ -125,3 +126,5 @@ A map builds in about half a second on Node.
 - **R16** THREE LAPS. A race is `race.laps` (3) laps of the loop.
 
 - **R17** DRIFTS ACROSS THE TRACK. The wind lays fresh snow over stretches of the groomer. A map is dealt a share of its loop in `drift.share` (0–50 %) to lie drifted, laid as stretches `drift.length` (60–180 m) long, at least `drift.gap` metres apart; across a stretch the packed field — the track's width and its shoulders — falls to `drift.packed` of its groomed value, easing in and out over `drift.fade` metres at either end. No drift lies within `drift.clear` metres of the start line, nor within `drift.fade` metres of a kicker's ramp or landing (R9). The drifts are dealt off a stream of their own, so a map's drifts move nothing else it draws; `Level.drifts` publishes every stretch.
+
+- **R18** THE BERMS. The groomer's plough leaves the snow it pushed off the line in a windrow along each edge, and that is what marks the track out of the country round it. The ground stays level for `berm.width` metres past the flat shoulder (R8) — the bank back into the country starts behind the berm, never under it — and on that bench a ridge stands `berm.height` (0.7–1.0 m) over the line, its crest halfway across, its faces a half-sine no steeper than `berm.maxSlope`. Its height wanders along the loop, never below `berm.height.min`, as a windrow does. No tree stands on a berm (R14's corridor reaches past it). The berms draw nothing from any stream.

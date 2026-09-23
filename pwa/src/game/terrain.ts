@@ -33,7 +33,7 @@
 // no two-metre facets), and the TRACK DIRECTION the corduroy runs along.
 
 import * as THREE from "three";
-import type { Level } from "@engine";
+import { LEVEL_RULES, bermProfile, type Level } from "@engine";
 
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
 import {
@@ -149,8 +149,10 @@ function forestDensity(level: Level): Float32Array {
 }
 
 /** The corduroy's direction on the ground's grid, as the DOUBLED angle
- * (a comb line has no front and back), encoded 0..1 in RG; zero length
- * off the track. */
+ * (a comb line has no front and back), encoded 0..1 in RG, zero length off
+ * the track; and in B how far up the plough's berm (R18) this cell stands,
+ * 0 off it … 1 on its crest — the shape `bermProfile` gives the ground,
+ * read here only to say what kind of snow it is. */
 function trackDirection(level: Level): Uint8Array {
   const f = level.ground;
   const out = new Uint8Array(f.cols * f.rows * 4);
@@ -159,8 +161,10 @@ function trackDirection(level: Level): Uint8Array {
     out[i] = 128;
     out[i + 1] = 128;
   }
+  const toe = LEVEL_RULES.track.shoulder.flat;
+  const bench = toe + LEVEL_RULES.berm.width;
   for (const p of level.track.points) {
-    const reach = p.width / 2 + 5;
+    const reach = p.width / 2 + bench;
     const c0 = Math.floor((p.x - reach - f.originX) / f.cell);
     const c1 = Math.ceil((p.x + reach - f.originX) / f.cell);
     const r0 = Math.floor((p.z - reach - f.originZ) / f.cell);
@@ -177,6 +181,7 @@ function trackDirection(level: Level): Uint8Array {
         best[k] = d;
         out[k * 4] = Math.round((dx * 0.5 + 0.5) * 255);
         out[k * 4 + 1] = Math.round((dz * 0.5 + 0.5) * 255);
+        out[k * 4 + 2] = Math.round(bermProfile(1, d - p.width / 2 - toe) * 255);
       }
     }
   }
