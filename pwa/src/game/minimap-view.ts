@@ -161,12 +161,16 @@ function trackLine(level: Level): { d: string; width: number } {
   return trackOf;
 }
 
-/** Which checkpoint the run owes, or null once the flag has fallen. */
+/** Which checkpoint the run owes, or null once the flag has fallen — and
+ * on a free ride, which owes none. */
 function owedOf(state: GameState): number | null {
-  return state.progress.finished ? null : state.progress.nextCheckpoint;
+  return state.progress.finished || !state.rules.course ? null : state.progress.nextCheckpoint;
 }
 
 function checkpointMarks(state: GameState): CheckpointMark[] {
+  // A free ride's plate is the country and the loop through it: a
+  // checkpoint nothing counts is not a mark worth the rider's eye.
+  if (!state.rules.course) return [];
   const owed = owedOf(state);
   const missed = state.progress.missed;
   return state.level.checkpoints.map((cp, index) => {

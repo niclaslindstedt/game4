@@ -3,7 +3,10 @@
 // the machine they last rode (the sled card, `menu-sled.tsx`), whether the
 // sound is on at all, and every row of OPTIONS (`menu-options.tsx`)
 // — the three faders, the picture (`settings-video.ts`), the keys
-// (`settings-input.ts`), the thumbs, and how much help the sled gives.
+// (`settings-input.ts`), the thumbs, and how much help the sled gives — and
+// the time trial's length, walked on the front door, and the start card's
+// answers for a free ride (`free-ride.ts`). The record book and the ghosts
+// are kept beside it, not in it (`records.ts`, `ghost.ts`).
 // Nothing is remembered that the player has no way to change: the camera is
 // walked with C (or the HUD's press) and the sound is the switch on the
 // front door and the pause card.
@@ -15,8 +18,9 @@
 // storage skin below it is the only part that touches `localStorage`, and it
 // never throws — a browser with storage turned off plays with the defaults.
 
-import { SLED, isSledId, type Assist, type SledId } from "@engine";
+import { SLED, TIME_TRIAL, isSledId, type Assist, type SledId } from "@engine";
 
+import { freshRide, mergeRide, type FreeRide } from "./free-ride.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
 import { DEFAULT_VIDEO, mergeVideo, type VideoSettings } from "./settings-video.ts";
@@ -64,6 +68,12 @@ export const ASSIST_LEVELS: readonly AssistLevel[] = ["off", "half", "full"];
 const ASSIST_SHARE: Record<AssistLevel, number> = { off: 0, half: 0.5, full: 1 };
 export type AssistSettings = { steer: AssistLevel; air: AssistLevel };
 
+/** The time trial's length after `laps`, wrapping — the front door's chip. */
+export function nextTrialLaps(laps: number): number {
+  const L = TIME_TRIAL.laps;
+  return L[(L.indexOf(laps) + 1) % L.length];
+}
+
 /** The engine's dials for a pair of rows. */
 export function assistOf(assist: AssistSettings): Assist {
   return { yaw: ASSIST_SHARE[assist.steer], air: ASSIST_SHARE[assist.air] };
@@ -86,6 +96,11 @@ export type Settings = {
   /** Whether blows bend the machine (`damage.ts`) — the next race's, off
    * unless asked for. */
   damage: boolean;
+  /** The time trial's length, laps (`TIME_TRIAL.laps`). */
+  trialLaps: number;
+  /** THE START CARD's answers: the free ride's map, day and snow
+   * (`free-ride.ts`). */
+  ride: FreeRide;
 };
 
 export function freshSettings(): Settings {
@@ -100,6 +115,8 @@ export function freshSettings(): Settings {
     touch: { lever: "right", sensitivity: 1, invertLean: false },
     assist: { steer: "full", air: "full" },
     damage: false,
+    trialLaps: TIME_TRIAL.laps[0],
+    ride: freshRide(),
   };
 }
 
@@ -158,6 +175,10 @@ export function mergeSettings(parsed: unknown): Settings {
   out.assist.steer = onLadder(assist.steer, ASSIST_LEVELS, out.assist.steer);
   out.assist.air = onLadder(assist.air, ASSIST_LEVELS, out.assist.air);
   if (typeof blob.damage === "boolean") out.damage = blob.damage;
+  if (typeof blob.trialLaps === "number" && TIME_TRIAL.laps.includes(blob.trialLaps)) {
+    out.trialLaps = blob.trialLaps;
+  }
+  out.ride = mergeRide(blob.ride);
   return out;
 }
 

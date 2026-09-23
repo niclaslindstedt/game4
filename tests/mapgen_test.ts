@@ -16,6 +16,7 @@ import {
   trackPointAt,
   withinBand,
   type GeneratedLevel,
+  sunsetOf,
 } from "@engine";
 
 import { LEVEL_SEEDS, analysisFor, levelFor } from "./support/levels.ts";
@@ -89,11 +90,16 @@ describe("the Level contract", () => {
     expect(level.packedAt(-50, -50)).toBe(0);
   });
 
-  it("deals a clear winter day (R15)", () => {
+  it("deals a winter day (R15), from sunset on an evening (R18)", () => {
     for (const level of corpus()) {
-      expect(withinBand(level.sun.hour, R.sun.hour)).toBe(true);
       expect(withinBand(level.sun.latitude, R.sun.latitude)).toBe(true);
       expect(withinBand(level.sun.dayOfYear, R.sun.dayOfYear)).toBe(true);
+      if (level.weather.evening) {
+        const late = level.sun.hour - sunsetOf(level.sun);
+        expect(withinBand(late, R.sun.evening, 1e-3)).toBe(true);
+        continue;
+      }
+      expect(withinBand(level.sun.hour, R.sun.hour)).toBe(true);
       expect(analysisFor(level.seed).stats.sunElevation).toBeGreaterThanOrEqual(
         R.sun.minElevation - 0.05,
       );

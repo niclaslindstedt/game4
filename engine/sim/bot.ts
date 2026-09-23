@@ -111,6 +111,9 @@ function locate(state: GameState): TrackHit {
   const p = state.progress;
   const cps = level.checkpoints;
   const c = state.sled;
+  // A FREE RIDE owes nothing, so there is no stretch to hold him to: he is
+  // wherever the loop is nearest.
+  if (!state.rules.course) return nearestTrackPoint(level, c.x, c.z, hit);
   const sNext = cps[p.nextCheckpoint].s;
   const from = p.lastCheckpoint >= 0 ? cps[p.lastCheckpoint].s - 20 : sNext - 200;
   const span = arcAhead(level, from, sNext + 20);
@@ -260,7 +263,12 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   const level = state.level;
   if (p.finished) return { ...NEUTRAL_INPUT };
   // GIVE UP on a stretch that has gone nowhere for too long.
-  if (p.time - Math.max(p.lastPassedAt, p.lastResetAt) > profile.giveUpAfter) {
+  // (A free ride has no checkpoint to wait for; its only way back is the
+  // engine's own, off its back or bogged.)
+  if (
+    state.rules.course &&
+    p.time - Math.max(p.lastPassedAt, p.lastResetAt) > profile.giveUpAfter
+  ) {
     return { ...NEUTRAL_INPUT, reset: true };
   }
   const speed = c.speed;
@@ -271,7 +279,7 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   // hand-built map): aim onto the track
   // SHORT of the line, so it is crossed riding along the track.
   const halfWidth = trackPointAt(level, on.s, pa).width / 2;
-  if (!p.started && p.nextCheckpoint === 0 && on.distance > halfWidth) {
+  if (state.rules.course && !p.started && p.nextCheckpoint === 0 && on.distance > halfWidth) {
     const short = clamp(on.distance * profile.entryShare, profile.entryMin, profile.entryMax);
     const ahead = arcAhead(level, on.s, cps[0].s);
     const toLine = ahead > level.track.length / 2 ? ahead - level.track.length : ahead;

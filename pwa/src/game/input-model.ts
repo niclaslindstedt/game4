@@ -19,6 +19,7 @@
 import type { SledInput } from "@engine";
 
 import { clamp } from "../lib/util.ts";
+import { snapInput } from "./ghost.ts";
 
 export const SCREEN_TO_ENGINE = -1;
 
@@ -235,12 +236,14 @@ export function sampleInput(
   const lean = touch.bar ? touch.lean : model.lean;
   const brake = clamp(Math.max(model.brake, touch.lever ? touch.brake : 0), 0, 1);
   const throttle = clamp(Math.max(model.throttle, touch.lever ? touch.throttle : 0), 0, 1);
-  return {
+  // ON THE TAPE'S GRID (`ghost.ts`'s `snapInput`), here where the input is
+  // made: the figure the engine is ridden on IS the figure a ghost records.
+  return snapInput({
     // `0 * -1` is -0, and a -0 is a wart every equality downstream trips on.
     steer: steer === 0 ? 0 : clamp(steer, -1, 1) * SCREEN_TO_ENGINE,
     throttle: brake > 0 ? 0 : throttle,
     brake,
     lean: clamp(lean, -1, 1),
     reset,
-  };
+  });
 }

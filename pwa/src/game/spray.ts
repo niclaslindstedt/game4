@@ -268,12 +268,12 @@ export function createSpray(haze: HazeUniforms): Spray {
     update(dt, look, level) {
       const lit = material.uniforms.uLit.value as THREE.Color;
       const shade = material.uniforms.uShade.value as THREE.Color;
-      const sun = look.sunIntensity * 0.34;
+      const sun = look.keyIntensity * 0.34;
       const sky = look.ambient * 0.55;
       lit.setRGB(
-        look.sunColour[0] * sun + look.skyLight[0] * sky,
-        look.sunColour[1] * sun + look.skyLight[1] * sky,
-        look.sunColour[2] * sun + look.skyLight[2] * sky,
+        look.keyColour[0] * sun + look.skyLight[0] * sky,
+        look.keyColour[1] * sun + look.skyLight[1] * sky,
+        look.keyColour[2] * sun + look.skyLight[2] * sky,
       );
       shade.setRGB(
         look.skyLight[0] * sky * 1.2,

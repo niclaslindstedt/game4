@@ -80,5 +80,5 @@ starting point.
 | `tricks` | The aerial vocabulary and its scoring (the jet-ski game's `tricks.ts`) |
 | `campaign`, `level-rating` | Pinned seeds and a ladder of them; whether a generated map is any GOOD and how HARD (both siblings') |
 | `debug-tools` | An in-game developer overlay, the REPRO line, `make debug-shot` (the rally game's) |
-| `replay` | A race recorded as its controls and watched again (the jet-ski game's `replay.ts`, `ghost.ts`) |
+| `replay` | A race recorded as its controls and watched again (the jet-ski game's `replay.ts`; the tape it would read is built — `pwa/src/game/ghost.ts`, the time trial's ghost) |
 | `store-listing`, `store-shots` | The storefront's words and its screenshot set |

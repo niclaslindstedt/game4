@@ -1,6 +1,6 @@
 ---
 name: atmosphere
-description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's tight shadow box that follows the lens. This slice's sky is ALWAYS CLEAR: no weather, no cloud, no night, no season's cast. Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, and on the engine side `engine/game/clock.ts` and R15 in `mapgen/sun.ts`. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
+description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's tight shadow box that follows the lens — and over that the WEATHER R18 deals (clear, fair, high cloud, overcast, falling snow, valley fog), its cloud, its falling snow and spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars, the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, R15 in `mapgen/sun.ts` and R18 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
 ---
 
 # The atmosphere: the sun, the sky and the haze
@@ -11,12 +11,11 @@ decides the palette, the sky's blue decides what colour a shadow on snow is,
 the haze decides how far the mountains read. A change here moves every
 picture in the game.
 
-**THIS SLICE HAS ONE WEATHER.** A seeded hour on a seeded winter's day at a
-seeded latitude, always clear. What changes over a race is the sun's height
-alone. Weather, cloud, night, stars and a season's cast are NOT BUILT — a
-session asked for one starts with `engine-system` (R15 grows a weather) and
-the sibling repos' skies (`game3`'s ladder of looks and `make sky` sheet,
-`game2`'s storms), retyped for snow.
+**A MAP IS DEALT ONE SKY AT ONE HOUR** (R15, R18): a seeded day at a seeded
+latitude, one of six weathers off a stream of its own, and on a quarter of
+the maps an evening start that rides from the last of the sun into the dark.
+What changes over a race is the sun's (and the moon's) height alone. A
+season's cast is NOT BUILT — `game3`'s `SEASON_LOOKS` is where it starts.
 
 **Read this skill's lessons first** — `node scripts/skill-lessons.mjs
 atmosphere --list`. Load **`skill-reflection`** at both ends and
@@ -30,7 +29,10 @@ engine has an opinion about colour.
 | Fact | Where |
 | --- | --- |
 | The map's day: a latitude (46–64°N), a day of the year (mid-January to mid-March) and a starting solar hour (9–16 h) at which the sun is at least `sun.minElevation` up (R15) | `engine/mapgen/sun.ts` (`dealSun`, `declinationOf`), `LEVEL_RULES.sun` |
-| The hour the race has REACHED — TEN MINUTES OF RIDING IS ONE HOUR OF SUN, so the shadows visibly swing over a race and no race rides into the dark | `sunHourAt(level, t)`, `sunAtRun(level, t)`, `SUN_SECONDS_PER_HOUR` in `engine/game/clock.ts` |
+| The hour the race has REACHED — TEN MINUTES OF RIDING IS ONE HOUR OF SUN, so the shadows visibly swing over a race | `sunHourAt(level, t)`, `sunAtRun(level, t)`, `SUN_SECONDS_PER_HOUR` in `engine/game/clock.ts` |
+| The moon: its place and its phase off the map's day (a nominal year, so R15's two months carry two lunations) | `moonAtRun(level, t)`, `moonAgeOn` in `clock.ts` over `lib/solar.ts`'s `moonAt` |
+| THE WEATHER (R18): the sky, the fall, the fog, the mean wind and its bearing, the evening — dealt last off its own stream so it moves nothing the map builds | `engine/mapgen/weather.ts` (`dealWeather`, `weatherOf`, `weatherFor`, `withSky`), `LEVEL_RULES.weather` |
+| The wind at a moment: the mean breathing in gusts, veering — a PURE function of (level, t), drawing nothing from `state.rng`, read by nothing in the physics | `windAt` in `engine/game/wind.ts` |
 | The astronomy: the sun's elevation and bearing at an hour, a latitude and a declination | `engine/lib/solar.ts` (`sunAt`) — the generic pool |
 
 ## The files, one direction of flow
@@ -40,6 +42,7 @@ engine has an opinion about colour.
 | `pwa/src/game/sky.ts` | WHAT COLOUR THE AIR IS: `skyLookAt(level, t)` → a `SkyLook` — the dome's zenith and horizon, the sun's own colour through the air it crossed (per-channel transmittance `exp(−k · airmass)` over the Kasten–Young air mass, `airMass`, `sunTint`), the two halves of the hemisphere light, the haze. Linear RGB throughout. THREE-FREE, so `tests/world_render_test.ts` reads the whole model |
 | `pwa/src/game/haze.ts` | ONE SKY FUNCTION IN GLSL (`SKY_GLSL`, `skyColour(dir)`) and the haze every world material fades into, drawn from it along that surface's own direction (`HAZE_FRAGMENT`, `hazeMaterial`) — replacing three's one-colour fog; the uniforms ONE object shared by reference (`createHazeUniforms`, `writeHaze`) |
 | `pwa/src/game/sky-dome.ts` | The dome: `skyColour` painted on a sphere round the lens with the sun's disc on it, through the same tone mapping and output conversion as every lit surface, so the haze meets it with no seam |
+| `pwa/src/game/snowfall.ts` | THE SNOW IN THE AIR: a wrapped box of flakes round the lens moved by one vector a frame (how hard it snows is the draw range; the SPRAY row caps the pool; a flake in the player's beam lights up), and the spindrift lifted off the crests on the CPU when the wind can lift dry snow |
 | `pwa/src/game/environment.ts` | Hangs it in the scene: the key light and the hemisphere light, the dome, the haze, re-read EVERY FRAME off the run's own clock; the key light's shadow box a few dozen metres across that FOLLOWS the lens's aim point, snapped to whole texels so a tree's shadow edge does not crawl |
 
 ## The rules
@@ -75,8 +78,12 @@ engine has an opinion about colour.
 
 ## The loop
 
-There is no sky contact sheet yet (the sibling's `make sky` is the model when
-weather arrives). The review is:
+**`make sky` FIRST** — every weather (with a light fall and a blizzard) against
+every three hours on one seed from one place, as one sheet
+(`previews/sky-<seed>.png`; `ARGS="--hours=10,17,22 --weathers=fair,blizzard
+--width=640 --height=360"` to zoom a few cells). A map is dealt one sky at one
+hour, so a race's screenshot can only say whether that one is wrong; the
+ladder is judged side by side. Then:
 
 1. `make world SEED=<n> ARGS=--views=vista,powder,forest` at seeds with an
    EARLY and a LATE hour (`make level SEED=<n>` prints the day; a low sun is

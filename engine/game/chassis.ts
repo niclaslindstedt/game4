@@ -36,9 +36,10 @@ function cross(a: Vec3, b: Vec3): Vec3 {
   return { x: a.y * b.z - a.z * b.y, y: a.z * b.x - a.x * b.z, z: a.x * b.y - a.y * b.x };
 }
 
-/** Apply the chassis contacts to the sled's velocities. Returns the fastest
+/** Apply the chassis contacts to the sled's velocities, on snow at the
+ * run's depth dial (`GameState.snowDepth`). Returns the fastest
  * speed into the snow met this step, m/s (0 with no point touching). */
-export function chassisContacts(c: SledState, level: Level): number {
+export function chassisContacts(c: SledState, level: Level, snowDepth = 1): number {
   const m = totalMass(c.spec);
   const I = inertiaOf(c.spec);
   const sink = footprintOf(c.spec).sink;
@@ -49,7 +50,7 @@ export function chassisContacts(c: SledState, level: Level): number {
     const px = c.x + r.x;
     const py = c.y + r.y;
     const pz = c.z + r.z;
-    const floor = level.groundAt(px, pz) - powderFloor(level.packedAt(px, pz), sink);
+    const floor = level.groundAt(px, pz) - powderFloor(level.packedAt(px, pz), sink, snowDepth);
     const pen = floor - py;
     if (pen <= 0) continue;
     touched = true;

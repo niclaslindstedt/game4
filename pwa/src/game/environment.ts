@@ -2,7 +2,9 @@
 // THE AIR: the two lights, the dome and the haze, answering to one
 // `SkyLook` (`sky.ts`) worked out again every frame off the run's own
 // clock — ten minutes of riding is an hour of sun (`clock.ts`), so the
-// shadows swing over a race.
+// shadows swing over a race. The key light is whichever of the sun and the
+// moon the look names; under a lid it is a glow with no shadow worth the
+// name, and the hemisphere carries the picture.
 //
 // THE KEY LIGHT'S SHADOW IS TIGHT. A directional light's shadow map has a
 // fixed number of texels, and spread over the whole basin a sled's shadow
@@ -28,8 +30,16 @@ export type Environment = {
   haze: HazeUniforms;
   sun: THREE.DirectionalLight;
   dome: SkyDome;
-  /** Apply a look, and aim the shadow box at (x, y, z). */
-  update(look: SkyLook, camera: THREE.Camera, x: number, y: number, z: number): void;
+  /** Apply a look, and aim the shadow box at (x, y, z); `drift` is how far
+   * the wind has carried the cloud (`sky-dome.ts`). */
+  update(
+    look: SkyLook,
+    camera: THREE.Camera,
+    x: number,
+    y: number,
+    z: number,
+    drift?: { x: number; z: number },
+  ): void;
   /** The key light's shadow map, texels a side; 0 casts nothing (the
    * SHADOWS row). */
   setShadow(size: number): void;
@@ -87,16 +97,18 @@ export function createEnvironment(
     haze,
     sun,
     dome,
-    update(look, camera, x, y, z) {
+    update(look, camera, x, y, z, drift) {
       writeHaze(haze, look);
       haze.uHaze.value = hazeFor(look.haze, distance);
-      sun.color.setRGB(...look.sunColour);
-      sun.intensity = look.sunIntensity;
+      dome.update(look, drift?.x ?? 0, drift?.z ?? 0);
+      // The key is the sun by day and the moon by night (`sky.ts`).
+      sun.color.setRGB(...look.keyColour);
+      sun.intensity = look.keyIntensity;
       hemi.color.setRGB(...look.skyLight);
       hemi.groundColor.setRGB(...look.groundLight);
       hemi.intensity = look.ambient;
       // Snap the box's centre to whole texels in the light's own frame.
-      const dir = new THREE.Vector3(look.sun.x, look.sun.y, look.sun.z);
+      const dir = new THREE.Vector3(look.key.x, Math.max(look.key.y, 0.02), look.key.z).normalize();
       lightSpace.lookAt(dir, new THREE.Vector3(0, 0, 0), new THREE.Vector3(0, 1, 0));
       inv.copy(lightSpace).invert();
       at.set(x, y, z).applyMatrix4(inv);

@@ -50,6 +50,8 @@ export function newsFor(e: GameEvent, state: GameState): NewsLine | null {
     case "damage":
       return { text: STRINGS.newsDamage(e.part), tone: "bad" };
     case "finish":
+      // A run alone has no place to report, only a time.
+      if (state.rivals.length === 0) return { text: STRINGS.newsFinishAlone(e.time), tone: "good" };
       return {
         text: STRINGS.newsFinish(e.place, state.rivals.length + 1, e.time),
         tone: "good",

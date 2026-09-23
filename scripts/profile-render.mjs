@@ -52,6 +52,11 @@ const args = parseArgs(
     scene: { kind: "string", help: `only this moment (${Object.keys(SCENES).join(", ")})` },
     seed: { kind: "number", default: 38, help: "map seed" },
     camera: { kind: "string", help: "hood, bars, chase, far, high" },
+    weather: {
+      kind: "string",
+      help: "ride under this sky (clear, fair, high, overcast, snow, fog)",
+    },
+    hour: { kind: "number", help: "the race's solar start hour, 0–24" },
     video: {
       kind: "string",
       help: "picture preset (low, medium, high, or all — one table row per rung)",
@@ -60,7 +65,7 @@ const args = parseArgs(
     timeout: { kind: "number", default: 45, help: "seconds to wait for window.__SH_READY__" },
   },
   "usage: node scripts/profile-render.mjs [--scene name] [--seed n] [--camera rung] " +
-    "[--video tier|all] [--window s] [--timeout s]",
+    "[--video tier|all] [--weather kind] [--hour h] [--window s] [--timeout s]",
 );
 const scenes = args.scene ? [args.scene] : Object.keys(SCENES);
 
@@ -163,6 +168,8 @@ for (const tier of tiers)
     });
     if (args.camera !== undefined) params.set("camera", String(args.camera));
     if (tier) params.set("video", tier);
+    if (args.weather !== undefined) params.set("weather", String(args.weather));
+    if (args.hour !== undefined) params.set("hour", String(args.hour));
     await page.goto(`${site.url}?${params}`, { waitUntil: "load" });
     try {
       await page.waitForFunction("window.__SH_READY__ === true", null, {

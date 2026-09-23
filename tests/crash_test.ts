@@ -8,6 +8,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  botInput,
   createGame,
   NEUTRAL_INPUT,
   placeRun,
@@ -174,6 +175,32 @@ describe("the wipeout", () => {
     expect(fast).toHaveLength(1);
     expect(fast[0].kind === "wipeout" && fast[0].cause).toBe("roll");
     expect(wipeouts(over(10))).toHaveLength(0);
+  });
+
+  it("on a free ride, the reset after a wipeout stands them on the nearest track", () => {
+    const state = createGame({ level: syntheticLevel(), mode: "free", quiet: true });
+    placeRun(state, { x: LONE_TREE.x + 0.4, z: LONE_TREE.z - 30, heading: 0, speed: 50 / 3.6 });
+    const events = ride(state, 6, FULL);
+    expect(wipeouts(events)).toHaveLength(1);
+    expect(events.some((e) => e.kind === "reset" && e.auto)).toBe(true);
+    expect(state.level.packedAt(state.sled.x, state.sled.z)).toBe(1);
+  });
+
+  it("a time trial with a wipeout in it still reaches its flag", () => {
+    const state = createGame({
+      level: syntheticLevel({ laps: 1 }),
+      seed: 7,
+      mode: "timeTrial",
+      laps: 1,
+      quiet: true,
+    });
+    placeRun(state, { x: LONE_TREE.x + 0.4, z: LONE_TREE.z - 30, heading: 0, speed: 50 / 3.6 });
+    const events = ride(state, 4.5, FULL);
+    expect(wipeouts(events)).toHaveLength(1);
+    for (let i = 0; i < 300 * TUNING.physicsHz && !state.progress.finished; i++) {
+      step(state, botInput(state));
+    }
+    expect(state.progress.finished).toBe(true);
   });
 
   it("is a pure function of the moment: two crashes are the same crash", () => {

@@ -83,8 +83,48 @@ export type SledModel = {
    * depth, m. */
   pose(sled: SledState, at: Pose, sink: number): void;
   setRiderVisible(visible: boolean): void;
+  /** The lamps' glow, 0 (off) … 1 (full night) — `SkyLook.lamps` — seen
+   * from `facing`: the cosine between the machine's nose and the way to
+   * the lens (1 head-on, −1 from dead astern). A lamp is a lens that shines
+   * one way: the headlamp glows at a lens in front, the taillight behind. */
+  setLamps(level: number, facing: number): void;
   dispose(): void;
 };
+
+/** Where a machine's lamps are in its body frame, m: the headlamp in the
+ * cowl's nose and the taillight on the tunnel's end. The headlamp's beam
+ * points along the body's forward axis, dipped by `HEADLAMP_DIP`. */
+export function lampMounts(spec: SledSpec): {
+  head: [number, number, number];
+  tail: [number, number, number];
+} {
+  const snow = -SLED.cogHeight;
+  const tail = spec.treadRear - SLED.treadRear;
+  return { head: [0, snow + 0.58, 1.5], tail: [0, snow + 0.47, -1.6 + tail] };
+}
+
+/** How far below the body's forward axis the headlamp is aimed, rad. */
+export const HEADLAMP_DIP = 0.1;
+
+/** A soft round glow, white at the middle — every lamp's sprite. */
+let glowTexture: THREE.DataTexture | null = null;
+function glow(): THREE.DataTexture {
+  if (glowTexture) return glowTexture;
+  const n = 32;
+  const data = new Uint8Array(n * n * 4);
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const r = Math.hypot(x + 0.5 - n / 2, y + 0.5 - n / 2) / (n / 2);
+      const v = Math.max(0, 1 - r);
+      const i = (y * n + x) * 4;
+      data[i] = data[i + 1] = data[i + 2] = 255;
+      data[i + 3] = Math.round(255 * v * v * v);
+    }
+  }
+  glowTexture = new THREE.DataTexture(data, n, n);
+  glowTexture.needsUpdate = true;
+  return glowTexture;
+}
 
 /** A side profile in the body's (z, y) plane, extruded `width` across x and
  * centred on x = 0. */
@@ -211,8 +251,9 @@ export function createSledModel(
   bumper.position.set(0, snow + 0.36, 1.7);
   bumper.scale.set(wide, 0.7, 1);
   // The headlight.
+  const mounts = lampMounts(spec);
   const light = add(new THREE.BoxGeometry(0.26, 0.06, 0.04), lamp);
-  light.position.set(0, snow + 0.58, 1.48);
+  light.position.set(mounts.head[0], mounts.head[1], mounts.head[2] - 0.02);
   light.rotation.x = -0.55;
 
   // THE WINDSHIELD, a curved sheet raked back.
@@ -404,6 +445,29 @@ export function createSledModel(
     mat({ vertexColors: true, roughness: 0.55, metalness: 0.05 }, "sled-merged"),
   );
 
+  // THE LAMPS' GLOW, drawn over the merged machine: additive sprites that
+  // come up as the light goes, so a rival reads as two lights in the dark.
+  const glowOf = (colour: number, size: number, at: [number, number, number]) => {
+    const m = new THREE.SpriteMaterial({
+      map: glow(),
+      color: colour,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      transparent: true,
+      opacity: 0,
+    });
+    mats.push(m);
+    const sprite = new THREE.Sprite(m);
+    sprite.scale.set(size, size, size);
+    sprite.position.set(...at);
+    sprite.visible = false;
+    sprite.renderOrder = 6;
+    root.add(sprite);
+    return sprite;
+  };
+  const headGlow = glowOf(0xfff0d0, 1.1, [mounts.head[0], mounts.head[1], mounts.head[2] + 0.05]);
+  const tailGlow = glowOf(0xff2a1a, 0.5, mounts.tail);
+
   const Y = new THREE.Vector3(0, 1, 0);
   const X = new THREE.Vector3(1, 0, 0);
   const toRoot = new THREE.Quaternion();
@@ -477,6 +541,18 @@ export function createSledModel(
       }
       bars.rotation.y = sled.steer * 0.42;
       merged.update();
+    },
+    setLamps(level, facing) {
+      const ahead = THREE.MathUtils.smoothstep(facing, -0.2, 0.6);
+      const behind = THREE.MathUtils.smoothstep(-facing, -0.1, 0.5);
+      for (const [sprite, k] of [
+        [headGlow, ahead],
+        [tailGlow, 0.9 * behind],
+      ] as const) {
+        const o = Math.min(1, level) * k;
+        sprite.visible = o > 0.02;
+        (sprite.material as THREE.SpriteMaterial).opacity = o;
+      }
     },
     setRiderVisible(v) {
       if (figure.group.visible === v) return;
