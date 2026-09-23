@@ -248,4 +248,30 @@ export const STRINGS = {
   pauseResume: "RESUME",
   pauseRestart: "RESTART RACE",
   pauseMainMenu: "MAIN MENU",
+
+  /* ── THE TIME TRIAL AND THE RECORD BOOK (menu-main.tsx, hud.tsx,
+        hud-result.tsx) ─────────────────────────────────────────────────── */
+  menuTrial: "TIME TRIAL",
+  menuTrialLine: (seed: number, laps: number): string =>
+    `SEED ${seed} · ${laps} ${laps === 1 ? "LAP" : "LAPS"} · ALONE`,
+  /** The row standing for this map, sled and length, on the tile. */
+  menuTrialBest: (seconds: number, sled: string): string =>
+    `BEST ${formatTime(seconds)} · ${sled.toUpperCase()}`,
+  menuTrialNoBest: "NO TIME SET YET",
+  /** The chip that walks the trial's length. */
+  menuTrialLaps: (laps: number): string => `TRIAL ${laps} ${laps === 1 ? "LAP" : "LAPS"}`,
+  /** The gap to the record at a crossing: `-0.42` ahead, `+1.30` behind. */
+  gap: (seconds: number): string => `${seconds < 0 ? "−" : "+"}${Math.abs(seconds).toFixed(2)}`,
+  gapLabel: "VS BEST",
+  resultTrialTitle: "TIME TRIAL",
+  resultRecord: "NEW RECORD",
+  /** The row that stood, with its sled and the day it was set. */
+  resultBest: (seconds: number, sled: string, at: number): string =>
+    `BEST ${formatTime(seconds)} · ${sled.toUpperCase()}${
+      at > 0 ? ` · ${new Date(at).toISOString().slice(0, 10)}` : ""
+    }`,
+  resultOff: (seconds: number): string => `+${seconds.toFixed(2)} OFF THE RECORD`,
+  resultTrialAgain: "RIDE AGAIN",
+  /** The news line at the flag of a run with nobody else on it. */
+  newsFinishAlone: (seconds: number): string => `FINISH  ${formatTime(seconds)}`,
 } as const;

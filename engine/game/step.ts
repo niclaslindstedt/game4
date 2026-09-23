@@ -14,7 +14,14 @@ import { generateLevel } from "../mapgen/index.ts";
 import type { Level } from "../mapgen/types.ts";
 import { status } from "../output.ts";
 import { freshProgress, standSled } from "./course.ts";
-import { FULL_ASSIST, RACE, raceRules, type Assist, type RunRules } from "./defs/modes.ts";
+import {
+  FULL_ASSIST,
+  MODE_RULES,
+  RACE,
+  type Assist,
+  type GameMode,
+  type RunRules,
+} from "./defs/modes.ts";
 import { SLED, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { clipRiders, createRivals, gridSlot, stepRivals } from "./rivals.ts";
@@ -28,6 +35,9 @@ export type CreateGameOptions = {
   seed?: number;
   /** A map to ride instead of the one the seed generates (tests, labs). */
   level?: Level;
+  /** The mode whose rules the run is dealt (`MODE_RULES`); a race when left
+   * out. Each option below still overrides its own rule. */
+  mode?: GameMode;
   /** How many rivals stand on the grid (`RACE.rivals` when left out; 0 is a
    * solo run — what the sim and the labs ride). */
   rivals?: number;
@@ -48,7 +58,7 @@ export type CreateGameOptions = {
 
 /** The rules a run is dealt from what it asked for. */
 export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
-  const base = raceRules(options.laps ?? level.laps);
+  const base = MODE_RULES[options.mode ?? "race"](options.laps ?? level.laps);
   return {
     rivals: options.rivals ?? base.rivals,
     laps: base.laps,

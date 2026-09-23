@@ -131,6 +131,17 @@ export function Hud({
               <span>{STRINGS.split(snap.split)}</span>
               <span class="hud-chip-sub">{STRINGS.splitLabel}</span>
             </div>
+            {/* ...and beside it, against the record at the same crossing:
+                green ahead, red behind. */}
+            {snap.gap !== null && (
+              <div
+                class={`hud-chip hud-split hud-gap ${snap.gap < 0 ? "hud-gap-ahead" : "hud-gap-behind"}`}
+                key={`gap-${snap.split}`}
+              >
+                <span>{STRINGS.gap(snap.gap)}</span>
+                <span class="hud-chip-sub">{STRINGS.gapLabel}</span>
+              </div>
+            )}
           </div>
         )}
       </div>
