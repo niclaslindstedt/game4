@@ -40,6 +40,7 @@ import {
 
 import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
+import { createTvCamera } from "./camera-tv.ts";
 import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
 import { createForest, type Forest, type ForestOptions } from "./forest.ts";
@@ -48,6 +49,7 @@ import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
 import type { CameraRung, WorldRenderer } from "./renderer-api.ts";
+import type { ReplayShot } from "./replay-shots.ts";
 import {
   createSledModel,
   HEADLAMP_DIP,
@@ -173,6 +175,10 @@ export function createWorldRenderer(
   const scene = new THREE.Scene();
   const lens: Lens = createLens(NEAR, FAR);
   scene.add(lens.camera);
+  /** THE BROADCAST (`camera-tv.ts`): the moment a replay is cut to, or null
+   * for the ladder's own rung. */
+  const tv = createTvCamera();
+  let shot: ReplayShot | null = null;
   const env: Environment = createEnvironment(scene, shadowLook(), FAR * 0.9);
   env.setDistance(video.distance);
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
@@ -469,11 +475,17 @@ export function createWorldRenderer(
       const inside = lens.rung() === "hood" || lens.rung() === "bars";
       player.model.setRiderVisible(!inside);
       lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, clear);
-      if (override) {
+      // The ladder is framed underneath either way, so a lens planted for a
+      // moment hands back to a boom that is already where it should be.
+      const planted =
+        override ??
+        (shot && clear ? tv.update(shot, rigPose, level, clear, Math.min(dt, 0.1)) : null);
+      if (planted) {
         const cam = lens.camera;
-        cam.position.set(override.eye.x, override.eye.y, override.eye.z);
-        cam.lookAt(override.target.x, override.target.y, override.target.z);
-        cam.fov = override.fov;
+        cam.position.set(planted.eye.x, planted.eye.y, planted.eye.z);
+        cam.up.set(0, 1, 0);
+        cam.lookAt(planted.target.x, planted.target.y, planted.target.z);
+        cam.fov = planted.fov;
         cam.updateProjectionMatrix();
         cam.updateMatrixWorld();
         player.model.setRiderVisible(true);
@@ -510,6 +522,11 @@ export function createWorldRenderer(
 
     setOverride(view) {
       override = view;
+    },
+
+    setShot(next) {
+      if (!next) tv.drop();
+      shot = next;
     },
 
     setSky(sky) {

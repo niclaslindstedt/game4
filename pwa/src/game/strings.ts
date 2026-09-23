@@ -411,4 +411,26 @@ export const STRINGS = {
   resultTrialAgain: "RIDE AGAIN",
   /** The news line at the flag of a run with nobody else on it. */
   newsFinishAlone: (seconds: number): string => `FINISH  ${formatTime(seconds)}`,
+
+  /* ── THE REPLAY (hud-replay.tsx, hud-result.tsx, menu-pause.tsx) ─────── */
+  replayWatch: "WATCH REPLAY",
+  /** Under the pause card's row: taken mid-race, the race is over. */
+  replayWatchNote: "ends this race",
+  replayLabel: "REPLAY",
+  /** Said while the picture runs slow, so it is not read as dropped frames. */
+  replaySlow: "SLOW",
+  replayTitle: (seed: number, mode: string): string =>
+    `SEED ${seed} · ${mode === "timeTrial" ? "TIME TRIAL" : "RACE"}`,
+  replayLine: (sled: string, time: number | null, place: number | null): string =>
+    `${sled.toUpperCase()} · ${
+      time === null
+        ? "UNFINISHED"
+        : place === null
+          ? formatTime(time)
+          : `${ordinal(place)} · ${formatTime(time)}`
+    }`,
+  /** The rung the recording is watched from. */
+  replayCamera: (rung: string): string => (rung === "tv" ? "BROADCAST" : rung.toUpperCase()),
+  replayExit: "EXIT",
+  replayNote: "C for the camera · ESC to leave",
 } as const;

@@ -51,6 +51,7 @@ import {
   playerRides,
   simulates,
   soundsLive,
+  watching,
   type Shell,
 } from "../pwa/src/game/shell.ts";
 import {
@@ -62,18 +63,19 @@ import {
 import { dealSeed, readParams } from "../pwa/src/game/url-params.ts";
 import { SHELL_COMMANDS } from "../pwa/src/shell-host.ts";
 
-describe("the five surfaces (shell.ts)", () => {
+describe("the six surfaces (shell.ts)", () => {
   it("steps the engine behind every card but the pause card", () => {
     for (const s of SHELLS) expect(simulates(s), s).toBe(s !== "pause");
   });
 
   it("puts the player's hands on the sled only on a run — the bot rides everywhere else", () => {
     for (const s of SHELLS) expect(playerRides(s), s).toBe(s === "run");
-    for (const s of SHELLS) expect(soundsLive(s), s).toBe(playerRides(s));
+    for (const s of SHELLS) expect(soundsLive(s), s).toBe(playerRides(s) || watching(s));
+    expect(SHELLS.filter(watching)).toEqual(["replay"]);
   });
 
   it("keeps the HUD up under the pause card, and reaches the pause card only from a run", () => {
-    expect(SHELLS.filter(hudOver)).toEqual(["pause", "run"]);
+    expect(SHELLS.filter(hudOver)).toEqual(["pause", "run", "replay"]);
     expect(SHELLS.filter(canPause)).toEqual(["run"]);
   });
 
@@ -346,6 +348,7 @@ describe("the game's own buttons (run-actions.ts)", () => {
       restart: () => did.push("restart"),
       camera: () => did.push("camera"),
       reset: () => did.push("reset"),
+      leave: () => did.push("leave"),
     });
     return { did, act };
   }
@@ -368,6 +371,13 @@ describe("the game's own buttons (run-actions.ts)", () => {
     act("pause");
     act("restart");
     expect(did).toEqual(["resume"]);
+  });
+
+  it("over a replay walks the camera and leaves on PAUSE, and nothing else", () => {
+    const { did, act } = rig("replay");
+    for (const command of SHELL_COMMANDS) act(command as RunPress);
+    act("reset");
+    expect(did.sort()).toEqual(["camera", "leave"]);
   });
 });
 

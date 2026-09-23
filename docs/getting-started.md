@@ -41,7 +41,9 @@ The HUD shows the **SCORE** and the seconds **LEFT** where a race keeps its laps
 
 **NEXT** is the sled card, and **RIDE** there stands the ride up. The HUD keeps the speed, the air clock and the minimap, and in place of the race's place, lap and checkpoint count shows the ride's clock, its **BEST AIR** and the distance **RIDDEN**; the minimap shows the loop without a checkpoint on it. **R** stands you back on the nearest point of the track. The pause card's **START AGAIN** rides the same map from where you started. Everything on the start card is remembered.
 
-At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **RESTART RACE**, **SOUND**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
+At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **RESTART RACE**, **SOUND**, **WATCH REPLAY**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
+
+**The replay.** Every race and time trial is recorded as the controls that rode it, and **WATCH REPLAY** — on the finish plate, or on the pause card, where it ends the race — plays it back: the same race rebuilt, the rivals ridden again by the same bot, the trails cut again from clean snow. It opens on the **BROADCAST** camera, which is the chase camera until the run reaches a moment it marked (a flight, a place taken, a trunk or a rival met, a wipeout, the flag); for those it cuts to a lens planted at the edge of the wood beside the kicker, the banner or the spot, before the sled gets there, and runs the moment in slow motion (the bar says **SLOW**). **C** walks the other cameras, **Escape** or **EXIT** leaves for the front door. A free ride keeps no replay.
 
 ## Riding
 
