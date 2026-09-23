@@ -29,7 +29,8 @@
 // game's own stylesheet.
 //
 // WHAT THE LAYER CARRIES is the HUD and the finish plate — the chrome that
-// belongs to the RACE. A card over it does not come along: the pause card's
+// belongs to the RACE. A card over it does not come along, nor does a
+// replay's transport bar: the pause card's
 // PICTURE row is pressed with the card up, and the picture it asked for is
 // the frozen race under the card, never a photograph of the button that
 // took it. The CANVAS is left out too, because it IS the picture.
@@ -65,9 +66,10 @@ const INHERITED = [
 let sheet: string | null = null;
 
 /** What the app-root holds that must NOT go into the layer: the canvas is
- * the picture the layer is drawn over, and a card (`.menu`, `.loading`) is a
- * surface over the race rather than part of it. */
-const NOT_IN_LAYER = "canvas, .menu, .loading";
+ * the picture the layer is drawn over, and a card (`.menu`, `.loading`) or a
+ * replay's transport bar (`.hud-replay-layer`) is a surface over the race
+ * rather than part of it. */
+const NOT_IN_LAYER = "canvas, .menu, .loading, .hud-replay-layer";
 
 /**
  * The screen's chrome as it stands right now, or null when there is none to
@@ -81,7 +83,9 @@ const NOT_IN_LAYER = "canvas, .menu, .loading";
  */
 export function readHudLayer(): HudLayer | null {
   try {
-    const hud = document.querySelector<HTMLElement>(".hud:not(.hud-over-card)");
+    const hud = document.querySelector<HTMLElement>(
+      ".hud:not(.hud-over-card):not(.hud-replay-layer)",
+    );
     if (!hud || hud.dataset.bare) return null;
     // The HUD's own box is the flow one it never uses — its instruments are
     // pinned to the app-root around it, so THAT is the rectangle the layer

@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // WHAT A LOAD IS ASKED TO STAND UP.
 //
+// And `raceOrFallback` at the foot: the race the page MOUNTS over, before any
+// load — the one place a refused seed quietly falls back to another map.
+//
 // `run-loader.ts` is the SEQUENCING: it cuts a load into steps, spends a
 // share of each frame on them and never learns what any of them does. This
 // is the other half — what the steps ARE — and it lives beside `App.tsx`
@@ -23,9 +26,17 @@
 //                 driver compiles every shader in it — paid for under the
 //                 card rather than out of the player's first second.
 
-import { error, type GameState } from "@engine";
+import {
+  createGame,
+  error,
+  type GameMode,
+  type GameState,
+  type SkyOverride,
+  type SledSpec,
+} from "@engine";
 
 import type { CameraRung, WorldRenderer } from "./renderer-api.ts";
+import { assistOf, type Settings } from "./settings.ts";
 import {
   advanceLoad,
   createLoad,
@@ -175,4 +186,32 @@ export function createLoader(
     },
     busy: () => job !== null,
   };
+}
+
+/** A whole race on `seed` — or, where the generator refuses it, the map the
+ * game falls back on, so the page ALWAYS mounts over something. `rider` is
+ * the player's help and machine for a race a link boots into; the race under
+ * the front door is the bot's, on the default machine with every hand on. */
+export function raceOrFallback(
+  seed: number,
+  rider: { assist: Settings["assist"]; spec: SledSpec; mode: GameMode; laps: number } | null,
+  sky?: SkyOverride,
+): GameState {
+  const help = {
+    ...(rider
+      ? {
+          assist: assistOf(rider.assist),
+          spec: rider.spec,
+          mode: rider.mode,
+          laps: rider.mode === "timeTrial" ? rider.laps : undefined,
+        }
+      : {}),
+    sky,
+  };
+  try {
+    return createGame({ seed, ...help });
+  } catch (e) {
+    error(`seed ${seed} would not build (${e instanceof Error ? e.message : String(e)})`);
+    return createGame({ seed: 1, ...help });
+  }
 }

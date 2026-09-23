@@ -94,6 +94,12 @@ export function createInputManager(
   };
   index(bindings);
 
+  /** A focused thing a key presses itself — a card's row, a field. */
+  const onControl = (target: EventTarget | null): boolean =>
+    typeof Element !== "undefined" &&
+    target instanceof Element &&
+    target.closest("button, input, select, textarea, a[href]") !== null;
+
   const onKeyDown = (e: KeyboardEvent): void => {
     const actions = byCode.get(e.code);
     if (!actions) return;
@@ -106,13 +112,14 @@ export function createInputManager(
         keys[action] = true;
         took = true;
       } else if (!e.repeat) {
-        // Every press but PAUSE is the race's, and only while it is being
-        // ridden: over a card ENTER is the focused button's (the shutter's
-        // key is the browser's confirm), and a press taken here would be
-        // the button never pressed.
-        if (action !== "pause" && !claiming()) continue;
-        if (action === "reset") reset = true;
-        else onAction(action);
+        // A key pressed ON A CONTROL off the race is that control's: ENTER is
+        // the shutter and also the browser's confirm, and a press taken here
+        // (and its default prevented) is the focused button never pressed.
+        if (action !== "pause" && !claiming() && onControl(e.target)) continue;
+        if (action === "reset") {
+          if (!claiming()) continue;
+          reset = true;
+        } else onAction(action);
         took = true;
       }
     }

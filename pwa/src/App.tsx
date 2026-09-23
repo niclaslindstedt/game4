@@ -36,6 +36,11 @@
 // a TIME TRIAL is ridden beside the ghost of the best run on that ticket.
 // The bot's race under a card is armed with nothing.
 //
+// THE REPLAY (`replay-run.ts`): the same runs are recorded as the controls
+// that rode them, and WATCH REPLAY on the finish plate or the pause card
+// rebuilds the race and steps it off the tape under the `replay` surface —
+// on the broadcast camera, in slow motion where the director says so.
+//
 // THE URL: every parameter the app reads is listed in `game/url-params.ts`.
 // A URL that names a race (`start`, `shot`, `paused`) boots into one;
 // anything else opens on the attract card or the front door.
@@ -70,14 +75,13 @@ import {
   type GameMode,
   type GameState,
   type Level,
-  type SkyOverride,
   type SledSpec,
 } from "@engine";
 
 import { connectOutput } from "./output-bridge.ts";
 import { onShellCommand } from "./shell-host.ts";
 import { createRunAudio, setAudioVolumes, unlockAudio } from "./game/audio/index.ts";
-import { createLoader } from "./game/app-load.ts";
+import { createLoader, raceOrFallback } from "./game/app-load.ts";
 import { freeGameOptions } from "./game/free-ride.ts";
 import { snapInput } from "./game/ghost.ts";
 import { createRunBook, type RunBook, type RunTicket } from "./game/ghost-run.ts";
@@ -85,6 +89,8 @@ import { keepsRecords } from "./game/records.ts";
 import { runRumble } from "./game/haptics.ts";
 import { Hud, hasTouch, type HudFlash } from "./game/hud.tsx";
 import { ResultPlate } from "./game/hud-result.tsx";
+import { ReplayBar } from "./game/hud-replay.tsx";
+import { createReplayRun, type ReplayBarFacts } from "./game/replay-run.ts";
 import { prepareMinimap } from "./game/minimap.tsx";
 import { createInputManager, type InputManager } from "./game/input.ts";
 import { LoadingScreen } from "./game/loading-screen.tsx";
@@ -119,6 +125,7 @@ import {
   playerRides,
   simulates,
   soundsLive,
+  watching,
   type Shell,
 } from "./game/shell.ts";
 import { SplashScreen } from "./game/splash-screen.tsx";
@@ -164,6 +171,7 @@ type Presses = {
   toMenu: () => void;
   abandonLoad: () => void;
   camera: () => void;
+  watch: () => void;
   shot: () => void;
 };
 
@@ -176,36 +184,9 @@ const NO_PRESSES: Presses = {
   toMenu: () => {},
   abandonLoad: () => {},
   camera: () => {},
+  watch: () => {},
   shot: () => {},
 };
-
-/** A whole race on `seed` — or, where the generator refuses it, the map the
- * game falls back on, so the page ALWAYS mounts over something. `rider` is
- * the player's help and machine for a race a link boots into; the race under
- * the front door is the bot's, on the default machine with every hand on. */
-function raceOrFallback(
-  seed: number,
-  rider: { assist: Settings["assist"]; spec: SledSpec; mode: GameMode; laps: number } | null,
-  sky?: SkyOverride,
-): GameState {
-  const help = {
-    ...(rider
-      ? {
-          assist: assistOf(rider.assist),
-          spec: rider.spec,
-          mode: rider.mode,
-          laps: rider.mode === "timeTrial" ? rider.laps : undefined,
-        }
-      : {}),
-    sky,
-  };
-  try {
-    return createGame({ seed, ...help });
-  } catch (e) {
-    error(`seed ${seed} would not build (${e instanceof Error ? e.message : String(e)})`);
-    return createGame({ seed: 1, ...help });
-  }
-}
 
 export function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -258,6 +239,10 @@ export function App() {
   const modeRef = useRef<GameMode>(params.page === "start" ? "free" : params.mode);
   const bookRef = useRef<RunBook | null>(null);
   const [input, setInput] = useState<InputManager | null>(null);
+  /** The bar over a recording, and whether there is one worth offering —
+   * both refreshed on the HUD's tick, never per frame. */
+  const [replayBar, setReplayBar] = useState<ReplayBarFacts | null>(null);
+  const [canReplay, setCanReplay] = useState(false);
   const [touch] = useState(hasTouch);
   const [keys] = useState(
     () => typeof matchMedia === "undefined" || matchMedia("(pointer: fine)").matches,
@@ -314,6 +299,11 @@ export function App() {
     rendererRef.current = renderer;
     const book = createRunBook({ show: (ghost) => renderer.setGhost(ghost) });
     bookRef.current = book;
+    const replays = createReplayRun({
+      renderer,
+      adopt: (s) => adopt(s),
+      shell: () => shellRef.current,
+    });
     const audio = createRunAudio();
     const clock = createRunClock(TUNING.physicsHz);
     const nav = createMenuNav();
@@ -347,6 +337,7 @@ export function App() {
       resize: (w, h, r) => renderer.resize(w, h, r),
       setVideo: (v) => renderer.setVideo(v),
       setGhost: (g) => renderer.setGhost(g),
+      setShot: (shot) => renderer.setShot(shot),
       drain: () => renderer.drain(),
       dispose: () => renderer.dispose(),
     };
@@ -449,6 +440,7 @@ export function App() {
     const adopt = (next: GameState, ticket: RunTicket | null = null): void => {
       state = next;
       book.arm(next, ticket);
+      replays.arm(next, ticket ? mode : null);
       setMapSeed(next.seed);
       live.length = 0;
       for (const k of Object.keys(tally)) delete tally[k];
@@ -484,14 +476,16 @@ export function App() {
       input: { ...state.input },
       shell: shellRef.current,
       camera: renderer.camera(),
+      replay: replays.bar()?.rung ?? null,
       events: { ...tally },
     });
 
     const stepOnce = (): void => {
       // ON THE TAPE'S GRID whoever is riding (`ghost.ts`), and written down.
-      const input = snapInput(inputFor());
+      const input = snapInput(replays.input() ?? inputFor());
       step(state, input);
       book.step(input, state.events);
+      replays.step(input, state);
       for (const e of state.events) tally[e.kind] = (tally[e.kind] ?? 0) + 1;
       if (preroll) return;
       const rides = playerRides(shellRef.current);
@@ -499,6 +493,8 @@ export function App() {
       if (rides) {
         runRumble.events(state.events);
         runRumble.step(state.sled);
+      }
+      if (rides || watching(shellRef.current)) {
         for (const e of state.events) {
           const line = newsFor(e, state);
           if (line) live.push({ id: flashId++, ...line, until: wall + FLASH_LIFE });
@@ -594,6 +590,14 @@ export function App() {
       restart,
       pause: () => {
         if (canPause(shellRef.current)) setShellNow("pause");
+        else if (watching(shellRef.current)) pressRef.current.toMenu();
+      },
+      watch: () => {
+        if (loader.busy() || !replays.watch()) return;
+        frozen = false;
+        clock.resume();
+        setShellNow("replay");
+        hudClock = HUD_TICK;
       },
       resume: () => {
         if (shellRef.current === "pause") setShellNow("run");
@@ -601,6 +605,7 @@ export function App() {
       toMenu: () => {
         // The run goes back to the bot: nothing more is filed or recorded.
         book.clear();
+        replays.clear();
         setPage("root");
         frozen = false;
         clock.resume();
@@ -611,6 +616,7 @@ export function App() {
         setShellNow("menu");
       },
       camera: () => {
+        if (watching(shellRef.current)) return replays.camera();
         const next = nextCamera(settingsRef.current.camera);
         setSettings((s) => ({ ...s, camera: next }));
         if (hudOver(shellRef.current)) renderer.setCamera(next);
@@ -626,6 +632,7 @@ export function App() {
       restart,
       camera: () => pressRef.current.camera(),
       reset: () => manager.requestReset(),
+      leave: () => pressRef.current.toMenu(),
       shoot: shots.take,
       toggleHud: () => setSettings((s) => ({ ...s, hud: !s.hud })),
     });
@@ -666,7 +673,8 @@ export function App() {
       // THE BACKDROP RACES ON: a race behind a card that the bot has taken
       // to the flag is stood back up on the same map, so the front door is
       // never over a sled coasting to a stop.
-      if (!playerRides(shellRef.current) && shellRef.current !== "pause" && !loader.busy()) {
+      const backdrop = !playerRides(shellRef.current) && !watching(shellRef.current);
+      if (backdrop && shellRef.current !== "pause" && !loader.busy()) {
         if (state.progress.finished) {
           book.clear();
           adopt(createGame({ level: state.level, seed: state.seed }));
@@ -675,9 +683,13 @@ export function App() {
 
       const held = !simulates(shellRef.current);
       const shown = drawable();
+      // SLOW MOTION is fewer steps per frame and nothing else (`replay-shots.ts`).
+      const rate = replays.frame();
+      const dtRun = dtFrame * rate;
       if (!frozen && !held && shown) {
-        const steps = clock.frame(dtFrame);
+        const steps = clock.frame(dtRun);
         for (let i = 0; i < steps; i++) stepOnce();
+        if (replays.over()) pressRef.current.toMenu();
       } else {
         // Held: the controls are still read, so a banked reset does not
         // fire the moment the picture thaws.
@@ -687,7 +699,7 @@ export function App() {
       const still = frozen || held || clock.paused();
       const timing = probe !== null && !playerRides(shellRef.current) && !loader.busy() && !still;
       const drawAt = performance.now();
-      renderer.draw(state, clock.alpha(), still ? 0 : dtFrame);
+      renderer.draw(state, clock.alpha(), still ? 0 : dtRun);
       shots.serve();
       if (timing && probe) {
         const verdict = probe.frame(frameMs, performance.now() - drawAt + renderer.drain());
@@ -698,7 +710,7 @@ export function App() {
       }
       if (!still) {
         audio.setView(renderer.camera());
-        audio.frame(state, dtFrame, soundsLive(shellRef.current) ? 1 : CARD_DUCK);
+        audio.frame(state, dtRun, soundsLive(shellRef.current) ? 1 : CARD_DUCK);
         if (playerRides(shellRef.current)) runRumble.frame(dtFrame);
       } else {
         audio.silence();
@@ -723,6 +735,8 @@ export function App() {
         const kept = live.filter((f) => f.until > wall);
         if (kept.length !== live.length) live.splice(0, live.length, ...kept);
         setFlashes(live.map(({ id, text, tone }) => ({ id, text, tone })));
+        setReplayBar(replays.bar());
+        setCanReplay(replays.offers());
         if (clock.paused() !== awayRef.current) {
           awayRef.current = clock.paused();
           setAway(awayRef.current);
@@ -820,12 +834,12 @@ export function App() {
         <Hud
           snap={snap!}
           flashes={flashes}
-          touch={touch}
+          touch={touch && !watching(shell)}
           input={input!}
           feel={settings.touch}
           lever={settings.touch.lever}
           away={away}
-          onReset={() => input?.requestReset()}
+          onReset={() => playerRides(shell) && input?.requestReset()}
           onCamera={() => pressRef.current.camera()}
           onPause={() => pressRef.current.pause()}
           bare={!settings.hud}
@@ -840,12 +854,21 @@ export function App() {
           </div>
         </div>
       )}
+      {replayBar && watching(shell) && (
+        <ReplayBar
+          {...replayBar}
+          touch={touch}
+          onCamera={() => pressRef.current.camera()}
+          onLeave={() => pressRef.current.toMenu()}
+        />
+      )}
       <ResultPlate
         snap={shell === "run" && !away ? snap : null}
         touch={touch}
         onAgain={() => pressRef.current.restart()}
         onNew={race}
         onMenu={() => pressRef.current.toMenu()}
+        onReplay={canReplay ? () => pressRef.current.watch() : null}
       />
       {shell === "pause" && snap !== null && (
         <PauseMenu
@@ -856,6 +879,7 @@ export function App() {
           onRestart={() => pressRef.current.restart()}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onMainMenu={() => pressRef.current.toMenu()}
+          onReplay={canReplay ? () => pressRef.current.watch() : null}
         />
       )}
       {shell === "menu" && page === "root" && (

@@ -13,9 +13,12 @@
 // these is about a RACE BEING RIDDEN, so over a card none of them does
 // anything — except PAUSE over the pause card, which is RESUME, because the
 // key that opened the card is the key a hand reaches for to close it; and
-// the SHUTTER and the HUD's switch, which are about the PICTURE and answer
-// wherever the race is on screen, the held frame under the pause card too
-// (`hudOver`) — a menu-bar row pressed there photographs the frozen race. (Over
+// over a REPLAY, where nobody is riding, the camera walks the watching
+// ladder and PAUSE leaves the recording, the way Escape does. The SHUTTER
+// and the HUD's switch are about the PICTURE and answer wherever a race is
+// on screen (`hudOver`): the held frame under the pause card — a menu-bar
+// row pressed there photographs the frozen race — and a replay, whose
+// broadcast camera is the best seat a rider ever gets of his own run. (Over
 // a card, Escape is usually taken upstream by `menu-nav.ts`'s capture-phase
 // walk and pressed as the card's own way back; the shell's menu row arrives
 // here instead, and has to mean the same thing.)
@@ -38,6 +41,8 @@ export type RunActionWorld = {
   camera: () => void;
   /** Put the sled back at the last checkpoint — the R key's edge. */
   reset: () => void;
+  /** Leave a recording being watched (`replay-run.ts`). */
+  leave?: () => void;
   /** The shutter (`shot-request.ts`). */
   shoot: () => void;
   /** The readouts on or off — the same switch as OPTIONS ▸ HUD. */
@@ -51,15 +56,20 @@ export type RunPress = InputAction | ShellCommand;
 export function createRunActions(world: RunActionWorld): (press: RunPress) => void {
   return (press) => {
     const shell = world.shell();
-    if (press === "pause") {
-      if (shell === "run") world.pause();
-      else if (shell === "pause") world.resume();
-      return;
-    }
     if (press === "shot" || press === "hud") {
       if (!hudOver(shell)) return;
       if (press === "shot") world.shoot();
       else world.toggleHud();
+      return;
+    }
+    if (shell === "replay") {
+      if (press === "camera") world.camera();
+      else if (press === "pause") world.leave?.();
+      return;
+    }
+    if (press === "pause") {
+      if (shell === "run") world.pause();
+      else if (shell === "pause") world.resume();
       return;
     }
     if (shell !== "run") return;
