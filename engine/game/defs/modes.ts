@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE RACE, and the rules a run is played by. This slice has ONE way onto
-// the snow — a race against a field over the map's loop — so a mode is not
-// a menu here; but the rules are still a plain record on the state
-// (`GameState.rules`) read by every system that answers to one, and nothing
-// branches on anything else. `OPEN_RULES` is what a measurement rides: no
+// THE MODES, and the rules a run is played by. A mode is a named bundle of
+// rules (`MODE_RULES`): the RACE against a field over the map's loop, and
+// the TIME TRIAL, the same loop alone against the clock. The rules are a
+// plain record on the state (`GameState.rules`) read by every system that
+// answers to one, and nothing below the app branches on a mode's name. `OPEN_RULES` is what a measurement rides: no
 // lights and nobody else out there, so a simulated run's digest carries the
 // rider and nothing in front of him.
 
@@ -61,3 +61,33 @@ export function raceRules(laps: number): RunRules {
 export function openRules(laps: number): RunRules {
   return { rivals: 0, laps, countdown: 0, contact: true };
 }
+
+/** THE WAYS ONTO THE SNOW. A mode is a NAME for a bundle of `RunRules`
+ * (`MODE_RULES`) and nothing below the app branches on it: the engine reads
+ * the rules, and the app reads the name to decide which card is up and which
+ * row of the record book a run is filed under. */
+export type GameMode = "race" | "timeTrial";
+
+export const GAME_MODES: readonly GameMode[] = ["race", "timeTrial"];
+
+export function isGameMode(value: unknown): value is GameMode {
+  return typeof value === "string" && (GAME_MODES as readonly string[]).includes(value);
+}
+
+/** THE TIME TRIAL'S NUMBERS: the race's lights, nobody else on the snow,
+ * and the two lengths it is offered at — the race's three laps, or one. */
+export const TIME_TRIAL = {
+  countdown: RACE.countdown,
+  laps: [3, 1] as readonly number[],
+} as const;
+
+/** The time trial as a rider is dealt it: the lights and the loop, alone. */
+export function timeTrialRules(laps: number): RunRules {
+  return { rivals: 0, laps, countdown: TIME_TRIAL.countdown, contact: true };
+}
+
+/** EVERY MODE'S RULES by its name — the one place a name becomes a bundle. */
+export const MODE_RULES: Readonly<Record<GameMode, (laps: number) => RunRules>> = {
+  race: raceRules,
+  timeTrial: timeTrialRules,
+};

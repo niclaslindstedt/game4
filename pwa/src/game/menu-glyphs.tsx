@@ -8,7 +8,8 @@
 // the sound switch, the three the pause card is read by — carry on, start
 // again, leave — the sliders on the OPTIONS chip, and the three more its
 // groups are headed with (the keys, the dial, the screen; SOUND takes the
-// speaker). Each group mark is chosen for what it is NOT: a wide box with a
+// speaker) — and the stopwatch on the TIME TRIAL. Each group mark is
+// chosen for what it is NOT: a wide box with a
 // spacebar in it is not a screen on a stand, and a dial shares no
 // silhouette with either.
 
@@ -25,6 +26,7 @@ export const GLYPH_NAMES = [
   "keyboard",
   "gauge",
   "display",
+  "clock",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -112,6 +114,16 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
     <>
       <rect x="2.4" y="4" width="19.2" height="13" rx="2.2" />
       <path d="M12 17v3.4M8.4 20.4h7.2" />
+    </>
+  ),
+  // A STOPWATCH: the time trial — the loop alone, against the clock. The
+  // crown on top is what keeps it from reading as the dial.
+  clock: (
+    <>
+      <circle cx="12" cy="13.4" r="7.6" />
+      <path d="M10 2.8h4M12 2.8v3" />
+      <path d="M12 13.4V9.2" />
+      <path d="M18.2 6.4l1.4-1.4" />
     </>
   ),
 };
