@@ -224,7 +224,7 @@ export function createWorldRenderer(
   /** How much deeper the drawn furrow is than the physics' sink under the
    * tread — the machine is drawn that much lower, so it sits IN the trough
    * it is cutting rather than hovering over it. */
-  function extraSink(sled: SledState): number {
+  function extraSink(sled: SledState, depth: number): number {
     if (!level) return 0;
     let sum = 0;
     let n = 0;
@@ -234,7 +234,7 @@ export function createWorldRenderer(
       // The drawn surface under the probe is the loose cover's height over
       // the ground less the furrow; the physics has it at the ground less
       // its own sink.
-      sum += drawnDepth(c, packed) - c.sink - LOOSE * (1 - packed);
+      sum += drawnDepth(c, packed, 1, depth) - c.sink - LOOSE * (1 - packed);
       n++;
     }
     return n > 0 ? Math.max(-0.1, Math.min(0.2, (sum / n) * 0.85)) : 0;
@@ -317,11 +317,11 @@ export function createWorldRenderer(
         observe(r.track, sled, run.tick);
         sample(r.track, alpha, r.drawn);
         // With the trails off there is no furrow to sit in.
-        const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled) : 0;
+        const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled, run.snowDepth) : 0;
         r.sink += (want - r.sink) * (1 - Math.exp(-dt * 10));
         r.model.pose(sled, r.drawn, r.sink);
         if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
-          stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps);
+          stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps, run.snowDepth);
         }
         // The landing puff: grounded now, in the air at the last frame.
         let landed = 0;

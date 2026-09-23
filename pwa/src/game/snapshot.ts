@@ -88,6 +88,13 @@ export type HudSnapshot = {
    * from straight ahead, and how far, m — or null with nothing owed. */
   missed: { angle: number; distance: number } | null;
   seed: number;
+  /** A FREE RIDE: no field, no laps, no checkpoint owed — the HUD shows the
+   * run's best air and the distance ridden in their place. */
+  free: boolean;
+  /** The run's longest flight so far, s. */
+  bestAir: number;
+  /** How far has been ridden, m. */
+  distance: number;
   /** THE FINISH: the player's own result once the flag has fallen, and the
    * whole field's table under it — live, because the field is still racing
    * home behind the rider. Null until then. */
@@ -160,6 +167,9 @@ export function takeSnapshot(state: GameState): HudSnapshot {
     airBest: airTime > 0 && airTime > p.bestAir,
     missed: owed ? { angle: owed.error * SCREEN_TO_ENGINE, distance: owed.distance } : null,
     seed: state.seed,
+    free: !state.rules.course,
+    bestAir: p.bestAir,
+    distance: p.distance,
     result: p.finished ? { place: racePlace(state), time: p.time } : null,
     standings: p.finished ? standingsOf(state) : null,
     minimap: buildMinimap(state),

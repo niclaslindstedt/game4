@@ -3,7 +3,8 @@
 // the machine they last rode (the sled card, `menu-sled.tsx`), whether the
 // sound is on at all, and every row of OPTIONS (`menu-options.tsx`)
 // — the three faders, the picture (`settings-video.ts`), the keys
-// (`settings-input.ts`), the thumbs, and how much help the sled gives.
+// (`settings-input.ts`), the thumbs, and how much help the sled gives — and
+// the start card's answers for a free ride (`free-ride.ts`).
 // Nothing is remembered that the player has no way to change: the camera is
 // walked with C (or the HUD's press) and the sound is the switch on the
 // front door and the pause card.
@@ -17,6 +18,7 @@
 
 import { SLED, isSledId, type Assist, type SledId } from "@engine";
 
+import { freshRide, mergeRide, type FreeRide } from "./free-ride.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
 import { DEFAULT_VIDEO, mergeVideo, type VideoSettings } from "./settings-video.ts";
@@ -83,6 +85,9 @@ export type Settings = {
   keys: KeyBindings;
   touch: TouchSettings;
   assist: AssistSettings;
+  /** THE START CARD's answers: the free ride's map, day and snow
+   * (`free-ride.ts`). */
+  ride: FreeRide;
 };
 
 export function freshSettings(): Settings {
@@ -96,6 +101,7 @@ export function freshSettings(): Settings {
     keys: freshKeys(),
     touch: { lever: "right", sensitivity: 1, invertLean: false },
     assist: { steer: "full", air: "full" },
+    ride: freshRide(),
   };
 }
 
@@ -153,6 +159,7 @@ export function mergeSettings(parsed: unknown): Settings {
   const assist = record(blob.assist);
   out.assist.steer = onLadder(assist.steer, ASSIST_LEVELS, out.assist.steer);
   out.assist.air = onLadder(assist.air, ASSIST_LEVELS, out.assist.air);
+  out.ride = mergeRide(blob.ride);
   return out;
 }
 

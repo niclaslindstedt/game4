@@ -6,26 +6,27 @@ Powder Run has no runtime configuration surface (no accounts, no server); everyt
 
 The running game reads its situation off the URL, which is what makes a map a link and a bug report a repro:
 
-| Parameter     | Meaning                                                                                                                                                              |
-| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `seed`        | Which map to build (an integer). The same seed is the same hills, forest, track, checkpoints, start and sun hour on every machine. Pins the front door's RACE to it. |
-| `start=race`  | Boot straight into a race on the grid, the attract card and the front door skipped (`start=1` is the same).                                                          |
-| `t`           | ...with this many seconds of it already ridden — by the bot, so a picture of a race is of one moving.                                                                |
-| `shot=1`      | ...held still once drawn, so nothing moves under a screenshot's shutter.                                                                                             |
-| `paused=1`    | ...or held under the pause card.                                                                                                                                     |
-| `camera`      | The race's camera rung: `hood`, `bars`, `chase`, `far`, `high`.                                                                                                      |
-| `sled`        | The player's machine for this visit — `trail`, `crossover`, `mountain`, `cross` — over the stored pick and never written back (a pick on the sled card replaces it). |
-| `menu=root`   | Open on the front door rather than the attract card; `menu=sled` the sled card, `menu=options` OPTIONS, `menu=keys` its KEYS page.                                   |
-| `video`       | Draw this visit at a picture preset — `low`, `medium`, `high` — without storing it: how a lab meters or photographs a rung.                                          |
-| `probe=0`     | Do not time the machine on this visit: the first-visit probe may move an untouched picture, and a lab wants it held still.                                           |
-| `splash=1\|0` | Force the attract card up, or off an ordinary visit.                                                                                                                 |
-| `update=1`    | Draw the new-build button as if a build were waiting.                                                                                                                |
+| Parameter     | Meaning                                                                                                                                                                     |
+| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `seed`        | Which map to build (an integer). The same seed is the same hills, forest, track, checkpoints, start and sun hour on every machine. Pins the front door's RACE to it.        |
+| `start=race`  | Boot straight into a race on the grid, the attract card and the front door skipped (`start=1` is the same).                                                                 |
+| `start=free`  | ...or into a FREE RIDE on the start card's stored map, day and snow (the `seed` over it).                                                                                   |
+| `t`           | ...with this many seconds of it already ridden — by the bot, so a picture of a race is of one moving.                                                                       |
+| `shot=1`      | ...held still once drawn, so nothing moves under a screenshot's shutter.                                                                                                    |
+| `paused=1`    | ...or held under the pause card.                                                                                                                                            |
+| `camera`      | The race's camera rung: `hood`, `bars`, `chase`, `far`, `high`.                                                                                                             |
+| `sled`        | The player's machine for this visit — `trail`, `crossover`, `mountain`, `cross` — over the stored pick and never written back (a pick on the sled card replaces it).        |
+| `menu=root`   | Open on the front door rather than the attract card; `menu=sled` the sled card, `menu=start` the free ride's start card, `menu=options` OPTIONS, `menu=keys` its KEYS page. |
+| `video`       | Draw this visit at a picture preset — `low`, `medium`, `high` — without storing it: how a lab meters or photographs a rung.                                                 |
+| `probe=0`     | Do not time the machine on this visit: the first-visit probe may move an untouched picture, and a lab wants it held still.                                                  |
+| `splash=1\|0` | Force the attract card up, or off an ordinary visit.                                                                                                                        |
+| `update=1`    | Draw the new-build button as if a build were waiting.                                                                                                                       |
 
 `pwa/src/game/url-params.ts` is the reading of all of them; it, this table and `scripts/screenshot.mjs` move together.
 
 ## What the game remembers
 
-One blob, in `localStorage` under `powderrun.settings.v1` (`pwa/src/game/settings.ts`): the camera rung the rider last chose, the sled last picked on the sled card, whether the sound is on, and every row of OPTIONS — the three faders (master, engine, effects), the picture (`pwa/src/game/settings-video.ts`: resolution, distance, terrain, trails, forest, shadows, spray, antialiasing), the key bindings, the thumbs (the lever's side, the travel, the inverted lean), the two assist dials — and whether the first-visit probe has had its say. It is merged field by field and a stored value this build does not offer is dropped for the default rather than trusted. Nothing else is written beyond what the service worker caches to play offline.
+One blob, in `localStorage` under `powderrun.settings.v1` (`pwa/src/game/settings.ts`): the camera rung the rider last chose, the sled last picked on the sled card, whether the sound is on, and every row of OPTIONS — the three faders (master, engine, effects), the picture (`pwa/src/game/settings-video.ts`: resolution, distance, terrain, trails, forest, shadows, spray, antialiasing), the key bindings, the thumbs (the lever's side, the travel, the inverted lean), the two assist dials — the start card's free ride (`pwa/src/game/free-ride.ts`: the map, the date and the hour — each null until moved, which is the map's own — the snow dial, and the spot picked on the chart with the seed it was picked on) — and whether the first-visit probe has had its say. It is merged field by field and a stored value this build does not offer is dropped for the default rather than trusted. Nothing else is written beyond what the service worker caches to play offline.
 
 **The first visit's picture.** A fresh visit opens on the MEDIUM picture and, under the front door, times itself drawing it for a second and a half (`pwa/src/game/video-probe.ts`): a machine with room for twice and a half the frame at the display's own rate is moved to HIGH, one already missing frames is moved to LOW, and the verdict is stored so it is asked once. It never touches a picture anybody has changed, never runs over a race, and `?probe=0` or `?video=` hold it off.
 

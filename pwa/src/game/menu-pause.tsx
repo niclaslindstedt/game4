@@ -6,7 +6,8 @@
 //
 //   RESUME        back to the snow, on the very frame it was left.
 //   RESTART RACE  the race again from the grid, on the same map — the B
-//                 key's own line.
+//                 key's own line. Over a free ride, START AGAIN: the same
+//                 ride from where it started.
 //   SOUND         the one setting worth stopping for, and it applies to
 //                 the frame in front of you the moment it moves.
 //   MAIN MENU     out of the race and back to the front door. Nothing is
@@ -56,7 +57,11 @@ export function PauseMenu({
       >
         <div class="menu-pause-head">
           <div class="menu-title">{STRINGS.pauseHead}</div>
-          <div class="menu-sub">{STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}</div>
+          <div class="menu-sub">
+            {snap.free
+              ? STRINGS.pauseSubFree(snap.seed)
+              : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
+          </div>
         </div>
         <div class="menu-items">
           <button
@@ -75,7 +80,9 @@ export function PauseMenu({
           </button>
           <button type="button" class="menu-item" onClick={onRestart}>
             <Glyph name="restart" />
-            <span class="menu-item-name">{STRINGS.pauseRestart}</span>
+            <span class="menu-item-name">
+              {snap.free ? STRINGS.pauseRestartFree : STRINGS.pauseRestart}
+            </span>
           </button>
           <button type="button" class="menu-item menu-item-leave" onClick={onMainMenu}>
             <Glyph name="exit" />

@@ -23,10 +23,11 @@
 // `data-nav-steps` marks the pair of arrows as ONE stop on the cursor's walk,
 // and sideways over the row presses them.
 //
-// Ported from the sibling game's rows; the start card's seed field and its
-// "dealt" mark stay there until this game has a start card to need them.
+// Ported from the sibling game's rows — the seed field ({@link NumberRow})
+// with the start card that needs it.
 
 import type { ComponentChildren } from "preact";
+import { useEffect, useRef, useState } from "preact/hooks";
 
 import { Glyph, type GlyphName } from "./menu-glyphs.tsx";
 import { STRINGS } from "./strings.ts";
@@ -58,23 +59,28 @@ export const ON_OFF: Stop<"off" | "on">[] = [
 /** A boolean as a stop id. */
 export const onOff = (on: boolean): "off" | "on" => (on ? "on" : "off");
 
-/** A PAGE'S HEAD: the way back, and the title. `data-nav-back` is what the
- * cursor's way out (Escape, Backspace) presses — see menu-nav.ts. */
+/** A PAGE'S HEAD: the way back, and the title — and, on a page that has
+ * one, its way ON standing opposite the way back (`action`). `data-nav-back`
+ * is what the cursor's way out (Escape, Backspace) presses — see
+ * menu-nav.ts. */
 export function MenuHead({
   back,
   backLabel,
   title,
+  action,
 }: {
   back: () => void;
   backLabel: string;
   title: string;
+  action?: ComponentChildren;
 }) {
   return (
-    <div class="menu-head">
+    <div class={`menu-head${action ? " menu-head-with-action" : ""}`}>
       <button type="button" class="menu-back" data-nav-back onClick={back}>
         ‹ {backLabel}
       </button>
       <div class="menu-title">{title}</div>
+      {action}
     </div>
   );
 }
@@ -229,6 +235,110 @@ export function FadeRow({
           data-nav-step="right"
           aria-label={`${label}: ${STRINGS.optMore}`}
           onClick={() => onChange(snap(value + step))}
+        >
+          ›
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A WHOLE NUMBER, TYPED OR STEPPED — the seed. The arrows stop at either end
+ * of the travel and a typed number is clamped into it; an emptied field is a
+ * CANCEL, not a zero. The field blurs itself on its way off the page, so a
+ * card that goes away under a focused input does not take a phone's
+ * keyboard state with it.
+ */
+export function NumberRow({
+  label,
+  value,
+  min,
+  max,
+  hint,
+  onValue,
+  onHint,
+}: {
+  label: string;
+  value: number;
+  min: number;
+  max: number;
+  hint?: string;
+  onValue: (value: number) => void;
+  onHint?: OnHint;
+}) {
+  const [draft, setDraft] = useState<string | null>(null);
+  const fieldRef = useRef<HTMLInputElement | null>(null);
+  /** Escape's blur is a cancel, and the blur handler runs before the row
+   * renders the draft away — so it is told by a ref. */
+  const cancelled = useRef(false);
+  useEffect(() => {
+    const field = fieldRef.current;
+    return () => {
+      if (field && document.activeElement === field) field.blur();
+    };
+  }, []);
+  const describe = (): void => onHint?.(says(label, hint));
+  const clampTo = (next: number): number => Math.min(max, Math.max(min, next));
+  const step = (dir: 1 | -1): void => {
+    setDraft(null);
+    onValue(clampTo(value + dir));
+    describe();
+  };
+  const commit = (text: string): void => {
+    setDraft(null);
+    if (cancelled.current) {
+      cancelled.current = false;
+      return;
+    }
+    const digits = text.replace(/[^0-9]/g, "");
+    if (digits === "") return;
+    const next = clampTo(Number(digits));
+    if (next !== value) onValue(next);
+  };
+  return (
+    <div class="knob" data-nav-steps onPointerEnter={describe} onFocusCapture={describe}>
+      <KnobLabel label={label} />
+      <div class="knob-ctl">
+        <button
+          type="button"
+          class="knob-arrow"
+          data-nav-step="left"
+          aria-label={`${label}: ${STRINGS.optPrev}`}
+          onClick={() => step(-1)}
+        >
+          ‹
+        </button>
+        <span class="knob-value">
+          <input
+            ref={fieldRef}
+            class="knob-word knob-field"
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            spellcheck={false}
+            aria-label={label}
+            value={draft ?? String(value)}
+            onInput={(e) => setDraft((e.target as HTMLInputElement).value)}
+            onBlur={(e) => commit((e.target as HTMLInputElement).value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+              // The way OUT of a field is the way out of everything else on
+              // the card, so Escape hands the keys back to the menu.
+              if (e.key === "Escape") {
+                cancelled.current = true;
+                (e.target as HTMLInputElement).blur();
+                e.stopPropagation();
+              }
+            }}
+          />
+        </span>
+        <button
+          type="button"
+          class="knob-arrow"
+          data-nav-step="right"
+          aria-label={`${label}: ${STRINGS.optNext}`}
+          onClick={() => step(1)}
         >
           ›
         </button>

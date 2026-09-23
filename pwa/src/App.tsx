@@ -10,7 +10,8 @@
 //            the first map is built, then the title and an invitation.
 //   menu     the front door (`menu-main.tsx`), over a bot-ridden race — and
 //            its pages: the SLED card RACE opens (`menu-sled.tsx`), the last
-//            card before the grid; OPTIONS (`menu-options.tsx`) and OPTIONS ▸
+//            card before the grid; the FREE RIDE's start card before it
+//            (`menu-start.tsx`); OPTIONS (`menu-options.tsx`) and OPTIONS ▸
 //            KEYS (`menu-keys.tsx`). All the same surface: the race behind
 //            them is the one the picture rows are judged against.
 //   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
@@ -57,6 +58,7 @@ import {
   error,
   sledById,
   step,
+  type CreateGameOptions,
   type GameState,
   type Level,
   type SledSpec,
@@ -66,6 +68,7 @@ import { connectOutput } from "./output-bridge.ts";
 import { onShellCommand } from "./shell-host.ts";
 import { createRunAudio, setAudioVolumes, unlockAudio } from "./game/audio/index.ts";
 import { createLoader } from "./game/app-load.ts";
+import { freeGameOptions } from "./game/free-ride.ts";
 import { runRumble } from "./game/haptics.ts";
 import { Hud, hasTouch, type HudFlash } from "./game/hud.tsx";
 import { ResultPlate } from "./game/hud-result.tsx";
@@ -77,6 +80,7 @@ import { MainMenu } from "./game/menu-main.tsx";
 import { createMenuNav, walkCardsOnKeys } from "./game/menu-nav.ts";
 import { OptionsPage } from "./game/menu-options.tsx";
 import { SledPage } from "./game/menu-sled.tsx";
+import { StartPage } from "./game/menu-start.tsx";
 import { PauseMenu } from "./game/menu-pause.tsx";
 import type { WorldRenderer } from "./game/renderer-api.ts";
 import { createRunActions } from "./game/run-actions.ts";
@@ -136,6 +140,7 @@ declare global {
  * reason to rebuild the loop that owns the race. */
 type Presses = {
   race: (seed: number) => void;
+  free: (options: CreateGameOptions) => void;
   restart: () => void;
   pause: () => void;
   resume: () => void;
@@ -146,6 +151,7 @@ type Presses = {
 
 const NO_PRESSES: Presses = {
   race: () => {},
+  free: () => {},
   restart: () => {},
   pause: () => {},
   resume: () => {},
@@ -199,6 +205,9 @@ export function App() {
   });
   /** Which page of the front door is up. */
   const [page, setPage] = useState<MenuPage>(params.page);
+  /** Which way onto the snow the sled card leads to: RACE's, or the FREE
+   * RIDE's once its start card has been through. */
+  const [flow, setFlow] = useState<"race" | "free">(params.page === "start" ? "free" : "race");
   /** A link's machine for this visit (`?sled=`), never written back — until
    * the rider picks one on the sled card, which is theirs to keep. */
   const [linkSled, setLinkSled] = useState(params.sled);
@@ -307,14 +316,34 @@ export function App() {
     };
 
     const raceSeed = params.seed ?? nextSeedRef.current;
+    /** The options the free ride on the pause card's START AGAIN rides:
+     * the last one stood up, on the map it was stood up on. */
+    let freeAgain: CreateGameOptions | null = null;
+    /** A free ride off the start card's answers — or, where the seed will
+     * not build, the race fallback's map. */
+    const freeBoot = (): GameState => {
+      const s = settingsRef.current;
+      const seed = params.seed ?? s.ride.seed ?? raceSeed;
+      const opts = freeGameOptions(s.ride, seed, specOf(s), assistOf(s.assist));
+      try {
+        const game = createGame(opts);
+        freeAgain = { ...opts, level: game.level };
+        return game;
+      } catch (e) {
+        error(`seed ${seed} would not build (${e instanceof Error ? e.message : String(e)})`);
+        return raceOrFallback(1, { assist: s.assist, spec: specOf(s) });
+      }
+    };
     // A race a link boots into is the player's, with the player's help; the
     // one under the front door is the bot's, with every hand on.
-    let state: GameState = raceOrFallback(
-      raceSeed,
-      params.rides
-        ? { assist: settingsRef.current.assist, spec: specOf(settingsRef.current) }
-        : null,
-    );
+    let state: GameState = params.free
+      ? freeBoot()
+      : raceOrFallback(
+          raceSeed,
+          params.rides
+            ? { assist: settingsRef.current.assist, spec: specOf(settingsRef.current) }
+            : null,
+        );
     /** The race the player is about to ride, on the machine they picked and
      * with the help they asked for — on this map, or on a fresh one. */
     const playerGame = (level: Level | undefined, seed: number): GameState =>
@@ -435,7 +464,11 @@ export function App() {
      * trails and its spray clean — so no card, just the lights again. */
     const restart = (): void => {
       if (loader.busy()) return;
-      adopt(playerGame(state.level, state.seed));
+      adopt(
+        !state.rules.course && freeAgain
+          ? createGame(freeAgain)
+          : playerGame(state.level, state.seed),
+      );
       frozen = false;
       clock.resume();
       setShellNow("run");
@@ -447,7 +480,25 @@ export function App() {
         loader.begin({
           // THE MAP UNDER THE MENU IS REUSED when it is the one asked for —
           // the race the player presses RACE over is the race they ride.
-          build: () => playerGame(state.level.seed === seed ? state.level : undefined, seed),
+          // (Never a free ride's: that one is the seed's map on another day.)
+          build: () =>
+            playerGame(
+              state.level.seed === seed && state.rules.course ? state.level : undefined,
+              seed,
+            ),
+          camera: settingsRef.current.camera,
+          done: lift,
+        });
+      },
+      free: (options) => {
+        loader.begin({
+          build: () => {
+            const reuse =
+              state.level.seed === options.seed && state.rules.course ? state.level : undefined;
+            const game = createGame({ ...options, level: reuse });
+            freeAgain = { ...options, level: game.level };
+            return game;
+          },
           camera: settingsRef.current.camera,
           done: lift,
         });
@@ -644,6 +695,17 @@ export function App() {
     if (params.seed === null) setNextSeed(dealSeed());
   };
 
+  /** The map on the start card: the one it stored, or the front door's. */
+  const startSeed = settings.ride.seed ?? nextSeed;
+  /** Onto the snow on a FREE RIDE: the start card's map, day and snow, on
+   * the machine the sled card holds. */
+  const freeRide = (): void => {
+    setPage("root");
+    pressRef.current.free(
+      freeGameOptions(settings.ride, startSeed, specOf(settings), assistOf(settings.assist)),
+    );
+  };
+
   const hudUp = hudOver(shell) && snap !== null && input !== null;
   return (
     <>
@@ -696,7 +758,14 @@ export function App() {
           riders={riders}
           sound={settings.sound}
           keys={keys ? keysLine(settings.keys) : null}
-          onRace={() => setPage("sled")}
+          onRace={() => {
+            setFlow("race");
+            setPage("sled");
+          }}
+          onFree={() => {
+            setFlow("free");
+            setPage("start");
+          }}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onOptions={() => setPage("options")}
         />
@@ -710,8 +779,19 @@ export function App() {
                 setLinkSled(null);
                 setSettings((s) => ({ ...s, sled }));
               }}
+              onBack={() => setPage(flow === "free" ? "start" : "root")}
+              onRide={flow === "free" ? freeRide : race}
+            />
+          ) : page === "start" ? (
+            <StartPage
+              settings={settings}
+              seed={startSeed}
+              onSettings={setSettings}
+              onReroll={() =>
+                setSettings((s) => ({ ...s, ride: { ...s.ride, seed: dealSeed(), spot: null } }))
+              }
               onBack={() => setPage("root")}
-              onRide={race}
+              onNext={() => setPage("sled")}
             />
           ) : page === "options" ? (
             <OptionsPage

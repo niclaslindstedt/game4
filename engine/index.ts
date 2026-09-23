@@ -52,6 +52,9 @@ export { createGame, rulesFor, step, FIELD_SIZE, type CreateGameOptions } from "
 export {
   FULL_ASSIST,
   RACE,
+  SNOW_DIAL,
+  clampSnowDepth,
+  freeRules,
   openRules,
   raceRules,
   type Assist,
@@ -87,7 +90,7 @@ export {
 export { freshSled, skiLockAt, derive } from "./game/sled.ts";
 export { probesOf, hullOf, type Probe, type HullPoint } from "./game/suspension.ts";
 export { footprintOf, pressureOf, skiShare, type Footprint } from "./game/footprint.ts";
-export { sinkTarget, snowDrag, powderFloor, gripAt, type Grip } from "./game/snow.ts";
+export { sinkTarget, snowDrag, powderFloor, gripAt, restSinkOf, type Grip } from "./game/snow.ts";
 export { powerShare, driveForce, maxDriveForce, rpmAtTop } from "./game/traction.ts";
 export { landingLoss } from "./game/flight.ts";
 export {
@@ -95,6 +98,7 @@ export {
   crossedCheckpoint,
   crossedLine,
   crossingsToFinish,
+  freeSpawn,
   freshProgress,
   resetPose,
   resetSled,

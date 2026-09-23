@@ -13,6 +13,10 @@
 // same map every time with nothing on the card to say why would read as a
 // broken dealer.
 //
+// THE FREE RIDE beside it, unlit: the whole map and nobody on it, set up on
+// its own start card (`menu-start.tsx`) — a second way onto the snow, so a
+// tile, but never a second red one.
+//
 // EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, OPTIONS
 // (`menu-options.tsx`), the keys on a machine that has them — read off the
 // bindings the rider actually has — and the build. Low, and not tile-shaped at
@@ -54,6 +58,7 @@ export function MainMenu({
   sound,
   keys,
   onRace,
+  onFree,
   onSound,
   onOptions,
 }: {
@@ -67,6 +72,8 @@ export function MainMenu({
   /** The keys line, on a machine that has keys worth listing. */
   keys: string | null;
   onRace: () => void;
+  /** Onto the free ride's start card. */
+  onFree: () => void;
   onSound: () => void;
   onOptions: () => void;
 }) {
@@ -97,6 +104,13 @@ export function MainMenu({
               <span class="menu-tile-name">{STRINGS.menuRace}</span>
               <span class="menu-tile-line">{STRINGS.menuRaceLine(seed, laps, riders)}</span>
               {pinned && <span class="menu-tile-line">{STRINGS.menuRacePinned}</span>}
+            </span>
+          </button>
+          <button type="button" class="menu-tile menu-tile-free" data-menu="free" onClick={onFree}>
+            <Glyph name="kicker" />
+            <span class="menu-tile-words">
+              <span class="menu-tile-name">{STRINGS.menuFree}</span>
+              <span class="menu-tile-line">{STRINGS.menuFreeLine}</span>
             </span>
           </button>
         </div>

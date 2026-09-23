@@ -18,6 +18,8 @@
 //   ?splash=1 / ?menu=root   the attract card / the front door;
 //   ?menu=options|keys       OPTIONS, and its KEYS page.
 //   ?menu=sled[&sled=id]     the sled card RACE opens, on a machine.
+//   ?menu=start      the free ride's start card (its chart built in a worker).
+//   ?start=free      a FREE RIDE on the start card's stored map and day.
 //   ?video=<tier>    ride at a picture preset (low, medium, high) this visit.
 //   ?probe=0         always sent: the first-visit probe must not move the
 //                    picture under the shutter.
@@ -91,6 +93,16 @@ const SURFACES = {
     params: { menu: "sled", sled: "mountain" },
     wait: ".sled-pick-canvas",
     settle: 1800,
+  },
+  // THE FREE RIDE'S START CARD: waited on until its chart — a whole map
+  // generated in a worker — has landed on it.
+  start: { params: { menu: "start" }, wait: ".seed-preview-map image", settle: 700 },
+  // ...and the free ride itself, twenty seconds in, held still: the HUD's
+  // best air and distance where the race's place and laps would be.
+  free: {
+    params: { start: "free", t: "20", shot: "1" },
+    wait: ".hud-best-air",
+    settle: 1500,
   },
 };
 

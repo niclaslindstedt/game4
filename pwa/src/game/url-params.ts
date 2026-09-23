@@ -9,6 +9,8 @@
 //                   menu stands over is built on it too.
 //   ?start=race     boot straight into a race on the grid (the splash and
 //                   the front door skipped). `start=1` is the same.
+//   ?start=free     ...or into a FREE RIDE on the start card's stored map,
+//                   day and snow (the seed a `?seed=` names over it).
 //   ?t=<s>          ...with this many seconds of it already ridden — by the
 //                   BOT, so a picture of a race is a picture of one moving.
 //   ?shot=1         ...and held still once drawn, so nothing moves under a
@@ -23,7 +25,8 @@
 //                   saddle to its finish plate with nobody's hands on it.
 //   ?menu=root      open on the front door rather than the attract card;
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
-//                   the sled card RACE opens.
+//                   the sled card RACE opens; `start` on the free ride's
+//                   start card.
 //   ?video=<tier>   ride this visit at a picture preset (low, medium, high —
 //                   `settings-video.ts`) without storing it: how a lab
 //                   meters or photographs a rung.
@@ -44,13 +47,15 @@ import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "sled" | "options" | "keys";
-const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys"];
+export type MenuPage = "root" | "sled" | "options" | "keys" | "start";
+const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys", "start"];
 
 export type UrlParams = {
   seed: number | null;
   /** The URL names a RACE to boot into rather than a card. */
   rides: boolean;
+  /** ...and that ride is a FREE RIDE. */
+  free: boolean;
   /** Seconds of the race to pre-ride before the first frame is shown. */
   t: number;
   shot: boolean;
@@ -86,7 +91,8 @@ export function readParams(search: string): UrlParams {
   const sled = q.get("sled");
   return {
     seed: seedOf(q.get("seed")),
-    rides: start === "race" || start === "1" || paused || q.get("shot") === "1",
+    rides: start === "race" || start === "free" || start === "1" || paused || q.get("shot") === "1",
+    free: start === "free",
     t: Number.isFinite(t) && t > 0 ? Math.min(t, 600) : 0,
     shot: q.get("shot") === "1",
     paused,

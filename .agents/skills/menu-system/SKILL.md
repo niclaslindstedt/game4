@@ -30,7 +30,7 @@ menu-system --list`. Load **`skill-reflection`** at both ends,
 a RACE, and **`ui-review`** for the sweep at the reference viewports.
 
 **Not built:** a developer page (and the hold that lets it out), a campaign,
-other modes, a start card, a sled picker, a gallery, a replay, a benchmark.
+other modes beyond RACE and FREE RIDE, a gallery, a replay, a benchmark.
 The sibling `game3` has every one of them, and its `menu-system` skill the
 rules they were built under; port from there, and never add a row whose
 setting nothing reads (below). OPTIONS is built — ported from game3's, and
@@ -41,7 +41,7 @@ the rows are its `menu-knobs.tsx` trimmed to what this page uses.
 | Surface | Covers | Where |
 | --- | --- | --- |
 | `splash` | The publisher's name while the first map is built, then the title, the trails laying themselves, and an invitation | `splash-screen.tsx` over the policy in `splash.ts`; the mark from `app-mark.ts` via `mark-trails.tsx` |
-| `menu` | The front door over a bot-ridden race: RACE (three laps against three riders on a map dealt from a seed, the seed ON the tile), the sound switch, OPTIONS — and its pages, which are the SAME surface over the same live race (`App.tsx`'s `page`: `root`, `sled`, `options`, `keys`). RACE opens the SLED card — the machine turning on its stand, its sheet beside it, RIDE — which is the last card before the grid | `menu-main.tsx`, `menu-sled.tsx` (over `sled-picker.tsx`, `sled-turntable.ts`, `sled-stats.ts`), `menu-options.tsx`, `menu-keys.tsx` |
+| `menu` | The front door over a bot-ridden race: RACE (three laps against three riders on a map dealt from a seed, the seed ON the tile), the sound switch, OPTIONS — and its pages, which are the SAME surface over the same live race (`App.tsx`'s `page`: `root`, `sled`, `options`, `keys`). RACE opens the SLED card — the machine turning on its stand, its sheet beside it, RIDE — which is the last card before the grid. FREE RIDE opens the START card first (the map with its chart, the date, the hour, the snow), whose NEXT is the sled card | `menu-main.tsx`, `menu-start.tsx` (over `free-ride.ts`, `seed-preview.tsx`, `seed-chart.ts`), `menu-sled.tsx` (over `sled-picker.tsx`, `sled-turntable.ts`, `sled-stats.ts`), `menu-options.tsx`, `menu-keys.tsx` |
 | `loading` | A race being stood up, paid for in slices | `loading-screen.tsx` over `run-loader.ts`, whose steps are `app-load.ts`'s |
 | `pause` | The race HELD: RESUME, RESTART RACE, SOUND, and the way out | `menu-pause.tsx` |
 | `run` | The player's hands on the bars, the HUD over the top; the finish plate once the flag is down | `hud.tsx`, `hud-result.tsx` (`hud-and-menus`) |
@@ -126,7 +126,7 @@ all.
   and Space already press it; `menu-nav.ts` is wired for directions and back
   only, or a row is pressed twice.
 - **Anything reachable from a card is reachable as a URL** (`?splash=1`,
-  `?menu=root|options|keys`, `?start=race`, `?paused=1`, `?seed=`) — which is what makes a
+  `?menu=root|options|keys|sled|start`, `?start=race|free`, `?paused=1`, `?seed=`) — which is what makes a
   frame handable to somebody else, and how `make screenshots` reaches it.
 
 ## The loop
