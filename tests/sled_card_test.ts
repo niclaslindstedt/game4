@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { SLED, SLEDS, sledById } from "@engine";
 
 import { mergeSettings, freshSettings } from "../pwa/src/game/settings.ts";
-import { powderOf, sledBars, sledFacts } from "../pwa/src/game/sled-stats.ts";
+import { climbOf, floatOf, powderOf, sledBars, sledFacts } from "../pwa/src/game/sled-stats.ts";
 import { readParams } from "../pwa/src/game/url-params.ts";
 
 describe("the spec sheet", () => {
@@ -50,21 +50,26 @@ describe("the spec sheet", () => {
     }
   });
 
-  it("bills the mountain sled best in powder and the trail sled worst — the catalog's own claim", () => {
-    const order = [...SLEDS].sort((a, b) => powderOf(b) - powderOf(a)).map((s) => s.id);
-    expect(order[0]).toBe("mountain");
-    expect(order[order.length - 1]).toBe("trail");
+  it("bills the mountain sled best at climbing and the work sled best at floating — the catalog's own claim", () => {
+    const climb = [...SLEDS].sort((a, b) => climbOf(b) - climbOf(a)).map((s) => s.id);
+    expect(climb[0]).toBe("ibex");
+    const float = [...SLEDS].sort((a, b) => floatOf(b) - floatOf(a)).map((s) => s.id);
+    expect(float[0]).toBe("beaver");
     expect(powderOf(SLED)).toBeCloseTo(1, 9);
+    expect(climbOf(SLED)).toBeCloseTo(1, 9);
+    expect(floatOf(SLED)).toBeCloseTo(1, 9);
   });
 });
 
 describe("the pick", () => {
   it("rides the crossover on a first visit", () => {
-    expect(freshSettings().sled).toBe("crossover");
+    expect(freshSettings().sled).toBe("fox");
   });
 
   it("keeps a stored machine the catalog carries, and drops one it does not", () => {
-    expect(mergeSettings({ sled: "mountain" }).sled).toBe("mountain");
+    expect(mergeSettings({ sled: "ibex" }).sled).toBe("ibex");
+    // The catalog's old names are not carried: a stored pick falls back.
+    expect(mergeSettings({ sled: "mountain" }).sled).toBe(SLED.id);
     expect(mergeSettings({ sled: "hovercraft" }).sled).toBe(SLED.id);
     expect(mergeSettings({ sled: 3 }).sled).toBe(SLED.id);
   });
@@ -76,7 +81,7 @@ describe("the pick", () => {
 
 describe("the link", () => {
   it("reads ?sled= for the visit, and nothing it does not carry", () => {
-    expect(readParams("?sled=cross").sled).toBe("cross");
+    expect(readParams("?sled=stoat").sled).toBe("stoat");
     expect(readParams("?sled=snowcat").sled).toBe(null);
     expect(readParams("").sled).toBe(null);
   });

@@ -19,7 +19,7 @@
 // best at something on this sheet and none is best at everything, which is
 // the card's whole argument.
 //
-// The bars are RELATIVE TO THE ROSTER, not absolute: four sleds within a few
+// The bars are RELATIVE TO THE ROSTER, not absolute: six sleds within a few
 // percent of each other on an axis scaled from zero are four identical full
 // bars, which is a picture of nothing. The roster's own spread is the scale,
 // and `BAR_FLOOR` keeps the worst machine's bar a bar rather than an empty
@@ -27,7 +27,15 @@
 //
 // DOM-free: `tests/sled_card_test.ts` reads it on plain Node.
 
-import { SLEDS, cornerGrip, footprintOf, harshSpeedOf, type SledSpec } from "@engine";
+import {
+  SLED,
+  SLEDS,
+  cornerGrip,
+  footprintOf,
+  harshSpeedOf,
+  totalMass,
+  type SledSpec,
+} from "@engine";
 
 import { STRINGS } from "./strings.ts";
 
@@ -47,6 +55,20 @@ export function powderOf(spec: SledSpec): number {
   return fit.powderDrive / fit.sink;
 }
 
+/** HOW WELL IT FLOATS, dimensionless: the reciprocal of the footprint's
+ * sink — how little of itself a machine buries standing on fresh snow. */
+export function floatOf(spec: SledSpec): number {
+  return 1 / footprintOf(spec).sink;
+}
+
+/** HOW WELL IT CLIMBS THROUGH POWDER, dimensionless: the going in powder
+ * (`powderOf`) times the power it has to spend there per kilo, both on the
+ * crossover's scale. */
+export function climbOf(spec: SledSpec): number {
+  const perKilo = (s: SledSpec) => s.powerKw / totalMass(s);
+  return (powderOf(spec) * perKilo(spec)) / perKilo(SLED);
+}
+
 type AxisKey = keyof typeof STRINGS.sledBars;
 type Axis = { key: AxisKey; of: (spec: SledSpec) => number };
 
@@ -57,7 +79,8 @@ const AXES: readonly Axis[] = [
   { key: "accel", of: (spec) => 1 / spec.accel0to100 },
   { key: "top", of: (spec) => spec.topSpeed },
   { key: "corner", of: (spec) => cornerGrip(spec, 1) },
-  { key: "powder", of: powderOf },
+  { key: "float", of: floatOf },
+  { key: "climb", of: climbOf },
   { key: "landing", of: harshSpeedOf },
 ];
 

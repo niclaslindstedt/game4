@@ -16,7 +16,16 @@ import { SLEDS, sledById, type SledId } from "@engine";
 import type { SledTurntable } from "./sled-turntable.ts";
 import { STRINGS } from "./strings.ts";
 
-export function SledPicker({ sled, onPick }: { sled: SledId; onPick: (id: SledId) => void }) {
+export function SledPicker({
+  sled,
+  livery,
+  onPick,
+}: {
+  sled: SledId;
+  /** The livery it is shown in (`sled-liveries.ts`). */
+  livery: number;
+  onPick: (id: SledId) => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const standRef = useRef<SledTurntable | null>(null);
   const spec = sledById(sled);
@@ -33,7 +42,10 @@ export function SledPicker({ sled, onPick }: { sled: SledId; onPick: (id: SledId
     void import("./sled-turntable.ts").then(({ createSledTurntable }) => {
       if (disposed) return;
       standRef.current = createSledTurntable(canvas);
-      standRef.current.setSled(sledById(canvas.dataset.sled ?? spec.id));
+      standRef.current.setSled(
+        sledById(canvas.dataset.sled ?? spec.id),
+        Number(canvas.dataset.livery ?? livery),
+      );
     });
     const onResize = (): void => standRef.current?.resize();
     window.addEventListener("resize", onResize);
@@ -51,9 +63,12 @@ export function SledPicker({ sled, onPick }: { sled: SledId; onPick: (id: SledId
   // The id also rides on the canvas, so a stand that finishes loading after
   // a pick has already happened picks it up.
   useEffect(() => {
-    if (canvasRef.current) canvasRef.current.dataset.sled = spec.id;
-    standRef.current?.setSled(spec);
-  }, [spec]);
+    if (canvasRef.current) {
+      canvasRef.current.dataset.sled = spec.id;
+      canvasRef.current.dataset.livery = String(livery);
+    }
+    standRef.current?.setSled(spec, livery);
+  }, [spec, livery]);
 
   return (
     <div class="sled-pick-row">
@@ -85,12 +100,13 @@ export function SledPicker({ sled, onPick }: { sled: SledId; onPick: (id: SledId
           ›
         </button>
       </div>
-      {/* The name and where it stands in the catalog, as ONE plate across
-          the head of the picture: four machines turning one at a time is a
-          carousel with no edges, and `2 / 4` is the whole catalog in five
-          characters. */}
+      {/* The name, the kind of machine it is, and where it stands in the
+          catalog, as ONE plate across the head of the picture: six machines
+          turning one at a time is a carousel with no edges, and `2 / 6` is
+          the whole catalog in five characters. */}
       <div class="sled-pick-id">
         <span class="sled-pick-name">{spec.name.toUpperCase()}</span>
+        <span class="sled-pick-kind">{spec.kind.toUpperCase()}</span>
         <span class="sled-pick-count">{STRINGS.sledOf(index + 1, SLEDS.length)}</span>
       </div>
     </div>

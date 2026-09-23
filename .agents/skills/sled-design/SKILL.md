@@ -1,25 +1,26 @@
 ---
 name: sled-design
-description: "Use when designing or changing how the SLED LOOKS — its silhouette, the skis and their spindles, the tunnel and the tread under it, the cowl, the windshield, the bars, the seat and the running boards, the snow flap, the colours of the four grid slots. Owns the low-poly builder (`pwa/src/game/sled-body.ts`: the machine built in the engine's own body frame off `defs/sled.ts`, the skis turning with `skiAngle` and riding their compression, the tread with the rear's), the style table (`SLED_STYLES`), and the render-compare-iterate loop: `make world` for the renderer's own views of a ridden run, then the built app with `make screenshots`, LOOK, refine, then verify at speed."
+description: "Use when designing or changing how the SLED LOOKS — its silhouette, the skis and their spindles, the tunnel and the tread under it, the cowl, the windshield, the bars, the seat and the running boards, the snow flap, the suspension, the liveries (paint, trim, pattern) and the colours of the four grid slots. Owns the low-poly builder (`pwa/src/game/sled-body.ts` the chassis, `sled-gear.ts` the running gear and its suspension, both built in the engine's own body frame off `defs/sled.ts` and each class's TRACED LOOK in `sled-looks.ts`), the liveries (`sled-liveries.ts`), the style table (`SLED_STYLES`), and the trace-render-compare loop: `make sled` for contact sheets of every machine by view, livery and pose, `make world` for a ridden run, then the built app with `make screenshots`, LOOK, refine, then verify at speed."
 ---
 
 # Sled design
 
-The sled is not modelled in a DCC tool: it is **generated**.
-`pwa/src/game/sled-body.ts` builds it from extruded profiles and boxes in the
-engine's own BODY FRAME — x right, y up, z forward, the origin at the centre
-of gravity of machine and rider — OFF EACH MACHINE'S OWN SPEC
-(`createSledModel(spec, style, wrap)`), so every dimension reads against
-`engine/game/defs/sled.ts` and the drawn skis stand where the physics' ski
-probes are. Two snow lines: the RUNNING GEAR (skis, spindles, tread) stands
-`spec.cogHeight` under the origin, and the CHASSIS (cowl, seat, boards,
-bars) where the crossover's does, because that is where the rider's hands
-and feet are fixed (`MOUNTS`); a machine carried higher on its springs is
-drawn with its running gear further under it. The tunnel, the tail and the
-flap run back to the tread's end (the mountain sled's long tail, the trail
-sled's stubby one), the cowl is as wide as the envelope, and the lugs stand
-at `lugHeight`. Designing the sled means editing
-the builder or a style and LOOKING, never guessing from numbers.
+The sled is not modelled in a DCC tool: it is **generated**, off two sources.
+Its SPEC (`engine/game/defs/sled.ts`) says where the physics' skis and belt are
+and how tall it stands on its springs; its class's TRACED LOOK
+(`pwa/src/game/sled-looks.ts`) says what it looks like — the cowl's outline,
+the screen's corners, the grip and the steering post, the seat's line, the
+tunnel's edges, the flap, the ski's profile, the idler, the drive and the
+belt's upper run, the boards, the lamps, and what rides on the tail — traced
+point by point off a studio photograph of a real machine of the class, drawn
+back over the photograph to check the line, scaled by the class's published
+length, and kept as metres with no make or model. `lookFrame` carries a trace
+onto a spec by pinning the traced ski centre to `skiForward` and the traced
+rear idler to `treadRear`; the spec's ski line and belt run were themselves
+read off the trace, so the stretch is 1 (`tests/livery_test.ts`). The rider
+is carried by the traced grip's distance from `MOUNTS.grip`, so he sits on the
+seat the trace drew. Designing the sled means editing a trace, the builder or
+a livery and LOOKING, never guessing from numbers.
 
 **Before starting, read this skill's lessons** —
 `node scripts/skill-lessons.mjs sled-design --list`. Load `skill-reflection`
@@ -29,20 +30,24 @@ at both ends, and `write-code` beside this skill for any code change.
 
 | Piece | Role |
 | --- | --- |
-| `pwa/src/game/sled-body.ts` | The builder (`createSledModel`): two SKIS a stance apart on SPINDLES under A-arms, turning with the engine's `skiAngle` and riding up and down with each ski's compression; the TREAD under the TUNNEL from `treadFront` to `treadRear`, climbing to the drive under the cowl, with a SNOW FLAP moving with the rear's compression; the COWL and its headlight, the WINDSHIELD, the BARS on their riser, the SEAT, the RUNNING BOARDS; and the rider hung on top. `SLED_STYLES` — four colour schemes, one per grid slot |
+| `pwa/src/game/sled-looks.ts` | THE TRACES, one per class, in the trace's own frame (z forward from the tunnel's end, y up from the snow), and `lookFrame` onto a spec. Three-free |
+| `pwa/src/game/sled-body.ts` | The CHASSIS (`createSledModel`): the cowl off the traced outline, tapered to its nose and crown and painted above the side panels (`clip`, `cutBy`), the livery's decals on its flanks and down the tunnel, the lamps under their brow, the screen, mirrors, plates, the bars (a mountain sled's loop), the seat, the tail pack / cargo box / trunk / backrest / rails, the tunnel, the flap, the boards; and the rider. `SLED_STYLES` — four grid slots; `styleIn` dresses one in a livery |
+| `pwa/src/game/sled-gear.ts` | THE RUNNING GEAR, posed off the engine's compressions: each ski (traced profile, tip loop) on its spindle, upper and lower A-ARMS, a COIL-OVER and a TIE ROD; the belt as a visible LOOP over the traced idler and drive with its lugs standing all the way round, the SKID RAILS, BOGIE and IDLER wheels, the front and rear ARMS and the coil-overs up to the tunnel — struts re-laid each frame |
+| `pwa/src/game/sled-liveries.ts` | THE LIVERIES: four per machine (paint, trim, panels, seat, springs, pattern) and the PATTERNS (stripe, twin, swoosh, split, chevron, race) stated in the cowl flank's own (u, v). The player's pick is `Settings.liveries`; the field keeps its grid slots' colours in its machine's own pattern |
 | `pwa/src/game/posed-merge.ts` | ONE DRAW PER POSED FIGURE: the sled and its rider are posed as a tree of small meshes (a group a ski, a capsule a limb), but every part is taken off the picture and what is drawn is one vertex-coloured mesh per machine, its vertices re-laid each frame through each part's matrix — forty parts in four riders were most of a frame's draws. A new part goes into the tree and is merged like the rest, never drawn on its own |
 | `pwa/src/game/rider.ts`, `rider-pose.ts` | The rider — the `rider` skill's. His hands and feet are fixed to this builder's grips and boards through `MOUNTS` in `rider-pose.ts`, so moving the bars, the seat or the boards moves him |
 | `engine/game/defs/sled.ts` | NOT this skill's file — the physics' spec. The builder READS `skiStance`, `skiForward`, `skiWidth`, `treadLength`/`Width`/`Front`/`Rear`, `length`, `width`, `height`, `cogHeight`, the suspensions' travel; a style never restates them |
 | `pwa/src/game/renderer.ts` | Places each model off its `SledState` (interpolated in `interp.ts`) — the mesh's origin is the CoG, so it pitches and rolls about the point the physics does. A slot whose run is on another machine than its model was built off is REBUILT (a new pick raced on the same map) |
-| `pwa/src/game/sled-turntable.ts` | The sled card's stand: the same builder, the player's colours, at rest at the springs' sag on a disc of snow, turning. The quickest look at all four machines side by side: `make screenshots ARGS="--surface sled,sled-mountain"`, or `?menu=sled&sled=<id>` |
+| `pwa/src/game/sled-turntable.ts` | The sled card's stand: the same builder, in the livery picked, at rest at the springs' sag on a disc of snow, turning (`make screenshots ARGS="--surface sled,sled-mountain"`, or `?menu=sled&sled=<id>`) |
+| `scripts/sled-preview.mjs`, `pwa/src/tools/sled-harness.ts` | `make sled` — THE SLED LAB: contact sheets built with the game's own builder. `machines` (every machine by side, front, rear, three-quarter and chase — the elevations orthographic on a metre grid), `liveries`, `poses` (one machine, every pose the rider takes), `landing` (the body on its legs through a landing, a frame every 60 ms). No `make build` |
 | `pwa/src/identity.ts` | The PALETTE — the player's sled is `PALETTE.flag`, the brand's red |
 | `scripts/world-preview.mjs` | `make world` — one map ridden by the bot, photographed through the game's own renderer at named views (`hood`, `bars`, `far`, `orbit`, `jump`, `landing`, …). Its own bundle, no `make build` |
 
 ## The loop: world → LOOK → iterate → the built app
 
-1. **Shoot the current state**: the four machines on the sled card
-   (`make screenshots ARGS="--surface sled,sled-mountain"`, or
-   `?menu=sled&sled=trail|cross` by hand) for the silhouettes side by side,
+1. **Shoot the current state**: `make sled` (every sheet; `ARGS="--sheet=machines
+   --views=side --cell=640"` for silhouettes big enough to judge a line), the
+   machines on the sled card (`make screenshots ARGS="--surface sled,sled-mountain"`),
    then `make world SEED=38
    ARGS=--views=orbit,far,jump,landing` (with
    `CHROMIUM_PATH=/opt/pw-browsers/chromium` in a web session). `orbit` walks
@@ -58,6 +63,12 @@ at both ends, and `write-code` beside this skill for any code change.
    frame is the verdict; `make world` only diagnoses.
 5. **`make profile`** — the sled is four of them on the grid; a part that
    added a draw call added four.
+
+**A NEW TRACE** is taken the way the six were: a clean studio side view of a
+real machine of the class (kept out of the repository, and nothing about it
+named), pixel picks cropped and zoomed, scaled by a published length, the
+polyline drawn back over the photograph and LOOKED at before a number is
+kept, then the ski line and belt run read into the spec.
 
 ## Judging the sled
 

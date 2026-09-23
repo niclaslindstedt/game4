@@ -1,6 +1,6 @@
 ---
 name: rider
-description: "Use when working on THE RIDER — the man on the sled: how he is posed on the machine (the hands on the grips, the boots on the running boards, the half-standing crouch a sled is ridden in), how his body answers the engine's readings (the weight hung into a turn, thrown back or forward by the lean, standing taller in the air, a landing folded into the knees), and how he looks from behind at chase range. Owns `pwa/src/game/rider-pose.ts` (the pose as three-free arithmetic: `BODY`, `MOUNTS`, `solveLimb`, `riderPose`) and `rider.ts` (the figure), the rider's cases in `tests/world_render_test.ts`, and the loop: `make world` (orbit, jump, landing), then the built app with `make screenshots`."
+description: "Use when working on THE RIDER — the man on the sled: how he is posed on the machine (the hands on the grips, the boots on the running boards, the half-standing crouch a sled is ridden in), how his body answers the engine's readings (the weight hung into a turn, thrown back or forward by the lean, standing taller in the air, a landing folded into the knees), and how he looks from behind at chase range. Owns `pwa/src/game/rider-pose.ts` (the pose as three-free arithmetic: `BODY`, `MOUNTS`, `solveLimb`, `riderPose`, and the body on its legs — `createRiderSpring` / `stepRiderSpring`) and `rider.ts` (the figure in his kit), the rider's cases in `tests/world_render_test.ts` and `tests/rider_test.ts`, and the loop: `make sled ARGS=--sheet=poses` and `--sheet=landing`, `make world` (orbit, jump, landing), then the built app with `make screenshots`."
 ---
 
 # The rider
@@ -15,6 +15,23 @@ snowmobile ridden hard is ridden up off the seat, knees bent, boots on the
 running boards, the weight moved about with the legs — hung off the uphill
 side on a sidehill, thrown forward up a climb, back for a landing. The base
 pose is that crouch, and every input moves it.
+
+**HIS BODY IS A MASS ON HIS LEGS** (`RiderSpring`, the view's, stepped with
+the frame's `dt` in `sled-body.ts`): a spring-damper in the machine's
+vertical (about 2.3 Hz, a little under half critical), kicked by every change
+in the machine's own climb (`SledState.vy`), so a landing that stops the sled
+dead leaves the body still coming down — the knees fold up to 24 cm and spring
+back — and the chatter of a rough groomer is a jiggle. Beside it the STAND,
+eased at 5 /s: sat at a crawl, half up on the move (0.62), stood tall in the
+air. **HUNG OFF** into a turn his hips go past the seat (`HANG` × the engine's
+`riderRight`) and his upper body rolls in (`HANG_ROLL`), the head held nearer
+level, the inside knee thrown out over its board. He is dressed after the
+photographs of a sled racer: a motocross helmet with its peak and a pointed
+chin bar, goggles, a padded jacket with a contrasting yoke and cuffs, gauntlet
+gloves, bulky pants and tall boots (`RiderStyle`: jacket, accent, pants,
+helmet, peak, visor). The whole figure is carried by the traced grip's
+distance from `MOUNTS.grip` (`sled-body.ts`), so every machine's rider sits on
+its own seat.
 
 **Before starting, read this skill's lessons** —
 `node scripts/skill-lessons.mjs rider --list`. Load `skill-reflection` at

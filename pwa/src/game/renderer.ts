@@ -34,6 +34,7 @@ import {
   type GameState,
   type Level,
   type SkyOverride,
+  type SledId,
   type SledSpec,
   type SledState,
   type Wind,
@@ -59,8 +60,10 @@ import {
   HEADLAMP_DIP,
   lampMounts,
   SLED_STYLES,
+  styleIn,
   type SledModel,
 } from "./sled-body.ts";
+import { liveryOf } from "./sled-liveries.ts";
 import { skyLookAt } from "./sky.ts";
 import { createSnowfall } from "./snowfall.ts";
 import { LOOSE } from "./snow-glsl.ts";
@@ -133,6 +136,9 @@ type Rider = {
   /** The machine the model was built off: a run on another one is a new
    * model, even on the same map and in the same slot. */
   spec: SledSpec;
+  /** The livery it was dressed in (`sled-liveries.ts`), or -1 for its grid
+   * slot's own colours. */
+  livery: number;
   track: PoseTrack;
   pen: TrailPen;
   drawn: Pose;
@@ -292,13 +298,20 @@ export function createWorldRenderer(
     casters: SHADOW_LOOK[video.shadows].trees ? FOREST_LOOK[video.forest].casters : "none",
   });
 
+  /** The player's liveries, and which one slot 0's model was dressed in. */
+  let liveries: Partial<Record<SledId, number>> = {};
+  const dressIn = (i: number, spec: SledSpec): number => (i === 0 ? (liveries[spec.id] ?? 0) : -1);
   function riderFor(i: number, spec: SledSpec): Rider {
-    const model = createSledModel(spec, SLED_STYLES[i % SLED_STYLES.length], wrap);
+    const slot = SLED_STYLES[i % SLED_STYLES.length];
+    const livery = dressIn(i, spec);
+    const style = livery < 0 ? slot : styleIn(slot, liveryOf(spec.id, livery));
+    const model = createSledModel(spec, style, wrap);
     model.root.name = "field";
     scene.add(model.root);
     return {
       model,
       spec,
+      livery,
       track: createTrack(),
       pen: createPen(16),
       drawn: { x: 0, y: 0, z: 0, q: { x: 0, y: 0, z: 0, w: 1 } },
@@ -438,7 +451,8 @@ export function createWorldRenderer(
       // A slot on another machine than the one it was drawn as — the player
       // chose a different sled for a race on the same map — is rebuilt.
       for (let i = 0; i < runs.length; i++) {
-        if (riders[i].spec === runs[i].sled.spec) continue;
+        const spec = runs[i].sled.spec;
+        if (riders[i].spec === spec && riders[i].livery === dressIn(i, spec)) continue;
         scene.remove(riders[i].model.root);
         riders[i].model.dispose();
         riders[i] = riderFor(i, runs[i].sled.spec);
@@ -473,7 +487,7 @@ export function createWorldRenderer(
         // With the trails off there is no furrow to sit in.
         const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled, run.snowDepth) : 0;
         r.sink += (want - r.sink) * (1 - Math.exp(-dt * 10));
-        r.model.pose(sled, r.drawn, r.sink, run.tricks.pose);
+        r.model.pose(sled, r.drawn, r.sink, run.tricks.pose, dt);
         if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
           stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps, run.snowDepth);
         }
@@ -598,6 +612,9 @@ export function createWorldRenderer(
       };
     },
 
+    dress(picks) {
+      liveries = { ...picks };
+    },
     setGhost(run) {
       ghostRun = run;
     },

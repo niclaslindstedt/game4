@@ -7,7 +7,7 @@ description: "Use when writing or changing a LAB, a PREVIEW or any script under 
 
 This project is tuned by measuring and LOOKING, and every subject skill ends
 with a lab: `make sim`, `make ride`, `make level`, `make analyze`,
-`make world`, `make audition`, `make screenshots`, `make profile`. They are
+`make world`, `make sled`, `make audition`, `make screenshots`, `make profile`. They are
 all built from ONE shelf, and the shelf is the reason a new lab is an
 afternoon rather than a week — and the reason a session that writes its own
 PNG encoder, flag parser or static server has reinvented something three
@@ -44,7 +44,11 @@ cannot photograph a stale build. The browser lab has two shapes:
   `pwa/src/tools/<name>.tsx` with `pwa/<name>-preview.html` beside it (with
   `noindex`), built by the driver into a one-off bundle under
   `previews/.<name>-preview/` (so no `make build`), exposing a small
-  `window.__<name>` API the driver calls. `world-harness.tsx` stands one seed
+  `window.__<name>` API the driver calls. `sled-harness.ts` is the
+  CONTACT-SHEET form of it (as `sky-harness.ts` is): one canvas, a scissored
+  viewport a cell, orthographic elevations on a metre grid beside the
+  game's own cameras, labels as DOM over the canvas — the pattern for any
+  "every X by every Y" sheet. `world-harness.tsx` stands one seed
   up, lets the bot ride it and draws named views through the game's own
   renderer. Vite builds only `index.html`, so a harness never ships.
   `audition.mjs` is the third shape — a page WRITTEN by the script, played

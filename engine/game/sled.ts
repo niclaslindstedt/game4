@@ -30,7 +30,7 @@
 
 import { angleDiff, approach, clamp } from "../lib/math.ts";
 import { fromEuler, integrate, rotate, toEuler, unrotate, type Vec3 } from "../lib/quat.ts";
-import { inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
+import { SLED, inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingLoss } from "./flight.ts";
 import { chassisContacts } from "./chassis.ts";
@@ -46,6 +46,7 @@ import type { GameEvent, GameState, SledInput, SledState, SnowContact } from "./
 const dt = TUNING.dt;
 const G = TUNING.grip;
 const R = TUNING.rider;
+const ARC = TUNING.arcade;
 
 /** The bump stop's rate and damping as multiples of the spring's own, and
  * the most any one probe may ever push, as a multiple of the load it
@@ -69,6 +70,9 @@ const DRAG_FADE = 0.3;
  * (the vertical closing per metre of ray) to count as meeting it. */
 const RAY_STEPS = 3;
 const RAY_GRAZE = 0.15;
+/** The least cosine between a strut and the snow's normal the normal force
+ * is resolved through — a strut lying along the snow carries it nothing. */
+const TILT_MIN = 0.5;
 
 /** A sled at rest with nothing read yet; `standSled` puts it somewhere. */
 export function freshSled(spec: SledSpec): SledState {
@@ -326,9 +330,17 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     touching += 1;
     const vn = pvx * normal.x + pvy * normal.y + pvz * normal.z;
     if (-vn > impact) impact = -vn;
-    // The spring pushes the chassis up its own axis, at the attachment.
-    push(ax, ay, az, up.x * spring, up.y * spring, up.z * spring);
-    const load = spring * Math.max(0, up.x * normal.x + up.y * normal.y + up.z * normal.z);
+    // THE SNOW ANSWERS ALONG ITS OWN NORMAL. What it can push with is a
+    // normal force, and what the strut carries is that force's share along
+    // the strut — the linkage takes the rest — so the normal force is the
+    // spring over the cosine between the two, and nothing sideways: holding
+    // sideways is the grip's, below. Pushed up the body's own axis instead,
+    // a chassis rolled out of a turn on its springs was shoved out of the
+    // turn by the tilt — a tenth of its weight, sideways, that no grip had
+    // paid for — and every sled pushed wide at 0.9 g whatever its skis held.
+    const tilt = up.x * normal.x + up.y * normal.y + up.z * normal.z;
+    const load = Math.min(spring / Math.max(TILT_MIN, tilt), MAX_LOAD * p.rest);
+    push(ax, ay, az, normal.x * load, normal.y * load, normal.z * load);
     contact.touching = true;
     contact.load = load;
     loadSum += load;
@@ -347,17 +359,30 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const side = cross(normal.x, normal.y, normal.z, tx, ty, tz);
     const vf = pvx * tx + pvy * ty + pvz * tz;
     const vl = pvx * side.x + pvy * side.y + pvz * side.z;
-    gripAt(packed, grip, fit.powderDrive, fit.packedSide);
+    gripAt(packed, grip, fit);
     if (ice > 0) onIce(grip, ice);
     let along = 0;
     let across = 0;
     if (p.kind === "tread") {
+      // COMBINED SLIP: the belt slipping along its length and the snow
+      // sliding across it are one slip, and the grip is one budget spent
+      // along that slip's direction (the friction ellipse — the belt's shear
+      // on snow saturating with how far it has been sheared, Janosi and
+      // Hanamoto, in its velocity form). So a belt spinning under full
+      // throttle has little left to hold the tail with and the tail walks
+      // out — the power slide a rider steers with — and a belt LOCKED by the
+      // brake slides whichever way the sled is going, so the tail comes
+      // round; with neither, all of it holds.
       const slip = c.treadSpeed - vf;
-      const drive = grip.tread * bite * load * Math.tanh(slip / G.slipRef);
+      const sx = slip / G.slipRef;
+      const sy = vl / G.sideRef;
+      const sheared = Math.hypot(sx, sy);
+      const share = sheared > 1e-6 ? Math.tanh(sheared) / sheared : 1;
+      const drive = grip.tread * bite * load * sx * share;
       beltReaction += drive;
       slipSum += slip;
       along += drive;
-      across -= grip.treadSide * load * Math.tanh(vl / G.sideRef);
+      across -= grip.treadSide * ARC.sideGrip * load * sy * share;
       // THE CARVE: a tread rolled onto its edge in powder bites toward the
       // low side, once there is way on to carve with.
       across +=
@@ -367,7 +392,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
         Math.sin(rollRel) *
         clamp(Math.abs(vf) / R.carveSpeed, 0, 1);
     } else {
-      across -= grip.ski * skiBite(c, p.side) * load * Math.tanh(vl / G.sideRef);
+      across -= grip.ski * ARC.sideGrip * skiBite(c, p.side) * load * Math.tanh(vl / G.sideRef);
     }
     const drag = snowDrag(
       packed,
@@ -398,7 +423,13 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   const grounded = touching > 0;
 
   // ── The belt and the engine ───────────────────────────────────────────
-  c.treadSpeed = stepTread(spec, c.treadSpeed, c.rpm, c.throttle, c.brake, beltReaction, dt);
+  // THE RIDER'S THUMB (`arcade.brakeSlip`): a pinned lever holds the belt
+  // just short of lock, still turning at the way less the slip it brakes
+  // hardest at, rather than locking it — a locked belt has no sideways
+  // hold left, and a heavy tail on one comes round. On the snow only; in
+  // the air the brake stops the belt dead, which is the gyro's nose-down.
+  const floor = grounded ? Math.max(0, c.way - ARC.brakeSlip) : 0;
+  c.treadSpeed = stepTread(spec, c.treadSpeed, c.rpm, c.throttle, c.brake, beltReaction, dt, floor);
   c.rpm = stepRpm(spec, c.rpm, c.throttle, c.treadSpeed, dt);
   c.slip = grounded ? slipSum / Math.max(1, probes.length - 2) : 0;
 
@@ -425,8 +456,19 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const packed = c.packed;
     const target = c.steer * (R.rollPacked * packed + R.rollPowder * (1 - packed));
     const hold = clamp((1.3 - Math.abs(rollRel)) / 0.4, 0, 1);
+    // Stated on the reference machine and scaled by this one's weight
+    // times its height: the moment a bend puts on a machine goes as both,
+    // so the same hold on a heavier, taller one was a rider who let the
+    // touring sled over at 113 km/h on a bend the crossover took flat.
+    const heave = (m * spec.cogHeight) / (totalMass(SLED) * SLED.cogHeight);
     tb.z +=
-      clamp(R.rollStiff * (rollRel - target) - R.rollDamp * c.wz, -R.rollMax, R.rollMax) * hold;
+      clamp(
+        R.rollStiff * (rollRel - target) - R.rollDamp * c.wz,
+        -R.rollMax * ARC.hangOff,
+        R.rollMax * ARC.hangOff,
+      ) *
+      heave *
+      hold;
     // THE YAW HELD (`steer.yawHold`): toward the rate the skis ask for, no
     // more than the grip can turn the way at, and the nose held to the way
     // the sled is actually going.
@@ -436,8 +478,14 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const reach = Math.abs(way) > 1 ? (cornerGrip(spec, packed) * S.pathShare) / Math.abs(way) : 0;
     const asked = clamp((way * Math.tan(c.skiAngle)) / S.base, -reach, reach);
     const slip = flat > S.slipFrom && way > 0 ? angleDiff(Math.atan2(c.vx, c.vz), c.heading) : 0;
+    // Stated in N·m on the reference machine and scaled by this one's yaw
+    // inertia: a hand on the yaw is an ACCELERATION, and the same torque on
+    // a heavier machine is a weaker hand — the touring sled spun where the
+    // crossover held.
+    const heft = I.y / inertiaOf(SLED).y;
     tb.y +=
       clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) *
+      heft *
       hold *
       state.assist.yaw;
   } else {

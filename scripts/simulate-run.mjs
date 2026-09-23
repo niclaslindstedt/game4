@@ -50,7 +50,7 @@ const args = parseArgs(
     max: { kind: "number", default: SIM_SECONDS, help: "give up after this much race time, s" },
     sled: {
       kind: "string",
-      default: "crossover",
+      default: "fox",
       help: `the machine (${SLEDS.map((s) => s.id).join(", ")}), or all for the roster`,
     },
     tricks: { kind: "flag", help: "ride each seed's map with its trick field laid (R20)" },

@@ -81,7 +81,7 @@ export function createGhostModel(
       m.root.visible = true;
       observe(track, run.sled, run.tick);
       sample(track, alpha, drawn);
-      m.pose(run.sled, drawn, 0);
+      m.pose(run.sled, drawn, 0, null, 1 / 60);
     },
     dispose: drop,
   };

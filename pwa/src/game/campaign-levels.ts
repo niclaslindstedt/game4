@@ -121,7 +121,7 @@ const FOOTHILLS: CampaignShelf = {
       version: 1,
       digest: "89e93724",
       day: { weather: "clear", hour: 12.38 },
-      medals: { gold: 111, silver: 119, bronze: 128 },
+      medals: { gold: 102, silver: 109, bronze: 116 },
     },
     {
       id: "foothills-3",
@@ -155,7 +155,7 @@ const FOOTHILLS: CampaignShelf = {
       version: 1,
       digest: "44b3c601",
       day: { weather: "fair", hour: 15.12 },
-      medals: { gold: 129, silver: 138, bronze: 149 },
+      medals: { gold: 115, silver: 123, bronze: 132 },
     },
     {
       id: "foothills-6",
@@ -199,7 +199,7 @@ const TIMBERLINE: CampaignShelf = {
       version: 1,
       digest: "5b19be42",
       day: { weather: "clear", hour: 12.54 },
-      medals: { gold: 135, silver: 145, bronze: 156 },
+      medals: { gold: 121, silver: 129, bronze: 138 },
     },
     {
       id: "timberline-3",
@@ -233,7 +233,7 @@ const TIMBERLINE: CampaignShelf = {
       version: 1,
       digest: "0bc8ffe6",
       day: { weather: "high", hour: 12.49 },
-      medals: { gold: 138, silver: 147, bronze: 159 },
+      medals: { gold: 124, silver: 132, bronze: 142 },
     },
     {
       id: "timberline-6",
@@ -277,7 +277,7 @@ const SUMMIT: CampaignShelf = {
       version: 1,
       digest: "35374391",
       day: { weather: "high", hour: 12.08 },
-      medals: { gold: 432, silver: 460, bronze: 495 },
+      medals: { gold: 388, silver: 414, bronze: 444 },
     },
     {
       id: "summit-3",
@@ -311,7 +311,7 @@ const SUMMIT: CampaignShelf = {
       version: 1,
       digest: "d094907e",
       day: { weather: "clear", hour: 17.61 },
-      medals: { gold: 413, silver: 439, bronze: 473 },
+      medals: { gold: 364, silver: 388, bronze: 416 },
     },
     {
       id: "summit-6",

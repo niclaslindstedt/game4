@@ -1,22 +1,25 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE CATALOG: four machines, each an answer to a kind of snow and none a
+// THE CATALOG: six machines, each an answer to a kind of snow and none a
 // point on one scale. Every machine is held to its own documented
 // expectations (`topSpeed`, `accel0to100`) on the groomer; then each is held
-// to what its row CLAIMS — the trail sled quickest on packed snow, the
-// mountain sled floating and paddling in powder, the cross sled taking the
-// landing the others bottom on — and the reference machine's footprint to
-// being exactly the one every shared number was tuned on. Staged on the
+// to what its row CLAIMS — the trail sled holding a groomed bend hardest,
+// the touring sled flat out fastest, the mountain sled paddling through
+// powder, the work sled floating on it, the race sled taking the landing
+// the others bottom on — and the reference machine's footprint to being
+// exactly the one every shared number was tuned on. Staged on the
 // synthetic drag strips (`support/synthetic.ts`) with `placeRun`.
 
 import { describe, expect, it } from "vitest";
 
 import {
-  CROSS_SLED,
-  MOUNTAIN_SLED,
+  BEAVER,
+  BISON,
+  HARE,
+  IBEX,
   NEUTRAL_INPUT,
   SLED,
   SLEDS,
-  TRAIL_SLED,
+  STOAT,
   cornerGrip,
   createGame,
   footprintOf,
@@ -68,33 +71,45 @@ function restSink(spec: SledSpec): number {
 }
 
 describe("the catalog", () => {
-  it("is four machines with their own ids, the crossover the default", () => {
-    expect(SLEDS.map((s) => s.id)).toEqual(["trail", "crossover", "mountain", "cross"]);
-    expect(SLED.id).toBe("crossover");
+  it("is six machines with their own ids, the fox the default", () => {
+    expect(SLEDS.map((s) => s.id)).toEqual(["fox", "hare", "ibex", "stoat", "bison", "beaver"]);
+    expect(SLED.id).toBe("fox");
     for (const s of SLEDS) {
       expect(sledById(s.id)).toBe(s);
       expect(isSledId(s.id)).toBe(true);
       expect(s.blurb.length).toBeGreaterThan(20);
+      expect(s.kind.length).toBeGreaterThan(3);
     }
     expect(sledById("snowcat")).toBe(SLED);
     expect(isSledId("snowcat")).toBe(false);
+    // A pick stored under the catalog's old names falls back to the default.
+    expect(sledById("crossover")).toBe(SLED);
   });
 
   it("keeps every machine inside the real bands it claims", () => {
     for (const s of SLEDS) {
+      // Two-stroke sport sleds 195–235 kg dry; four-stroke work and touring
+      // machines up to 315.
       expect(s.dryMass).toBeGreaterThanOrEqual(190);
-      expect(s.dryMass).toBeLessThanOrEqual(235);
-      // 850-class two-strokes make 165 hp, the turbocharged one 180.
-      expect(s.powerKw).toBeGreaterThanOrEqual(120);
-      expect(s.powerKw).toBeLessThanOrEqual(135);
+      expect(s.dryMass).toBeLessThanOrEqual(315);
+      // A race 600 makes 125–135 hp, a turbocharged four-stroke up to 200.
+      expect(s.powerKw).toBeGreaterThanOrEqual(90);
+      expect(s.powerKw).toBeLessThanOrEqual(150);
       // Mountain stances 34–36 in, trail stances up to 43–44 in.
       expect(s.skiStance).toBeGreaterThanOrEqual(0.86);
       expect(s.skiStance).toBeLessThanOrEqual(1.12);
-      // Belts 120–175 in.
+      // Belts 120–175 in long, 15–24 in wide.
       expect(s.treadLength).toBeGreaterThanOrEqual(3.05);
       expect(s.treadLength).toBeLessThanOrEqual(4.45);
+      expect(s.treadWidth).toBeGreaterThanOrEqual(0.37);
+      expect(s.treadWidth).toBeLessThanOrEqual(0.62);
       expect(s.lugHeight).toBeGreaterThanOrEqual(0.025);
-      expect(s.lugHeight).toBeLessThanOrEqual(0.075);
+      expect(s.lugHeight).toBeLessThanOrEqual(0.08);
+      expect(s.studs).toBeGreaterThanOrEqual(0);
+      expect(s.studs).toBeLessThanOrEqual(160);
+      // Carbides 4–8 in.
+      expect(s.carbide).toBeGreaterThanOrEqual(0.09);
+      expect(s.carbide).toBeLessThanOrEqual(0.21);
     }
   });
 
@@ -105,6 +120,10 @@ describe("the catalog", () => {
     expect(fit.powderDrive).toBe(1);
     expect(fit.packedSide).toBe(1);
     expect(fit.beltLoss).toBe(1);
+    expect(fit.studded).toBe(1);
+    expect(fit.skiBite).toBe(1);
+    expect(fit.skiFloat).toBe(1);
+    expect(fit.belt).toBe(1);
     expect(harshSpeedOf(SLED)).toBeCloseTo(TUNING.air.harshSpeed, 9);
   });
 });
@@ -125,47 +144,47 @@ describe("every machine, on the groomer", () => {
   }
 });
 
-describe("four answers to a kind of snow", () => {
-  it("the trail sled is the quickest flat out on packed snow; the cross, geared short, the slowest", () => {
+describe("six answers to a kind of snow", () => {
+  it("the touring sled is the quickest flat out on packed snow; the race sled, geared short, the slowest", () => {
     const tops = new Map(SLEDS.map((s) => [s.id, topOn(s, PACKED)]));
-    expect(Math.max(...tops.values())).toBe(tops.get("trail"));
-    expect(Math.min(...tops.values())).toBe(tops.get("cross"));
+    expect(Math.max(...tops.values())).toBe(tops.get("bison"));
+    expect(Math.min(...tops.values())).toBe(tops.get("stoat"));
     // ...and the long, tall belt costs the mountain sled the top end of
     // the crossover's, with more power under it.
-    expect(tops.get("mountain")!).toBeLessThan(tops.get("crossover")!);
+    expect(tops.get("ibex")!).toBeLessThan(tops.get("fox")!);
   });
 
-  it("the wide, low trail sled tips last in a bend, the narrow mountain sled first", () => {
+  it("the wide, low trail sled tips last in a bend; the narrow, tall ones first", () => {
     const tips = SLEDS.map(tipLimit);
-    expect(Math.max(...tips)).toBe(tipLimit(TRAIL_SLED));
-    expect(Math.min(...tips)).toBe(tipLimit(MOUNTAIN_SLED));
+    expect(Math.max(...tips)).toBe(tipLimit(HARE));
+    for (const s of [IBEX, BEAVER]) expect(tipLimit(s)).toBeLessThan(tipLimit(SLED));
   });
 
   it("the trail sled holds the groomer hardest in a bend, the mountain pushes widest", () => {
     const grips = SLEDS.map((s) => cornerGrip(s, 1));
-    expect(Math.max(...grips)).toBe(cornerGrip(TRAIL_SLED, 1));
-    expect(Math.min(...grips)).toBe(cornerGrip(MOUNTAIN_SLED, 1));
+    expect(Math.max(...grips)).toBe(cornerGrip(HARE, 1));
+    expect(Math.min(...grips)).toBe(cornerGrip(IBEX, 1));
   });
 
-  it("the mountain sled sinks least and gets going quickest in powder", () => {
+  it("the work sled's wide belt sinks least; the mountain sled's paddles get going quickest in powder", () => {
     const sinks = SLEDS.map(restSink);
-    expect(Math.min(...sinks)).toBe(restSink(MOUNTAIN_SLED));
-    expect(restSink(MOUNTAIN_SLED)).toBeLessThan(TUNING.snow.powderSink * 0.85);
+    expect(Math.min(...sinks)).toBe(restSink(BEAVER));
+    expect(restSink(IBEX)).toBeLessThan(TUNING.snow.powderSink * 0.85);
     const times = SLEDS.map((s) => timeTo(s, POWDER, 50));
-    expect(Math.min(...times)).toBe(timeTo(MOUNTAIN_SLED, POWDER, 50));
-    expect(timeTo(MOUNTAIN_SLED, POWDER, 50)).toBeLessThan(timeTo(SLED, POWDER, 50) * 0.7);
+    expect(Math.min(...times)).toBe(timeTo(IBEX, POWDER, 50));
+    expect(timeTo(IBEX, POWDER, 50)).toBeLessThan(timeTo(SLED, POWDER, 50) * 0.7);
   });
 
-  it("the trail and cross sleds, the least belt under the most weight, bog in powder", () => {
-    for (const s of [TRAIL_SLED, CROSS_SLED]) {
+  it("the trail, race and touring sleds, the least belt under the most weight, bog in powder", () => {
+    for (const s of [HARE, STOAT, BISON]) {
       expect(footprintOf(s).sink).toBeGreaterThan(1);
       expect(timeTo(s, POWDER, 50)).toBeGreaterThan(timeTo(SLED, POWDER, 50));
     }
   });
 
-  it("the cross sled's long, stiff stroke takes the hardest landing whole", () => {
+  it("the race sled's long, stiff stroke takes the hardest landing whole", () => {
     const harsh = SLEDS.map(harshSpeedOf);
-    expect(Math.max(...harsh)).toBe(harshSpeedOf(CROSS_SLED));
-    expect(harshSpeedOf(CROSS_SLED)).toBeGreaterThan(TUNING.air.harshSpeed * 1.2);
+    expect(Math.max(...harsh)).toBe(harshSpeedOf(STOAT));
+    expect(harshSpeedOf(STOAT)).toBeGreaterThan(TUNING.air.harshSpeed * 1.2);
   });
 });

@@ -1,13 +1,13 @@
 ---
 name: sled-tuning
-description: "Use when changing THE MACHINE'S OWN NUMBERS — the spec in `engine/game/defs/sled.ts` (mass, envelope, stance, the tread's footprint, the springs, the engine, the CVT, the brake, the rider's reach), the documented expectations a test holds the physics to (`topSpeed`, `accel0to100`), what separates one rival from another in the field (`Rival.pace`), or adding a machine to the catalog of four. Owns what every per-sled knob buys, the real-machine bands each number must stay inside, and the `make ride` + `make sim` sweep that is the only honest test of a retune. Not the LOOK of the sled (`sled-design`) and not the shared model every sled inherits (`sled-physics`)."
+description: "Use when changing THE MACHINE'S OWN NUMBERS — the spec in `engine/game/defs/sled.ts` (mass, envelope, stance, the tread's footprint, the springs, the engine, the CVT, the brake, the rider's reach), the documented expectations a test holds the physics to (`topSpeed`, `accel0to100`), what separates one rival from another in the field (`Rival.pace`), or adding a machine to the catalog of six. Owns what every per-sled knob buys, the real-machine bands each number must stay inside, and the `make ride` + `make sim` sweep that is the only honest test of a retune. Not the LOOK of the sled (`sled-design`) and not the shared model every sled inherits (`sled-physics`)."
 ---
 
 # Tuning the machine
 
 This skill owns **two questions**: is each sled a believable machine of its
 kind — does it get going, top out, stop, turn and land the way its numbers
-say it will? And is each of the four an ANSWER to a kind of snow rather
+say it will? And is each of the six an ANSWER to a kind of snow rather
 than a point on one scale with a winner?
 
 The answer is measured, never asserted. **Any change to `defs/sled.ts` owes
@@ -25,34 +25,48 @@ The answer is measured, never asserted. **Any change to `defs/sled.ts` owes
 
 ## The catalog
 
-FOUR machines, `SLEDS` in `defs/sled.ts`, in the order the sled card turns
-through them: `TRAIL_SLED`, `SLED` (the CROSSOVER — the reference every
-shared number in `TUNING` was tuned on, and the default), `MOUNTAIN_SLED`
-and `CROSS_SLED`. Each is the crossover's row spread with what differs —
-two steerable skis on independent front suspension, a rubber tread on a
-slide-rail rear, a two-stroke 850 through a CVT, a rider on the saddle.
-Every host reads them through `@engine` (`SLEDS`, `sledById`, `isSledId`).
+SIX machines, `SLEDS` in `defs/sled.ts`, in the order the sled card turns
+through them — best all-round first, the one that asks most of a rider last:
+`SLED` (the FOX, a crossover — the reference every shared number in `TUNING`
+was tuned on, and the default), `HARE` (trail), `IBEX` (mountain), `STOAT`
+(snocross), `BISON` (turbo four-stroke touring) and `BEAVER` (utility). Each
+is a real CLASS, named for an animal that rides the way it does, and the Fox's
+row spread with what differs. Every host reads them through `@engine`
+(`SLEDS`, `sledById`, `isSledId`); ids are the animal names.
 
 | Machine | Its answer | What buys it |
 | --- | --- | --- |
-| trail | quickest on the groomer, bogs in a drift | a short 3.28 m belt of 32 mm lugs (the least belt to turn), a wide 1.09 m stance, firm springs, early engagement |
-| crossover | the middle of every band | 3.71 m of 44 mm lugs, 1.04 m stance — every `footprint.ts` multiplier exactly 1 |
-| mountain | floats and paddles in powder, pushes wide on a packed bend | 3.94 m of 66 mm paddles, the lightest machine, a 0.89 m stance, a turbo, geared low |
-| cross | lands what the others bottom on, sinks in deep powder | stiff springs on the longest travel, a short 3.48 m belt, geared short, revs higher |
+| Fox (crossover) | the middle of every band | 3.71 m of 44 mm lugs, 1.04 m stance — every `footprint.ts` multiplier exactly 1 |
+| Hare (trail) | quickest round a groomed bend, stopped by a drift | short studded belt of 32 mm lugs, the widest stance, low CoG, early engagement |
+| Ibex (mountain) | climbs and floats in powder, pushes on the groomer | 4.19 m × 0.41 of 76 mm paddles, lightest, 0.88 m stance, 4-in carbides, turbo, most lock |
+| Stoat (snocross) | lands anything, turns where it points, runs out of gear | race 600, 144 studs, 8-in carbides, the longest stiffest stroke, geared short |
+| Bison (touring) | fastest flat out, pushes into a bend, sinks in powder | turbo four-stroke 149 kW, 285 kg, flat curve, hard engine braking, bare 29 mm belt |
+| Beaver (utility) | floats over every drift, fights every bend and landing | a belt two feet wide, 305 kg, turbo four-stroke 97 kW, two-speed span, soft short travel |
 
-Real-machine BANDS, so the numbers stay honest (a band, never a make and a
-model — the router's rule): an 850-class sled is 190–235 kg dry, 123–134 kW,
-stance 0.89–1.09 m centre to centre, a belt of 3.2–4.0 m by 0.38 m with
-25–75 mm lugs, a CVT ratio span of 3–4, and 145–170 km/h flat out on a
-groomed trail. A machine outside those bands is a different vehicle and
-says so in its comment.
+Real-machine BANDS (a band, never a make and a model — the router's rule):
+two-stroke sport sleds are 195–235 kg dry, four-stroke touring and work sleds
+up to 315; 97 kW (a race 600) to 149 kW (the strongest turbo four-stroke);
+stance 0.86–1.09 m; belts 3.28–4.19 m by 0.38–0.61 m with 25–76 mm lugs;
+96–144 studs on trail and race belts, none on deep-snow and work belts;
+carbides 4–8 in. `tests/catalog_test.ts` holds every row inside them.
+
+WHERE THE SKIS AND THE BELT STAND IS TRACED: each class's side profile in
+`pwa/src/game/sled-looks.ts` (off a studio photograph of a real machine of the
+class) gives the ski line and the belt's run — from the rear idler to where the
+belt leaves a hard floor, plus 0.1 m for the rails' curved front, which bears
+in snow — and the CoG is placed between them to keep the class's ski share.
+Move `skiForward`, `treadFront` or `treadRear` and the drawing is stretched off
+its trace: `tests/livery_test.ts` holds the stretch to 1 ± 0.03.
 
 The per-sled half of the snow model is `engine/game/footprint.ts`: each
-machine's ground pressure and lug height turned into multipliers on the
-shared numbers (the sink, the planing speed, the powder paddle, the packed
-side grip, the belt's own losses) — all exactly 1 on the crossover. A knob
-that should change how a machine meets snow goes through there, never
-through a branch on its id.
+machine's ground pressure, lugs, studs, carbides, ski width and belt mass
+turned into multipliers on the shared numbers (the sink, the planing speed,
+the powder paddle, the packed side grip, the belt's own losses, the studs'
+packed grip, the skis' packed bite and powder float, the belt's mass) — all
+exactly 1 on the Fox. A knob that should change how a machine meets snow
+goes through there, never through a branch on its id. The engine's
+character — a two-stroke's peaky `curve` 2 against a turbo four-stroke's 3,
+and its `engineBrake` — is the spec's.
 
 ## Where the numbers live
 
@@ -80,6 +94,9 @@ on the spec that the model reads, never an `if (spec.id === …)`.
 | `gearTop`, `gearSpan`, `driveline` | The CVT: the belt speed at the redline in top, how much slower in low, what reaches the snow |
 | `cdA` | Air drag at speed (the belt's own losses are bigger) |
 | `skiLock` | Full lock at a standstill; `skiLockAt` fades it with speed |
+| `carbide`, `skiWidth` | The skis' bite on the groomer, and their float and steer in powder |
+| `studs` | The tread's packed grip — driving, braking, sideways; nothing in powder |
+| `curve`, `engineBrake` | The power curve's shape (2 two-stroke, 3 turbo four-stroke) and how hard a shut throttle brakes the belt |
 | `brakeForce` | What the disc can put on the belt |
 | `riderHeight`, `riderReach` | How far his weight moves, and how high it acts |
 | `topSpeed`, `accel0to100` | NOT INPUTS — documented expectations |
@@ -108,8 +125,10 @@ too fast or too slow is a `RACE` / pace change measured with
 
 1. **State the target** as a figure and a band: "0–100 km/h in 4–5 s on the
    groomer, and the sled planes by 40 km/h in powder".
-2. **Baseline**: `make ride ARGS="--sled all"` on `rest`, `rest-powder`,
-   `accel`, `accel-powder`, `brake`, `turn`, `kicker`; `make sim ARGS="--sled
+2. **Baseline**: `make ride ARGS=--card` — THE ROSTER CARD, one row a
+   machine, the figures that tell the classes apart — then `make ride
+   ARGS="--sled all"` on `rest`, `rest-powder`, `accel`, `accel-powder`,
+   `brake`, `turn-in`, `turn-power`, `kicker`; `make sim ARGS="--sled
    all"` — the roster table, one column a machine, `*` on the quickest per
    seed, and the `pow` column saying how much of each loop is drifted.
 3. **Move the one knob** that owns the figure (table above). Stay in the
@@ -125,9 +144,10 @@ too fast or too slow is a `RACE` / pace change measured with
 ## The roster is judged as a roster
 
 `make sim ARGS="--sled all" COUNT=12` is the verdict: NO machine best
-everywhere — the mountain sled wins the powder-heavy seeds (a high `pow`),
-the trail sled the packed ones, and every machine wins somewhere or has a
-reason in its blurb not to. A retune that makes one machine sweep the table
+everywhere — the Ibex wins the powder-heavy seeds (a high `pow`), the Hare
+the packed ones, the Stoat a mixed one, and every machine wins somewhere or
+has a reason in its blurb not to (the Fox is best at nothing by design, the
+Bison hates a bend, the Beaver is a tractor). A retune that makes one machine sweep the table
 has collapsed the catalog back to one sled, whatever `tests/catalog_test.ts`
 says about each row alone.
 
@@ -144,10 +164,12 @@ crossover in the middle of every band, the mountain sled best in powder and
 the trail sled worst. A retune that breaks one of those has changed what a
 machine IS, and its `blurb` moves with it.
 
-## Adding a fifth machine
+## Adding a seventh machine
 
 A row spread from `SLED` with what differs, added to `SLEDS` (the card turns
-through it in that order) and to `SledId`; its own ANSWER to a kind of snow,
+through it in that order — by goodness) and to `SledId`, with a traced look
+(`sled-looks.ts`, the `lab-tooling` trace-and-overlay loop), four liveries
+(`sled-liveries.ts`) and its ski line and belt run read off the trace; its own ANSWER to a kind of snow,
 never a point between two others. It owes a `tests/catalog_test.ts` row, a
 column in the roster table, and a LOOK at the card and in the race: the
 builder draws it off the spec (`sled-design`), so a tread or a stance out of

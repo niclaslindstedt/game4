@@ -1,10 +1,15 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE RIDER — a figure in a winter suit and a helmet, hung on the points
-// `rider-pose.ts` works out: capsules for the limbs (each its own fixed
-// length, only ever turned, never stretched), a torso, a helmet with its
-// visor. Low-poly on purpose; at chase range he is a silhouette, and what
-// matters is that the silhouette MOVES — hangs off into a turn, stands for
-// the air, folds on a landing.
+// THE RIDER — a sled racer in his kit, hung on the points `rider-pose.ts`
+// works out. Drawn after the way a sled is actually ridden and dressed: a
+// motocross helmet with its PEAK over the goggles and a chin bar jutting to
+// a point, the goggles' band and mirrored lens across the front; a padded
+// winter jacket, broad at the chest and tapering to the waist, with a
+// contrasting YOKE over the shoulders and cuffs at the wrists; bulky
+// insulated pants; gauntlet gloves; tall boots. Low-poly on purpose — at
+// chase range he is a silhouette — and every part is a fixed shape only
+// ever turned and moved, never stretched, so the silhouette MOVES: up off
+// the seat on the move, hung off the inside of a turn, stood tall in the
+// air, folded on his knees by a landing.
 
 import * as THREE from "three";
 
@@ -17,7 +22,17 @@ import {
   type V3,
 } from "./rider-pose.ts";
 
-export type RiderStyle = { jacket: number; pants: number; helmet: number; visor: number };
+export type RiderStyle = {
+  jacket: number;
+  pants: number;
+  helmet: number;
+  visor: number;
+  /** The jacket's yoke and cuffs — the kit's second colour; the jacket's
+   * own when left out. */
+  accent?: number;
+  /** The helmet's peak; the helmet's own when left out. */
+  peak?: number;
+};
 
 export type RiderFigure = {
   group: THREE.Group;
@@ -37,74 +52,107 @@ export function createRider(
   const group = new THREE.Group();
   const geos: THREE.BufferGeometry[] = [];
   const mats: THREE.Material[] = [];
-  const mat = (colour: number, rough = 0.8, name = "rider") => {
-    const m = wrap(new THREE.MeshStandardMaterial({ color: colour, roughness: rough }), name);
+  const mat = (colour: number, rough = 0.8, metal = 0, name = "rider") => {
+    const m = wrap(
+      new THREE.MeshStandardMaterial({ color: colour, roughness: rough, metalness: metal }),
+      name,
+    );
     mats.push(m);
     return m;
   };
   const jacket = mat(style.jacket, 0.7);
+  const accent = mat(style.accent ?? style.jacket, 0.6);
   const pants = mat(style.pants, 0.85);
-  const glove = mat(0x1b1d22, 0.8);
-  const helmet = mat(style.helmet, 0.35);
-  const visor = mat(style.visor, 0.15);
+  const glove = mat(0x17191d, 0.75);
+  const helmet = mat(style.helmet, 0.3);
+  const peakMat = mat(style.peak ?? style.helmet, 0.35);
+  const lens = mat(style.visor, 0.12, 0.6);
+  const strap = mat(0x101114, 0.6);
 
-  const limb = (length: number, radius: number, m: THREE.Material) => {
-    const g = new THREE.CapsuleGeometry(radius, length, 3, 8);
+  const geo = <G extends THREE.BufferGeometry>(g: G): G => {
     geos.push(g);
+    return g;
+  };
+  const part = (g: THREE.BufferGeometry, m: THREE.Material, parent: THREE.Object3D = group) => {
     const mesh = new THREE.Mesh(g, m);
     mesh.castShadow = true;
-    group.add(mesh);
+    parent.add(mesh);
     return mesh;
   };
-  const thighs = [limb(BODY.thigh, 0.075, pants), limb(BODY.thigh, 0.075, pants)];
-  const shins = [limb(BODY.shin, 0.062, pants), limb(BODY.shin, 0.062, pants)];
-  const upper = [limb(BODY.upperArm, 0.06, jacket), limb(BODY.upperArm, 0.06, jacket)];
-  const fore = [limb(BODY.forearm, 0.052, jacket), limb(BODY.forearm, 0.052, jacket)];
-  const torso = limb(BODY.spine - 0.1, 0.16, jacket);
-  torso.scale.set(1.05, 1, 0.78);
-  const bootGeo = new THREE.BoxGeometry(0.12, 0.12, 0.3);
-  geos.push(bootGeo);
+  /** A limb: a capsule laid along +y, hung between two points by `place`. */
+  const limb = (length: number, radius: number, m: THREE.Material) =>
+    part(geo(new THREE.CapsuleGeometry(radius, length, 3, 8)), m);
+
+  // THE LEGS: bulky insulated pants, the thigh the thickest part of him.
+  const thighs = [0, 1].map(() => limb(BODY.thigh, 0.085, pants));
+  const shins = [0, 1].map(() => limb(BODY.shin, 0.068, pants));
+  // Tall boots: a shaft up the lower shin and a foot on the board.
+  const bootShaftGeo = geo(new THREE.CylinderGeometry(0.075, 0.08, 0.24, 8));
+  const bootFootGeo = geo(new THREE.BoxGeometry(0.13, 0.1, 0.3));
   const boots = [0, 1].map(() => {
-    const b = new THREE.Mesh(bootGeo, glove);
-    b.castShadow = true;
-    group.add(b);
-    return b;
+    const g = new THREE.Group();
+    group.add(g);
+    part(bootFootGeo, glove, g).position.set(0, 0.03, 0.05);
+    return g;
   });
-  const handGeo = new THREE.SphereGeometry(0.055, 8, 6);
-  geos.push(handGeo);
-  const hands = [0, 1].map(() => {
-    const h = new THREE.Mesh(handGeo, glove);
-    group.add(h);
-    return h;
-  });
+  const shafts = [0, 1].map(() => part(bootShaftGeo, glove));
+
+  // THE ARMS: jacket sleeves, a contrasting cuff, and gauntlet gloves.
+  const upper = [0, 1].map(() => limb(BODY.upperArm, 0.066, jacket));
+  const fore = [0, 1].map(() => limb(BODY.forearm, 0.058, jacket));
+  const cuffGeo = geo(new THREE.CylinderGeometry(0.07, 0.07, 0.08, 8));
+  const cuffs = [0, 1].map(() => part(cuffGeo, accent));
+  const handGeo = geo(new THREE.BoxGeometry(0.1, 0.09, 0.13));
+  const hands = [0, 1].map(() => part(handGeo, glove));
+
+  // THE TORSO, in its own frame: y up the spine from the hips, z out of
+  // the chest. A padded jacket broad at the chest and narrowing to the
+  // waist, the yoke over the shoulders, a collar, the pelvis under it.
+  const torso = new THREE.Group();
+  group.add(torso);
+  const chest = part(
+    geo(new THREE.CylinderGeometry(0.2, 0.15, BODY.spine - 0.06, 10)),
+    jacket,
+    torso,
+  );
+  chest.position.y = (BODY.spine - 0.06) / 2 + 0.02;
+  chest.scale.set(1, 1, 0.72);
+  const yoke = part(geo(new THREE.CylinderGeometry(0.215, 0.205, 0.14, 10)), accent, torso);
+  yoke.position.y = BODY.spine - 0.1;
+  yoke.scale.set(1, 1, 0.76);
+  const shoulderGeo = geo(new THREE.SphereGeometry(0.085, 8, 6));
+  for (const side of [-1, 1]) {
+    part(shoulderGeo, accent, torso).position.set(side * BODY.shoulder, BODY.spine - 0.07, 0);
+  }
+  const collar = part(geo(new THREE.CylinderGeometry(0.075, 0.1, 0.07, 8)), accent, torso);
+  collar.position.y = BODY.spine + 0.01;
+  const pelvis = part(geo(new THREE.BoxGeometry(0.3, 0.16, 0.22)), pants, torso);
+  pelvis.position.y = -0.02;
+
+  // THE HELMET, in its own frame: z forward, y up.
   const headGroup = new THREE.Group();
   group.add(headGroup);
-  const shell = new THREE.SphereGeometry(0.15, 14, 10);
-  geos.push(shell);
-  const helm = new THREE.Mesh(shell, helmet);
-  helm.scale.set(0.95, 1, 1.08);
-  helm.castShadow = true;
-  headGroup.add(helm);
-  const visorGeo = new THREE.SphereGeometry(
-    0.152,
-    12,
-    6,
-    Math.PI * 0.18,
-    Math.PI * 0.64,
-    Math.PI * 0.35,
-    Math.PI * 0.25,
+  const shell = part(geo(new THREE.SphereGeometry(0.15, 14, 10)), helmet, headGroup);
+  shell.scale.set(0.94, 1, 1.1);
+  // The chin bar, jutting forward and down to a point.
+  const chin = part(geo(new THREE.ConeGeometry(0.1, 0.17, 4)), helmet, headGroup);
+  chin.rotation.set(Math.PI / 2 + 0.55, Math.PI / 4, 0);
+  chin.position.set(0, -0.085, 0.15);
+  chin.scale.set(1, 1, 0.6);
+  // The goggles: a strap round the shell and the lens across the eye port.
+  const band = part(
+    geo(new THREE.CylinderGeometry(0.152, 0.152, 0.05, 14, 1, true)),
+    strap,
+    headGroup,
   );
-  geos.push(visorGeo);
-  const vis = new THREE.Mesh(visorGeo, visor);
-  vis.scale.set(0.97, 1, 1.1);
-  headGroup.add(vis);
-  // The chin bar of a snocross helmet, jutting forward.
-  const chinGeo = new THREE.BoxGeometry(0.16, 0.07, 0.12);
-  geos.push(chinGeo);
-  const chin = new THREE.Mesh(chinGeo, helmet);
-  chin.position.set(0, -0.08, 0.12);
-  chin.rotation.x = 0.3;
-  headGroup.add(chin);
+  band.scale.set(0.95, 1, 1.1);
+  band.position.y = 0.005;
+  const goggle = part(geo(new THREE.BoxGeometry(0.19, 0.065, 0.05)), lens, headGroup);
+  goggle.position.set(0, 0.005, 0.158);
+  // The PEAK over the goggles, raked up and out past the brow.
+  const peak = part(geo(new THREE.BoxGeometry(0.22, 0.014, 0.17)), peakMat, headGroup);
+  peak.position.set(0, 0.09, 0.14);
+  peak.rotation.x = -0.28;
 
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();
@@ -116,6 +164,18 @@ export function createRider(
     dir.copy(b).sub(a).normalize();
     mesh.quaternion.setFromUnitVectors(Y, dir);
   };
+  /** A short part set `at` a share of the way from one point to another,
+   * turned along the line between them. */
+  const along = (mesh: THREE.Object3D, from: V3, to: V3, at: number) => {
+    place(mesh, from, to);
+    a.set(from.x, from.y, from.z);
+    b.set(to.x, to.y, to.z);
+    mesh.position.copy(a).lerp(b, at);
+  };
+  const spineUp = new THREE.Vector3();
+  const chestOut = new THREE.Vector3();
+  const across = new THREE.Vector3();
+  const basis = new THREE.Matrix4();
 
   return {
     group,
@@ -141,13 +201,30 @@ export function createRider(
       };
       place(thighs[i], hip, p.knees[i]);
       place(shins[i], p.knees[i], p.feet[i]);
+      along(shafts[i], p.knees[i], p.feet[i], 0.78);
       place(upper[i], p.shoulders[i], p.elbows[i]);
       place(fore[i], p.elbows[i], p.hands[i]);
-      boots[i].position.set(p.feet[i].x, p.feet[i].y - 0.02, p.feet[i].z + 0.06);
+      along(cuffs[i], p.elbows[i], p.hands[i], 0.86);
+      boots[i].position.set(p.feet[i].x, p.feet[i].y - 0.04, p.feet[i].z);
+      place(hands[i], p.elbows[i], p.hands[i]);
       hands[i].position.set(p.hands[i].x, p.hands[i].y, p.hands[i].z);
     }
-    place(torso, p.hips, p.neck);
+    // The torso's frame: up the spine, across the shoulders, out of the
+    // chest — so the jacket turns with the hang as well as the pitch.
+    spineUp.set(p.neck.x - p.hips.x, p.neck.y - p.hips.y, p.neck.z - p.hips.z).normalize();
+    across
+      .set(
+        p.shoulders[1].x - p.shoulders[0].x,
+        p.shoulders[1].y - p.shoulders[0].y,
+        p.shoulders[1].z - p.shoulders[0].z,
+      )
+      .normalize();
+    chestOut.crossVectors(across, spineUp).normalize();
+    across.crossVectors(spineUp, chestOut).normalize();
+    basis.makeBasis(across, spineUp, chestOut);
+    torso.quaternion.setFromRotationMatrix(basis);
+    torso.position.set(p.hips.x, p.hips.y, p.hips.z);
     headGroup.position.set(p.head.x, p.head.y, p.head.z);
-    headGroup.rotation.set(-0.25 + p.pitch * 0.35, 0, -p.roll * 0.5);
+    headGroup.rotation.set(-0.2 + p.pitch * 0.3, 0, -p.roll * 0.35);
   }
 }

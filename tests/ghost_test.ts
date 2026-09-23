@@ -43,7 +43,7 @@ import { recordId, type RecordBook, type RecordKey } from "../pwa/src/game/recor
 import { LONE_TREE, syntheticLevel } from "./support/synthetic.ts";
 
 const LEVEL = syntheticLevel({ laps: 1 });
-const KEY: RecordKey = { seed: 7, sled: "crossover", mode: "timeTrial", laps: 1 };
+const KEY: RecordKey = { seed: 7, sled: "fox", mode: "timeTrial", laps: 1 };
 const TICKET: RunTicket = { key: KEY, assist: { yaw: 1, air: 1 } };
 /** Long enough for the bot to take a lap of the stadium and the lights. */
 const MAX_STEPS = 240 * TUNING.physicsHz;

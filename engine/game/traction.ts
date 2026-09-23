@@ -5,7 +5,11 @@
 // between the two, and the engine that turns it.
 //
 // THE ENGINE is a power curve (`powerShare`) over rpm, rising to its peak at
-// `peakRpm` and falling past it to the limiter at `maxRpm`.
+// `peakRpm` and falling past it to the limiter at `maxRpm`. Its SHAPE under
+// the peak is the spec's `curve`: a two-stroke's (2) has little down low and
+// rushes onto the pipe, a turbocharged four-stroke's (3) is broad and flat
+// through the midrange. Shut, a four-stroke's compression brakes the belt
+// far harder than a two-stroke's (`engineBrake`, the spec's).
 //
 // THE CVT is modelled by what it does rather than by its sheaves: with the
 // throttle open it holds the engine at the rpm the lever asks for — from the
@@ -17,8 +21,9 @@
 // speed so a standing start is the clutch slipping rather than a division by
 // zero, and capped at what the peak torque can do through the lowest ratio.
 //
-// THE BELT (`stepTread`) is a mass of its own (`tread.beltMass`): the engine
-// pushes it, the snow pushes back through the grip, its own rails and idlers
+// THE BELT (`stepTread`) is a mass of its own (`tread.beltMass` on the
+// reference's belt, more rubber on a longer, wider one — `footprint.ts`):
+// the engine pushes it, the snow pushes back through the grip, its own rails and idlers
 // drag it, and the brake clamps it. It can spin faster than the sled is going
 // — wheelspin, in powder or off the line — and in the air it spins up free.
 // It never runs backwards: the drive is one-way.
@@ -35,7 +40,7 @@ const RPM_TO_RAD = (2 * Math.PI) / 60;
 export function powerShare(spec: SledSpec, rpm: number): number {
   if (rpm <= spec.peakRpm) {
     const x = clamp((rpm - spec.idleRpm) / (spec.peakRpm - spec.idleRpm), 0, 1);
-    return 0.12 + 0.88 * x * (2 - x);
+    return 0.12 + 0.88 * (1 - Math.pow(1 - x, spec.curve));
   }
   const x = clamp((rpm - spec.peakRpm) / (spec.maxRpm - spec.peakRpm), 0, 1.5);
   return 1 - 0.25 * x * x;
@@ -66,7 +71,7 @@ export function driveForce(
 ): number {
   const top = rpmAtTop(spec, treadSpeed);
   if (throttle <= 0.01 || rpm < spec.engageRpm * 0.95) {
-    return top > spec.engageRpm ? -T.engineBrake * treadSpeed : 0;
+    return top > spec.engageRpm ? -spec.engineBrake * treadSpeed : 0;
   }
   const power = spec.powerKw * 1000 * powerShare(spec, rpm) * throttle * spec.driveline;
   let force = Math.min(power / Math.max(treadSpeed, T.launchFloor), maxDriveForce(spec));
@@ -87,7 +92,8 @@ export function rpmGoal(spec: SledSpec, throttle: number, treadSpeed: number): n
 /** THE BELT'S STEP: advance its speed by the drive, the snow's reaction
  * (`ground`, N, the sum of the forces the tread's grip put INTO the snow —
  * positive when the belt is pushing the sled forward), its own losses and
- * the brake (0..1). Returns the new belt speed, m/s. */
+ * the brake (0..1), which never clamps it below `floor` m/s. Returns the
+ * new belt speed, m/s. */
 export function stepTread(
   spec: SledSpec,
   treadSpeed: number,
@@ -96,16 +102,21 @@ export function stepTread(
   brake: number,
   ground: number,
   dt: number,
+  floor = 0,
 ): number {
   const v = treadSpeed;
   // More belt is more rail, more idler and more rubber to flex round them.
-  const loss = (T.lossLin * v + T.lossQuad * v * v) * footprintOf(spec).beltLoss;
+  const fit = footprintOf(spec);
+  const loss = (T.lossLin * v + T.lossQuad * v * v) * fit.beltLoss;
   const net = driveForce(spec, rpm, throttle, v) - ground - loss;
-  let next = v + (net / T.beltMass) * dt;
+  const mass = T.beltMass * fit.belt;
+  let next = v + (net / mass) * dt;
   // The brake is a clamp: it takes up to its force's worth of belt speed
   // off toward zero and holds the belt there if that is enough.
-  const clampDv = (spec.brakeForce * brake * dt) / T.beltMass;
-  if (next > 0) next = Math.max(0, next - clampDv);
+  // `floor` is the slowest the brake may hold the belt at, m/s — the
+  // rider's thumb (`arcade.brakeSlip`): a belt already below it is left be.
+  const clampDv = (spec.brakeForce * brake * dt) / mass;
+  if (next > 0) next = Math.max(Math.min(next, floor), next - clampDv);
   return Math.max(0, next);
 }
 

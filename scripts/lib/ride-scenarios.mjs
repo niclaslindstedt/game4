@@ -28,6 +28,25 @@ function timeTo(run, kmh) {
   return f ? f.t : null;
 }
 
+/** THE GOVERNOR: throttle and brake that hold a sled at `kmh` — a firm
+ * proportional hand on the lever, with the brake only for a real overshoot.
+ * A turn measured at "60 km/h" on a fixed throttle drifts to whatever speed
+ * that throttle finds in the bend, and the radius goes as the speed squared,
+ * so a figure taken without it is a figure about the throttle. */
+function hold(st, kmh) {
+  const err = kmh / 3.6 - st.sled.speed;
+  return {
+    throttle: Math.min(1, Math.max(0, 0.35 + 0.5 * err)),
+    brake: Math.min(1, Math.max(0, -0.5 * err - 0.4)),
+  };
+}
+
+/** The mean of `f` over the frames from `from` s to the end. */
+function tail(run, from, f) {
+  const fs = run.frames.filter((x) => x.t >= from);
+  return fs.reduce((s, x) => s + f(x), 0) / Math.max(1, fs.length);
+}
+
 const fmt = (v, d = 2) => (v === null || v === undefined ? "—" : Number(v).toFixed(d));
 
 function accel(run) {
@@ -125,11 +144,16 @@ const dug = new WeakMap();
 function trench(run) {
   const stuck = run.events.find((e) => e.kind === "stuck");
   const deepest = run.frames.reduce((m, f) => Math.max(m, f.trench), 0);
+  // Two moments, because they are two different things: the hole PACKED
+  // BACK by the rocking (the trench's own mechanic), and the sled RIDDEN
+  // OFF — which also asks whether the face it nosed into lets it turn away.
+  const packed = stuck ? run.frames.find((f) => f.t > stuck.t && f.trench === 0) : null;
   const out = stuck ? run.frames.find((f) => f.t > stuck.t && f.trench === 0 && f.speed > 2) : null;
   return [
     ["trenched at s", stuck ? fmt(stuck.t) : "—"],
     ["deepest m", fmt(deepest, 3)],
-    ["out at s", out ? fmt(out.t) : "—"],
+    ["packed back at s", packed ? fmt(packed.t) : "—"],
+    ["rode off at s", out ? fmt(out.t) : "—"],
     ["resets", run.events.filter((e) => e.kind === "reset").length],
   ];
 }
@@ -264,7 +288,7 @@ export const SCENARIOS = [
     place: () => ({ x: 1500, z: 400, heading: 0, speed: 60 / 3.6 }),
     seconds: 8,
     view: "plan",
-    input: (t, st) => ({ ...FULL, steer: 1, throttle: st.sled.speed * 3.6 < 60 ? 0.7 : 0.25 }),
+    input: (t, st) => ({ ...FULL, steer: 1, ...hold(st, 60) }),
     measure: turn,
   },
   {
@@ -274,9 +298,82 @@ export const SCENARIOS = [
     place: () => ({ x: 1500, z: 400, heading: 0, speed: 100 / 3.6 }),
     seconds: 6,
     view: "plan",
-    input: (t, st) => ({ ...FULL, steer: 1, throttle: st.sled.speed * 3.6 < 100 ? 1 : 0.4 }),
+    input: (t, st) => ({ ...FULL, steer: 1, ...hold(st, 100) }),
     measure: turn,
   },
+  {
+    id: "turn-in",
+    title: "the bars thrown to full lock at 80 km/h on packed snow",
+    level: (S) => S.flatLevel({ packed: 1 }),
+    place: () => ({ x: 1500, z: 400, heading: 0, speed: 80 / 3.6 }),
+    seconds: 5,
+    view: "plan",
+    input: (t, st) => ({ ...FULL, steer: t >= 0.5 ? 1 : 0, ...hold(st, 80) }),
+    // HOW QUICKLY IT ANSWERS THE BARS: the time from the bars going over to
+    // nine tenths of the yaw rate it settles at, how far round it has come a
+    // second after, and the lateral g it settles at — the three numbers that
+    // separate a sled that darts from one that pushes.
+    measure: (run) => {
+      const settled = tail(run, 3.5, (f) => f.wy);
+      const at = run.frames.find((f) => f.t >= 0.5 && Math.abs(f.wy) >= 0.9 * Math.abs(settled));
+      const h0 = run.frames.find((f) => f.t >= 0.5).heading;
+      const h1 = run.frames.find((f) => f.t >= 1.5).heading;
+      let turned = h1 - h0;
+      turned = Math.atan2(Math.sin(turned), Math.cos(turned));
+      const v = tail(run, 3.5, (f) => f.speed);
+      return [
+        ["to 90% yaw s", at ? fmt(at.t - 0.5) : "—"],
+        ["turned in 1 s deg", fmt(Math.abs(turned) * 57.3, 0)],
+        ["settled g", fmt((v * Math.abs(settled)) / 9.81, 2)],
+        ["radius m", fmt(v / Math.abs(settled), 1)],
+        ["roll deg", fmt(tail(run, 3.5, (f) => f.roll) * 57.3, 1)],
+      ];
+    },
+  },
+  ...[
+    ["turn-power", "full throttle", { throttle: 1, brake: 0 }],
+    ["turn-lift", "the throttle shut", { throttle: 0, brake: 0 }],
+    ["turn-brake", "the brake on", { throttle: 0, brake: 1 }],
+  ].map(([id, what, lever]) => ({
+    id,
+    title: `settled in a 70 km/h bend at 0.6 lock, then ${what}`,
+    level: (S) => S.flatLevel({ packed: 1 }),
+    place: () => ({ x: 1500, z: 400, heading: 0, speed: 70 / 3.6 }),
+    seconds: 5,
+    view: "plan",
+    // THE LEVER IN A BEND: three seconds settled at a governed speed, then
+    // the lever for a second and a half. Throttle unloads the skis and
+    // spends the belt's grip driving, so the nose pushes and the tail
+    // walks; the throttle shut and the brake load the skis, and a LOCKED
+    // belt slides whichever way the sled is going. What moved is read at
+    // the end of the lever against the settled bend.
+    input: (t, st) => ({ ...FULL, steer: 0.6, ...(t < 3 ? hold(st, 70) : lever) }),
+    measure: (run) => {
+      const before = run.frames.filter((f) => f.t > 2.5 && f.t <= 3);
+      const after = run.frames.filter((f) => f.t > 3 && f.t <= 4.5);
+      const mean = (fs, g) => fs.reduce((sum, f) => sum + g(f), 0) / Math.max(1, fs.length);
+      let slip = 0;
+      for (let i = 1; i < after.length; i++) {
+        const a = after[i - 1];
+        const b = after[i];
+        const way = Math.atan2(b.x - a.x, b.z - a.z);
+        const d = Math.atan2(Math.sin(b.heading - way), Math.cos(b.heading - way));
+        if (Math.abs(d) > Math.abs(slip)) slip = d;
+      }
+      const ski0 = mean(before, (f) => f.skiLoad);
+      const ski1 = mean(after.slice(-60), (f) => f.skiLoad);
+      const yaw0 = mean(before, (f) => f.wy);
+      const yaw1 = mean(after.slice(-60), (f) => f.wy);
+      const v1 = mean(after.slice(-60), (f) => f.speed);
+      return [
+        ["ski load %", `${fmt(ski0 * 100, 0)}→${fmt(ski1 * 100, 0)}`],
+        ["yaw deg/s", `${fmt(yaw0 * 57.3, 0)}→${fmt(yaw1 * 57.3, 0)}`],
+        ["radius m", `${fmt(70 / 3.6 / Math.abs(yaw0), 0)}→${fmt(v1 / Math.abs(yaw1), 0)}`],
+        ["worst tail slip deg", fmt(slip * 57.3, 0)],
+        ["speed km/h", fmt(v1 * 3.6, 0)],
+      ];
+    },
+  })),
   {
     id: "brake-turn",
     title: "braking hard into a turn from 100 km/h",
@@ -313,7 +410,7 @@ export const SCENARIOS = [
     place: () => ({ x: 1500, z: 400, heading: 0, speed: 50 / 3.6 }),
     seconds: 8,
     view: "plan",
-    input: (t, st) => ({ ...FULL, steer: 1, throttle: st.sled.speed * 3.6 < 50 ? 1 : 0.5 }),
+    input: (t, st) => ({ ...FULL, steer: 1, ...hold(st, 50) }),
     measure: turn,
   },
   {

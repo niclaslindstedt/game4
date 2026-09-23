@@ -102,15 +102,31 @@ export function onIce(out: Grip, ice: number): Grip {
   return out;
 }
 
-/** The friction coefficients at `packed` 0..1, into `out`, for a tread
- * whose lugs bite `powderDrive` times the reference's in powder — driving
- * and holding sideways alike, a paddle digs whichever way the snow is
- * shoved — and hold `packedSide` times its sideways grip on the groomer
- * (`footprint.ts`). */
-export function gripAt(packed: number, out: Grip, powderDrive = 1, packedSide = 1): Grip {
+/** The friction coefficients at `packed` 0..1, into `out`, for a machine
+ * whose footprint (`footprint.ts`) is `fit`: lugs that bite `powderDrive`
+ * times the reference's in powder — driving and holding sideways alike, a
+ * paddle digs whichever way the snow is shoved — and hold `packedSide`
+ * times its sideways grip on the groomer; studs worth `studded` of the
+ * tread's packed grip; carbides worth `skiBite` of the skis' packed grip,
+ * and a ski base worth `skiFloat` of their powder grip. The reference's
+ * footprint is 1 on every one. */
+export function gripAt(packed: number, out: Grip, fit: GripFit = UNIT_FIT): Grip {
   const p = 1 - packed;
-  out.tread = G.treadPacked * packed + G.treadPowder * powderDrive * p;
-  out.treadSide = G.treadSidePacked * packedSide * packed + G.treadSidePowder * powderDrive * p;
-  out.ski = G.skiPacked * packed + G.skiPowder * p;
+  out.tread = G.treadPacked * fit.studded * packed + G.treadPowder * fit.powderDrive * p;
+  out.treadSide =
+    G.treadSidePacked * fit.packedSide * fit.studded * packed +
+    G.treadSidePowder * fit.powderDrive * p;
+  out.ski = G.skiPacked * fit.skiBite * packed + G.skiPowder * fit.skiFloat * p;
   return out;
 }
+
+/** The share of a footprint the grip reads (`Footprint` carries it). */
+export type GripFit = {
+  powderDrive: number;
+  packedSide: number;
+  studded: number;
+  skiBite: number;
+  skiFloat: number;
+};
+
+const UNIT_FIT: GripFit = { powderDrive: 1, packedSide: 1, studded: 1, skiBite: 1, skiFloat: 1 };

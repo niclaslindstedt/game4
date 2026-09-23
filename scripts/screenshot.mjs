@@ -112,7 +112,7 @@ const SURFACES = {
   // builds the machine on its first frame, so it is given a moment.
   sled: { params: { menu: "sled" }, wait: ".sled-pick-canvas", settle: 1800 },
   "sled-mountain": {
-    params: { menu: "sled", sled: "mountain" },
+    params: { menu: "sled", sled: "ibex" },
     wait: ".sled-pick-canvas",
     settle: 1800,
   },

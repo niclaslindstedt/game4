@@ -61,14 +61,15 @@ term and the comment's claim has to stay true.
 
 | Force | Model | Where |
 | --- | --- | --- |
-| Suspension | Raycast vehicle: each probe a spring-damper along the body's down axis against the snow's SUPPORT (the surface less the sink), a bump stop past its travel; the damper's rate is the compression's own change, read off the same surface as the spring | `suspension.ts`, `sled.ts` |
+| Suspension | Raycast vehicle: each probe a spring-damper along the body's down axis against the snow's SUPPORT (the surface less the sink), a bump stop past its travel; the damper's rate is the compression's own change, read off the same surface as the spring; the snow answers along its OWN NORMAL, the spring over the cosine between strut and normal | `suspension.ts`, `sled.ts` |
 | The sink | The planing-hull analogy: support rises with speed as exp(−(v/planeSpeed)²), blended by `packed`, eased over `sinkLag` | `snow.ts` — `sinkTarget` |
 | Resistance | Rolling resistance as a share of the load; THE PLOUGH (the bow wave of a sunk footprint, ∝ width · sink · v², front row only); powder drag ∝ load · v | `snow.ts` — `snowDrag` |
-| Grip | Coulomb on the probe's load, each coefficient a `tanh` of its slip over a reference speed (a lugged belt and a carbide keel let go progressively), blended by `packed` | `snow.ts` — `gripAt`; summed in `sled.ts` |
+| Grip | Coulomb on the probe's load, each coefficient a `tanh` of its slip over a reference speed (a lugged belt and a carbide keel let go progressively), blended by `packed`, scaled by the machine's footprint (studs, carbides, ski width); the TREAD's drive and side are ONE budget along the combined slip (the friction ellipse) | `snow.ts` — `gripAt`; summed in `sled.ts` |
 | The drive | A power curve over rpm; the CVT holds the engine at the rpm the lever asks for until it runs out of ratio; force = power / belt speed, floored at `launchFloor`, capped at `maxDriveForce` | `traction.ts` |
 | The belt | A mass of its own: the engine pushes, the snow pushes back through the tread's grip, rails and idlers drag, the brake clamps; one-way | `traction.ts` — `stepTread` |
 | Steering | The skis' sideways grip along their steered line, the lock falling with speed (`skiLockAt`) | `sled.ts` |
-| The yaw hand | ARCADE: the yaw rate held toward the ski geometry's, the nose held to the way — models nothing, stated as such | `sled.ts`, `TUNING.steer.yawHold` |
+| The yaw hand | ARCADE: the yaw rate held toward the ski geometry's, the nose held to the way — models nothing, stated as such; stated on the Fox, scaled by each machine's yaw inertia | `sled.ts`, `TUNING.steer.yawHold` |
+| The arcade's hands | ARCADE multipliers on measured quantities, 1 the bare physics: `sideGrip` on every sideways grip, `hangOff` on the tipping point and the roll held, `brakeSlip` the rider's thumb holding a pinned brake short of lock; in the air the pitch eased toward the flight path | `TUNING.arcade`, `TUNING.air.pitch*`, `sled.ts`, `flight.ts`, `traction.ts` |
 | The rider | His weight moved by the bars and the lean, lagging; the roll the chassis settles at into a turn; in powder THE CARVE — load per radian of roll turned toward the low side | `sled.ts`, `TUNING.rider` |
 | Air control | Lean → pitch, throttle → nose up (the belt as a gyroscope), brake → nose down, a little yaw off the bars, the rider levelling the roll up to `rollGiveUp` | `flight.ts` |
 | Landing cost | Past `harshSpeed` INTO the slope, a share of the way per m/s over, capped | `flight.ts` — `landingLoss` |
@@ -99,7 +100,9 @@ look at.** The scenarios are `scripts/lib/ride-scenarios.mjs`:
 | `rest` / `rest-powder` | The stance: the CoG height, the sag, the sink, level, no drift — on the groomer and in fresh snow |
 | `accel` / `accel-powder` | 0–50 and 0–100 km/h, the top speed, the tread's slip; in powder, the speed it PLANES at |
 | `brake` | 100–0 km/h: the time, the metres, the g |
-| `turn` / `turn-fast` | Full lock at 60 and 100 km/h: radius, g, roll |
+| `turn` / `turn-fast` | Full lock at 60 and 100 km/h, at a GOVERNED speed: radius, g, roll |
+| `turn-in` | The bars thrown over at 80 km/h: time to nine tenths of the yaw, degrees round in a second, settled g |
+| `turn-power` / `turn-lift` / `turn-brake` | The lever changed mid-bend: the skis' share of the load, the yaw, the radius, the tail's slide |
 | `brake-turn` | Braking into a turn: the worst slide, whether it spins |
 | `turn-powder` | The carve: radius, g, and the lean into it |
 | `kicker` / `kicker-slow` | The stadium kicker at speed and slowly: air time, carry, height, the landing's impact and cost |
@@ -173,6 +176,18 @@ rewrites that row. No build, no browser, seconds.
   CEILING.** The belt's own losses are the largest drag at speed. A model
   that needs `maxRpm` to hold the top speed is wrong; `SLED.topSpeed` and
   `accel0to100` are EXPECTATIONS the test holds the physics to (`sled-tuning`).
+- **THE SNOW PUSHES ALONG ITS OWN NORMAL.** A raycast strut's force pushed
+  up the body's own axis gives the sled a sideways force no grip paid for
+  whenever the body rolls or pitches off the slope — every sled pushed wide
+  at 0.9 g whatever its skis held. The normal force is the spring over the
+  cosine between strut and normal, along the normal; sideways is the grip's.
+- **DRIVE AND SIDE ARE ONE BUDGET ON THE TREAD.** A belt that spins under
+  throttle or locks under the brake has spent its grip along its length, and
+  the tail walks. Anything that grips two ways at once shares one ellipse.
+- **A HAND IS AN ACCELERATION, SO SCALE IT BY THE INERTIA.** Every arcade
+  hand is stated on the Fox and multiplied by the machine's own inertia about
+  its axis (yaw, pitch) or its weight times its CoG height (the roll held): a
+  torque that holds the crossover lets the touring sled spin or roll over.
 - **THE YAW HAND IS ARCADE, AND SAYS SO.** `steer.yawHold` exists because the
   bare physics spun a sled braked hard into a turn through 98° of slide. It
   must stay a hand on the RATE the skis ask for, never a source of turn: a
