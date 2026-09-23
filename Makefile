@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky build test lint fmt fmt-check release clean install icons sim level analyze ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -45,6 +45,15 @@ icons:
 # session. SEED=n picks the map; ARGS="--views=powder,lookback" a subset.
 world:
 	npm run world -- $(if $(SEED),--seed $(SEED),) $(ARGS)
+
+# THE SKY LAB: every weather (R18) against every three hours of the clock,
+# day and night, on one seed seen from one place, as one labelled contact
+# sheet — previews/sky-<seed>.png. Its own one-off bundle from
+# pwa/sky-preview.html (never deployed); needs a Chromium like `world`.
+# SEED=n picks the map (its day and latitude are kept);
+# ARGS="--hours=6,12,18 --view=vista --weathers=overcast,fog" narrows it.
+sky:
+	npm run sky -- $(if $(SEED),--seed $(SEED),) $(ARGS)
 
 # ---------------------------------------------------------------------------
 # The desktop app (tauri/)

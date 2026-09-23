@@ -59,6 +59,7 @@ import {
   step,
   type GameState,
   type Level,
+  type SkyOverride,
   type SledSpec,
 } from "@engine";
 
@@ -161,8 +162,9 @@ const NO_PRESSES: Presses = {
 function raceOrFallback(
   seed: number,
   rider: { assist: Settings["assist"]; spec: SledSpec } | null,
+  sky?: SkyOverride,
 ): GameState {
-  const help = rider ? { assist: assistOf(rider.assist), spec: rider.spec } : {};
+  const help = { ...(rider ? { assist: assistOf(rider.assist), spec: rider.spec } : {}), sky };
   try {
     return createGame({ seed, ...help });
   } catch (e) {
@@ -314,6 +316,7 @@ export function App() {
       params.rides
         ? { assist: settingsRef.current.assist, spec: specOf(settingsRef.current) }
         : null,
+      params.sky ?? undefined,
     );
     /** The race the player is about to ride, on the machine they picked and
      * with the help they asked for — on this map, or on a fresh one. */
@@ -321,6 +324,7 @@ export function App() {
       createGame({
         level,
         seed,
+        sky: params.sky ?? undefined,
         spec: specOf(settingsRef.current),
         assist: assistOf(settingsRef.current.assist),
       });

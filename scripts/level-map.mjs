@@ -72,6 +72,11 @@ out.push(
 out.push(
   `sun: ${f(level.sun.hour, 2)} h solar on day ${level.sun.dayOfYear} at ${f(level.sun.latitude)}°N — ${f(st.sunElevation)}° up`,
 );
+out.push(
+  `weather: ${level.weather.kind}${level.weather.evening ? " (evening)" : ""}, wind ${f(level.weather.wind)} m/s` +
+    `${level.weather.snowfall > 0 ? `, fall ${f(level.weather.snowfall, 2)}` : ""}` +
+    `${level.weather.fog > 0 ? `, fog ${f(level.weather.fog, 2)}` : ""}`,
+);
 out.push("");
 out.push("  cp      s(m)      x      z      y   width  from last");
 level.checkpoints.forEach((c, i) => {

@@ -10,8 +10,8 @@
 // rival's run by the same function; then every sled against every other.
 
 import { createRng } from "../lib/prng.ts";
-import { generateLevel } from "../mapgen/index.ts";
-import type { Level } from "../mapgen/types.ts";
+import { generateLevel, withSky } from "../mapgen/index.ts";
+import type { Level, SkyOverride } from "../mapgen/types.ts";
 import { status } from "../output.ts";
 import { freshProgress, standSled } from "./course.ts";
 import { FULL_ASSIST, RACE, raceRules, type Assist, type RunRules } from "./defs/modes.ts";
@@ -44,6 +44,11 @@ export type CreateGameOptions = {
   assist?: Assist;
   /** Build without announcing the map (the sim's sweeps). */
   quiet?: boolean;
+  /** Ride the map under this sky, or from this start hour, instead of the
+   * ones R15 and R18 dealt it (`withSky`): the map itself — the ground, the
+   * loop, the trees — is the seed's either way, and nothing the physics
+   * reads moves. */
+  sky?: SkyOverride;
 };
 
 /** The rules a run is dealt from what it asked for. */
@@ -58,7 +63,8 @@ export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
 }
 
 export function createGame(options: CreateGameOptions = {}): GameState {
-  const level = options.level ?? generateLevel(options.seed ?? 1);
+  const built = options.level ?? generateLevel(options.seed ?? 1);
+  const level = options.sky ? withSky(built, options.sky) : built;
   const seed = options.seed ?? level.seed;
   const rules = rulesFor(options, level);
   const state: GameState = {

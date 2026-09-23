@@ -20,6 +20,7 @@ import { sunAt } from "../lib/solar.ts";
 import { nearestTrackPoint, nearestWithin, trackPointAt } from "../mapgen/query.ts";
 import { LEVEL_RULES as R, withinBand, type Band } from "../mapgen/rules.ts";
 import { declinationOf } from "../mapgen/sun.ts";
+import { WEATHER_KINDS, sunsetOf, weatherOf } from "../mapgen/weather.ts";
 import { maxGradeOf, minRadius, minSeparation } from "../mapgen/track.ts";
 import type { Level } from "../mapgen/types.ts";
 import { selfCrossings } from "./crossings.ts";
@@ -359,20 +360,42 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   }
   if (level.trees.length < 1000) add("R14", "warn", `only ${level.trees.length} trees`);
 
-  // R15 — the day.
+  // R15 — the day; an evening map (R18) starts from sunset instead.
   const sun = sunAt(level.sun.hour, level.sun.latitude, declinationOf(level.sun.dayOfYear));
   const elevation = (sun.elevation * 180) / Math.PI;
+  const weather = weatherOf(level);
+  const startOk = weather.evening
+    ? withinBand(level.sun.hour - sunsetOf(level.sun), R.sun.evening, 1e-3)
+    : withinBand(level.sun.hour, R.sun.hour) && elevation >= R.sun.minElevation - 0.05;
   if (
-    !withinBand(level.sun.hour, R.sun.hour) ||
+    !startOk ||
     !withinBand(level.sun.latitude, R.sun.latitude) ||
-    !withinBand(level.sun.dayOfYear, R.sun.dayOfYear) ||
-    elevation < R.sun.minElevation - 0.05
+    !withinBand(level.sun.dayOfYear, R.sun.dayOfYear)
   ) {
     add(
       "R15",
       "error",
       `the sun: ${fmt(level.sun.hour)} h on day ${level.sun.dayOfYear} at ${fmt(level.sun.latitude)}°N, ${fmt(elevation)}° up`,
     );
+  }
+
+  // R18 — the weather: a sky the rule deals, at numbers inside its bands.
+  if (level.weather) {
+    const wind = R.weather.wind[weather.kind];
+    const bad =
+      !WEATHER_KINDS.includes(weather.kind) ||
+      !withinBand(weather.wind, wind, 1e-6) ||
+      (weather.kind === "snow"
+        ? !withinBand(weather.snowfall, R.weather.snowfall)
+        : weather.snowfall !== 0) ||
+      (weather.kind === "fog" ? !withinBand(weather.fog, R.weather.fog) : weather.fog !== 0);
+    if (bad) {
+      add(
+        "R18",
+        "error",
+        `a ${weather.kind} sky: wind ${fmt(weather.wind)} m/s, fall ${fmt(weather.snowfall)}, fog ${fmt(weather.fog)}`,
+      );
+    }
   }
 
   // R16 — the race.

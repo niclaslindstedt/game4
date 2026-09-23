@@ -24,6 +24,11 @@
 //   ?menu=root      open on the front door rather than the attract card;
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
 //                   the sled card RACE opens.
+//   ?weather=<kind> ride the map under this sky instead of the one R18
+//                   dealt it (clear, fair, high, overcast, snow, fog) —
+//                   how a lab photographs every weather on one seed.
+//   ?hour=<h>       ...and from this solar start hour (0–24), so a lab can
+//                   stand a race in the dark.
 //   ?video=<tier>   ride this visit at a picture preset (low, medium, high —
 //                   `settings-video.ts`) without storing it: how a lab
 //                   meters or photographs a rung.
@@ -37,7 +42,7 @@
 // DOM-free: the query string is an argument, so `tests/menu_system_test.ts`
 // reads every rule here without a browser.
 
-import { isSledId, type SledId } from "@engine";
+import { WEATHER_KINDS, isSledId, type SkyOverride, type SledId, type WeatherKind } from "@engine";
 
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
@@ -68,7 +73,22 @@ export type UrlParams = {
   video: Tier | null;
   /** Whether the first-visit probe may run. */
   probe: boolean;
+  /** A sky and a start hour for this visit's races, over the dealt ones;
+   * null when the link names neither. */
+  sky: SkyOverride | null;
 };
+
+/** The sky a link names, if any. */
+function skyOf(q: URLSearchParams): SkyOverride | null {
+  const weather = q.get("weather");
+  const hour = Number(q.get("hour") ?? NaN);
+  const sky: SkyOverride = {};
+  if (weather !== null && WEATHER_KINDS.includes(weather as WeatherKind)) {
+    sky.weather = weather as WeatherKind;
+  }
+  if (q.get("hour") !== null && Number.isFinite(hour) && hour >= 0 && hour <= 24) sky.hour = hour;
+  return sky.weather === undefined && sky.hour === undefined ? null : sky;
+}
 
 /** A seed a link may name: a whole number the generator's stream takes. */
 function seedOf(raw: string | null): number | null {
@@ -98,6 +118,7 @@ export function readParams(search: string): UrlParams {
     page: MENU_PAGES.includes(q.get("menu") as MenuPage) ? (q.get("menu") as MenuPage) : "root",
     video: TIERS.includes(q.get("video") as Tier) ? (q.get("video") as Tier) : null,
     probe: q.get("probe") !== "0",
+    sky: skyOf(q),
   };
 }
 

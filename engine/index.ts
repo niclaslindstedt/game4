@@ -41,7 +41,7 @@ export {
   type Quat,
 } from "./lib/quat.ts";
 export { angleDiff, clamp, lerp, TAU } from "./lib/math.ts";
-export { sunAt, SOUTH, type SunPlace } from "./lib/solar.ts";
+export { moonAt, sunAt, SOUTH, type MoonPlace, type SunPlace } from "./lib/solar.ts";
 
 // THE WORLD (engine/mapgen/): the generator, the Level contract, the track
 // queries.
@@ -112,7 +112,8 @@ export {
 } from "./game/rivals.ts";
 export { stepRun } from "./game/run.ts";
 export { placeRun, type RunMoment } from "./game/place.ts";
-export { SUN_SECONDS_PER_HOUR, sunAtRun, sunHourAt } from "./game/clock.ts";
+export { SUN_SECONDS_PER_HOUR, moonAgeOn, moonAtRun, sunAtRun, sunHourAt } from "./game/clock.ts";
+export { windAt, type Wind } from "./game/wind.ts";
 export {
   brakeDecel,
   cornerGrip,

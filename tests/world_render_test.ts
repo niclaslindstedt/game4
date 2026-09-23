@@ -76,7 +76,7 @@ describe("the sky", () => {
     const lum = (c: number[]) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
     expect(lum(look.horizon)).toBeGreaterThan(lum(look.zenith));
     expect(look.skyLight[2]).toBeGreaterThan(look.skyLight[0]);
-    expect(look.sunIntensity).toBeGreaterThan(skyLookFor(Math.PI, 0.05).sunIntensity);
+    expect(look.keyIntensity).toBeGreaterThan(skyLookFor(Math.PI, 0.05).keyIntensity);
   });
 
   it("reads the level's own sun off the run's clock", () => {

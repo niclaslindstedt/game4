@@ -34,6 +34,7 @@
 // grey. So the tone is pushed past white and the tone mapper takes the lit
 // side down to a bright, unclipped white.
 
+import { LAMP_SLOTS } from "./haze.ts";
 import { TRAIL_GLSL } from "./trail-map.ts";
 
 /** How much brighter than white snow's albedo is painted. */
@@ -168,6 +169,12 @@ uniform vec2 uHeightOrigin;
 uniform vec2 uHeightCount;
 uniform float uCell;
 uniform vec4 uHole;
+uniform float uFlat;
+uniform float uGlitter;
+uniform vec3 uLampPos[${LAMP_SLOTS}];
+uniform vec3 uLampDir[${LAMP_SLOTS}];
+uniform float uLampOn[${LAMP_SLOTS}];
+uniform vec3 uLampCol;
 varying vec3 vSnowWorld;
 varying vec3 vSnowNormal;
 ${TRAIL_GLSL}
@@ -328,16 +335,58 @@ normal = normalize((viewMatrix * vec4(snowN, 0.0)).xyz);
 `;
 
 /** After `lights_fragment_end`: the light that went in and came back out,
- * and the crystals. `directLight` still holds the sun as the loop left it —
- * shadowed — because there is one directional light and it is last. */
+ * the crystals, the flat light's last relief and the sleds' lamps.
+ * `directLight` still holds the key as the loop left it — shadowed —
+ * because there is one directional light and it is last.
+ *
+ * FLAT LIGHT (`uFlat`, `sky.ts`): under a lid the key is a glow and the
+ * hemisphere is the same white above and below, so the snow loses its
+ * shading and a bump reads as nothing — which is the weather, and is kept.
+ * What is left is what a rider really sees in flat light: the lid is
+ * brighter over where the sun is, so a slope facing it is a touch lighter
+ * than one turned away. That is the one cue drawn, at a tenth of the
+ * contrast a sun gives: readable, but hard.
+ *
+ * THE LAMPS (`uLamp*`): each sled's headlamp is a cone from its nose,
+ * falling off with the square of the distance, with a little spill round
+ * the pool; the snow in it glitters toward the lamp as it does toward the
+ * sun, which is what makes a lit pool of snow read as snow at night. */
 export const SNOW_FRAGMENT_LIGHT = /* glsl */ `
+{
+  vec3 lidDir = normalize(vec3(uSunPos.x, 2.2, uSunPos.z));
+  float facing = clamp(dot(snowN, lidDir) / lidDir.y, 0.0, 1.3);
+  reflectedLight.indirectDiffuse *= mix(1.0, 0.55 + 0.45 * facing, uFlat);
+}
+{
+  vec3 V = normalize(cameraPosition - vSnowWorld);
+  float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6);
+  vec3 lampLit = vec3(0.0);
+  float lampGlint = 0.0;
+  for (int i = 0; i < ${LAMP_SLOTS}; i++) {
+    if (uLampOn[i] <= 0.001) continue;
+    vec3 L = uLampPos[i] - vSnowWorld;
+    float d = length(L);
+    L /= max(d, 1e-3);
+    float axis = dot(-L, uLampDir[i]);
+    float beam = smoothstep(0.86, 0.975, axis) + 0.1 * smoothstep(0.35, 0.86, axis);
+    float e = uLampOn[i] * beam / (1.0 + 0.012 * d * d);
+    lampLit += vec3(e * max(dot(snowN, L), 0.0));
+    if (snowDist < 40.0) {
+      vec3 H = normalize(L + V);
+      lampGlint += e * snowGlints(vSnowWorld, 7.0, 600.0, 0.6, snowN, H, 57.0);
+    }
+  }
+  reflectedLight.directDiffuse += BRDF_Lambert(diffuseColor.rgb) * uLampCol * lampLit * 9.0;
+  reflectedLight.directSpecular += uLampCol * lampGlint * loose
+    * (1.0 - smoothstep(12.0, 40.0, snowDist)) * 12.0;
+}
 #if NUM_DIR_LIGHTS > 0
 {
   vec3 sunLit = directLight.color;
   float ndl = dot(snowN, uSunDir);
   // Wrap: what the terminator gains, tinted the blue of light that has been
   // through a few centimetres of ice.
-  float wrap = max(0.0, (ndl + 0.45) / 1.45) - max(ndl, 0.0);
+  float wrap = (max(0.0, (ndl + 0.45) / 1.45) - max(ndl, 0.0)) * (1.0 - 0.7 * uFlat);
   reflectedLight.directDiffuse +=
     BRDF_Lambert(diffuseColor.rgb) * sunLit * wrap * vec3(0.55, 0.78, 1.0) * 0.9;
 
@@ -350,7 +399,7 @@ export const SNOW_FRAGMENT_LIGHT = /* glsl */ `
     * (1.0 - smoothstep(15.0, 45.0, snowDist));
   glint += snowGlints(vSnowWorld, 2.5, 900.0, 0.35, snowN, H, 31.0)
     * smoothstep(8.0, 25.0, snowDist) * (1.0 - smoothstep(50.0, 140.0, snowDist));
-  reflectedLight.directSpecular += sunLit * glint * loose * 18.0;
+  reflectedLight.directSpecular += sunLit * glint * loose * 18.0 * uGlitter;
 }
 #endif
 `;
