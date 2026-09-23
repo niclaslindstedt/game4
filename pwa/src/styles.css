@@ -3697,3 +3697,88 @@ canvas {
 .hud-best-air {
   animation: hud-score-bank 340ms cubic-bezier(0.2, 1.4, 0.4, 1);
 }
+
+/* ── THE TRICKS RUN (hud-combo.tsx) ──────────────────────────────────────
+   THE COMBO OVER THE NOSE: a column on the centreline, a little under the
+   air clock, so the seconds, what was turned in them and what they are
+   worth read down one line. Its figure is keyed on the multiplier, so every
+   element won lands with a beat. */
+.hud-combo {
+  position: absolute;
+  z-index: 1;
+  top: 22%;
+  left: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.2rem;
+  line-height: 1.05;
+  text-align: center;
+  pointer-events: none;
+  transform: translateX(-50%);
+  max-width: min(90vw, 40rem);
+}
+
+.hud-combo-line {
+  font-size: clamp(0.85rem, 2.6vmin, 1.3rem);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.hud-combo-points {
+  font-size: clamp(1.2rem, 4.4vmin, 2.2rem);
+  font-weight: 700;
+  color: var(--hud-good);
+  font-variant-numeric: tabular-nums;
+  animation: hud-combo-beat 260ms ease-out;
+}
+
+.hud-combo-closed .hud-combo-points {
+  color: var(--hud-info);
+}
+
+.hud-combo-bailed,
+.hud-combo-bailed .hud-combo-points {
+  color: var(--hud-bad);
+}
+
+@keyframes hud-combo-beat {
+  from {
+    transform: scale(1.25);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+/* The buzzer's last ten seconds. */
+.hud-score-late {
+  color: var(--hud-bad);
+}
+
+/* THE TRICK PRESS for a thumb: bottom centre over the speed panel, between
+   the two thumbs, where either can reach it without leaving its zone. */
+.hud-trick-press {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 5.5rem);
+  transform: translateX(-50%);
+  font: inherit;
+  font-size: clamp(0.8rem, 2.4vmin, 1rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--hud-ink);
+  background: rgb(var(--hud-plate) / 70%);
+  border: 2px solid var(--hud-edge);
+  border-radius: 999px;
+  padding: 0.7rem 1.4rem;
+  touch-action: none;
+  user-select: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-combo-points {
+    animation: none;
+  }
+}

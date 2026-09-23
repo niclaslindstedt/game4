@@ -152,6 +152,8 @@ export type KeysHeld = {
   brake: boolean;
   leanBack: boolean;
   leanForward: boolean;
+  /** The trick button (`strokes.ts`'s poses) — a switch, not a ramp. */
+  trick: boolean;
 };
 
 export const NO_KEYS: KeysHeld = {
@@ -161,6 +163,7 @@ export const NO_KEYS: KeysHeld = {
   brake: false,
   leanBack: false,
   leanForward: false,
+  trick: false,
 };
 
 /** What the thumb zones have written, screen-space, at pointer rate. A zone
@@ -177,10 +180,12 @@ export type TouchChannel = {
   throttle: number;
   brake: number;
   lever: boolean;
+  /** The TRICK press held (a tricks run's HUD only). */
+  trick: boolean;
 };
 
 export function neutralTouch(): TouchChannel {
-  return { steer: 0, lean: 0, bar: false, throttle: 0, brake: 0, lever: false };
+  return { steer: 0, lean: 0, bar: false, throttle: 0, brake: 0, lever: false, trick: false };
 }
 
 /** The keyboard's ramped axes, screen-space. Advanced once per STEP (§37.1)
@@ -245,5 +250,6 @@ export function sampleInput(
     brake,
     lean: clamp(lean, -1, 1),
     reset,
+    trick: keys.trick || touch.trick,
   });
 }

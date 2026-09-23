@@ -58,9 +58,11 @@ export function PauseMenu({
         <div class="menu-pause-head">
           <div class="menu-title">{STRINGS.pauseHead}</div>
           <div class="menu-sub">
-            {snap.free
-              ? STRINGS.pauseSubFree(snap.seed)
-              : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
+            {snap.tricks
+              ? STRINGS.pauseSubTricks(snap.seed, snap.tricks.score)
+              : snap.free
+                ? STRINGS.pauseSubFree(snap.seed)
+                : STRINGS.pauseSub(snap.seed, snap.lap, snap.laps)}
           </div>
         </div>
         <div class="menu-items">

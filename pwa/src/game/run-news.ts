@@ -49,8 +49,16 @@ export function newsFor(e: GameEvent, state: GameState): NewsLine | null {
       return { text: STRINGS.newsStuck, tone: "bad" };
     case "damage":
       return { text: STRINGS.newsDamage(e.part), tone: "bad" };
+    case "combo":
+      return e.sketchy
+        ? { text: `${STRINGS.comboSketchy} ${STRINGS.comboBanked(e.points)}`, tone: "info" }
+        : { text: STRINGS.comboBanked(e.points), tone: "good" };
+    case "bail":
+      return { text: STRINGS.comboBailed(e.lost), tone: "bad" };
     case "finish":
-      // A run alone has no place to report, only a time.
+      // A tricks run is its score; a run alone has no place, only a time.
+      if (state.rules.tricks)
+        return { text: STRINGS.newsTricksFinish(state.tricks.score), tone: "good" };
       if (state.rivals.length === 0) return { text: STRINGS.newsFinishAlone(e.time), tone: "good" };
       return {
         text: STRINGS.newsFinish(e.place, state.rivals.length + 1, e.time),

@@ -110,6 +110,9 @@ const EVERY_EVENT_BY_KIND: { [K in GameEvent["kind"]]: Extract<GameEvent, { kind
   wipeout: { kind: "wipeout", t: 1, cause: "tree", speed: 14, x: 0, z: 0 },
   stuck: { kind: "stuck", t: 1 },
   damage: { kind: "damage", t: 1, part: "skiLeft", level: 0.3 },
+  trick: { kind: "trick", t: 1, trick: "backflip", spins: 1, points: 300, mult: 3 },
+  combo: { kind: "combo", t: 1, points: 2000, base: 700, mult: 3, sketchy: false },
+  bail: { kind: "bail", t: 1, lost: 2000, cause: "wipeout" },
 };
 
 /** The kinds the bank says nothing about, with the reason: the lip is the

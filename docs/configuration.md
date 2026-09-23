@@ -15,6 +15,7 @@ The running game reads its situation off the URL, which is what makes a map a li
 | `shot=1`      | ...held still once drawn, so nothing moves under a screenshot's shutter.                                                                                                    |
 | `paused=1`    | ...or held under the pause card.                                                                                                                                            |
 | `mode=trial`  | The run a link boots into (and the next one pressed) is a TIME TRIAL — alone, against the record and its ghost — rather than a race.                                        |
+| `mode=tricks` | ...or a TRICKS run: two minutes alone on the seed's trick field (R20), scored.                                                                                              |
 | `camera`      | The race's camera rung: `hood`, `bars`, `chase`, `far`, `high`.                                                                                                             |
 | `sled`        | The player's machine for this visit — `trail`, `crossover`, `mountain`, `cross` — over the stored pick and never written back (a pick on the sled card replaces it).        |
 | `menu=root`   | Open on the front door rather than the attract card; `menu=sled` the sled card, `menu=start` the free ride's start card, `menu=options` OPTIONS, `menu=keys` its KEYS page. |

@@ -24,6 +24,14 @@ export type RunRules = {
    * road through the country, nothing is owed and a reset stands the sled
    * on the nearest point of it rather than at a checkpoint. */
   course: boolean;
+  /** WHETHER THE TRICKS COUNT: the strokes and the trick button are read
+   * (`strokes.ts`) and the combo is the run's to work for. The score is
+   * kept on every run (`tricks.ts`), but only a run with this on can turn
+   * anything. */
+  tricks: boolean;
+  /** THE BUZZER, s of run clock: the run ends there, whatever it was doing;
+   * 0 is no buzzer at all. */
+  limit: number;
 };
 
 /** HOW MUCH HELP THE RIDER IS GIVEN — the arcade's two hands on the sled,
@@ -61,18 +69,26 @@ export const RACE = {
 /** The race as a rider is dealt it: the field, the lights, contact on. The
  * laps are the level's own and are filled in by `createGame`. */
 export function raceRules(laps: number): RunRules {
-  return { rivals: RACE.rivals, laps, countdown: RACE.countdown, contact: true, course: true };
+  return {
+    rivals: RACE.rivals,
+    laps,
+    countdown: RACE.countdown,
+    contact: true,
+    course: true,
+    tricks: false,
+    limit: 0,
+  };
 }
 
 /** What a measurement rides: the level's laps, no lights, nobody else. */
 export function openRules(laps: number): RunRules {
-  return { rivals: 0, laps, countdown: 0, contact: true, course: true };
+  return { rivals: 0, laps, countdown: 0, contact: true, course: true, tricks: false, limit: 0 };
 }
 
 /** THE FREE RIDE: nobody else out there, no lights, and no course — the
  * whole map to ride, the clock running only as a record of the outing. */
 export function freeRules(laps: number): RunRules {
-  return { rivals: 0, laps, countdown: 0, contact: true, course: false };
+  return { rivals: 0, laps, countdown: 0, contact: true, course: false, tricks: false, limit: 0 };
 }
 
 /** THE SNOW'S DEPTH, a RUN DIAL: how deep untouched powder lets a sled
@@ -94,9 +110,9 @@ export function clampSnowDepth(depth: number | undefined): number {
  * (`MODE_RULES`) and nothing below the app branches on it: the engine reads
  * the rules, and the app reads the name to decide which card is up and which
  * row of the record book a run is filed under. */
-export type GameMode = "race" | "timeTrial" | "free";
+export type GameMode = "race" | "timeTrial" | "free" | "tricks";
 
-export const GAME_MODES: readonly GameMode[] = ["race", "timeTrial", "free"];
+export const GAME_MODES: readonly GameMode[] = ["race", "timeTrial", "free", "tricks"];
 
 export function isGameMode(value: unknown): value is GameMode {
   return typeof value === "string" && (GAME_MODES as readonly string[]).includes(value);
@@ -111,7 +127,38 @@ export const TIME_TRIAL = {
 
 /** The time trial as a rider is dealt it: the lights and the loop, alone. */
 export function timeTrialRules(laps: number): RunRules {
-  return { rivals: 0, laps, countdown: TIME_TRIAL.countdown, contact: true, course: true };
+  return {
+    rivals: 0,
+    laps,
+    countdown: TIME_TRIAL.countdown,
+    contact: true,
+    course: true,
+    tricks: false,
+    limit: 0,
+  };
+}
+
+/** THE TRICKS RUN'S NUMBERS: the lights, then two minutes on the map's
+ * trick field (R20) with nobody else out there and the course counting
+ * nothing — the score is the run. */
+export const TRICKS_RUN = {
+  countdown: RACE.countdown,
+  /** The buzzer, s. */
+  limit: 120,
+} as const;
+
+/** A tricks run as a rider is dealt it: the lights, the strokes read, the
+ * buzzer, and no course owed. */
+export function tricksRules(laps: number): RunRules {
+  return {
+    rivals: 0,
+    laps,
+    countdown: TRICKS_RUN.countdown,
+    contact: true,
+    course: false,
+    tricks: true,
+    limit: TRICKS_RUN.limit,
+  };
 }
 
 /** EVERY MODE'S RULES by its name — the one place a name becomes a bundle. */
@@ -119,4 +166,5 @@ export const MODE_RULES: Readonly<Record<GameMode, (laps: number) => RunRules>> 
   race: raceRules,
   timeTrial: timeTrialRules,
   free: freeRules,
+  tricks: tricksRules,
 };

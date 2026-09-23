@@ -7,8 +7,9 @@
 // other way to advance a run.
 //
 // THE STEP ORDER: the clock; the lights; the player's run (`run.ts`: the
-// sled, the trees, the edge, the clock, the course, the reset); every
-// rival's run by the same function; then every sled against every other.
+// sled, the trees, the edge, the clock, the course, the reset); the score
+// (`tricks.ts`); every rival's run by the same function; then every sled
+// against every other.
 
 import { createRng } from "../lib/prng.ts";
 import { generateLevel, withDay, withSky } from "../mapgen/index.ts";
@@ -29,6 +30,7 @@ import { TUNING } from "./defs/tuning.ts";
 import { clipRiders, createRivals, gridSlot, stepRivals } from "./rivals.ts";
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
+import { freshTricks, stepTricks } from "./tricks.ts";
 import { NEUTRAL_INPUT, type GameState, type SledInput } from "./state.ts";
 
 export type CreateGameOptions = {
@@ -89,11 +91,15 @@ export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
     countdown: options.countdown ?? base.countdown,
     contact: options.contact ?? base.contact,
     course: base.course,
+    tricks: base.tricks,
+    limit: base.limit,
   };
 }
 
 export function createGame(options: CreateGameOptions = {}): GameState {
-  const built = options.level ?? generateLevel(options.seed ?? 1);
+  // A tricks run is ridden on the seed's map with its trick field laid (R20).
+  const built =
+    options.level ?? generateLevel(options.seed ?? 1, { tricks: options.mode === "tricks" });
   const dayed = options.day ? withDay(built, options.day) : built;
   const level = options.sky ? withSky(dayed, options.sky) : dayed;
   const seed = options.seed ?? level.seed;
@@ -112,6 +118,7 @@ export function createGame(options: CreateGameOptions = {}): GameState {
     damage: options.damage ?? false,
     snowDepth: clampSnowDepth(options.snowDepth),
     rivals: [],
+    tricks: freshTricks(),
     countdown: rules.countdown,
     phase: rules.countdown > 0 ? "countdown" : "racing",
     events: [],
@@ -160,6 +167,8 @@ export function step(state: GameState, input: SledInput): GameState {
   }
 
   stepRun(state, input, events);
+  // THE SCORE is the player's, kept on every run (`tricks.ts`).
+  stepTricks(state, events);
   stepRivals(state);
   if (state.rules.contact) clipRiders(state, events);
   return state;

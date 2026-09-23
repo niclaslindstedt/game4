@@ -7,6 +7,10 @@
 // reset. Every number carries its unit; every model it feeds names its
 // source at the function that implements it. Tweak here, verify with
 // `npm run ride` and `npm run sim`; the render layer never reads these.
+// The score and the strokes are stated next door (`defs/tricks.ts`) and
+// folded in as `TUNING.tricks`.
+
+import { TRICKS } from "./tricks.ts";
 
 /** The clock the whole engine runs on. Named out here so the timestep is
  * derived from it rather than restated. */
@@ -383,4 +387,7 @@ export const TUNING = {
     stuckFor: 3,
     stuckSpeed: 0.8,
   },
+
+  /** THE SCORE AND THE STROKES (`defs/tricks.ts`). */
+  tricks: TRICKS,
 } as const;

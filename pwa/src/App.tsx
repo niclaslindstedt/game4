@@ -59,6 +59,7 @@
 
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
+  TRICKS_RUN,
   TUNING,
   botInput,
   createGame,
@@ -393,7 +394,8 @@ export function App() {
      * picked and with the help they asked for — on this map, or a fresh one. */
     const playerGame = (level: Level | undefined, seed: number): GameState =>
       createGame({
-        level,
+        // A tricks run needs its map's trick field (R20): the race's won't do.
+        level: mode === "tricks" && !level?.kickers?.some((k) => k.trick) ? undefined : level,
         seed,
         sky: params.sky ?? undefined,
         mode,
@@ -536,7 +538,7 @@ export function App() {
       // A free ride starts again from where it was stood up; every other
       // run from the grid, on the same map, in its mode.
       const next =
-        !state.rules.course && freeAgain
+        !state.rules.course && !state.rules.tricks && freeAgain
           ? createGame(freeAgain)
           : playerGame(state.level, state.seed);
       adopt(next, ticketFor(next));
@@ -770,7 +772,8 @@ export function App() {
    * the seed that tile showed and the machine the sled card holds. */
   const race = (): void => {
     setPage("root");
-    const trial = modeRef.current === "timeTrial";
+    // The trial and the tricks run are ridden on the map the menu stands over.
+    const trial = modeRef.current === "timeTrial" || modeRef.current === "tricks";
     pressRef.current.race(trial ? trialSeed : nextSeed, modeRef.current);
     // The next race deals the next map, unless a link pinned this one.
     if (!trial && params.seed === null) setNextSeed(dealSeed());
@@ -861,6 +864,11 @@ export function App() {
           onFree={() => {
             modeRef.current = "free";
             setPage("start");
+          }}
+          tricks={{ seed: trialSeed, seconds: TRICKS_RUN.limit }}
+          onTricks={() => {
+            modeRef.current = "tricks";
+            setPage("sled");
           }}
           onTrialLaps={() => setSettings((s) => ({ ...s, trialLaps: nextTrialLaps(s.trialLaps) }))}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}

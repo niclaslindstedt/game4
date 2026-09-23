@@ -70,8 +70,9 @@ describe("what names a row", () => {
     expect(recordId({ ...KEY })).toBe(id);
   });
 
-  it("every measured mode keeps a book, and the free ride none", () => {
-    for (const mode of GAME_MODES) expect(keepsRecords(mode)).toBe(mode !== "free");
+  it("every timed mode keeps a book, and the free ride and the tricks run none", () => {
+    for (const mode of GAME_MODES)
+      expect(keepsRecords(mode)).toBe(mode !== "free" && mode !== "tricks");
     expect(beats("free", 10, null)).toBe(false);
   });
 });
