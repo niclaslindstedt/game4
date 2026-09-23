@@ -59,6 +59,9 @@ export type LoadPlan = {
   camera: CameraRung;
   /** Run on the frame the card lifts. */
   done: () => void;
+  /** Steps paid for under the card after the three every load makes — the
+   * benchmark's warm-up (`bench-run.ts`), and nothing else today. */
+  after?: LoadStep[];
 };
 
 export type LoadWorld = {
@@ -116,6 +119,7 @@ export function loadPlanSteps(world: LoadWorld, plan: LoadPlan): LoadStep[] {
         return false;
       },
     },
+    ...(plan.after ?? []),
   ];
 }
 

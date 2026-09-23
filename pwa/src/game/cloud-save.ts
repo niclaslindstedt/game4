@@ -24,7 +24,9 @@
 //             level card's map, the free ride's card, the HUD switch — a
 //             person's preferences. NOT the picture (`video`, `probed`: what
 //             THIS machine can hold) and NOT the thumbs (`touch`: the travel
-//             of a screen this size) — `DEVICE_SETTINGS`.
+//             of a screen this size) and NOT the developer page (`developer`,
+//             `dev`: a bench let out on one machine is not let out on the
+//             next) — `DEVICE_SETTINGS`.
 //
 // THE MERGE IS MECHANICAL, NEVER A JUDGEMENT CALL. Two devices that both rode
 // while offline must both keep their work, and running the merge again must
@@ -79,7 +81,7 @@ export const CLOUD_BUDGET = 900_000;
 
 /** The rows that are a fact about the MACHINE, not the rider: never carried,
  * never overwritten by another device's. */
-export const DEVICE_SETTINGS = ["video", "probed", "touch"] as const;
+export const DEVICE_SETTINGS = ["video", "probed", "touch", "developer", "dev"] as const;
 type DeviceKey = (typeof DEVICE_SETTINGS)[number];
 
 /** The rider's half of the settings. */

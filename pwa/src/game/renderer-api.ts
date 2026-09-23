@@ -5,6 +5,8 @@
 // writes a `GameState`.
 import type { GameState } from "@engine";
 
+import type { FrameCost, SceneShare } from "./benchmark-report.ts";
+import type { LensPose } from "./camera-rigs.ts";
 import type { ReplayShot } from "./replay-shots.ts";
 import type { VideoSettings } from "./settings-video.ts";
 
@@ -38,4 +40,25 @@ export interface WorldRenderer {
    * that took, ms — what the first-visit probe times a frame with. */
   drain(): number;
   dispose(): void;
+}
+
+/** What the DEVELOPER page and the BENCHMARK may also ask — instruments, not
+ * the game's own drawing (`menu-dev.tsx`, `benchmark.ts`). */
+export interface DevRenderer {
+  /** What the last frame cost, off the renderer's own counters — one object
+   * rewritten every frame; a reading copies it. */
+  cost(): FrameCost;
+  /** The scene walked and bucketed by subsystem (`scene-tally.ts`) — a walk
+   * of the whole graph, so never from a frame being timed. */
+  sceneTally(): SceneShare[];
+  /** The drawing buffer, device pixels. */
+  bufferSize(): { w: number; h: number };
+  /** Draw the trail maps over the corner of the picture, or stop. */
+  setTrailOverlay(on: boolean): void;
+  /** Stand the lens at a fixed place instead of the ladder — the FREE
+   * CAMERA's, or a lab's view; null hands it back. */
+  setOverride(view: LensPose | null): void;
+  /** Where the lens stands and which way it looks, so the free camera takes
+   * off from the frame on screen. */
+  lensPose(): { x: number; y: number; z: number; yaw: number; pitch: number };
 }

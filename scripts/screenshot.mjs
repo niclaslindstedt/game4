@@ -103,6 +103,11 @@ const SURFACES = {
   // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
   options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
   keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },
+  // THE DEVELOPER PAGE (`?menu=dev` lets it out, as the title's hold does)
+  // and the two pages behind it.
+  dev: { params: { menu: "dev" }, wait: ".menu-card-options", settle: 900 },
+  unlocks: { params: { menu: "unlocks" }, wait: ".dev-locks", settle: 900 },
+  "bench-history": { params: { menu: "benchHistory" }, wait: ".bench-runs", settle: 900 },
   // THE SLED CARD, straight off the URL; the turntable is its own chunk and
   // builds the machine on its first frame, so it is given a moment.
   sled: { params: { menu: "sled" }, wait: ".sled-pick-canvas", settle: 1800 },

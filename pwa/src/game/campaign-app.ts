@@ -37,6 +37,8 @@ export type CampaignApp = {
   /** A board merged in from the rider's other devices (`use-cloud-sync.ts`)
    * becomes the one this device renders and books into. */
   adopt: (progress: CampaignProgress) => void;
+  /** The board SET rather than earned — DEVELOPER ▸ UNLOCKS. */
+  setProgress: (progress: CampaignProgress) => void;
 };
 
 export function useCampaign(world: {
@@ -60,6 +62,7 @@ export function useCampaign(world: {
     progress,
     rig,
     rung,
+    setProgress: (next) => setProgress((held.current = next)),
     openCard: (mode, page) => {
       world.mode.current = mode;
       rung.current = null;

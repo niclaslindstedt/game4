@@ -56,6 +56,10 @@ At any point, **Escape** (or the pause mark in the top right, under the minimap)
 
 **GALLERY**, along the front door's foot, is the roll: the newest picture first, an arrow either side to flip (or the filmstrip under it), and **SHARE** (the phone's own share sheet, where the browser has one), **COPY**, **SAVE** and a two-step **DELETE**. The roll keeps the last forty pictures on this device (`docs/configuration.md`); the oldest falls off.
 
+## The developer page
+
+Hold the front door's title — the mark and the name — for **seven seconds**. Nothing shows while it is held; when it lands a **DEVELOPER** chip appears along the foot. The page behind it is instruments over the picture, each a switch: the **FRAME RATE**, the **FRAME COST** (the engine's steps and the draw cut into its stretches, the draw calls and triangles), **PHYSICS** (every probe's load, sink and travel, the share on packed snow), the **TRAIL MAP** (the two maps the snow reads its furrows off, in the corner), the **ENGINE LOG** and a **FREE CAMERA** (I K fly, J L slide, U O sink and climb, shift faster, drag to look). With any of them on, the overlay's foot carries the **REPRO** line — the race on screen as a link; **COPY REPRO LINK** puts it on the clipboard. **UNLOCKS** opens or shuts the campaign's shelves by hand. **BENCHMARK** takes the canvas for thirty seconds of a pinned race through the woods and over a kicker, the whole field ridden by the bot and drawn as fast as the machine can; its score is an index where 100 is real time, **COPY DEBUG REPORT** puts the whole breakdown on the clipboard, and **BENCHMARK HISTORY** keeps the last twenty runs. **LOCK** shuts the page again.
+
 ## Riding
 
 The whole game is two grounds under one machine. On the **packed track** the skis bite, the tread drives and the sled is quick and sure. In **powder** the sled sinks: at walking pace it wallows with the tread buried to its rails, and as speed builds it climbs up onto the top of the snow and planes — keep the throttle open and you float; stop in it and you dig in. Cutting a corner through the powder is a decision with a price.

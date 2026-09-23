@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky birds build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky birds build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -212,6 +212,14 @@ screenshots:
 # `make profile` · `make profile ARGS="--seed 7"`
 profile:
 	npm run profile -- $(ARGS)
+
+# DEVELOPER ▸ BENCHMARK off the command line: the built site on `?bench=1`,
+# the pinned race timed to its end, and the report COPY DEBUG REPORT would
+# copy printed and written to previews/benchmark.txt. Headless Chromium draws
+# in software, so read its score as this build's cost, not a phone's.
+# `make bench` · `make bench ARGS="--width 640 --height 360 --video low"`
+bench:
+	npm run bench -- $(ARGS)
 
 shellcheck:
 	shellcheck scripts/*.sh .githooks/*

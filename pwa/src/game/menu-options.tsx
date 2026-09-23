@@ -377,14 +377,20 @@ export function OptionsPage({
         </div>
       </div>
       <Caption hint={hint} fallback={STRINGS.optCaption} />
-      {/* RESTORE DEFAULTS keeps the camera the rider chose and the probe's
-          verdict — neither is a row on this page — and puts every row that
-          IS back where it shipped. */}
+      {/* RESTORE DEFAULTS keeps the camera the rider chose, the probe's
+          verdict and the developer page — none is a row on this page — and
+          puts every row that IS back where it shipped. */}
       <button
         type="button"
         class="opt-reset"
         onClick={() =>
-          onSettings({ ...freshSettings(), camera: settings.camera, probed: settings.probed })
+          onSettings({
+            ...freshSettings(),
+            camera: settings.camera,
+            probed: settings.probed,
+            developer: settings.developer,
+            dev: settings.dev,
+          })
         }
       >
         {STRINGS.optRestore}
