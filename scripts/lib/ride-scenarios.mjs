@@ -91,6 +91,47 @@ function flight(run) {
   ];
 }
 
+/** THE WIPEOUT's numbers: what put him off and when, how fast the sled was
+ * going, how far he slid from where he left it, the sled's own way on after
+ * it, and when the reset stood them up. */
+function wipeout(run) {
+  const off = run.events.find((e) => e.kind === "wipeout");
+  const reset = run.events.find((e) => e.kind === "reset" && (!off || e.t > off.t));
+  const lying = off ? run.frames.filter((f) => f.t > off.t && f.thrown) : [];
+  const last = lying[lying.length - 1];
+  return [
+    ["wipeout", off ? `${off.cause} at ${fmt(off.t)} s` : "no"],
+    ["at km/h", off ? fmt(off.speed * 3.6, 1) : "—"],
+    ["rider slid m", last ? fmt(Math.hypot(last.rx - off.x, last.rz - off.z), 1) : "—"],
+    ["tumbled turns", last ? fmt(Math.abs(last.tumble) / (2 * Math.PI), 1) : "—"],
+    ["reset at s", reset ? fmt(reset.t) : "—"],
+  ];
+}
+
+/** A sled rocked back and forth: the lean thrown fore and aft and the
+ * bars side to side, `hz` times a second, on `throttle`. */
+function rock(t, hz, throttle) {
+  const s = Math.sin(2 * Math.PI * hz * t) >= 0 ? 1 : -1;
+  return { steer: s, throttle, brake: 0, lean: s, reset: false };
+}
+
+/** Which phase of the rocking scenario a run is in, per run. */
+const dug = new WeakMap();
+
+/** THE TRENCH's numbers: when it was trenched, how deep it got, when it was
+ * out and moving again, and whether the engine had to reset it. */
+function trench(run) {
+  const stuck = run.events.find((e) => e.kind === "stuck");
+  const deepest = run.frames.reduce((m, f) => Math.max(m, f.trench), 0);
+  const out = stuck ? run.frames.find((f) => f.t > stuck.t && f.trench === 0 && f.speed > 2) : null;
+  return [
+    ["trenched at s", stuck ? fmt(stuck.t) : "—"],
+    ["deepest m", fmt(deepest, 3)],
+    ["out at s", out ? fmt(out.t) : "—"],
+    ["resets", run.events.filter((e) => e.kind === "reset").length],
+  ];
+}
+
 export const SCENARIOS = [
   {
     id: "rest",
@@ -336,8 +377,85 @@ export const SCENARIOS = [
         ["hit km/h", hit ? fmt(hit.speed * 3.6, 1) : "—"],
         ["after km/h", after ? fmt(after.speed * 3.6, 1) : "—"],
         ["yaw after deg", after ? fmt(after.heading * 57.3, 1) : "—"],
+        ...wipeout(run).filter(([k]) => k !== "at km/h"),
       ];
     },
+  },
+  {
+    id: "tree-glance",
+    title: "a trunk clipped at 25 km/h — held on to",
+    level: (S) => S.syntheticLevel(),
+    place: (S) => ({ x: S.LONE_TREE.x + 0.7, z: S.LONE_TREE.z - 20, heading: 0, speed: 25 / 3.6 }),
+    seconds: 4,
+    view: "plan",
+    input: (t, st) => ({ ...FULL, throttle: st.sled.speed * 3.6 < 25 ? 0.5 : 0.1 }),
+    measure: (run) => {
+      const hit = run.events.find((e) => e.kind === "hit");
+      return [["hit km/h", hit ? fmt(hit.speed * 3.6, 1) : "—"], ...wipeout(run)];
+    },
+  },
+  {
+    id: "nose-in",
+    title: "a landing taken 40 degrees nose-down at 60 km/h",
+    level: (S) => S.flatLevel({ packed: 1 }),
+    place: () => ({
+      x: 1500,
+      z: 200,
+      heading: 0,
+      speed: 60 / 3.6,
+      height: 2.5,
+      vy: -3,
+      pitch: -0.7,
+    }),
+    seconds: 6,
+    view: "profile",
+    input: () => IDLE,
+    measure: (run) => {
+      const land = run.events.find((e) => e.kind === "land");
+      return [["impact m/s", land ? fmt(land.impact) : "—"], ...wipeout(run)];
+    },
+  },
+  {
+    id: "rollover",
+    title: "thrown onto its side at 70 km/h",
+    level: (S) => S.flatLevel({ packed: 1 }),
+    place: () => ({ x: 1500, z: 200, heading: 0, speed: 70 / 3.6, height: 1.6, roll: 1.35 }),
+    seconds: 6,
+    view: "plan",
+    input: () => FULL,
+    measure: wipeout,
+  },
+  {
+    id: "stuck",
+    title: "nosed into a powder bank, then rocked out",
+    level: (S) => S.flatLevel({ packed: 0, grade: 1, slopeFrom: 400 }),
+    place: () => ({ x: 1500, z: 397, heading: 0.5 }),
+    seconds: 12,
+    view: "profile",
+    // Pinned until it has dug itself 15 cm in, then rocked on a part
+    // throttle until the hole is packed back, then turned away and ridden.
+    input: (t, st) => {
+      const c = st.sled;
+      if (!dug.has(st) && c.trench >= 0.15) dug.set(st, "rock");
+      if (dug.get(st) === "rock" && c.trench === 0) dug.set(st, "away");
+      const phase = dug.get(st);
+      return phase === "rock"
+        ? rock(t, 1.2, 0.35)
+        : phase === "away"
+          ? { ...FULL, steer: 1 }
+          : FULL;
+    },
+    measure: trench,
+  },
+  {
+    id: "stuck-held",
+    title: "nosed into a powder bank, throttle pinned",
+    level: (S) => S.flatLevel({ packed: 0, grade: 1, slopeFrom: 400 }),
+    place: () => ({ x: 1500, z: 397, heading: 0 }),
+    seconds: 14,
+    view: "profile",
+    input: () => FULL,
+    measure: trench,
   },
 ];
 

@@ -21,8 +21,15 @@ import * as THREE from "three";
 
 import type { SkyLook } from "./sky.ts";
 
+/** How many sleds' lamps the snow is lit by: the player and the field. */
+export const LAMP_SLOTS = 4;
+
 export type HazeUniforms = {
+  /** Toward the KEY light — the sun by day, the moon by night: what the
+   * snow's wrap and glitter answer to. */
   uSunDir: { value: THREE.Vector3 };
+  /** Toward the sun itself, wherever it is: the aureole and the disc. */
+  uSunPos: { value: THREE.Vector3 };
   uZenith: { value: THREE.Color };
   uHorizon: { value: THREE.Color };
   uGlow: { value: THREE.Color };
@@ -33,17 +40,41 @@ export type HazeUniforms = {
    * `environment.ts`; not the sky's, but it rides the same shared object
    * because every world material already carries it. */
   uShadowFade: { value: THREE.Vector4 };
+  /** The haze's thinning height, m, and the share of it left up there. */
+  uHazeLift: { value: number };
+  uHazeFloor: { value: number };
+  /** The snow's cues: how flat the light is, how much it glitters. */
+  uFlat: { value: number };
+  uGlitter: { value: number };
+  /** THE LAMPS: each sled's headlamp — where it is, where it points, how
+   * far on (0 for a slot with no sled) — and the colour of the beam. */
+  uLampPos: { value: THREE.Vector3[] };
+  uLampDir: { value: THREE.Vector3[] };
+  uLampOn: { value: number[] };
+  uLampCol: { value: THREE.Color };
 };
 
 export function createHazeUniforms(): HazeUniforms {
+  const vectors = (): THREE.Vector3[] =>
+    Array.from({ length: LAMP_SLOTS }, () => new THREE.Vector3(0, 0, 1));
   return {
     uSunDir: { value: new THREE.Vector3(0, 0.4, -1).normalize() },
+    uSunPos: { value: new THREE.Vector3(0, 0.4, -1).normalize() },
     uZenith: { value: new THREE.Color() },
     uHorizon: { value: new THREE.Color() },
     uGlow: { value: new THREE.Color() },
     uSunCol: { value: new THREE.Color() },
     uHaze: { value: 1 / 1500 },
     uShadowFade: { value: new THREE.Vector4(0, 0, 1e9, 2e9) },
+    uHazeLift: { value: 700 },
+    uHazeFloor: { value: 0.55 },
+    uFlat: { value: 0 },
+    uGlitter: { value: 1 },
+    uLampPos: { value: vectors() },
+    uLampDir: { value: vectors() },
+    uLampOn: { value: new Array<number>(LAMP_SLOTS).fill(0) },
+    // A halogen's warm white, in linear light.
+    uLampCol: { value: new THREE.Color().setRGB(1.0, 0.86, 0.66) },
   };
 }
 
@@ -51,27 +82,36 @@ export function createHazeUniforms(): HazeUniforms {
  * are set channel by channel rather than through `Color.set`, which would
  * treat them as sRGB. */
 export function writeHaze(u: HazeUniforms, look: SkyLook): void {
-  u.uSunDir.value.set(look.sun.x, look.sun.y, look.sun.z);
+  u.uSunDir.value.set(look.key.x, look.key.y, look.key.z);
+  u.uSunPos.value.set(look.sun.x, look.sun.y, look.sun.z);
   u.uZenith.value.setRGB(...look.zenith);
   u.uHorizon.value.setRGB(...look.horizon);
   u.uGlow.value.setRGB(...look.glow);
   u.uSunCol.value.setRGB(...look.sunColour);
   u.uHaze.value = look.haze;
+  u.uHazeLift.value = look.hazeLift;
+  // A valley fog is thick at the floor and gone over the peaks.
+  u.uHazeFloor.value = look.fog > 0 ? 0.12 : 0.55;
+  u.uFlat.value = look.flat;
+  u.uGlitter.value = look.glitter;
 }
 
 /** The sky along a direction, in linear light — the dome's own colour. */
 export const SKY_GLSL = /* glsl */ `
 uniform vec3 uSunDir;
+uniform vec3 uSunPos;
 uniform vec3 uZenith;
 uniform vec3 uHorizon;
 uniform vec3 uGlow;
 uniform vec3 uSunCol;
 uniform float uHaze;
+uniform float uHazeLift;
+uniform float uHazeFloor;
 
 vec3 skyColour(vec3 dir) {
   float up = clamp(dir.y, 0.0, 1.0);
   vec3 c = mix(uHorizon, uZenith, pow(up, 0.5));
-  float mu = max(dot(normalize(dir), uSunDir), 0.0);
+  float mu = max(dot(normalize(dir), uSunPos), 0.0);
   // The aureole round the sun, strongest low on the dome.
   c += uGlow * (0.22 * pow(mu, 6.0) + 0.5 * pow(mu, 48.0)) * (1.0 - 0.6 * up);
   // Under the horizon the dome is the far snow's glare in the air.
@@ -90,8 +130,8 @@ vec3 hazeColour(vec3 dir) {
 // away whose height over the lens is \`rise\` m: exponential, thinning with
 // altitude so the peaks keep their shape a little longer than the valleys.
 float hazeAmount(float dist, float rise) {
-  float thin = exp(-max(rise, 0.0) / 700.0);
-  return 1.0 - exp(-dist * uHaze * mix(0.55, 1.0, thin));
+  float thin = exp(-max(rise, 0.0) / uHazeLift);
+  return 1.0 - exp(-dist * uHaze * mix(uHazeFloor, 1.0, thin));
 }
 `;
 

@@ -61,6 +61,8 @@ export function createRivals(state: GameState, count: number): void {
       // The player's help is the player's: the bot rides every rival with
       // every hand on, so a harder setting is a harder sled, not a slower field.
       assist: { ...FULL_ASSIST },
+      // ...and so is his damage: a rival's machine is never bent.
+      damage: false,
       progress: freshProgress(state.level),
       rivals: [],
       events: [],

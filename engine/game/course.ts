@@ -23,8 +23,8 @@
 
 import { angleDiff } from "../lib/math.ts";
 import { fromEuler } from "../lib/quat.ts";
-import { trackPointAt } from "../mapgen/index.ts";
-import type { Checkpoint, Level } from "../mapgen/types.ts";
+import { nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
+import type { Checkpoint, Level, Spawn } from "../mapgen/types.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { derive } from "./sled.ts";
 import { sinkTarget } from "./snow.ts";
@@ -49,6 +49,7 @@ export function freshProgress(level: Level): Progress {
     lastPassedAt: 0,
     lastResetAt: 0,
     bestAir: 0,
+    distance: 0,
   };
 }
 
@@ -151,13 +152,20 @@ function placeOf(state: GameState): number {
 
 /** Where a reset stands the sled: on the track's centreline a few metres
  * past the last checkpoint taken (or short of the start line), facing
- * along the track. */
+ * along the track. On a FREE RIDE, where no checkpoint is owed, it is the
+ * point of the centreline nearest the sled — the groomer the rider was
+ * last closest to, facing the way the loop runs there. */
 export function resetPose(state: GameState): {
   x: number;
   z: number;
   heading: number;
   checkpoint: number;
 } {
+  if (!state.rules.course) {
+    const near = nearestTrackPoint(state.level, state.sled.x, state.sled.z);
+    const at = trackPointAt(state.level, near.s);
+    return { x: at.x, z: at.z, heading: at.heading, checkpoint: -1 };
+  }
   const cps = state.level.checkpoints;
   const last = state.progress.lastCheckpoint;
   const s = last < 0 ? cps[0].s - K.resetAhead * 2 : cps[last].s + K.resetAhead;
@@ -185,7 +193,9 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
   );
   const packed = level.packedAt(x, z);
   const probes = probesOf(c.spec);
-  for (let i = 0; i < probes.length; i++) c.sinks[i] = sinkTarget(packed, 0, probes[i].sinkScale);
+  for (let i = 0; i < probes.length; i++) {
+    c.sinks[i] = sinkTarget(packed, 0, probes[i].sinkScale, 1, state.snowDepth);
+  }
   c.x = x;
   c.z = z;
   c.y = level.groundAt(x, z) - c.sinks[probes.length - 1] + c.spec.cogHeight;
@@ -210,6 +220,13 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
   c.landing = 1e6;
   c.overFor = 0;
   c.stuckFor = 0;
+  // Stood up out of its hole with the rider back on it; what the machine
+  // has taken, it keeps.
+  c.trench = 0;
+  c.trenchFor = 0;
+  c.boggedFor = 0;
+  c.rolledFor = 0;
+  c.thrown = null;
   c.hitCooldown = 0;
   c.bumpCooldown = 0;
   for (const contact of c.contacts) {
@@ -218,6 +235,30 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
   }
   c.comps.fill(0);
   derive(c);
+}
+
+/** How far clear of a trunk a free ride may be stood, m past its radius. */
+const TREE_CLEAR = 2.5;
+
+/** WHERE A FREE RIDE STARTS when the rider picked a spot on the chart: the
+ * point held inside the map's edge (`TUNING.bounds`), facing the way the
+ * loop runs at its nearest point — a direction the rider can read off the
+ * chart — and, where the spot is inside a trunk, stood on that nearest
+ * point of the track instead: a sled cannot be put down inside a tree. */
+export function freeSpawn(level: Level, x: number, z: number): Spawn {
+  const B = TUNING.bounds;
+  const lo = B.margin + B.soft;
+  const hi = level.size - lo;
+  const px = Math.min(hi, Math.max(lo, x));
+  const pz = Math.min(hi, Math.max(lo, z));
+  const near = nearestTrackPoint(level, px, pz);
+  const along = trackPointAt(level, near.s);
+  for (const t of level.trees) {
+    if (Math.hypot(t.x - px, t.z - pz) < t.radius + TREE_CLEAR) {
+      return { x: along.x, z: along.z, heading: along.heading };
+    }
+  }
+  return { x: px, z: pz, heading: along.heading };
 }
 
 /** `reset`: back on the track at the last checkpoint taken. */

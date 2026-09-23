@@ -8,6 +8,8 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  bermCrest,
+  bermProfile,
   dealDrifts,
   generateLevel,
   LEVEL_RULES as R,
@@ -16,6 +18,7 @@ import {
   trackPointAt,
   withinBand,
   type GeneratedLevel,
+  sunsetOf,
 } from "@engine";
 
 import { LEVEL_SEEDS, analysisFor, levelFor } from "./support/levels.ts";
@@ -89,11 +92,16 @@ describe("the Level contract", () => {
     expect(level.packedAt(-50, -50)).toBe(0);
   });
 
-  it("deals a clear winter day (R15)", () => {
+  it("deals a winter day (R15), from sunset on an evening (R19)", () => {
     for (const level of corpus()) {
-      expect(withinBand(level.sun.hour, R.sun.hour)).toBe(true);
       expect(withinBand(level.sun.latitude, R.sun.latitude)).toBe(true);
       expect(withinBand(level.sun.dayOfYear, R.sun.dayOfYear)).toBe(true);
+      if (level.weather.evening) {
+        const late = level.sun.hour - sunsetOf(level.sun);
+        expect(withinBand(late, R.sun.evening, 1e-3)).toBe(true);
+        continue;
+      }
+      expect(withinBand(level.sun.hour, R.sun.hour)).toBe(true);
       expect(analysisFor(level.seed).stats.sunElevation).toBeGreaterThanOrEqual(
         R.sun.minElevation - 0.05,
       );
@@ -169,6 +177,29 @@ describe("the loop (R5–R8)", () => {
         expect(level.packedAt(p.x - rx * off, p.z - rz * off)).toBeLessThan(0.02);
       }
     }
+  });
+});
+
+describe("the berms (R18)", () => {
+  it("stands a ridge along both edges the whole way round, no steeper than the rule", () => {
+    for (const level of corpus()) {
+      const s = analysisFor(level.seed).stats;
+      expect(s.bermLow).toBeGreaterThan(0.6 * R.berm.height.min);
+      expect(s.bermLow).toBeLessThan(R.berm.height.max);
+      expect(s.bermSteep).toBeLessThanOrEqual(R.berm.maxSlope + 0.05);
+    }
+  });
+
+  it("wanders inside its band and meets itself round the loop", () => {
+    for (const length of [2517, 2929, 3990]) {
+      for (let s = 0; s < length; s += 7) {
+        expect(withinBand(bermCrest(s, length), R.berm.height)).toBe(true);
+      }
+      expect(bermCrest(length, length)).toBeCloseTo(bermCrest(0, length), 9);
+    }
+    expect(bermProfile(1, 0)).toBe(0);
+    expect(bermProfile(1, R.berm.width / 2)).toBeCloseTo(1, 9);
+    expect(bermProfile(1, R.berm.width)).toBe(0);
   });
 });
 

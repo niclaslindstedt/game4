@@ -2,7 +2,9 @@
 // THE AIR: the two lights, the dome and the haze, answering to one
 // `SkyLook` (`sky.ts`) worked out again every frame off the run's own
 // clock — ten minutes of riding is an hour of sun (`clock.ts`), so the
-// shadows swing over a race.
+// shadows swing over a race. The key light is whichever of the sun and the
+// moon the look names; under a lid it is a glow with no shadow worth the
+// name, and the hemisphere carries the picture.
 //
 // THE KEY LIGHT'S SHADOW IS ONE MAP OVER ONE PATCH. A directional light's
 // shadow map has a fixed number of texels, and spread over the whole basin a
@@ -30,8 +32,9 @@ export type Environment = {
   sun: THREE.DirectionalLight;
   dome: SkyDome;
   /** Apply a look, and aim the shadow ahead of `camera`, its box standing
-   * at height `y` (the sled's: what the depth range is centred on). */
-  update(look: SkyLook, camera: THREE.Camera, y: number): void;
+   * at height `y` (the sled's: what the depth range is centred on);
+   * `drift` is how far the wind has carried the cloud (`sky-dome.ts`). */
+  update(look: SkyLook, camera: THREE.Camera, y: number, drift?: { x: number; z: number }): void;
   /** Where the shadow stands this frame, or null while the SHADOWS row is
    * off — what `forest.ts` picks its casters by. */
   shadow(): ShadowBox | null;
@@ -104,24 +107,28 @@ export function createEnvironment(
     haze,
     sun,
     dome,
-    update(sky, camera, y) {
+    update(sky, camera, y, drift) {
       writeHaze(haze, sky);
       haze.uHaze.value = hazeFor(sky.haze, distance);
-      sun.color.setRGB(...sky.sunColour);
-      sun.intensity = sky.sunIntensity;
+      dome.update(sky, drift?.x ?? 0, drift?.z ?? 0);
+      // The key is the sun by day and the moon by night (`sky.ts`).
+      sun.color.setRGB(...sky.keyColour);
+      sun.intensity = sky.keyIntensity;
       hemi.color.setRGB(...sky.skyLight);
       hemi.groundColor.setRGB(...sky.groundLight);
       hemi.intensity = sky.ambient;
       camera.getWorldDirection(look);
       aimShadow(box, camera.position.x, camera.position.z, look.x, look.z, box.reach);
       box.y = y;
-      box.sx = sky.sun.x;
-      box.sy = sky.sun.y;
-      box.sz = sky.sun.z;
+      // The key's direction, kept a hair over the horizon so the box has a
+      // light to stand under.
+      dir.set(sky.key.x, Math.max(sky.key.y, 0.02), sky.key.z).normalize();
+      box.sx = dir.x;
+      box.sy = dir.y;
+      box.sz = dir.z;
       haze.uShadowFade.value.x = box.x;
       haze.uShadowFade.value.y = box.z;
       // Snap the box's centre to whole texels in the light's own frame.
-      dir.set(sky.sun.x, sky.sun.y, sky.sun.z);
       lightSpace.lookAt(dir, origin, up);
       inv.copy(lightSpace).invert();
       at.set(box.x, box.y, box.z).applyMatrix4(inv);

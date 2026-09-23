@@ -21,7 +21,9 @@
 // lookback, furrow, track, hood, bars, far, jump, landing, vista, forest,
 // approach-140, approach-90, approach-60, approach-40 (the forest view's line
 // walked in toward the wood — a shadow that appears between two of them was
-// switched on by the lens coming nearer), orbit.
+// switched on by the lens coming nearer), orbit, and last, staged rather
+// than ridden to: wipeout and wipeout-lie (the player put into the nearest
+// trunk flat out, then where the rider came to rest).
 
 import { existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
@@ -56,6 +58,8 @@ const VIEWS = [
   "approach-60",
   "approach-40",
   "orbit",
+  "wipeout",
+  "wipeout-lie",
 ];
 
 const args = parseArgs(

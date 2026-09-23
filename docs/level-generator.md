@@ -64,8 +64,9 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    country where it was.
 4. **The track's kickers** (`kickers.ts`, R9) — added to the graded profile on the straightest
    brows before a descent: a t² ramp steepest at its lip, a (1 − u)² landing falling away past it.
-5. **The corridor** (`track.ts`, R8, R10) — the finished line pressed into the ground: level across
-   the width and a flat shoulder, a bank back into the country, and the packed field beside it.
+5. **The corridor** (`track.ts`, R8, R10, R18) — the finished line pressed into the ground: level
+   across the width, a flat shoulder and the bench past it, the plough's berm along each edge on
+   that bench, a bank back into the country, and the packed field beside it.
 6. **The kickers off the track** (`kickers.ts`, R4) — the same profile stamped on hilltops the
    search climbs to, well clear of the corridor.
 7. **The start** (`spawn.ts`, R11–R13) — a station on the loop searched for the start line, the
@@ -78,6 +79,12 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    field through the corridor's own nearest-segment index and move nothing else the map draws.
    `Level.drifts` publishes each stretch's core as arc lengths.
 10. **The day** (`sun.ts`, R15), and the compile (`compile.ts`) that binds it all into a `Level`.
+11. **The weather** (`weather.ts`, R19) — the sky, the fall, the fog and the wind, and whether the race
+    is ridden in the evening — dealt LAST, off a stream of its own (the attempt's sub-seed, salted),
+    so it moves nothing the map builds; an evening moves only the day's start hour. `Level.weather`
+    publishes it, `weatherOf` reads it (a hand-built map is ridden under `CLEAR_WEATHER`), and
+    `withSky` / `GenerateOptions.sky` / `CreateGameOptions.sky` put a map under a sky and an hour
+    chosen by hand — applied after the search accepts the map, so the map is the seed's either way.
 
 A map builds in about half a second on Node.
 
@@ -120,8 +127,12 @@ A map builds in about half a second on Node.
 
 - **R14** FORESTS AND MEADOWS. Conifers stand where a slow noise says forest — at most one per `forest.spacing` metre cell, jittered — thinning to `forest.meadow` of that density in the open meadows between, with `forest.clearings.count` round clearings cut out of the woods. A tree is `forest.height` (6–19 m) tall with a trunk of `forest.trunk` and a crown `forest.crown` of its height across, never wider than `forest.crownMax`. No two trunks stand closer than `forest.gap` (9 m), so a sled can be ridden between any two trees. No tree stands within `forest.corridor` metres of the track's edge, on ground steeper than `forest.maxSlope`, above `forest.treeLine` of the way up the rim, or on a kicker.
 
-- **R15** A CLEAR WINTER DAY. The map lies at a seeded latitude in `sun.latitude` (46–64°N) on a seeded day of the year in `sun.dayOfYear` (mid-January to mid-March), and the race starts at a seeded solar hour in `sun.hour` (9–16 h) at which the sun stands at least `sun.minElevation` degrees over the horizon.
+- **R15** A WINTER DAY. The map lies at a seeded latitude in `sun.latitude` (46–64°N) on a seeded day of the year in `sun.dayOfYear` (mid-January to mid-March), and the race starts at a seeded solar hour in `sun.hour` (9–16 h) at which the sun stands at least `sun.minElevation` degrees over the horizon — except on the maps R19 deals an EVENING, which start instead `sun.evening` (−0.5 to +3.5 h) from that day's sunset: from the last of the sun into full night.
 
 - **R16** THREE LAPS. A race is `race.laps` (3) laps of the loop.
 
 - **R17** DRIFTS ACROSS THE TRACK. The wind lays fresh snow over stretches of the groomer. A map is dealt a share of its loop in `drift.share` (0–50 %) to lie drifted, laid as stretches `drift.length` (60–180 m) long, at least `drift.gap` metres apart; across a stretch the packed field — the track's width and its shoulders — falls to `drift.packed` of its groomed value, easing in and out over `drift.fade` metres at either end. No drift lies within `drift.clear` metres of the start line, nor within `drift.fade` metres of a kicker's ramp or landing (R9). The drifts are dealt off a stream of their own, so a map's drifts move nothing else it draws; `Level.drifts` publishes every stretch.
+
+- **R18** THE BERMS. The groomer's plough leaves the snow it pushed off the line in a windrow along each edge, and that is what marks the track out of the country round it. The ground stays level for `berm.width` metres past the flat shoulder (R8) — the bank back into the country starts behind the berm, never under it — and on that bench a ridge stands `berm.height` (0.7–1.0 m) over the line, its crest halfway across, its faces a half-sine no steeper than `berm.maxSlope`. Its height wanders along the loop, never below `berm.height.min`, as a windrow does. No tree stands on a berm (R14's corridor reaches past it). The berms draw nothing from any stream.
+
+- **R19** THE WEATHER. Every map is dealt one sky off a stream of its own — the attempt's sub-seed, salted — so its weather moves nothing else the map draws: `clear`, `fair` (fair-weather cumulus), `high` (a sheet of high cloud), `overcast` (a lid of stratus and its flat light), `snow` (a fall, from light to a blizzard) or `fog` (a valley fog lying in the basin), at the odds in `weather.odds`. A fall is dealt an intensity in `weather.snowfall` and a fog a density in `weather.fog`; the wind is dealt a mean speed in that sky's band of `weather.wind` — a heavier fall a harder wind — and a bearing it blows from. The same stream sends `weather.evening` of the maps out in the EVENING of R15. `Level.weather` publishes all of it.

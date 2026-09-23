@@ -107,11 +107,16 @@ const EVERY_EVENT_BY_KIND: { [K in GameEvent["kind"]]: Extract<GameEvent, { kind
   lap: { kind: "lap", t: 1, lap: 1, time: 60 },
   finish: { kind: "finish", t: 1, time: 180, place: 1 },
   reset: { kind: "reset", t: 1, checkpoint: 2, auto: false },
+  wipeout: { kind: "wipeout", t: 1, cause: "tree", speed: 14, x: 0, z: 0 },
+  stuck: { kind: "stuck", t: 1 },
+  damage: { kind: "damage", t: 1, part: "skiLeft", level: 0.3 },
 };
 
 /** The kinds the bank says nothing about, with the reason: the lip is the
- * engine's moment — it unloads and screams — not a one-shot's. */
-const SILENT_KINDS: GameEvent["kind"][] = ["air"];
+ * engine's moment — it unloads and screams — not a one-shot's; a trench is
+ * the belt spinning, which the engine bed already is; and what a blow bent
+ * is heard in the blow. */
+const SILENT_KINDS: GameEvent["kind"][] = ["air", "stuck", "damage"];
 
 /** The ceiling a context at 16 kHz holds a cutoff under. */
 const HEADSET = safeCutoff(1e9, 16000);

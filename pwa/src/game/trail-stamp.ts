@@ -43,6 +43,10 @@ export const TRAIL = {
   /** A probe that has moved further than this since its last stamp is a
    * reset or a teleport, not a trail, m. */
   jump: 6,
+  /** A THROWN RIDER's gouge (`bodyStampOf`): its width, m — shoulders and a
+   * flung arm — and its depth in virgin powder, m. */
+  body: 0.7,
+  bodyDepth: 0.14,
 };
 
 /** One capsule of trail: from (ax, az) to (bx, bz), `half` wide either side
@@ -59,9 +63,12 @@ export type Stamp = {
 
 /** THE DEPTH A PROBE IS DRAWN AT, m, on snow `packed` (0 powder … 1
  * groomed) — its load share (`0..1`) scales the furrow, so a ski barely
- * kissing the snow on a hop leaves less than one carrying the nose. */
-export function drawnDepth(contact: SnowContact, packed: number, load = 1): number {
-  const furrow = contact.kind === "ski" ? TRAIL.powderSki : TRAIL.powderTread;
+ * kissing the snow on a hop leaves less than one carrying the nose, and the
+ * run's snow dial (`GameState.snowDepth`) scales the powder's own furrow the
+ * way it scales the physics' sink: a dusting leaves a scuff, a dump a
+ * trench. */
+export function drawnDepth(contact: SnowContact, packed: number, load = 1, depth = 1): number {
+  const furrow = (contact.kind === "ski" ? TRAIL.powderSki : TRAIL.powderTread) * depth;
   const p = Math.min(1, Math.max(0, packed));
   const drawn = (furrow * (1 - p) + TRAIL.packedDepth * p) * Math.min(1, Math.max(0.25, load));
   return Math.min(TRAIL.maxDepth, Math.max(contact.sink, drawn));
@@ -82,7 +89,7 @@ export function createPen(probes: number): TrailPen {
  * The capsules one rider lays since its last stamp, pushed onto `out`.
  * `packedAt` is the level's own; `nominalLoad` is the load (N) a probe
  * carries standing still, which is what "a full furrow" is measured
- * against.
+ * against; `depth` is the run's snow dial.
  */
 export function stampsOf(
   contacts: readonly SnowContact[],
@@ -90,6 +97,7 @@ export function stampsOf(
   packedAt: (x: number, z: number) => number,
   nominalLoad: number,
   out: Stamp[],
+  depth = 1,
 ): void {
   for (let i = 0; i < contacts.length && i < pen.xs.length; i++) {
     const c = contacts[i];
@@ -106,17 +114,53 @@ export function stampsOf(
     pen.down[i] = 1;
     if (moved > TRAIL.jump) continue;
     const load = nominalLoad > 0 ? c.load / nominalLoad : 1;
-    const depth = drawnDepth(c, packedAt(c.x, c.z), load);
+    const drawn = drawnDepth(c, packedAt(c.x, c.z), load, depth);
     out.push({
       ax,
       az,
       bx: c.x,
       bz: c.z,
       half: c.width * 0.5,
-      depth,
-      berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare),
+      depth: drawn,
+      berm: Math.min(TRAIL.maxBerm, drawn * TRAIL.bermShare),
     });
   }
+}
+
+/** THE BODY'S TRAIL: a thrown rider (`Thrown`, `crash.ts`) sliding on the
+ * snow ploughs a wide, shallow gouge of his own — a body is a footprint
+ * too, and the sprawl it leaves is the one mark on the map that says a
+ * crash happened here. One capsule from where he last touched to where he
+ * touches now, drawn as a furrow of `TRAIL.body` width at the powder's own
+ * depth (a scuff on the groomer); `pen` is a one-probe pen of its own. */
+export function bodyStampOf(
+  body: { x: number; z: number; touching: boolean },
+  pen: TrailPen,
+  packedAt: (x: number, z: number) => number,
+  out: Stamp[],
+): void {
+  if (!body.touching) {
+    pen.down[0] = 0;
+    return;
+  }
+  const was = pen.down[0] === 1;
+  const ax = was ? pen.xs[0] : body.x;
+  const az = was ? pen.zs[0] : body.z;
+  pen.xs[0] = body.x;
+  pen.zs[0] = body.z;
+  pen.down[0] = 1;
+  if (Math.hypot(body.x - ax, body.z - az) > TRAIL.jump) return;
+  const p = Math.min(1, Math.max(0, packedAt(body.x, body.z)));
+  const depth = TRAIL.bodyDepth * (1 - p) + TRAIL.packedDepth * 2 * p;
+  out.push({
+    ax,
+    az,
+    bx: body.x,
+    bz: body.z,
+    half: TRAIL.body / 2,
+    depth,
+    berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare),
+  });
 }
 
 /** The cross-section of one furrow at `d` m from its centreline: how far

@@ -60,6 +60,8 @@ export type RunReport = {
   bumps: number;
   resets: number;
   autoResets: number;
+  /** Times the rider was thrown off (`crash.ts`) — 0 on every clean ride. */
+  wipeouts: number;
   missed: number;
   /** Where the bot finished against the field (1 on a solo run). */
   place: number;
@@ -99,6 +101,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
   let bumps = 0;
   let resets = 0;
   let autoResets = 0;
+  let wipeouts = 0;
   let missed = 0;
   let place = 1;
   let distance = 0;
@@ -120,6 +123,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
         resets += 1;
         if (e.auto) autoResets += 1;
       } else if (e.kind === "missed") missed += 1;
+      else if (e.kind === "wipeout") wipeouts += 1;
       else if (e.kind === "finish") place = e.place;
     }
     const c = state.sled;
@@ -160,6 +164,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
     bumps,
     resets,
     autoResets,
+    wipeouts,
     missed,
     place,
     events,

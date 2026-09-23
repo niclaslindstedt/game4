@@ -200,7 +200,11 @@ rewrites that row. No build, no browser, seconds.
   sled goes over when the roll load passes what the rider and the chassis can
   hold (`rollMax`) or the sidehill is steep enough; after that the chassis
   points carry it and `reset.overFor` stands it back up. Stage it on the
-  bench (`sidehill`), never judge it from a run in the game.
+  bench (`sidehill`), never judge it from a run in the game. A sled that goes
+  over AT SPEED throws its rider (`crash.ts`, the `crash` skill), and a
+  trenched tread (`trench.ts`) is a deeper sink and a weaker drive read here
+  — `trenchGrip` and the trench on the tread probes' sink target, both
+  exactly neutral out of a hole, as the damage shares are on a sound sled.
 - **ANGULAR VELOCITY IS BODY-FRAME, THE QUATERNION IS BODY→WORLD, AND IT IS
   RENORMALISED EVERY STEP.** `heading`, `pitch`, `roll` are derived from `q`
   each step for the HUD, the camera and the bot — never integrated on their

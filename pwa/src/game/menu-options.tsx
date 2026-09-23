@@ -209,6 +209,14 @@ export function OptionsPage({
               onPick={(air) => setAssist({ air })}
               onHint={setHint}
             />
+            <StepRow
+              label={STRINGS.optDamage}
+              hint={`${STRINGS.optDamageHint} ${STRINGS.optAssistNote}`}
+              stops={ON_OFF}
+              value={onOff(settings.damage)}
+              onPick={(id) => onSettings({ ...settings, damage: id === "on" })}
+              onHint={setHint}
+            />
           </KnobGroup>
           {/* THE FADERS ARE OVER A LIVE RACE TOO: the bus reads them every
               frame, so the engine under the card gets quieter as the thumb

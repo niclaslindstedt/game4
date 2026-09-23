@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// ONE RIDER'S STEP — the sled, the trees and the edge, the air record, the
-// clock, the course and the automatic reset, in that order, for ONE run:
+// ONE RIDER'S STEP — the sled, the trees and the edge, the wipeout (or the
+// rider's own tumble once he is off, `crash.ts`), the damage it cost
+// (`damage.ts`), the air record, the clock and the odometer, the course (when
+// the rules count one — a free ride does not) and the automatic reset, in
+// that order, for ONE run:
 // the player's, or one of the rivals' (`rivals.ts`), which is a run of its
 // own over the same map. The field is stepped by this same function — a
 // rival that rode a different step would be a rival in a different game.
@@ -13,6 +16,8 @@ import { TUNING } from "./defs/tuning.ts";
 import { collideTrees, keepInBounds } from "./collision.ts";
 import { resetSled, stepCourse } from "./course.ts";
 import { stepSled } from "./sled.ts";
+import { crashOver, quietClocks, stepThrown, throwRider, wipeoutCause } from "./crash.ts";
+import { takeDamage } from "./damage.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledInput } from "./state.ts";
 
 /** What the rider holds under the lights: the brake, and nothing else. */
@@ -29,10 +34,23 @@ export function stepRun(run: GameState, input: SledInput, events: GameEvent[]): 
   const c = run.sled;
   const x0 = c.x;
   const z0 = c.z;
-  const held = run.phase === "countdown" ? HOLD : racing ? input : NEUTRAL_INPUT;
+  const v0 = { x: c.vx, y: c.vy, z: c.vz };
+  const speed0 = c.speed;
+  // THE WIPEOUT (`crash.ts`): with the rider off it, the sled goes on with
+  // the controls let go, and he tumbles on his own.
+  const off = c.thrown;
+  const held = off || !racing ? (run.phase === "countdown" ? HOLD : NEUTRAL_INPUT) : input;
   stepSled(run, held, events);
   collideTrees(run, events);
   keepInBounds(run);
+  if (off) {
+    stepThrown(run, off);
+    quietClocks(c);
+  } else {
+    const cause = wipeoutCause(run, events, speed0);
+    if (cause) throwRider(run, cause, v0, events);
+  }
+  takeDamage(run, events);
   // THE RUN'S AIR RECORD, off the landing the sled has just reported.
   for (let i = 0; i < events.length; i++) {
     const e = events[i];
@@ -42,8 +60,17 @@ export function stepRun(run: GameState, input: SledInput, events: GameEvent[]): 
   const p = run.progress;
   if (p.finished) return;
   p.time += TUNING.dt;
-  stepCourse(run, x0, z0, events);
+  p.distance += Math.hypot(c.x - x0, c.z - z0);
+  if (off) {
+    // A sled without its rider takes no checkpoint; he is stood back up
+    // once he has lain long enough.
+    if (crashOver(off)) resetSled(run, events, true);
+    return;
+  }
+  if (run.rules.course) stepCourse(run, x0, z0, events);
   if (p.finished) return;
   const R = TUNING.reset;
-  if (c.overFor >= R.overFor || c.stuckFor >= R.stuckFor) resetSled(run, events, true);
+  // Trenched, the rider is given the time to rock it out (`trench.ts`).
+  const stuck = c.trench > 0 ? c.trenchFor >= TUNING.trench.holdFor : c.stuckFor >= R.stuckFor;
+  if (c.overFor >= R.overFor || stuck) resetSled(run, events, true);
 }

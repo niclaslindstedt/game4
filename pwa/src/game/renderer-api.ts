@@ -26,6 +26,9 @@ export interface WorldRenderer {
   /** The picture (OPTIONS ▸ PICTURE), applied at once — all but ANTIALIAS,
    * which a canvas takes only when it is made. */
   setVideo(video: VideoSettings): void;
+  /** THE GHOST (`ghost-run.ts`): another run on the same map, drawn
+   * see-through and leaving no trail — or null for none. */
+  setGhost(ghost: GameState | null): void;
   /** Wait for the GPU to finish everything asked of it, and say how long
    * that took, ms — what the first-visit probe times a frame with. */
   drain(): number;

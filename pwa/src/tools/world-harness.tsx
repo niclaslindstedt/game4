@@ -11,7 +11,7 @@
 // furrows and flies its spray, it only skips drawing the picture — which in a
 // software rasterizer is most of the cost.
 
-import { botInput, createGame, step, type GameState } from "@engine";
+import { botInput, createGame, NEUTRAL_INPUT, placeRun, step, type GameState } from "@engine";
 
 import type { LensPose } from "../game/camera-rigs.ts";
 import { createWorldRenderer } from "../game/renderer.ts";
@@ -303,6 +303,62 @@ const shots: Record<string, () => string> = {
     renderer.setCamera("orbit", true);
     settle(30);
     return "the menus' drone";
+  },
+  wipeout() {
+    // THE WIPEOUT (`crash.ts`): the player's sled stood short of the trunk
+    // nearest it and ridden into it flat out, drawn a moment after the
+    // rider has left the saddle — the burst, and him in the air past it.
+    const s = state.sled;
+    let tree = level.trees[0];
+    for (const t of level.trees) {
+      if (Math.hypot(t.x - s.x, t.z - s.z) < Math.hypot(tree.x - s.x, tree.z - s.z)) tree = t;
+    }
+    const h = Math.atan2(s.x - tree.x, s.z - tree.z);
+    placeRun(state, {
+      x: tree.x + Math.sin(h) * 25,
+      z: tree.z + Math.cos(h) * 25,
+      heading: h + Math.PI,
+      speed: 55 / 3.6,
+    });
+    renderer.setCamera("chase", true);
+    const pinned = { ...NEUTRAL_INPUT, throttle: 1 };
+    const on = (done: () => boolean, limit: number) => {
+      while (state.t < limit && !done()) {
+        for (let i = 0; i < 2; i++) step(state, pinned);
+        renderer.draw(state, 0, FRAME, false);
+      }
+    };
+    on(() => (state.sled.thrown?.t ?? 0) > 0.35, state.t + 6);
+    still();
+    const off = state.sled.thrown;
+    return off ? `thrown (${off.cause}), ${off.t.toFixed(2)} s off` : "no wipeout";
+  },
+  "wipeout-lie"() {
+    // ...and where he came to rest, from beside him: the sprawl and the
+    // gouge his slide cut.
+    const t0 = state.t;
+    while (state.sled.thrown && state.sled.thrown.t < 1.7 && state.t < t0 + 3) {
+      for (let i = 0; i < 2; i++) step(state, NEUTRAL_INPUT);
+      renderer.draw(state, 0, FRAME, false);
+    }
+    const off = state.sled.thrown;
+    if (!off) return "already stood back up";
+    const across = off.heading + Math.PI / 2;
+    const ex = off.x + Math.sin(across) * 4;
+    const ez = off.z + Math.cos(across) * 4;
+    renderer.setOverride({
+      eye: { x: ex, y: level.groundAt(ex, ez) + 2.2, z: ez },
+      target: {
+        x: off.x - Math.sin(off.heading) * 3,
+        y: off.y,
+        z: off.z - Math.cos(off.heading) * 3,
+      },
+      fov: 55,
+      roll: 0,
+    });
+    still();
+    renderer.setOverride(null);
+    return `lying ${off.t.toFixed(1)} s after, tumbled ${(off.tumble / (2 * Math.PI)).toFixed(1)} turns`;
   },
 };
 

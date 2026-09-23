@@ -20,7 +20,7 @@ import {
   type GameEvent,
   type GameState,
 } from "@engine";
-import { syntheticLevel } from "./support/synthetic.ts";
+import { flatLevel, syntheticLevel } from "./support/synthetic.ts";
 
 /** Teleport the sled across a checkpoint's line along its heading: stand it
  * a step short, then let one step carry it over. */
@@ -165,6 +165,30 @@ describe("the reset", () => {
     placeRun(state, { x: 300, z: 300, heading: 0 });
     const events: GameEvent[] = [];
     // Pinned: its way taken off it every step, as a sled wedged in a drift.
+    // In the powder it digs itself in first (`trench.ts`), and the engine
+    // gives the rider the trench's own hold to rock it out before it steps in.
+    for (let i = 0; i < 14 * TUNING.physicsHz; i++) {
+      state.sled.vx = state.sled.vz = 0;
+      step(state, { ...NEUTRAL_INPUT, throttle: 1 });
+      state.sled.vx = state.sled.vz = 0;
+      events.push(...state.events);
+      if (events.some((e) => e.kind === "reset")) break;
+    }
+    const reset = events.find((e) => e.kind === "reset");
+    expect(reset && reset.kind === "reset" && reset.auto).toBe(true);
+    expect(events.some((e) => e.kind === "stuck")).toBe(true);
+    expect(reset!.t).toBeGreaterThan(TUNING.trench.holdFor);
+  });
+
+  it("comes after the plain hold on packed snow, where nothing digs", () => {
+    const state = createGame({
+      level: flatLevel({ packed: 1 }),
+      rivals: 0,
+      countdown: 0,
+      quiet: true,
+    });
+    placeRun(state, { x: 1500, z: 300, heading: 0 });
+    const events: GameEvent[] = [];
     for (let i = 0; i < 5 * TUNING.physicsHz; i++) {
       state.sled.vx = state.sled.vz = 0;
       step(state, { ...NEUTRAL_INPUT, throttle: 1 });
@@ -173,6 +197,7 @@ describe("the reset", () => {
       if (events.some((e) => e.kind === "reset")) break;
     }
     expect(events.some((e) => e.kind === "reset" && e.auto)).toBe(true);
+    expect(events.some((e) => e.kind === "stuck")).toBe(false);
   });
 });
 

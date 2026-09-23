@@ -104,6 +104,13 @@ function record(scenario, spec) {
       airborne: c.airborne,
       skiComp: (c.skiCompression[0] + c.skiCompression[1]) / 2,
       treadComp: c.treadCompression,
+      trench: c.trench,
+      // The rider, once he is off it (`crash.ts`).
+      thrown: c.thrown !== null,
+      rx: c.thrown ? c.thrown.x : c.x,
+      ry: c.thrown ? c.thrown.y : c.y,
+      rz: c.thrown ? c.thrown.z : c.z,
+      tumble: c.thrown ? c.thrown.tumble : 0,
     });
   }
   return { frames, events, trees: level.trees };

@@ -38,6 +38,7 @@ export type LevelParts = {
   basin: GeneratedLevel["basin"];
   attempt: number;
   drifts: GeneratedLevel["drifts"];
+  weather: GeneratedLevel["weather"];
 };
 
 /** Bind the parts into a level. */
@@ -72,5 +73,6 @@ export function compileLevel(parts: LevelParts): GeneratedLevel {
     basin: parts.basin,
     attempt: parts.attempt,
     drifts: parts.drifts,
+    weather: parts.weather,
   };
 }
