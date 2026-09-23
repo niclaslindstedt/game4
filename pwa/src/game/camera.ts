@@ -79,7 +79,8 @@ export function createLens(near: number, far: number): Lens {
       // Every other boom keeps swinging behind the scenes, so a switch to it
       // starts from where it would be rather than from a stale frame.
       for (const r of ["chase", "far", "high"] as const) {
-        if (r !== current && r !== previous) frameRig(RIGS[r], pose, stateOf(r), dt, groundAt, clear);
+        if (r !== current && r !== previous)
+          frameRig(RIGS[r], pose, stateOf(r), dt, groundAt, clear);
       }
       camera.position.set(lens.eye.x, lens.eye.y, lens.eye.z);
       camera.up.set(0, 1, 0);

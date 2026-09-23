@@ -36,7 +36,15 @@ const STAKE = { height: 3.2, radius: 0.06 };
 const POST = { height: 5.6, radius: 0.12 };
 
 type Post = { x: number; z: number; y0: number; y1: number; r: number };
-type Banner = { x: number; z: number; ux: number; uz: number; half: number; y0: number; y1: number };
+type Banner = {
+  x: number;
+  z: number;
+  ux: number;
+  uz: number;
+  half: number;
+  y0: number;
+  y1: number;
+};
 
 export function createLineClear(level: Level): LineClear {
   const posts: Post[] = [];

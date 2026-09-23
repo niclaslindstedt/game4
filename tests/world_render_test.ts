@@ -8,15 +8,18 @@
 
 import { describe, expect, it } from "vitest";
 import { createGame, step, NEUTRAL_INPUT, type SnowContact } from "@engine";
+import { LONE_TREE, syntheticLevel } from "./support/synthetic.ts";
 
 import {
   blendLens,
   createBoomState,
   frameRig,
+  PULL_MIN,
   RIGS,
   turn,
   type RigPose,
 } from "../pwa/src/game/camera-rigs.ts";
+import { createLineClear } from "../pwa/src/game/camera-clear.ts";
 import { createTrack, nlerp, observe, sample } from "../pwa/src/game/interp.ts";
 import { BODY, gripAt, riderPose, solveLimb } from "../pwa/src/game/rider-pose.ts";
 import { airMass, skyLookAt, skyLookFor, sunDirection, sunTint } from "../pwa/src/game/sky.ts";
@@ -208,6 +211,50 @@ describe("the camera ladder", () => {
     expect(mid).toBeGreaterThan(a.eye.y);
     expect(mid).toBeLessThan(b.eye.y);
     expect(turn(3, -3)).toBeCloseTo(2 * Math.PI - 6, 9);
+  });
+});
+
+describe("the lens kept out of the woods", () => {
+  const level = syntheticLevel();
+  const clear = createLineClear(level);
+  // Riding north (+z) four metres past the lone spruce: the boom's arm runs
+  // straight back through its crown.
+  const past = () =>
+    pose({
+      x: LONE_TREE.x,
+      z: LONE_TREE.z + 4,
+      y: level.groundAt(LONE_TREE.x, LONE_TREE.z + 4) + 0.5,
+    });
+
+  it("reads a line through a crown as blocked and one in the open as clear", () => {
+    const y = level.groundAt(LONE_TREE.x, LONE_TREE.z) + 2;
+    const from = { x: LONE_TREE.x, y, z: LONE_TREE.z + 5 };
+    expect(clear(from, { x: LONE_TREE.x, y, z: LONE_TREE.z - 5 })).toBeLessThan(0.5);
+    expect(clear(from, { x: LONE_TREE.x, y, z: LONE_TREE.z + 12 })).toBe(1);
+  });
+
+  it("pulls the chase arm in short of the tree, at once, and never onto the rider", () => {
+    const p = past();
+    const free = frameRig(RIGS.chase, p, createBoomState(), 1 / 60, level.groundAt);
+    const st = createBoomState();
+    const held = frameRig(RIGS.chase, p, st, 1 / 60, level.groundAt, clear);
+    expect(st.pull).toBeLessThan(1);
+    // In front of the trunk, not behind it.
+    expect(held.eye.z).toBeGreaterThan(LONE_TREE.z);
+    expect(free.eye.z).toBeLessThan(LONE_TREE.z);
+    const arm = Math.hypot(held.eye.x - p.x, held.eye.z - p.z);
+    expect(arm).toBeGreaterThan(PULL_MIN * 0.5);
+  });
+
+  it("lets the arm back out slowly once the tree is behind it", () => {
+    const st = createBoomState();
+    frameRig(RIGS.chase, past(), st, 1 / 60, level.groundAt, clear);
+    const pulled = st.pull;
+    const open = pose({ x: LONE_TREE.x, z: LONE_TREE.z + 40 });
+    open.y = level.groundAt(open.x, open.z) + 0.5;
+    frameRig(RIGS.chase, open, st, 1 / 60, level.groundAt, clear);
+    expect(st.pull).toBeGreaterThan(pulled);
+    expect(st.pull).toBeLessThan(1);
   });
 });
 
