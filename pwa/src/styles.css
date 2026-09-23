@@ -1933,6 +1933,70 @@ canvas {
   color: var(--hud-good);
 }
 
+/* HOW THE HELD RUN HAS GONE (`pause-stats.ts`): up to four figures in one
+   row, each over its caption — the HUD's own chip, because the rider reading
+   this card was reading those chips a second ago.
+
+   ONE ROW, NEVER TWO. `1fr` columns rather than `auto-fit` with a minimum:
+   a minimum that cannot be met WRAPS, silently, and a strip that wrapped
+   would cost this card a whole second line of height on exactly the viewport
+   that has none to give. Equal columns cannot wrap, so the figures are sized
+   to the cell instead, and the widest of them — a four-rider standing, ten
+   minutes on the clock — was MEASURED into a four-cell strip at every
+   reference viewport rather than eyeballed on the three-cell one a lab can
+   ride to. */
+.pause-stats {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.3rem;
+  /* Every vertical measure on this card is scaled against the SHORT axis,
+     because the viewport that decides it is a phone on its side: 390 px of
+     height, of which the wash keeps some. `vmin` is what turns "roomy on a
+     desktop" into "tight on the one screen that cannot afford roomy"
+     without a second layout to keep in step. */
+  margin: 0.1rem 0 clamp(0.3rem, 1.5vmin, 0.55rem);
+  padding: clamp(0.28rem, 1.2vmin, 0.45rem) 0.2rem;
+  border-top: 2px solid rgb(242 247 248 / 14%);
+  border-bottom: 2px solid rgb(242 247 248 / 14%);
+}
+
+.pause-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.pause-stat-value {
+  /* FLAT, and deliberately not clamped against a viewport. The card is
+     `min(24rem, 100%)` wide, so a four-cell strip is 81–88 px per cell at
+     every reference viewport — the column barely moves, and a figure sized
+     against the viewport moves anyway: against `vw` it reaches its maximum
+     on a wide SHORT screen whose cells are still a phone's, and the widest
+     figure walks out of its column into its neighbour's. This is the size
+     the widest figure was measured to fit the NARROWEST of those cells at. */
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+  color: var(--hud-ink);
+  white-space: nowrap;
+}
+
+.pause-stat-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  line-height: 1.1;
+  color: var(--hud-info);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
 /* THE ROWS, ON THIS CARD ONLY. `.menu-item` is the pause card's RESUME and the
    developer page's whole column as well, so the mark-and-a-line layout is
    scoped here rather than pushed onto all of them: the pause card is the one
@@ -1978,6 +2042,38 @@ canvas {
 .menu-card-pause .menu-item-leave {
   margin-top: clamp(0.15rem, 1vmin, 0.35rem);
   font-size: 0.82rem;
+}
+
+/* THE PAUSE CARD'S OPTIONS PANEL (menu-pause.tsx): the same groups the front
+   door's page carries, one column wide, on the pause card's own narrow plate
+   so the two faces of the card are the same object rather than two.
+
+   ONE COLUMN AT EVERY WIDTH. `.knob-groups` goes to a two-column grid at
+   48rem, which is a rule written for a page of four groups; four rows split two
+   and two is a panel with a hole in the corner of it. */
+.menu-card-pause-options {
+  align-items: stretch;
+  text-align: left;
+  gap: 0.55rem;
+}
+
+/* `align-items` is restated on purpose: the two-column rule at 48rem sets it
+   to `start` for a GRID, where it means "do not stretch a short group down the
+   row", and the same word in a flex COLUMN means "do not stretch a group
+   ACROSS" — which sized every group to its own longest label and left the
+   panel's rows standing at three different widths. */
+.menu-card-pause-options .knob-groups {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.55rem;
+}
+
+/* The head reads as the card's, not as a page's: the run behind it is still
+   the subject, and a title the weight of PAUSED would make the panel look
+   like somewhere you had navigated to. */
+.menu-card-pause-options .menu-title {
+  font-size: clamp(0.95rem, 3.4vmin, 1.15rem);
 }
 
 .menu-brand {

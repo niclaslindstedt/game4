@@ -30,7 +30,7 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 
 **NEXT** is the sled card, and **RIDE** there stands the ride up. The HUD keeps the speed, the air clock and the minimap, and in place of the race's place, lap and checkpoint count shows the ride's clock, its **BEST AIR** and the distance **RIDDEN**; the minimap shows the loop without a checkpoint on it. **R** stands you back on the nearest point of the track. The pause card's **START AGAIN** rides the same map from where you started. Everything on the start card is remembered.
 
-At any point, **Escape** (or the pause mark in the top right) holds the race under the pause card: **RESUME** (back to the frame you left), **RESTART RACE**, **SOUND**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
+At any point, **Escape** (or the pause mark in the top right, under the minimap) holds the race under the pause card. Under its head a strip bills the race so far — your place and the clock, then the record a time trial is ridden against, your best air and the distance ridden, up to four figures — and under that: **RESUME** (back to the frame you left), **OPTIONS** (a panel with the camera and the sound: the switch and the three faders, applied to the held frame at once), **RESTART RACE**, **MAIN MENU**. The pause card is the only surface that stops the snow; behind every other card the race keeps running.
 
 ## Riding
 

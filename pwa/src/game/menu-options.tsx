@@ -39,6 +39,7 @@ import {
   StepRow,
   onOff,
   type Hint,
+  type OnHint,
   type Stop,
 } from "./menu-knobs.tsx";
 import {
@@ -111,6 +112,68 @@ const ASSIST_STOPS: Stop<AssistLevel>[] = ASSIST_LEVELS.map((id) => ({
 const level = (share: number): string =>
   share <= 0 ? STRINGS.optSoundOff : STRINGS.percent(share);
 
+/** THE SOUND GROUP'S FOUR ROWS — the switch and the three faders. Exported
+ * because the PAUSE CARD's panel carries the same rows: a fader moved mid-race
+ * and one moved on the front door are one setting, and two copies of the rows
+ * would be two lists the day a fourth fader lands. */
+export function SoundRows({
+  settings,
+  onSettings,
+  onHint,
+}: {
+  settings: Settings;
+  onSettings: (settings: Settings) => void;
+  onHint: OnHint;
+}) {
+  const setAudio = (next: Partial<AudioLevels>): void =>
+    onSettings({ ...settings, audio: { ...settings.audio, ...next } });
+  return (
+    <>
+      <StepRow
+        label={STRINGS.optSound}
+        hint={STRINGS.optSoundHint}
+        stops={ON_OFF}
+        value={onOff(settings.sound)}
+        onPick={(id) => onSettings({ ...settings, sound: id === "on" })}
+        onHint={onHint}
+      />
+      <FadeRow
+        label={STRINGS.optMaster}
+        hint={STRINGS.optMasterHint}
+        value={settings.audio.master}
+        min={0}
+        max={1}
+        step={AUDIO_STEP}
+        read={level}
+        onChange={(master) => setAudio({ master })}
+        onHint={onHint}
+      />
+      <FadeRow
+        label={STRINGS.optEngine}
+        hint={STRINGS.optEngineHint}
+        value={settings.audio.engine}
+        min={0}
+        max={1}
+        step={AUDIO_STEP}
+        read={level}
+        onChange={(engine) => setAudio({ engine })}
+        onHint={onHint}
+      />
+      <FadeRow
+        label={STRINGS.optEffects}
+        hint={STRINGS.optEffectsHint}
+        value={settings.audio.effects}
+        min={0}
+        max={1}
+        step={AUDIO_STEP}
+        read={level}
+        onChange={(effects) => setAudio({ effects })}
+        onHint={onHint}
+      />
+    </>
+  );
+}
+
 export function OptionsPage({
   settings,
   keys,
@@ -132,8 +195,6 @@ export function OptionsPage({
   const video = settings.video;
   const setVideo = (next: Partial<VideoSettings>): void =>
     onSettings({ ...settings, video: { ...video, ...next } });
-  const setAudio = (next: Partial<AudioLevels>): void =>
-    onSettings({ ...settings, audio: { ...settings.audio, ...next } });
   const setTouch = (next: Partial<Settings["touch"]>): void =>
     onSettings({ ...settings, touch: { ...settings.touch, ...next } });
   const setAssist = (next: Partial<Settings["assist"]>): void =>
@@ -222,47 +283,7 @@ export function OptionsPage({
               frame, so the engine under the card gets quieter as the thumb
               moves. The switch over all three is the front door's own. */}
           <KnobGroup title={STRINGS.optSoundGroup} glyph={settings.sound ? "speaker" : "mute"}>
-            <StepRow
-              label={STRINGS.optSound}
-              hint={STRINGS.optSoundHint}
-              stops={ON_OFF}
-              value={onOff(settings.sound)}
-              onPick={(id) => onSettings({ ...settings, sound: id === "on" })}
-              onHint={setHint}
-            />
-            <FadeRow
-              label={STRINGS.optMaster}
-              hint={STRINGS.optMasterHint}
-              value={settings.audio.master}
-              min={0}
-              max={1}
-              step={AUDIO_STEP}
-              read={level}
-              onChange={(master) => setAudio({ master })}
-              onHint={setHint}
-            />
-            <FadeRow
-              label={STRINGS.optEngine}
-              hint={STRINGS.optEngineHint}
-              value={settings.audio.engine}
-              min={0}
-              max={1}
-              step={AUDIO_STEP}
-              read={level}
-              onChange={(engine) => setAudio({ engine })}
-              onHint={setHint}
-            />
-            <FadeRow
-              label={STRINGS.optEffects}
-              hint={STRINGS.optEffectsHint}
-              value={settings.audio.effects}
-              min={0}
-              max={1}
-              step={AUDIO_STEP}
-              read={level}
-              onChange={(effects) => setAudio({ effects })}
-              onHint={setHint}
-            />
+            <SoundRows settings={settings} onSettings={onSettings} onHint={setHint} />
           </KnobGroup>
         </div>
         <div class="knob-col">
