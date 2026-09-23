@@ -40,6 +40,12 @@ export type HazeUniforms = {
    * `environment.ts`; not the sky's, but it rides the same shared object
    * because every world material already carries it. */
   uShadowFade: { value: THREE.Vector4 };
+  /** THE RIDER'S OWN MAP (`hero-shadow.ts`): its packed depths, the matrix
+   * from the world into it, and `x` on (1) or off (0), `y` one texel in
+   * the map's own 0..1, `z` the normal offset, m, `w` the depth bias. */
+  uHeroMap: { value: THREE.Texture | null };
+  uHeroMatrix: { value: THREE.Matrix4 };
+  uHero: { value: THREE.Vector4 };
   /** The haze's thinning height, m, and the share of it left up there. */
   uHazeLift: { value: number };
   uHazeFloor: { value: number };
@@ -66,6 +72,9 @@ export function createHazeUniforms(): HazeUniforms {
     uSunCol: { value: new THREE.Color() },
     uHaze: { value: 1 / 1500 },
     uShadowFade: { value: new THREE.Vector4(0, 0, 1e9, 2e9) },
+    uHeroMap: { value: null },
+    uHeroMatrix: { value: new THREE.Matrix4() },
+    uHero: { value: new THREE.Vector4(0, 1, 0, 0) },
     uHazeLift: { value: 700 },
     uHazeFloor: { value: 0.55 },
     uFlat: { value: 0 },
@@ -174,12 +183,58 @@ float shadowFaded(float shadow) {
 }
 `;
 
+/** The rider's own shadow (`shadow-box.ts`, `hero-shadow.ts`), looked up
+ * in his map and taken with the wide map's, the darker of the two. Four
+ * compares blended bilinearly per tap and nine taps a texel and a quarter
+ * apart: an edge a few millimetres soft, as the sun's own disc makes it,
+ * that slides smoothly rather than stepping a texel at a time. Only the
+ * pixels inside his map pay for it. Needs three's `packing` chunk, so it
+ * goes in after `shadowmap_pars_fragment`. */
+const HERO_SHADOW_GLSL = /* glsl */ `
+#ifdef USE_SHADOWMAP
+uniform sampler2D uHeroMap;
+uniform mat4 uHeroMatrix;
+uniform vec4 uHero;
+float heroLit(vec2 uv, float z) {
+  return step(z, unpackRGBAToDepth(texture2D(uHeroMap, uv)));
+}
+float heroLerp(vec2 uv, float z) {
+  float t = uHero.y;
+  vec2 st = uv / t - 0.5;
+  vec2 f = fract(st);
+  vec2 at = (floor(st) + 0.5) * t;
+  float a = heroLit(at, z);
+  float b = heroLit(at + vec2(t, 0.0), z);
+  float c = heroLit(at + vec2(0.0, t), z);
+  float d = heroLit(at + vec2(t, t), z);
+  return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+float heroShadowed(float shadow, vec3 viewNormal) {
+  if (uHero.x < 0.5) return shadow;
+  vec3 n = inverseTransformDirection(viewNormal, viewMatrix);
+  vec4 hc = uHeroMatrix * vec4(vHazeWorld + n * uHero.z, 1.0);
+  vec3 p = hc.xyz / hc.w;
+  if (p.x <= 0.0 || p.x >= 1.0 || p.y <= 0.0 || p.y >= 1.0 || p.z >= 1.0) return shadow;
+  p.z -= uHero.w;
+  float gap = uHero.y * 1.25;
+  float lit = 0.0;
+  for (int j = -1; j <= 1; j++) {
+    for (int i = -1; i <= 1; i++) {
+      lit += heroLerp(p.xy + vec2(float(i), float(j)) * gap, p.z);
+    }
+  }
+  return min(shadow, lit / 9.0);
+}
+#endif
+`;
+
 const DIR_SHADOW_OPEN = "? getShadow( directionalShadowMap[ i ]";
 const DIR_SHADOW_CLOSE = "vDirectionalShadowCoord[ i ] ) : 1.0;";
 
 /** Three's `lights_fragment_begin` with the directional light's shadow
- * passed through `shadowFaded`. Built once, and loudly: a three that moved
- * the line would otherwise leave the rim a hard edge with nothing said. */
+ * passed through `shadowFaded`, and the rider's own map taken with it
+ * (`heroShadowed`). Built once, and loudly: a three that moved the line
+ * would otherwise leave the rim a hard edge with nothing said. */
 let fadedLights: string | null = null;
 export function lightsWithFade(): string {
   if (fadedLights !== null) return fadedLights;
@@ -188,8 +243,8 @@ export function lightsWithFade(): string {
     throw new Error("haze.ts: three's directional shadow line moved; re-graft shadowFaded");
   }
   fadedLights = chunk
-    .replace(DIR_SHADOW_OPEN, "? shadowFaded( getShadow( directionalShadowMap[ i ]")
-    .replace(DIR_SHADOW_CLOSE, "vDirectionalShadowCoord[ i ] ) ) : 1.0;");
+    .replace(DIR_SHADOW_OPEN, "? heroShadowed( shadowFaded( getShadow( directionalShadowMap[ i ]")
+    .replace(DIR_SHADOW_CLOSE, "vDirectionalShadowCoord[ i ] ) ), geometryNormal ) : 1.0;");
   return fadedLights;
 }
 
@@ -223,6 +278,10 @@ export function hazeMaterial<M extends THREE.Material>(
       .replace(
         "#include <common>",
         `#include <common>\n${SKY_GLSL}\n${HAZE_VERTEX}\n${SHADOW_FADE_GLSL}`,
+      )
+      .replace(
+        "#include <shadowmap_pars_fragment>",
+        `#include <shadowmap_pars_fragment>\n${HERO_SHADOW_GLSL}`,
       )
       .replace("#include <lights_fragment_begin>", lightsWithFade())
       .replace("#include <fog_fragment>", HAZE_FRAGMENT);

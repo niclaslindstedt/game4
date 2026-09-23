@@ -179,17 +179,21 @@ export type ShadowLook = {
   reach: number;
   /** Whether the trees cast — every one whose shadow can land in reach. */
   trees: boolean;
+  /** THE RIDER'S OWN MAP (`hero-shadow.ts`), texels a side: the player's
+   * machine and rider cast into a map a few metres across that follows
+   * them, never into the wide one, whose texels are wider than an arm. */
+  hero: number;
 };
 
 /** SHADOWS. Under ALL, EVERY tree whose shadow can land in reach casts,
  * whatever band it is drawn in — so a shadow is never switched on by
  * riding closer to its tree. */
 export const SHADOW_LOOK: Record<ShadowLevel, ShadowLook> = {
-  off: { size: 0, reach: 0, trees: false },
+  off: { size: 0, reach: 0, trees: false, hero: 0 },
   // The machines on a tight map: the sharpest sled shadow there is for
   // almost nothing in the pass, and the snow under the woods left bare.
-  sleds: { size: 1024, reach: 30, trees: false },
-  all: { size: 2048, reach: 75, trees: true },
+  sleds: { size: 1024, reach: 30, trees: false, hero: 1024 },
+  all: { size: 2048, reach: 75, trees: true, hero: 2048 },
 };
 
 /** SPRAY: the share of every emission rate, and of the particle pool. */

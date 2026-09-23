@@ -105,3 +105,34 @@ export function castsInto(
   const qz = pz - dz * along;
   return qx * qx + qz * qz < r * r;
 }
+
+// THE RIDER'S OWN SHADOW. The wide map's texel is centimetres across, wider
+// than an arm, so a rider drawn into it is a blur that swims as he crosses
+// the texel grid — and he is in every frame. So the player's machine and
+// rider cast into a map of their own instead (`hero-shadow.ts`): a box in
+// the light's frame just round their bound, following them exactly, so
+// their shadow holds its shape from frame to frame, and the snow takes the
+// darker of the two maps.
+
+/** Room round the model's bound in the light's frame, m. */
+export const HERO_MARGIN = 0.15;
+/** How far up-sun of the bound's centre the rider's light stands, m: past
+ * any bound the model can have, a thrown rider's included. */
+export const HERO_BACK = 40;
+/** How far past the bound's centre a receiver is still looked up, m: the
+ * snow under a jump taken at a low sun lies a long way down the ray. */
+export const HERO_DEPTH = 400;
+
+/** The rider's map for a bound `radius` m round, `size` texels a side: its
+ * half-width, one texel in metres, and how far a receiver is pushed off
+ * its surface (`normalBias`, m) and toward the light (`depthBias`, in the
+ * map's own 0..1 depth) before it is looked up — a texel and a half and a
+ * couple of centimetres, too little to lift a shadow off the snow. */
+export function heroFrame(
+  radius: number,
+  size: number,
+): { half: number; texel: number; normalBias: number; depthBias: number } {
+  const half = radius + HERO_MARGIN;
+  const texel = (2 * half) / Math.max(size, 1);
+  return { half, texel, normalBias: texel * 1.5, depthBias: 0.02 / (HERO_BACK + HERO_DEPTH) };
+}
