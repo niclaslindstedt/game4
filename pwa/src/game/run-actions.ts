@@ -12,7 +12,9 @@
 // WHAT THE SURFACE DOES TO A PRESS is the whole of this module: every one of
 // these is about a RACE BEING RIDDEN, so over a card none of them does
 // anything — except PAUSE over the pause card, which is RESUME, because the
-// key that opened the card is the key a hand reaches for to close it. (Over
+// key that opened the card is the key a hand reaches for to close it; and
+// over a REPLAY, where nobody is riding, the camera walks the watching
+// ladder and PAUSE leaves the recording, the way Escape does. (Over
 // a card, Escape is usually taken upstream by `menu-nav.ts`'s capture-phase
 // walk and pressed as the card's own way back; the shell's menu row arrives
 // here instead, and has to mean the same thing.)
@@ -35,6 +37,8 @@ export type RunActionWorld = {
   camera: () => void;
   /** Put the sled back at the last checkpoint — the R key's edge. */
   reset: () => void;
+  /** Leave a recording being watched (`replay-run.ts`). */
+  leave?: () => void;
 };
 
 /** Everything that can be pressed: the app's own actions and the shell's
@@ -44,6 +48,11 @@ export type RunPress = InputAction | ShellCommand;
 export function createRunActions(world: RunActionWorld): (press: RunPress) => void {
   return (press) => {
     const shell = world.shell();
+    if (shell === "replay") {
+      if (press === "camera") world.camera();
+      else if (press === "pause") world.leave?.();
+      return;
+    }
     if (press === "pause") {
       if (shell === "run") world.pause();
       else if (shell === "pause") world.resume();

@@ -5,6 +5,7 @@
 // writes a `GameState`.
 import type { GameState } from "@engine";
 
+import type { ReplayShot } from "./replay-shots.ts";
 import type { VideoSettings } from "./settings-video.ts";
 
 /** The camera ladder, nearest first. */
@@ -29,6 +30,10 @@ export interface WorldRenderer {
   /** THE GHOST (`ghost-run.ts`): another run on the same map, drawn
    * see-through and leaving no trail — or null for none. */
   setGhost(ghost: GameState | null): void;
+  /** THE BROADCAST (`camera-tv.ts`): the moment a replay is cut to, framed
+   * from a lens planted beside it — or null for the camera ladder. Only a
+   * replay ever sets one (`replay-run.ts`). */
+  setShot(shot: ReplayShot | null): void;
   /** Wait for the GPU to finish everything asked of it, and say how long
    * that took, ms — what the first-visit probe times a frame with. */
   drain(): number;
