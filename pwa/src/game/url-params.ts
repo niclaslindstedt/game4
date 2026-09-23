@@ -4,9 +4,9 @@
 // makes a frame somebody found handable to somebody else — and it is the
 // contract `scripts/screenshot.mjs` drives the built site through.
 //
-//   ?seed=<n>       pin the map: the front door's RACE rides this seed every
-//                   time instead of dealing a fresh one, and the race the
-//                   menu stands over is built on it too.
+//   ?seed=<n>       pin the map: the front door's RACE and TIME TRIAL ride
+//                   this seed rather than a campaign map off the level card,
+//                   and the race the menu stands over is built on it too.
 //   ?start=race     boot straight into a race on the grid (the splash and
 //                   the front door skipped). `start=1` is the same.
 //   ?start=free     ...or into a FREE RIDE on the start card's stored map,
@@ -29,7 +29,9 @@
 //   ?menu=root      open on the front door rather than the attract card;
 //   ?menu=options   ...on OPTIONS, and `keys` on OPTIONS ▸ KEYS; `sled` on
 //                   the sled card RACE opens; `start` on the free ride's
-//                   start card.
+//                   start card; `campaign` on the campaign card; `levels` on
+//                   the level card a RACE (or, with `mode=trial`, a TIME
+//                   TRIAL) picks its pinned map on.
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -62,8 +64,16 @@ import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
 /** The cards a link may open on. */
-export type MenuPage = "root" | "sled" | "options" | "keys" | "start";
-const MENU_PAGES: readonly MenuPage[] = ["root", "sled", "options", "keys", "start"];
+export type MenuPage = "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels";
+const MENU_PAGES: readonly MenuPage[] = [
+  "root",
+  "sled",
+  "options",
+  "keys",
+  "start",
+  "campaign",
+  "levels",
+];
 
 export type UrlParams = {
   seed: number | null;

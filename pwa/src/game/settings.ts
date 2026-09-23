@@ -5,8 +5,9 @@
 // — the three faders, the picture (`settings-video.ts`), the keys
 // (`settings-input.ts`), the thumbs, and how much help the sled gives — and
 // the time trial's length, walked on the front door, and the start card's
-// answers for a free ride (`free-ride.ts`). The record book and the ghosts
-// are kept beside it, not in it (`records.ts`, `ghost.ts`).
+// answers for a free ride (`free-ride.ts`), and the pinned map the level card
+// last picked. The record book, the ghosts and the campaign's board are kept
+// beside it, not in it (`records.ts`, `ghost.ts`, `campaign.ts`).
 // Nothing is remembered that the player has no way to change: the camera is
 // walked with C (or the HUD's press) and the sound is the switch on the
 // front door and the pause card.
@@ -20,6 +21,7 @@
 
 import { SLED, TIME_TRIAL, isSledId, type Assist, type SledId } from "@engine";
 
+import { findLevel } from "./campaign.ts";
 import { freshRide, mergeRide, type FreeRide } from "./free-ride.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
@@ -101,6 +103,10 @@ export type Settings = {
   /** THE START CARD's answers: the free ride's map, day and snow
    * (`free-ride.ts`). */
   ride: FreeRide;
+  /** THE LEVEL CARD's answer: the pinned map a RACE and a TIME TRIAL ride
+   * (`menu-levels.tsx`, `pinnedFor`) — a campaign map's id, or null for the
+   * first rung. */
+  level: string | null;
 };
 
 export function freshSettings(): Settings {
@@ -117,6 +123,7 @@ export function freshSettings(): Settings {
     damage: false,
     trialLaps: TIME_TRIAL.laps[0],
     ride: freshRide(),
+    level: null,
   };
 }
 
@@ -179,6 +186,7 @@ export function mergeSettings(parsed: unknown): Settings {
     out.trialLaps = blob.trialLaps;
   }
   out.ride = mergeRide(blob.ride);
+  if (typeof blob.level === "string" && findLevel(blob.level) !== null) out.level = blob.level;
   return out;
 }
 

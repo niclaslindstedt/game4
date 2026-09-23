@@ -36,3 +36,13 @@ export {
   type Severity,
 } from "../analysis/index.ts";
 export { minRadius, minSeparation } from "./track.ts";
+export {
+  CURRENT_GENERATOR_VERSION,
+  GENERATOR_VERSIONS,
+  GENERATOR_VERSION_IDS,
+  generatorTraits,
+  isGeneratorVersion,
+  type GeneratorTraits,
+  type GeneratorVersion,
+} from "./versions.ts";
+export { levelDigest } from "./digest.ts";

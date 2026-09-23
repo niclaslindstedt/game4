@@ -4,8 +4,9 @@
 // a player has to READ to find the press they came for is a card that has
 // failed; a mark is found without reading.
 //
-// Only the marks this slice's cards use: the flag on RACE, the stopwatch on
-// the TIME TRIAL, the kicker on FREE RIDE, the speaker on the sound switch,
+// Only the marks this slice's cards use: the peaks on the CAMPAIGN and the
+// padlock on what it has not opened, the flag on RACE, the stopwatch on the
+// TIME TRIAL, the kicker on FREE RIDE, the speaker on the sound switch,
 // the three the pause card is read by — carry on, start again, leave — the
 // sliders on the OPTIONS chip, and the three more its groups are headed with
 // (the keys, the dial, the screen; SOUND takes the speaker). Each group mark
@@ -27,6 +28,8 @@ export const GLYPH_NAMES = [
   "display",
   "kicker",
   "clock",
+  "peaks",
+  "lock",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -134,6 +137,24 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <path d="M10 2.8h4M12 2.8v3" />
       <path d="M12 13.4V9.2" />
       <path d="M18.2 6.4l1.4-1.4" />
+    </>
+  ),
+  // TWO PEAKS AND A PENNANT on the higher: the campaign — a ladder of maps
+  // climbed shelf by shelf. The pennant is what keeps it from reading as
+  // the kicker's slope.
+  peaks: (
+    <>
+      <path d="M2.5 20.5l6.5-10 3.4 5.2 3.6-8.2 5.5 13z" />
+      <path d="M16 7.5V2.8" />
+      <path d="M16 2.8h4l-1.2 1.6 1.2 1.6h-4" fill="currentColor" />
+    </>
+  ),
+  // A PADLOCK: a map or a shelf the campaign has not opened yet.
+  lock: (
+    <>
+      <rect x="5" y="10.5" width="14" height="10" rx="1.8" />
+      <path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9" />
+      <path d="M12 14.4v2.4" />
     </>
   ),
 };

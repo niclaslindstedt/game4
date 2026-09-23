@@ -7,6 +7,7 @@
 // (§39.2). Developer diagnostics are deliberately not here.
 
 import { formatTime, ordinal } from "../lib/util.ts";
+import { CAMPAIGN_STRINGS } from "./strings-campaign.ts";
 
 export const STRINGS = {
   /* ── THE HUD (hud.tsx) ─────────────────────────────────────────────── */
@@ -351,4 +352,7 @@ export const STRINGS = {
   resultTrialAgain: "RIDE AGAIN",
   /** The news line at the flag of a run with nobody else on it. */
   newsFinishAlone: (seconds: number): string => `FINISH  ${formatTime(seconds)}`,
+
+  /* ── THE CAMPAIGN (strings-campaign.ts, spread in) ─────────────────── */
+  ...CAMPAIGN_STRINGS,
 } as const;

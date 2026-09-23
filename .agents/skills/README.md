@@ -64,6 +64,8 @@ sibling's the day one lands, and add its registry row.
 | `test-scenario` | Exact situations: the synthetic maps, `placeRun`, scripted inputs, the ride lab's scenarios |
 | `debug-game` | Deterministic repros, classifying by layer, the failing test first |
 | `simulate-run` | `make sim`: the `RunReport` table, its columns, which movements are regressions |
+| `level-rating` | Whether a generated map is any GOOD and how HARD: `engine/rating/`'s eight axes and the index, the ladder scorer, `make rate` and `make difficulty` (the jet-ski game's, retyped for snow) |
+| `campaign` | The pinned maps and the ladder they make — three shelves of six, the points, the locks, the level card a measured run picks its map on, the generator-version contract and the digest a pinned map stands on (the jet-ski game's) |
 | `bot-improvement` | The centreline-reading bot in `engine/sim/bot.ts` — the player's stand-in and every rival — measured with `make sim` |
 | `sound-effects` | Every sound synthesized from parameters — the engine and the belt, the hiss, the powder, the wind as steered layers, every one-shot as a def — under `pwa/src/game/audio/`; the audition page and its meter |
 
@@ -78,7 +80,6 @@ starting point.
 | --- | --- |
 | `soundtrack` | The scores — a second view of the one synth in `audio/bus.ts`, its own fader (the rally game's) |
 | `tricks` | The aerial vocabulary and its scoring (the jet-ski game's `tricks.ts`) |
-| `campaign`, `level-rating` | Pinned seeds and a ladder of them; whether a generated map is any GOOD and how HARD (both siblings') |
 | `debug-tools` | An in-game developer overlay, the REPRO line, `make debug-shot` (the rally game's) |
 | `replay` | A race recorded as its controls and watched again (the jet-ski game's `replay.ts`; the tape it would read is built — `pwa/src/game/ghost.ts`, the time trial's ghost) |
 | `store-listing`, `store-shots` | The storefront's words and its screenshot set |

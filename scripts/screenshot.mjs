@@ -84,13 +84,17 @@ const SURFACES = {
   // The loading card is up for as long as a map takes to build and no
   // longer, so it is photographed on the first frame it is in the DOM.
   loading: {
-    params: { menu: "root" },
-    press: ".menu-tile-hero",
+    params: { menu: "sled" },
+    press: ".sled-done",
     pressAfter: 1500,
     wait: ".loading-card",
     settle: 60,
   },
   pause: { params: { paused: "1", t: "14" }, wait: ".menu-card-pause", settle: 700 },
+  // THE CAMPAIGN CARD and the LEVEL CARD a RACE picks its pinned map on,
+  // straight off the URL (`?menu=campaign|levels`).
+  campaign: { params: { menu: "campaign" }, wait: ".menu-card-campaign", settle: 900 },
+  levels: { params: { menu: "levels" }, wait: ".menu-card-levels", settle: 900 },
   // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
   options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
   keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },

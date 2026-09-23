@@ -52,6 +52,7 @@ import {
   type Loop,
 } from "./track.ts";
 import type { GenerateOptions, GeneratedLevel } from "./types.ts";
+import { generatorTraits, type GeneratorVersion } from "./versions.ts";
 
 /** How many loops an attempt draws before it gives up on its country. */
 const DRAWS = 40;
@@ -63,7 +64,12 @@ export function subSeed(seed: number, attempt: number): number {
 }
 
 /** One attempt: a level, or the reason this sub-seed could not make one. */
-function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLevel | string {
+function attemptLevel(
+  seed: number,
+  attempt: number,
+  laps: number,
+  version: GeneratorVersion,
+): GeneratedLevel | string {
   const rng = createRng(subSeed(seed, attempt));
   const plan = planTerrain(rng);
   const ground = bakeCountry(plan);
@@ -127,6 +133,7 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
     attempt,
     drifts,
     weather,
+    version,
   });
 }
 
@@ -134,9 +141,12 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
 export function generateLevel(seed: number, opts: GenerateOptions = {}): GeneratedLevel {
   const attempts = opts.attempts ?? 16;
   const laps = opts.laps ?? R.race.laps;
+  // Every row of `versions.ts` builds by these rules today; a legacy row's
+  // traits are read at the one place its behaviour differs.
+  const { version } = generatorTraits(opts.version);
   const reasons: string[] = [];
   for (let a = 0; a < attempts; a++) {
-    const built = attemptLevel(seed, a, laps);
+    const built = attemptLevel(seed, a, laps, version);
     if (typeof built === "string") {
       reasons.push(`#${a}: ${built}`);
       continue;

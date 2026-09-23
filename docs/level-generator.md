@@ -88,12 +88,35 @@ is the same everywhere. Inside an attempt the order is the dependency order:
 
 A map builds in about half a second on Node.
 
+## Versions, and the digest
+
+The rules ARE the map, so a change that moves what a seed builds re-rolls every map at once. That
+is the point of a generator everywhere but the CAMPAIGN, whose eighteen maps were curated — rated,
+timed, named — and must stay the maps they were. So the generator is VERSIONED
+(`engine/mapgen/versions.ts`): `GenerateOptions.version` asks for a version, `Level.version` says
+which one built a map, and everything that is not a campaign map takes `CURRENT_GENERATOR_VERSION`.
+A campaign map names its version and carries the DIGEST of the map that came out (`levelDigest`,
+`engine/mapgen/digest.ts`: FNV-1a over the loop every 20 m, the checkpoints, the grid, the kickers,
+the drifts, every trunk, the day and the sky, and the ground under every checkpoint and lip), and
+`tests/generator_version_test.ts` rebuilds each one and compares.
+
+The contract: a change that moves what a seed builds owes a NEW row in `GENERATOR_VERSIONS`, with
+the old behaviour kept on the old row as an optional trait read at the one place it differs
+(`generatorTraits(opts.version)`); a campaign map moves onto the new version only deliberately,
+re-rated and re-timed; and a version no campaign map names any more is deleted, row and trait
+branches together. A red digest is never fixed by writing the new one down unless the map was
+meant to move. Today there is one version, and it has no traits.
+
 ## Labs
 
 - `npm run level -- --seed 38` — the map drawn from above (`previews/level-38.png`): hillshaded
   snow with contours every 5 and 25 m, the packed track and its orange centreline, every
   checkpoint numbered, every tree, every kicker (`K1…` on the track, `X1…` off it), the spawn and
   its grid — and a table of the same (`previews/level-38.txt`).
+- `npm run rate` — how HARD a map is and what kind of hard (`engine/rating/`: the lap, the
+  corners, the climb, the kickers, the woods walling the loop, the drifts, the dark, the sky) over
+  a sweep; `--stats` is the population per axis, `--campaign` audits the committed ladder.
+  `npm run difficulty -- --seed 38` draws what makes a map hard over its plan.
 - `npm run analyze` — the scoreboard over a sweep of seeds (`--seed n` for one, `--from`/`--count`
   for a range): one row a map, every finding by rule, and the spread of the numbers at the foot.
 

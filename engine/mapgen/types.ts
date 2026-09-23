@@ -3,6 +3,7 @@
 // everything that rides, draws or measures one. Extend it; never rename a
 // field without moving every reader with it.
 import type { Heightfield } from "../lib/heightfield.ts";
+import type { GeneratorVersion } from "./versions.ts";
 
 export interface Vec3 {
   x: number;
@@ -90,6 +91,9 @@ export interface Level {
   /** The sky the map is ridden under (R19). A hand-built level without one
    * is ridden under `CLEAR_WEATHER` — ask `weatherOf`, never this field. */
   weather?: Weather;
+  /** WHICH GENERATOR built the map (`versions.ts`): the current rules unless
+   * a campaign map pinned an older row. */
+  version?: GeneratorVersion;
 }
 
 /** The skies R19 deals, lightest first. */
@@ -129,7 +133,9 @@ export interface Drift {
 
 /** A level as `generateLevel` hands it out: every optional field set. */
 export type GeneratedLevel = Level &
-  Required<Pick<Level, "packed" | "kickers" | "basin" | "attempt" | "drifts" | "weather">>;
+  Required<
+    Pick<Level, "packed" | "kickers" | "basin" | "attempt" | "drifts" | "weather" | "version">
+  >;
 
 /** A crest shaped to kick a sled into the air (R4, R9). `x, z` is the LIP. */
 export interface Kicker {
@@ -164,6 +170,9 @@ export interface GenerateOptions {
    * R15 and R19 dealt (`withSky`). Applied AFTER the search accepts the
    * map, so it moves nothing the map builds. */
   sky?: SkyOverride;
+  /** The generator version to build by (`versions.ts`) — a campaign map's
+   * pinned row; the current rules when left out or unknown. */
+  version?: GeneratorVersion;
 }
 
 /** The answer to "where on the track is this point nearest?" */

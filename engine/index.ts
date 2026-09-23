@@ -142,6 +142,24 @@ export {
   treadCeiling,
 } from "./game/limits.ts";
 
+// How hard a map is, and what kind of hard (engine/rating/).
+export {
+  LADDER,
+  RATING,
+  RATING_AXES,
+  WALL_REACH,
+  characterDistance,
+  cornerRadius,
+  leadingAxis,
+  rateLadder,
+  rateLevel,
+  skyWeight,
+  type LadderReport,
+  type MapRating,
+  type RateOptions,
+  type RatingAxes,
+} from "./rating/index.ts";
+
 // The bot rider and the headless simulator.
 export { botInput, RIDER_BOT, type BotProfile } from "./sim/bot.ts";
 export { simulateRun, SIM_SECONDS, type RunReport, type SimOptions } from "./sim/simulate.ts";

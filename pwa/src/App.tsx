@@ -35,6 +35,9 @@
 // a TIME TRIAL is ridden beside the ghost of the best run on that ticket.
 // The bot's race under a card is armed with nothing.
 //
+// THE CAMPAIGN (`campaign-run.ts`, `pinned-run.ts`): a rung is armed before its
+// first step and booked at the flag; RACE and TIME TRIAL ride pinned maps too.
+//
 // THE URL: every parameter the app reads is listed in `game/url-params.ts`.
 // A URL that names a race (`start`, `shot`, `paused`) boots into one;
 // anything else opens on the attract card or the front door.
@@ -77,6 +80,9 @@ import { connectOutput } from "./output-bridge.ts";
 import { onShellCommand } from "./shell-host.ts";
 import { createRunAudio, setAudioVolumes, unlockAudio } from "./game/audio/index.ts";
 import { createLoader } from "./game/app-load.ts";
+import { frontDoorPins, loadProgress, pinnedFor, saveProgress } from "./game/campaign.ts";
+import type { CampaignLevel } from "./game/campaign.ts";
+import { createCampaignRig, type CampaignRig } from "./game/campaign-run.ts";
 import { freeGameOptions } from "./game/free-ride.ts";
 import { snapInput } from "./game/ghost.ts";
 import { createRunBook, type RunBook, type RunTicket } from "./game/ghost-run.ts";
@@ -94,6 +100,8 @@ import { OptionsPage } from "./game/menu-options.tsx";
 import { SledPage } from "./game/menu-sled.tsx";
 import { StartPage } from "./game/menu-start.tsx";
 import { PauseMenu } from "./game/menu-pause.tsx";
+import { PinnedCards } from "./game/menu-pinned.tsx";
+import { createPinnedRuns, sledBack } from "./game/pinned-run.ts";
 import type { WorldRenderer } from "./game/renderer-api.ts";
 import { createRunActions } from "./game/run-actions.ts";
 import type { LoadPhase } from "./game/run-loader.ts";
@@ -154,6 +162,8 @@ declare global {
 type Presses = {
   race: (seed: number, mode: GameMode) => void;
   free: (options: CreateGameOptions) => void;
+  /** A pinned map: a campaign rung (`rung`), or a map off the level card. */
+  pinned: (pin: CampaignLevel, mode: CampaignLevel["mode"], rung: boolean) => void;
   restart: () => void;
   pause: () => void;
   resume: () => void;
@@ -165,6 +175,7 @@ type Presses = {
 const NO_PRESSES: Presses = {
   race: () => {},
   free: () => {},
+  pinned: () => {},
   restart: () => {},
   pause: () => {},
   resume: () => {},
@@ -251,6 +262,13 @@ export function App() {
   // (A link to the start card is a free ride on its way to the sled card.)
   const modeRef = useRef<GameMode>(params.page === "start" ? "free" : params.mode);
   const bookRef = useRef<RunBook | null>(null);
+  /** THE CAMPAIGN'S BOARD, the rig that books a rung into it, and the rung
+   * the sled card's RIDE is for when the campaign card opened it. */
+  const [progress, setProgress] = useState(loadProgress);
+  const progressRef = useRef(progress);
+  progressRef.current = progress;
+  const rigRef = useRef<CampaignRig | null>(null);
+  const rungRef = useRef<CampaignLevel | null>(null);
   const [input, setInput] = useState<InputManager | null>(null);
   const [touch] = useState(hasTouch);
   const [keys] = useState(
@@ -271,6 +289,7 @@ export function App() {
   const rendererRef = useRef<WorldRenderer | null>(null);
 
   useEffect(() => saveSettings(settings), [settings]);
+  useEffect(() => saveProgress(progress), [progress]);
   // The switch reaches the bus the moment it moves; a layer reads the bus
   // every frame, so the engine under the card goes quiet with the press.
   const mix = mixOf(settings);
@@ -308,6 +327,11 @@ export function App() {
     rendererRef.current = renderer;
     const book = createRunBook({ show: (ghost) => renderer.setGhost(ghost) });
     bookRef.current = book;
+    const rig = createCampaignRig({
+      progress: () => progressRef.current,
+      setProgress: (next) => setProgress((progressRef.current = next)),
+    });
+    rigRef.current = rig;
     const audio = createRunAudio();
     const clock = createRunClock(TUNING.physicsHz);
     const nav = createMenuNav();
@@ -482,6 +506,7 @@ export function App() {
       const rides = playerRides(shellRef.current);
       if (soundsLive(shellRef.current)) audio.events(state.events);
       if (rides) {
+        if (!params.bot) rig.step(state);
         runRumble.events(state.events);
         runRumble.step(state.sled);
         for (const e of state.events) {
@@ -538,7 +563,7 @@ export function App() {
       const next =
         !state.rules.course && freeAgain
           ? createGame(freeAgain)
-          : playerGame(state.level, state.seed);
+          : (pinned.again() ?? playerGame(state.level, state.seed));
       adopt(next, ticketFor(next));
       frozen = false;
       clock.resume();
@@ -546,9 +571,20 @@ export function App() {
       hudClock = HUD_TICK;
     };
 
+    const pinned = createPinnedRuns({
+      rig,
+      loader,
+      current: () => state,
+      settings: () => settingsRef.current,
+      spec: specOf,
+      setMode: (asked) => (mode = asked),
+      done: lift,
+    });
+
     pressRef.current = {
       race: (seed, asked) => {
         mode = asked;
+        pinned.clear();
         loader.begin({
           // THE MAP UNDER THE MENU IS REUSED when it is the one asked for —
           // the race the player presses RACE over is the race they ride.
@@ -564,6 +600,7 @@ export function App() {
       },
       free: (options) => {
         mode = "free";
+        pinned.clear();
         loader.begin({
           build: () => {
             const reuse =
@@ -576,6 +613,7 @@ export function App() {
           done: lift,
         });
       },
+      pinned: pinned.press,
       restart,
       pause: () => {
         if (canPause(shellRef.current)) setShellNow("pause");
@@ -586,6 +624,7 @@ export function App() {
       toMenu: () => {
         // The run goes back to the bot: nothing more is filed or recorded.
         book.clear();
+        pinned.clear();
         setPage("root");
         frozen = false;
         clock.resume();
@@ -593,6 +632,7 @@ export function App() {
       },
       abandonLoad: () => {
         loader.abandon();
+        pinned.clear();
         setShellNow("menu");
       },
       camera: () => {
@@ -770,6 +810,10 @@ export function App() {
    * the seed that tile showed and the machine the sled card holds. */
   const race = (): void => {
     setPage("root");
+    // A RUNG off the campaign card, or a PINNED map off the level card.
+    const pin = rungRef.current ?? pinnedFor(settings.level, modeRef.current, params.seed);
+    const asked = rungRef.current?.mode ?? (modeRef.current === "timeTrial" ? "timeTrial" : "race");
+    if (pin) return pressRef.current.pinned(pin, asked, rungRef.current !== null);
     const trial = modeRef.current === "timeTrial";
     pressRef.current.race(trial ? trialSeed : nextSeed, modeRef.current);
     // The next race deals the next map, unless a link pinned this one.
@@ -791,6 +835,13 @@ export function App() {
     pressRef.current.free(
       freeGameOptions(settings.ride, startSeed, specOf(settings), assistOf(settings.assist)),
     );
+  };
+
+  /** A front-door tile: the mode its cards are for, and no campaign rung. */
+  const openCard = (mode: GameMode, next: MenuPage): void => {
+    modeRef.current = mode;
+    rungRef.current = null;
+    setPage(next);
   };
 
   const hudUp = hudOver(shell) && snap !== null && input !== null;
@@ -824,8 +875,14 @@ export function App() {
         snap={shell === "run" && !away ? snap : null}
         touch={touch}
         onAgain={() => pressRef.current.restart()}
-        onNew={race}
+        onNew={() => {
+          if (!pinnedFor(settings.level, modeRef.current, params.seed)) return race();
+          pressRef.current.toMenu();
+          setPage("levels");
+        }}
         onMenu={() => pressRef.current.toMenu()}
+        campaign={shell === "run" ? (rigRef.current?.plate() ?? null) : null}
+        onNext={(next) => pressRef.current.pinned((rungRef.current = next), next.mode, true)}
       />
       {shell === "pause" && snap !== null && (
         <PauseMenu
@@ -839,6 +896,8 @@ export function App() {
       )}
       {shell === "menu" && page === "root" && (
         <MainMenu
+          {...frontDoorPins(progress, settings.level, params.seed)}
+          onCampaign={() => setPage("campaign")}
           seed={nextSeed}
           pinned={params.seed !== null}
           laps={laps}
@@ -850,18 +909,9 @@ export function App() {
             laps: settings.trialLaps,
             best: trialBest ? { time: trialBest.value, sled: sledById(trialBest.sled).name } : null,
           }}
-          onRace={() => {
-            modeRef.current = "race";
-            setPage("sled");
-          }}
-          onTrial={() => {
-            modeRef.current = "timeTrial";
-            setPage("sled");
-          }}
-          onFree={() => {
-            modeRef.current = "free";
-            setPage("start");
-          }}
+          onRace={() => openCard("race", params.seed === null ? "levels" : "sled")}
+          onTrial={() => openCard("timeTrial", params.seed === null ? "levels" : "sled")}
+          onFree={() => openCard("free", "start")}
           onTrialLaps={() => setSettings((s) => ({ ...s, trialLaps: nextTrialLaps(s.trialLaps) }))}
           onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
           onOptions={() => setPage("options")}
@@ -869,14 +919,29 @@ export function App() {
       )}
       {shell === "menu" && page !== "root" && (
         <div class="menu">
-          {page === "sled" ? (
+          {page === "campaign" || page === "levels" ? (
+            <PinnedCards
+              page={page}
+              mode={modeRef.current}
+              settings={settings}
+              sled={specOf(settings).id}
+              progress={progress}
+              standing={(key) => bookRef.current?.standing(key) ?? null}
+              onBack={() => setPage("root")}
+              onChoose={(level, rung) => {
+                rungRef.current = rung ? level : null;
+                if (!rung) setSettings((s) => ({ ...s, level: level.id }));
+                setPage("sled");
+              }}
+            />
+          ) : page === "sled" ? (
             <SledPage
               sled={specOf(settings).id}
               onPick={(sled) => {
                 setLinkSled(null);
                 setSettings((s) => ({ ...s, sled }));
               }}
-              onBack={() => setPage(modeRef.current === "free" ? "start" : "root")}
+              onBack={() => setPage(sledBack(rungRef.current, modeRef.current, params.seed))}
               onRide={modeRef.current === "free" ? freeRide : race}
             />
           ) : page === "start" ? (
