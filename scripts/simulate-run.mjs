@@ -1,0 +1,135 @@
+#!/usr/bin/env node
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// THE BALANCE TABLE: the bot rides generated maps through the REAL engine —
+// createGame, step, botInput — with no renderer attached, and prints what
+// happened per seed. This is the measuring stick for every sled, snow, bot
+// and generator change: run it before and after, read the diff, paste both
+// tables in the PR (docs/simulation.md says what every column means and
+// which movements are regressions).
+//
+//   npm run sim                          seeds 1..8, solo, the map's laps
+//   npm run sim -- --count 20            seeds 1..20
+//   npm run sim -- --seeds 3,7,38        specific seeds
+//   npm run sim -- --rivals 3            a whole race, the bot on the grid's first slot
+//   npm run sim -- --laps 1 --json out.json
+//
+// Exits non-zero when the bot finishes NO seed at all — a sled that cannot
+// get round any map is a broken sled, not a slow one — and prints the
+// digests, which are where a determinism regression shows first.
+
+import { writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import process from "node:process";
+
+import { parseArgs } from "./lib/cli.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const { simulateRun, SIM_SECONDS, engineVersion, TUNING, SLED } = await import(
+  join(root, "engine/index.ts")
+);
+
+const args = parseArgs(
+  process.argv.slice(2),
+  {
+    count: { kind: "number", default: 8, help: "ride seeds 1..count" },
+    seeds: { kind: "list", help: "seeds to ride instead, comma-separated" },
+    laps: { kind: "number", help: "laps per race (the map's own when left out)" },
+    rivals: { kind: "number", default: 0, help: "rivals on the grid beside the bot" },
+    max: { kind: "number", default: SIM_SECONDS, help: "give up after this much race time, s" },
+    json: { kind: "string", help: "also write the rows (events dropped) to this file" },
+  },
+  "usage: npm run sim -- [--count n | --seeds a,b,c] [--laps n] [--rivals n] [--max s] [--json path]",
+);
+
+const seeds = args.seeds
+  ? args.seeds.map(Number)
+  : Array.from({ length: Math.max(1, args.count) }, (_, i) => i + 1);
+if (seeds.some((s) => !Number.isInteger(s))) {
+  console.error(`--seeds wants integers, got ${args.seeds.join(",")}`);
+  process.exit(2);
+}
+
+const pad = (v, n) => String(v).padStart(n);
+const kmh = (ms) => (ms * 3.6).toFixed(0);
+
+console.log(
+  `sim — engine ${engineVersion} at ${TUNING.physicsHz} Hz · sled ${SLED.name} · seeds ${seeds.join(",")} · ` +
+    `laps ${args.laps ?? "map"} · rivals ${args.rivals} · max ${args.max} s`,
+);
+console.log(
+  [
+    pad("seed", 5),
+    pad("fin", 4),
+    pad("time", 7),
+    pad("laps", 17),
+    pad("cps", 7),
+    pad("len", 6),
+    pad("mean", 5),
+    pad("top", 5),
+    pad("air", 5),
+    pad("best", 5),
+    pad("jmp", 4),
+    pad("hrsh", 4),
+    pad("tree", 4),
+    pad("rst", 4),
+    pad("auto", 4),
+    pad("miss", 4),
+    pad("plc", 4),
+    pad("digest", 9),
+  ].join(" "),
+);
+
+const rows = [];
+for (const seed of seeds) {
+  const r = simulateRun(seed, { laps: args.laps, rivals: args.rivals, maxSeconds: args.max });
+  rows.push(r);
+  console.log(
+    [
+      pad(seed, 5),
+      pad(r.finished ? "yes" : "NO", 4),
+      pad(r.time.toFixed(1), 7),
+      pad(r.lapTimes.map((t) => t.toFixed(0)).join("/") || "-", 17),
+      pad(`${r.checkpoints}/${r.crossings}`, 7),
+      pad(r.trackLength.toFixed(0), 6),
+      pad(kmh(r.meanSpeed), 5),
+      pad(kmh(r.topSpeed), 5),
+      pad(r.airTime.toFixed(1), 5),
+      pad(r.bestAir.toFixed(1), 5),
+      pad(r.jumps, 4),
+      pad(r.harshLandings, 4),
+      pad(r.treeHits, 4),
+      pad(r.resets, 4),
+      pad(r.autoResets, 4),
+      pad(r.missed, 4),
+      pad(r.place, 4),
+      pad(r.digest, 9),
+    ].join(" "),
+  );
+}
+
+const done = rows.filter((r) => r.finished);
+const sum = (f) => rows.reduce((a, r) => a + f(r), 0);
+const mean = done.length ? done.reduce((a, r) => a + r.meanSpeed, 0) / done.length : 0;
+console.log(
+  `\n${done.length}/${rows.length} finished · mean ${kmh(mean)} km/h · top ${kmh(
+    Math.max(...rows.map((r) => r.topSpeed)),
+  )} km/h · air ${(sum((r) => r.airTime) / rows.length).toFixed(1)} s/run · ` +
+    `jumps ${sum((r) => r.jumps)} · harsh ${sum((r) => r.harshLandings)} · trees ${sum((r) => r.treeHits)} · ` +
+    `resets ${sum((r) => r.resets)} (auto ${sum((r) => r.autoResets)}) · missed ${sum((r) => r.missed)}`,
+);
+
+if (args.json) {
+  const withoutEvents = rows.map((r) => {
+    const copy = { ...r };
+    delete copy.events;
+    return copy;
+  });
+  writeFileSync(args.json, `${JSON.stringify(withoutEvents, null, 2)}\n`);
+  console.log(`wrote ${args.json}`);
+}
+
+if (done.length === 0) {
+  console.error("\n!! the bot finished no seed at all");
+  process.exit(1);
+}

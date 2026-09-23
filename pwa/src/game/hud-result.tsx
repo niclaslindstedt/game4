@@ -1,0 +1,84 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// THE FINISH PLATE — the card over a race the player has finished.
+//
+// A FINISHED RACE COASTS: the engine hands the sled neutral from the flag
+// on, so the throttle, the bars and the reset all stop answering. That is
+// the race being over rather than the game hanging — but a plate that only
+// stated the result would leave the rider holding a dead machine with
+// nothing on screen saying what to do about it. So it says what happened —
+// the place and the time — then the WHOLE FIELD's table under it, which is
+// live: the rest of the field is still racing home behind the rider, and
+// each of them lands on the table with a time the moment they cross the
+// line. Then the ways on, as PRESSES.
+//
+// IT PRESSES THE GAME'S OWN BUTTONS AND ADDS NONE: RACE AGAIN is the very
+// line the B key lands on and MAIN MENU is the pause card's own. NEW MAP is
+// the front door's RACE, pressed from here so a rider who wants another map
+// is not sent through a card to get it.
+//
+// ITS OWN LAYER, drawn by App.tsx outside the HUD, and gated here: it is up
+// over a finished race and down under the pause card, which offers its own.
+
+import { formatTime } from "../lib/util.ts";
+import type { HudSnapshot } from "./snapshot.ts";
+import { STRINGS } from "./strings.ts";
+
+export function ResultPlate({
+  snap,
+  touch,
+  onAgain,
+  onNew,
+  onMenu,
+}: {
+  /** The race, or null while the plate is not the player's to press. */
+  snap: HudSnapshot | null;
+  /** Whether there is a thumb on the screen — the key note is for the other
+   * kind of player, and the presses are for both. */
+  touch: boolean;
+  onAgain: () => void;
+  onNew: () => void;
+  onMenu: () => void;
+}) {
+  if (!snap?.result || !snap.standings) return null;
+  const { result, standings } = snap;
+  return (
+    <div class="hud hud-result-layer">
+      <div class="hud-center">
+        <div class={`hud-card hud-result${result.place === 1 ? " hud-result-record" : ""}`}>
+          <span class="hud-card-note hud-result-label">{STRINGS.resultTitle}</span>
+          <span class="hud-card-title">{STRINGS.resultPlace(result.place, snap.riders)}</span>
+          <span class="hud-card-note">{STRINGS.resultTime(result.time)}</span>
+          {/* THE FIELD, best first. A rider still out is billed by the lap
+              they are on, so the table fills in as they come home. */}
+          <ol class="hud-standings">
+            {standings.map((s) => (
+              <li key={s.slot} class={`hud-standing${s.you ? " hud-standing-you" : ""}`}>
+                <span class="hud-standing-place">{s.place}</span>
+                <span class="hud-standing-name">
+                  {s.you ? STRINGS.riderYou : STRINGS.riderRival(s.slot)}
+                </span>
+                <span class="hud-standing-time">
+                  {s.time !== null ? formatTime(s.time) : STRINGS.standingOut(s.lap, snap.laps)}
+                </span>
+              </li>
+            ))}
+          </ol>
+          {/* THE WAYS ON. Racing again first — it is what a rider wants most
+              of the time and the only one with a key behind it. */}
+          <div class="hud-result-acts">
+            <button type="button" class="hud-mini hud-result-act" data-nav-next onClick={onAgain}>
+              {STRINGS.resultAgain}
+            </button>
+            <button type="button" class="hud-mini hud-result-act" onClick={onNew}>
+              {STRINGS.resultNew}
+            </button>
+            <button type="button" class="hud-mini hud-result-act" onClick={onMenu}>
+              {STRINGS.pauseMainMenu}
+            </button>
+          </div>
+          {!touch && <span class="hud-card-note hud-result-note">{STRINGS.resultNote}</span>}
+        </div>
+      </div>
+    </div>
+  );
+}

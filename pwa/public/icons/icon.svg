@@ -1,0 +1,32 @@
+<!-- SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- The app mark: a sled's two trails curving over a hill. A snowfield
+       rises under a clear sky with a shadowed ridge behind it; the two
+       parallel trails climb from the lower left, run over the crest and
+       swing down into the dip on the right — each two tangent arcs of
+       opposite turn — and a red checkpoint flag stands on the hill. The
+       raster icons (pwa-*.png, apple-touch, favicon) are generated from this
+       same geometry by scripts/generate-icons.mjs, and
+       pwa/src/game/app-mark.ts carries the two trail paths as data — keep
+       all three in lockstep. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6fa8dc"/>
+      <stop offset="1" stop-color="#cfe6f7"/>
+    </linearGradient>
+    <clipPath id="tile">
+      <rect width="512" height="512" rx="96"/>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#tile)">
+    <rect width="512" height="512" fill="url(#sky)"/>
+    <circle cx="420" cy="520" r="330" fill="#b9cde0"/>
+    <circle cx="256" cy="560" r="330" fill="#f4f8fb"/>
+  </g>
+  <g fill="none" stroke="#6fa8dc" stroke-width="22" stroke-linecap="round">
+    <path d="M 74.74 375.48 A 200 200 0 0 1 356 286.79 A 120 120 0 0 0 436.84 301.05"/>
+    <path d="M 107.37 390.69 A 164 164 0 0 1 338 317.97 A 156 156 0 0 0 443.09 336.5"/>
+  </g>
+  <rect x="144" y="126" width="10" height="126" rx="3" fill="#0d2233"/>
+  <polygon fill="#e8412c" points="154,128 226,152 154,176"/>
+</svg>

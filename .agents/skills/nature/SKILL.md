@@ -1,0 +1,110 @@
+---
+name: nature
+description: "Use when working on the NATURE the race runs through — the snow-loaded conifers (where the generator stands them under R14, their height and crown, the meadows and clearings between the woods, the tree line up the rim) and how `pwa/src/game/forest.ts` draws them (two shapes, the white-over-green banding, three bands of distance, the woods carried to the rim by the terrain's forest tint); the country as a LANDSCAPE (the mountain flanks as the horizon, the bare high snow, the hills and bowls as they read from the saddle); and the ground as a mesh (`terrain.ts`'s clipmap reaching past the rim). There are no biomes, no fauna, no birds and no rocks in this game. Owns the look-first loop for all of it: `make world`'s forest and vista views, `make level`'s plan, `make profile`."
+---
+
+# The nature: the woods, the country, the snow on both
+
+The world IS half the game's look — the race loop is a packed line through
+it. This skill owns what the country is COVERED in and how it reads: where the
+trees stand and how they are drawn, the landscape the loop runs through as a
+thing seen from the saddle, and the ground mesh that carries it to the
+horizon. The snow's own light — the glitter, the blue shadows, the groomed
+grain, the furrows — is `snow-look`'s; the rules that shape the country and
+the loop are `mapgen-improvement`'s.
+
+**ONE NATURE.** This slice has one kind of country — snowy hills, mountain
+flanks, forests of snow-covered conifers, open powder meadows. There are no
+biomes, no water, no animals, no birds and no rocks, and nothing here should
+grow a table keyed by a biome id until a second kind of country is asked for.
+
+**Read this skill's lessons first** —
+`node scripts/skill-lessons.mjs nature --list`. Load **`skill-reflection`**
+at both ends of the session, and **`write-code`** beside this one for any
+code change.
+
+## The files, one direction of flow
+
+| File | Owns |
+| --- | --- |
+| `engine/mapgen/forest.ts` | WHERE EVERY TREE STANDS (R14): one candidate per `forest.spacing` cell, jittered; kept with the probability the forest noise gives its spot (woods inside the forest, `forest.meadow` of that density out in the meadows); `forest.clearings` cut out of the woods; refused by rule — near the track (`forest.corridor`), too steep (`maxSlope`), above `treeLine` of the way up the rim, on a kicker, in the spawn's clearing or its lane. Taller in the thick of a wood and down in the valleys, shorter at a wood's edge and up the slopes. Drawn off the attempt's stream in a fixed order |
+| `engine/mapgen/rules.ts` (`forest`) | The numbers: spacing, the noise's scale, the meadow share, the clearings, height (6–19 m), trunk, crown, corridor, slope, tree line |
+| `engine/mapgen/types.ts` (`TreeDef`) | `x, z, y, height, radius` (the TRUNK — what the sled meets), `crown` (drawn only) |
+| `engine/game/collision.ts` | The trunk as a cylinder the sled meets — the `collision` skill's |
+| `engine/mapgen/terrain.ts` | The country's shape (R2, R3) — the `mapgen-improvement` skill's, but every judgement about how it READS is this one's |
+| `pwa/src/game/forest.ts` | THE WOODS AS DRAWN: two shapes (a narrow spruce, a broader heavier-laden fir), each a stack of drooping skirts white on the upper face and dark green under the lip, built into vertex colours; each tree scaled to its own height and crown, turned and tinted by a hash of where it stands; instanced in THREE bands of distance (NEAR casting shadows, MID without, FAR a two-tier sketch), binned into 64 m cells and frustum-tested per frame; `FOREST_QUALITY` |
+| `pwa/src/game/terrain.ts` | THE GROUND AS A MESH: a camera-centred CLIPMAP of nested grids (a quarter metre a vertex at the lens, doubling per level, eight levels past the rim), nothing baked into the mesh — the vertex shader reads the heights from a float texture of the generator's own heightfield. Three textures per level: the heights, the GROUND map (gradient, packed, how wooded), the track direction. `TERRAIN_QUALITY` |
+| `pwa/src/game/snow-glsl.ts` | The terrain's shader — `snow-look`'s — but its FOREST TINT (the woods past the far band, read off the ground map) is where this skill's trees end and the ground's paint begins; the two must agree on where a wood is |
+| `pwa/src/identity.ts` | `PALETTE.pine`, `pineDark`, `snow`, `snowShadow` — the colours every piece of nature is drawn from |
+
+## How the country should read
+
+- **The mountains are the horizon.** Every shot from the basin has the rim
+  in it: bare high snow above the tree line, ridged crests, the flanks
+  climbing out of the forest. A frame with no mountains in it reads as a
+  field anywhere.
+- **Woods and meadows, not an even stubble.** The forest noise is slow on
+  purpose: a wood you ride past, a meadow you ride across, a clearing cut
+  into the wood. A density that is the same everywhere reads as a lawn of
+  trees at range and as a wall up close.
+- **Trees thin with height and exposure.** Shorter at a wood's edge and up
+  the slopes, gone above the tree line — the same ladder any real mountain
+  has, and the one thing that makes the rim read as high.
+- **A loaded conifer is its banding.** White over dark green, tier over
+  tier. A tree that is all green reads as summer; all white reads as a cone.
+  The two shapes and the per-tree tint are what stop a wood reading as one
+  tree copied.
+- **The track is cut through the woods, never planted over.** `forest.corridor`
+  keeps trunks clear of the track's edge; a trunk inside it is a generator
+  bug (`analysis` reports `treesOnCorridor`).
+
+## The rules
+
+- **The engine stands every tree; the renderer draws exactly those.** The
+  trunk drawn is `TreeDef.x/z/radius` — a tree drawn somewhere else is a
+  tree the sled passes through or hits in thin air. Decorative scatter the
+  sled cannot hit (a bush, a sapling) would be the renderer's own, placed
+  deterministically off the level, and must never stand on the track.
+- **Placement is deterministic and in a fixed order.** A tree added to the
+  middle of the draw order moves every tree after it on every seed.
+- **Instanced, banded, culled.** Tens of thousands of trees, so every change
+  is judged in `make profile`: a new shape is a new instanced mesh per band;
+  a per-tree allocation per frame is a stutter.
+- **Past the far band the terrain carries the woods.** The ground map's
+  wooded channel is what tints the snow dark where the far forest is; a
+  change to where trees stand that does not move that channel leaves a
+  painted wood with no trees in it, or trees on white snow at range.
+- **The ground mesh is the generator's heightfield, sampled.** Nothing in
+  `terrain.ts` invents a height; a ridge that is not in `Level.ground` is not
+  in the picture either.
+
+## The loop
+
+1. **Plan**: `make level SEED=<n>` — where the woods, meadows and clearings
+   fall, and where the trees stand against the track.
+2. **Look**: `make world SEED=<n> ARGS=--views=forest,vista,track,spawn`
+   (its own bundle; `CHROMIUM_PATH=/opt/pw-browsers/chromium` in a web
+   session). `forest` is in the woods, `vista` the country from above, `track`
+   the loop through it, `spawn` the grid in the powder. Judge with the Read
+   tool at full size AND at a quarter — the woods have to read at range.
+3. **Cost**: `make profile` before and after — draw calls and triangles per
+   band.
+4. **More than one seed.** A country that reads well on one seed has read
+   badly on the next; look at three.
+5. **The built app**: `make build`, `make screenshots` for the game's own
+   framing at the reference viewports.
+6. If a rule moved: `mapgen-improvement`'s loop (`make analyze`, the
+   verbatim mirror in `docs/level-generator.md`, `make sim`).
+
+## What the change obliges elsewhere
+
+- `make world` pictures and `make profile` before and after, in the PR.
+- A placement change is a generator change: `make analyze` tally,
+  `make sim` both tables, `tests/mapgen_test.ts`.
+- A `.changes/unreleased/` fragment when a player would see it.
+
+## Skill self-improvement
+
+Load **`skill-reflection`** before this session commits. Worth recording: a
+density or a shape that read wrong at range and right up close, a band
+distance that popped, a tint that did not match the trees it stood for.

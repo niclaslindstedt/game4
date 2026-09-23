@@ -1,0 +1,239 @@
+#!/usr/bin/env node
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// SCREENSHOTS of the real build: serves pwa/dist, opens the app in headless
+// Chromium, waits for the app to say the frame is ready, and captures it at
+// the three reference viewports (§35.2) — desktop landscape 1280×720, phone
+// portrait 390×844 and phone LANDSCAPE 844×390, the phones at 2× and with a
+// TOUCHSCREEN — into the gitignored previews/. The third is the one the game
+// is actually held at, and the only one that reaches the short-landscape
+// rules, so a layout judged on the other two has not been judged where it is
+// played.
+//
+// THE CONTRACT WITH THE APP (pwa/src/game/url-params.ts):
+//   ?start=race&seed=<n>&t=<s>&shot=1
+//     a race on the map built off `seed`, `t` seconds of it already ridden
+//     by the bot, held still once drawn so nothing moves under the shutter.
+//   ?paused=1        ...held under the pause card instead.
+//   ?camera=<rung>   the run's camera: hood, bars, chase, far, high.
+//   ?splash=1 / ?menu=root   the attract card / the front door.
+//   ?update=1        the new-build button, as if a build were waiting.
+//   window.__SH_READY__ === true
+//     set by the app once a race's frame has been drawn. This tool waits for
+//     it (30 s, then a clear error).
+//
+//   node scripts/screenshot.mjs                          # the race at 10 s
+//   node scripts/screenshot.mjs --scene grid             # on the lights
+//   node scripts/screenshot.mjs --surface all            # every card
+//   node scripts/screenshot.mjs --surface menu,loading --viewport phone
+//   node scripts/screenshot.mjs --scene race --camera hood --seed 7
+//
+// Needs a built pwa/dist (`npm run build` — first, every time: a stale dist
+// photographs the last change), a Chromium and a driver (scripts/lib/
+// chromium.mjs says where both are looked for).
+
+import { existsSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import process from "node:process";
+
+import { findChromium } from "./lib/chromium.mjs";
+import { parseArgs } from "./lib/cli.mjs";
+import { serveDir } from "./lib/serve-dist.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const dist = join(root, "pwa", "dist");
+const outDir = join(root, "previews");
+
+/** THE STAGED MOMENTS of a race, as seconds into it — the whole of what a
+ * scene is here, since the race itself is the scenario. */
+const SCENES = {
+  /** On the grid, the lights on. */
+  grid: 0.5,
+  /** GO just gone. */
+  go: 3.4,
+  /** Racing, the field strung out. */
+  race: 12,
+  /** Well into the first lap. */
+  lap: 40,
+};
+
+/** THE CARDS, and how to photograph each one. A card is not a race's frame,
+ * so these do not wait on `__SH_READY__` — what says a card is up is the
+ * card being in the DOM. `settle` is the beat after it the card's arrival
+ * animation needs. `press` is a button pressed on the way in, for the one
+ * surface reached by a press rather than by a URL. */
+const SURFACES = {
+  // The title and the invitation, which wait for the first map to be built.
+  splash: { params: { splash: "1" }, wait: ".splash-prompt", settle: 900 },
+  menu: { params: { menu: "root" }, wait: ".menu-card-root", settle: 1200 },
+  // The loading card is up for as long as a map takes to build and no
+  // longer, so it is photographed on the first frame it is in the DOM.
+  loading: {
+    params: { menu: "root" },
+    press: ".menu-tile-hero",
+    pressAfter: 1500,
+    wait: ".loading-card",
+    settle: 60,
+  },
+  pause: { params: { paused: "1", t: "14" }, wait: ".menu-card-pause", settle: 700 },
+};
+
+/** The reference viewports — and the phone is a TOUCHSCREEN, not a narrow
+ * desktop window: the HUD's thumb zones and the splash's TAP ask the device
+ * what it is. */
+const VIEWPORTS = {
+  desktop: { viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 },
+  phone: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, hasTouch: true },
+  landscape: { viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true },
+};
+
+const args = parseArgs(
+  process.argv.slice(2),
+  {
+    scene: {
+      kind: "string",
+      default: "race",
+      help: `which moment of a race (${Object.keys(SCENES).join(", ")}, all)`,
+    },
+    surface: {
+      kind: "string",
+      help: `a card instead of a race (${Object.keys(SURFACES).join(", ")}, all)`,
+    },
+    seed: { kind: "number", default: 38, help: "map seed" },
+    t: { kind: "number", help: "seconds into the race (overrides the scene's own)" },
+    camera: { kind: "string", help: "hood, bars, chase, far, high" },
+    update: { kind: "flag", help: "draw the new-build button (?update=1)" },
+    viewport: {
+      kind: "string",
+      default: "all",
+      help: `${Object.keys(VIEWPORTS).join(", ")} or all`,
+    },
+    timeout: { kind: "number", default: 45, help: "seconds to wait for the frame" },
+  },
+  "usage: node scripts/screenshot.mjs [--scene name | --surface name] [--seed n] [--t s] " +
+    "[--camera rung] [--update] [--viewport v] [--timeout s]",
+);
+const viewports =
+  args.viewport === "all" ? Object.keys(VIEWPORTS) : String(args.viewport).split(",");
+for (const v of viewports) {
+  if (!VIEWPORTS[v]) {
+    console.error(`unknown viewport "${v}" (${Object.keys(VIEWPORTS).join(", ")}, all)`);
+    process.exit(2);
+  }
+}
+if (!existsSync(join(dist, "index.html"))) {
+  console.error(`no built site at ${dist} — run \`npm run build\` first`);
+  process.exit(2);
+}
+const found = await findChromium();
+if (!found) process.exit(2);
+
+mkdirSync(outDir, { recursive: true });
+const site = await serveDir(dist);
+const browser = await found.chromium.launch({
+  executablePath: found.executablePath,
+  args: ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
+});
+console.log(
+  `screenshots — seed ${args.seed}, ${viewports.join("+")}, serving ${dist} at ${site.url}`,
+);
+
+let failures = 0;
+
+/** One capture: a page at a viewport, the URL the contract names, the wait,
+ * the file. Console errors and page errors are printed under the file name:
+ * a screenshot of a frame the app threw on is a screenshot of the wrong
+ * thing. */
+async function capture(name, params, viewportName, surface) {
+  const page = await browser.newPage({ ...VIEWPORTS[viewportName] });
+  const problems = [];
+  page.on("pageerror", (err) => problems.push(`pageerror: ${err.message}`));
+  page.on("console", (msg) => {
+    if (msg.type() === "error" || msg.type() === "warning") {
+      problems.push(`${msg.type()}: ${msg.text()}`);
+    }
+  });
+  const url = `${site.url}?${new URLSearchParams(params)}`;
+  const file = join(outDir, `shot-${name}-${viewportName}.png`);
+  try {
+    await page.goto(url, { waitUntil: "load" });
+    if (surface) {
+      if (surface.press) {
+        await page.waitForSelector(surface.press, { timeout: args.timeout * 1000 });
+        await page.waitForTimeout(surface.pressAfter ?? 0);
+        // Through the DOM rather than `.click()`: a card Preact re-renders
+        // every tick never settles for the actionability check.
+        await page.evaluate(
+          (sel) => globalThis.document.querySelector(sel)?.click(),
+          surface.press,
+        );
+      }
+      await page.waitForSelector(surface.wait, { timeout: args.timeout * 1000 });
+      await page.waitForTimeout(surface.settle);
+    } else {
+      await page.waitForFunction("window.__SH_READY__ === true", null, {
+        timeout: args.timeout * 1000,
+      });
+      // One more beat for the HUD's first snapshot to be drawn.
+      await page.waitForTimeout(250);
+    }
+    await page.screenshot({ path: file });
+    console.log(`previews/shot-${name}-${viewportName}.png  ← ${url}`);
+  } catch (err) {
+    failures += 1;
+    const ready = await page.evaluate("window.__SH_READY__").catch(() => undefined);
+    console.error(
+      `!! ${name} (${viewportName}): ${err.message.split("\n")[0]}` +
+        (surface
+          ? ` — no "${surface.wait}" after ${args.timeout} s (${url})`
+          : ` — window.__SH_READY__ is ${String(ready)} after ${args.timeout} s (${url})`),
+    );
+  }
+  for (const p of problems) console.log(`   ${p}`);
+  await page.close();
+}
+
+if (args.surface) {
+  const names = args.surface === "all" ? Object.keys(SURFACES) : String(args.surface).split(",");
+  for (const name of names) {
+    const surface = SURFACES[name];
+    if (!surface) {
+      console.error(`unknown surface "${name}" (${Object.keys(SURFACES).join(", ")}, all)`);
+      failures += 1;
+      continue;
+    }
+    const params = { seed: String(args.seed), ...surface.params };
+    if (args.update) params.update = "1";
+    if (args.camera !== undefined) params.camera = String(args.camera);
+    for (const v of viewports)
+      await capture(`${name}${args.update ? "-update" : ""}`, params, v, surface);
+  }
+} else {
+  const scenes = args.scene === "all" ? Object.keys(SCENES) : String(args.scene).split(",");
+  for (const scene of scenes) {
+    if (!(scene in SCENES)) {
+      console.error(`unknown scene "${scene}" (${Object.keys(SCENES).join(", ")}, all)`);
+      failures += 1;
+      continue;
+    }
+    const params = {
+      start: "race",
+      seed: String(args.seed),
+      t: String(args.t ?? SCENES[scene]),
+      shot: "1",
+    };
+    if (args.camera !== undefined) params.camera = String(args.camera);
+    if (args.update) params.update = "1";
+    const name =
+      `${scene}${args.t !== undefined ? `-t${args.t}` : ""}` +
+      `${args.camera !== undefined ? `-${args.camera}` : ""}${args.update ? "-update" : ""}`;
+    for (const v of viewports) await capture(name, params, v);
+  }
+}
+
+await browser.close();
+await site.close();
+if (failures > 0) {
+  console.error(`\n${failures} capture(s) failed`);
+  process.exit(1);
+}

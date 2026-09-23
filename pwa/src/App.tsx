@@ -1,0 +1,615 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// THE APP: the shell the game lives inside, and the §37 clock underneath it.
+//
+// FIVE SURFACES, ONE CANVAS, AND THE SNOW NEVER STOPS — except under the
+// card standing over the PLAYER's own race. `game/shell.ts` names the
+// surfaces and owns that distinction; this file decides when one gives way
+// to the next.
+//
+//   splash   the attract card (`splash-screen.tsx`) — the house's name while
+//            the first map is built, then the title and an invitation.
+//   menu     the front door (`menu-main.tsx`), over a bot-ridden race.
+//   loading  a race being stood up (`loading-screen.tsx` over `app-load.ts`),
+//            paid for in slices so the page stays a page.
+//   pause    the race HELD (`menu-pause.tsx`), reached by Escape or the
+//            HUD's pause mark: RESUME, SOUND, RESTART, or out to the door.
+//   run      the player's hands on the bars, with the HUD over the top —
+//            and the finish plate over that once the flag has fallen.
+//
+// ONE ENGINE STATE THROUGHOUT, and the surface decides who rides it:
+// `botInput` under a card, the input manager under a run. Leaving a race
+// for the front door hands the same sled back to the bot rather than
+// tearing anything down, which is why the menu comes up over the map the
+// player was just on. Under a card the camera is the slow ORBIT round the
+// sled; over a run it is the rung the rider chose (`cameraFor`).
+//
+// THE URL: every parameter the app reads is listed in `game/url-params.ts`.
+// A URL that names a race (`start`, `shot`, `paused`) boots into one;
+// anything else opens on the attract card or the front door.
+//
+// THE LOOP: `requestAnimationFrame` hands the clock (run-loop.ts) the wall
+// time; the clock says how many fixed steps to take; each step samples the
+// input (§37.1, once per step) and calls `step`. The renderer draws the
+// state once per frame; the HUD is refreshed from a snapshot at ~12 Hz. A
+// hidden tab pauses the clock (§37.3) and the HUD says so.
+//
+// THE RENDERER IS FETCHED, NOT BUNDLED: `game/renderer.ts` is the one import
+// that reaches three.js, so it arrives as its own chunk behind the attract
+// card, and everything this file asks of it is `renderer-api.ts`'s — it
+// draws a `GameState` and never writes one.
+//
+// THE SOUND AND THE MOTOR FOLLOW THE SAME RULE AS THE SNOW: fed every frame
+// the engine steps — the beds ducked under a card, where the bot's race is
+// scenery — and told to be quiet on every frame it does not, because a bed
+// that is merely not fed holds its last note. The race's events make a
+// noise and a pulse only with the player's hands on the bars: a checkpoint
+// the bot takes under the menu is not news.
+
+import { useEffect, useRef, useState } from "preact/hooks";
+import { TUNING, botInput, createGame, error, step, type GameState, type Level } from "@engine";
+
+import { connectOutput } from "./output-bridge.ts";
+import { onShellCommand } from "./shell-host.ts";
+import { createRunAudio, setAudioVolumes, unlockAudio } from "./game/audio/index.ts";
+import { createLoader } from "./game/app-load.ts";
+import { runRumble } from "./game/haptics.ts";
+import { Hud, hasTouch, type HudFlash } from "./game/hud.tsx";
+import { ResultPlate } from "./game/hud-result.tsx";
+import { createInputManager, type InputManager } from "./game/input.ts";
+import { LoadingScreen } from "./game/loading-screen.tsx";
+import { MainMenu } from "./game/menu-main.tsx";
+import { createMenuNav, walkCardsOnKeys } from "./game/menu-nav.ts";
+import { PauseMenu } from "./game/menu-pause.tsx";
+import type { WorldRenderer } from "./game/renderer-api.ts";
+import { createRunActions } from "./game/run-actions.ts";
+import type { LoadPhase } from "./game/run-loader.ts";
+import { createRunClock } from "./game/run-loop.ts";
+import { newsFor } from "./game/run-news.ts";
+import { loadSettings, nextCamera, saveSettings, type Settings } from "./game/settings.ts";
+import {
+  cameraFor,
+  canPause,
+  hudOver,
+  playerRides,
+  simulates,
+  soundsLive,
+  type Shell,
+} from "./game/shell.ts";
+import { SplashScreen } from "./game/splash-screen.tsx";
+import { splashSkipped } from "./game/splash.ts";
+import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
+import { dealSeed, readParams } from "./game/url-params.ts";
+import { UpdateButton } from "./game/update-button.tsx";
+import { clamp } from "./lib/util.ts";
+
+/** How often the HUD's readouts are refreshed, s. */
+const HUD_TICK = 1 / 12;
+/** How long a line stays in the news column, s. */
+const FLASH_LIFE = 3.2;
+/** How long the loading card takes to fade off the race underneath. Must
+ * match the `.loading.leaving` transition in styles.css. */
+const LOAD_FADE_MS = 260;
+/** How much of the mix the bot's race gets under a card. */
+const CARD_DUCK = 0.5;
+
+declare global {
+  interface Window {
+    __SH_READY__?: boolean;
+    /** A LAB'S WINDOW ON THE RUN: what the HUD reads, where the player's
+     * sled is and which way it points, the shell, the rung, and a tally of
+     * every event the player's run has raised — so a script driving the
+     * built app can check a key did what it says without reading pixels.
+     * Read-only; nothing in the app calls it. */
+    __SH_PROBE__?: () => Record<string, unknown>;
+  }
+}
+
+/** The presses the cards make, boxed so a card re-rendering is never a
+ * reason to rebuild the loop that owns the race. */
+type Presses = {
+  race: (seed: number) => void;
+  restart: () => void;
+  pause: () => void;
+  resume: () => void;
+  toMenu: () => void;
+  abandonLoad: () => void;
+  camera: () => void;
+};
+
+const NO_PRESSES: Presses = {
+  race: () => {},
+  restart: () => {},
+  pause: () => {},
+  resume: () => {},
+  toMenu: () => {},
+  abandonLoad: () => {},
+  camera: () => {},
+};
+
+/** A whole race on `seed` — or, where the generator refuses it, the map the
+ * game falls back on, so the page ALWAYS mounts over something. */
+function raceOrFallback(seed: number): GameState {
+  try {
+    return createGame({ seed });
+  } catch (e) {
+    error(`seed ${seed} would not build (${e instanceof Error ? e.message : String(e)})`);
+    return createGame({ seed: 1 });
+  }
+}
+
+export function App() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [params] = useState(() => readParams(location.search));
+  const [snap, setSnap] = useState<HudSnapshot | null>(null);
+  const [flashes, setFlashes] = useState<HudFlash[]>([]);
+  /** The TAB is away and the clock with it (§37.3) — not the pause card. */
+  const [away, setAway] = useState(false);
+  const [shell, setShell] = useState<Shell>(() =>
+    params.rides
+      ? params.paused
+        ? "pause"
+        : "run"
+      : splashSkipped(location.search)
+        ? "menu"
+        : "splash",
+  );
+  const [loadingPhase, setLoadingPhase] = useState<LoadPhase | null>(null);
+  const [loadLeaving, setLoadLeaving] = useState(false);
+  const [loadFailed, setLoadFailed] = useState<string | null>(null);
+  /** True once the renderer has drawn a frame — what the attract card waits
+   * on before it will take a press (`splash.ts`). */
+  const [warm, setWarm] = useState(false);
+  const [settings, setSettings] = useState<Settings>(() => {
+    const s = loadSettings();
+    return params.camera ? { ...s, camera: params.camera } : s;
+  });
+  /** THE SEED RACE WILL BUILD, shown on the tile. Pinned by `?seed=`,
+   * otherwise dealt fresh after every race stood up. */
+  const [nextSeed, setNextSeed] = useState(() => params.seed ?? dealSeed());
+  const [laps, setLaps] = useState(3);
+  const [riders, setRiders] = useState(4);
+  const [input, setInput] = useState<InputManager | null>(null);
+  const [touch] = useState(hasTouch);
+  const [keys] = useState(
+    () => typeof matchMedia === "undefined" || matchMedia("(pointer: fine)").matches,
+  );
+
+  const shellRef = useRef<Shell>(shell);
+  const settingsRef = useRef(settings);
+  settingsRef.current = settings;
+  const nextSeedRef = useRef(nextSeed);
+  nextSeedRef.current = nextSeed;
+  const pressRef = useRef<Presses>(NO_PRESSES);
+  /** The two flags the loop raises at most once a frame, as refs beside the
+   * state, so the loop can ask "have I already said this?" without waiting
+   * for a render to answer. */
+  const warmRef = useRef(false);
+  const awayRef = useRef(false);
+  const rendererRef = useRef<WorldRenderer | null>(null);
+
+  useEffect(() => saveSettings(settings), [settings]);
+  // The switch reaches the bus the moment it moves; a layer reads the bus
+  // every frame, so the engine under the card goes quiet with the press.
+  useEffect(() => setAudioVolumes({ sfx: settings.sound ? 1 : 0 }), [settings.sound]);
+
+  // THE RENDER STACK, FETCHED RATHER THAN BUNDLED (see the header).
+  const [renderKit, setRenderKit] = useState<typeof import("./game/renderer.ts") | null>(null);
+  useEffect(() => {
+    let live = true;
+    void import("./game/renderer.ts").then((mod) => {
+      if (live) setRenderKit(mod);
+    });
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !renderKit) return;
+    connectOutput();
+    const manager = createInputManager(window, () => playerRides(shellRef.current));
+    setInput(manager);
+    const renderer = renderKit.createWorldRenderer(canvas);
+    rendererRef.current = renderer;
+    const audio = createRunAudio();
+    const clock = createRunClock(TUNING.physicsHz);
+    const nav = createMenuNav();
+
+    /* ── WHICH MAP THE RENDERER HOLDS ───────────────────────────────────
+       A map is built into the renderer asynchronously, and until it has
+       been the renderer cannot draw a race on it — nor may that race be
+       stepped, or its lights would count down under a card the player
+       cannot see through. So every build goes through `build`, which
+       remembers which level is standing; `drawable` is the one question the
+       loop asks before it steps or draws. */
+    let standing: Level | null = null;
+    let wanted: Level | null = null;
+    const build = (s: GameState): Promise<void> => {
+      const level = s.level;
+      // A new race on the map already standing needs nothing built: the
+      // renderer sees a fresh state and starts its trails and spray clean.
+      if (standing === level) return Promise.resolve();
+      wanted = level;
+      standing = null;
+      return renderer.load(s).then(() => {
+        if (wanted === level) standing = level;
+      });
+    };
+    const view: WorldRenderer = {
+      load: build,
+      draw: (s, alpha, dt) => renderer.draw(s, alpha, dt),
+      setCamera: (rung) => renderer.setCamera(rung),
+      camera: () => renderer.camera(),
+      resize: (w, h, r) => renderer.resize(w, h, r),
+      dispose: () => renderer.dispose(),
+    };
+
+    const raceSeed = params.seed ?? nextSeedRef.current;
+    let state: GameState = raceOrFallback(raceSeed);
+    const drawable = (): boolean => standing !== null && standing === state.level;
+    let frozen = params.shot;
+    let preroll = false;
+    let ready = false;
+    const live: { id: number; text: string; tone: HudFlash["tone"]; until: number }[] = [];
+    let flashId = 0;
+    /** Every event the player's run has raised, by kind (`__SH_PROBE__`). */
+    const tally: Record<string, number> = {};
+    let hudClock = HUD_TICK;
+    let wall = 0;
+
+    const setShellNow = (next: Shell): void => {
+      shellRef.current = next;
+      setShell(next);
+      renderer.setCamera(cameraFor(next, settingsRef.current.camera));
+    };
+
+    /** A new race has taken over the engine: everything that belonged to
+     * the one before it goes with it. */
+    const adopt = (next: GameState): void => {
+      state = next;
+      live.length = 0;
+      for (const k of Object.keys(tally)) delete tally[k];
+      audio.reset();
+      runRumble.reset();
+      setLaps(next.rules.laps);
+      setRiders(next.rivals.length + 1);
+    };
+
+    /** What this step is ridden on: the player's hands on a run, and the BOT
+     * everywhere else — the race behind a card is still being raced — and
+     * through a link's pre-roll, so a picture of a race is of one moving. */
+    const inputFor = () =>
+      preroll || params.bot || !playerRides(shellRef.current)
+        ? botInput(state)
+        : manager.sample(TUNING.dt);
+
+    window.__SH_PROBE__ = () => ({
+      ...takeSnapshot(state),
+      phase: state.phase,
+      t: state.t,
+      x: state.sled.x,
+      z: state.sled.z,
+      heading: state.sled.heading,
+      input: { ...state.input },
+      shell: shellRef.current,
+      camera: renderer.camera(),
+      events: { ...tally },
+    });
+
+    const stepOnce = (): void => {
+      step(state, inputFor());
+      for (const e of state.events) tally[e.kind] = (tally[e.kind] ?? 0) + 1;
+      if (preroll) return;
+      const rides = playerRides(shellRef.current);
+      if (soundsLive(shellRef.current)) audio.events(state.events);
+      if (rides) {
+        runRumble.events(state.events);
+        runRumble.step(state.sled);
+        for (const e of state.events) {
+          const line = newsFor(e, state);
+          if (line) live.push({ id: flashId++, ...line, until: wall + FLASH_LIFE });
+        }
+      }
+    };
+
+    // THE FIRST RACE: the map the menu stands over (and RACE rides, unless
+    // the player waits for another), or the race a link names — already
+    // `t` seconds in, ridden by the bot.
+    adopt(state);
+    if (params.rides && params.t > 0) {
+      preroll = true;
+      const steps = Math.round(params.t * TUNING.physicsHz);
+      for (let i = 0; i < steps; i++) stepOnce();
+      preroll = false;
+    }
+    renderer.setCamera(cameraFor(shellRef.current, settingsRef.current.camera));
+    build(state).catch((e: unknown) =>
+      error(`the renderer could not build the map: ${e instanceof Error ? e.message : String(e)}`),
+    );
+
+    /* ── STANDING A RACE UP ────────────────────────────────────────────── */
+    const loader = createLoader(
+      { renderer: view, adopt, current: () => state },
+      {
+        phase: setLoadingPhase,
+        start: () => {
+          setLoadLeaving(false);
+          setShellNow("loading");
+        },
+        failed: setLoadFailed,
+      },
+    );
+
+    const lift = (): void => {
+      setLoadLeaving(true);
+      setShellNow("run");
+      clock.resume();
+      hudClock = HUD_TICK;
+      window.setTimeout(() => setLoadLeaving(false), LOAD_FADE_MS);
+    };
+
+    /** The race again from the grid, on the same map: nothing to generate
+     * and nothing to build — the renderer sees a fresh state and starts its
+     * trails and its spray clean — so no card, just the lights again. */
+    const restart = (): void => {
+      if (loader.busy()) return;
+      adopt(createGame({ level: state.level, seed: state.seed }));
+      frozen = false;
+      clock.resume();
+      setShellNow("run");
+      hudClock = HUD_TICK;
+    };
+
+    pressRef.current = {
+      race: (seed) => {
+        loader.begin({
+          // THE MAP UNDER THE MENU IS REUSED when it is the one asked for —
+          // the race the player presses RACE over is the race they ride.
+          build: () =>
+            state.level.seed === seed
+              ? createGame({ level: state.level, seed })
+              : createGame({ seed }),
+          camera: settingsRef.current.camera,
+          done: lift,
+        });
+      },
+      restart,
+      pause: () => {
+        if (canPause(shellRef.current)) setShellNow("pause");
+      },
+      resume: () => {
+        if (shellRef.current === "pause") setShellNow("run");
+      },
+      toMenu: () => {
+        frozen = false;
+        clock.resume();
+        setShellNow("menu");
+      },
+      abandonLoad: () => {
+        loader.abandon();
+        setShellNow("menu");
+      },
+      camera: () => {
+        const next = nextCamera(settingsRef.current.camera);
+        setSettings((s) => ({ ...s, camera: next }));
+        if (hudOver(shellRef.current)) renderer.setCamera(next);
+      },
+    };
+
+    /** One of the game's own buttons, wherever the press came from. */
+    const act = createRunActions({
+      shell: () => shellRef.current,
+      pause: () => pressRef.current.pause(),
+      resume: () => pressRef.current.resume(),
+      restart,
+      camera: () => pressRef.current.camera(),
+      reset: () => manager.requestReset(),
+    });
+    manager.onAction(act);
+    // A MENU ROW, PRESSED: the desktop shell's menu bar reaches the game by
+    // NAME (shell-host.ts), and every word lands on the handler its key does.
+    const stopShellCommands = onShellCommand(act);
+
+    // Walking a card on the keys is `menu-nav.ts`'s.
+    const walk = walkCardsOnKeys(nav, () => shellRef.current !== "run");
+
+    let raf = 0;
+    let last = performance.now();
+    let frameMs = 1000 / 60;
+    const frame = (now: number): void => {
+      raf = requestAnimationFrame(frame);
+      // CLAMPED AT BOTH ENDS: the ceiling is the long-frame guard, and the
+      // floor is the first callback after a build, whose timestamp lands
+      // BEHIND the clock read after it.
+      const dtFrame = clamp((now - last) / 1000, 0, 0.1);
+      frameMs = now - last || frameMs;
+      last = now;
+      wall += dtFrame;
+
+      // A LOAD IS PAID FOR BEFORE THE STEPS, and the steps still happen.
+      loader.frame(frameMs);
+      if (walk.walked()) nav.sync();
+
+      // THE BACKDROP RACES ON: a race behind a card that the bot has taken
+      // to the flag is stood back up on the same map, so the front door is
+      // never over a sled coasting to a stop.
+      if (!playerRides(shellRef.current) && shellRef.current !== "pause" && !loader.busy()) {
+        if (state.progress.finished) adopt(createGame({ level: state.level, seed: state.seed }));
+      }
+
+      const held = !simulates(shellRef.current);
+      const shown = drawable();
+      if (!frozen && !held && shown) {
+        const steps = clock.frame(dtFrame);
+        for (let i = 0; i < steps; i++) stepOnce();
+      } else {
+        // Held: the controls are still read, so a banked reset does not
+        // fire the moment the picture thaws.
+        manager.sample(TUNING.dt);
+      }
+      if (!shown) return;
+      const still = frozen || held || clock.paused();
+      renderer.draw(state, clock.alpha(), still ? 0 : dtFrame);
+      if (!still) {
+        audio.setView(renderer.camera());
+        audio.frame(state, dtFrame, soundsLive(shellRef.current) ? 1 : CARD_DUCK);
+        if (playerRides(shellRef.current)) runRumble.frame(dtFrame);
+      } else {
+        audio.silence();
+      }
+      if (!warmRef.current) {
+        warmRef.current = true;
+        setWarm(true);
+      }
+      // The frame above is presented on the NEXT animation frame; the flag
+      // waits for it, and for the race to be up, so a screenshot never
+      // captures a card over it.
+      if (!ready && hudOver(shellRef.current)) {
+        ready = true;
+        requestAnimationFrame(() => {
+          window.__SH_READY__ = true;
+        });
+      }
+      hudClock += dtFrame;
+      if (hudClock >= HUD_TICK) {
+        hudClock = 0;
+        setSnap(takeSnapshot(state));
+        const kept = live.filter((f) => f.until > wall);
+        if (kept.length !== live.length) live.splice(0, live.length, ...kept);
+        setFlashes(live.map(({ id, text, tone }) => ({ id, text, tone })));
+        if (clock.paused() !== awayRef.current) {
+          awayRef.current = clock.paused();
+          setAway(awayRef.current);
+        }
+      }
+    };
+    raf = requestAnimationFrame(frame);
+
+    // §37.3: a hidden tab is a paused race.
+    const onVisibility = (): void => {
+      if (document.hidden) {
+        clock.pause();
+        audio.silence();
+      } else {
+        clock.resume();
+        last = performance.now();
+      }
+      awayRef.current = clock.paused();
+      setAway(awayRef.current);
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    // A browser makes no sound before the player has touched something, so
+    // the unlock hangs off real gestures only — captured, so a card that
+    // stops propagation cannot swallow it.
+    const unlockOpts = { capture: true, passive: true } as const;
+    document.addEventListener("pointerdown", unlockAudio, unlockOpts);
+    document.addEventListener("keydown", unlockAudio, unlockOpts);
+    // The canvas's size is the renderer's own business: it is handed the
+    // box it draws into and told again whenever the box changes.
+    const fit = (): void => {
+      const box = canvas.getBoundingClientRect();
+      renderer.resize(box.width, box.height, Math.min(2, devicePixelRatio || 1));
+    };
+    const observer = new ResizeObserver(fit);
+    observer.observe(canvas);
+    fit();
+
+    return () => {
+      cancelAnimationFrame(raf);
+      audio.silence();
+      observer.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
+      document.removeEventListener("pointerdown", unlockAudio, unlockOpts);
+      document.removeEventListener("keydown", unlockAudio, unlockOpts);
+      walk.stop();
+      stopShellCommands();
+      manager.dispose();
+      renderer.dispose();
+      delete window.__SH_PROBE__;
+    };
+    // Boots once: the URL is read on mount and `renderKit` is set exactly
+    // once.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renderKit]);
+
+  const race = (): void => {
+    pressRef.current.race(nextSeed);
+    // The next press deals the next map, unless a link pinned this one.
+    if (params.seed === null) setNextSeed(dealSeed());
+  };
+
+  const hudUp = hudOver(shell) && snap !== null && input !== null;
+  return (
+    <>
+      <canvas ref={canvasRef} />
+      {hudUp && (
+        <Hud
+          snap={snap!}
+          flashes={flashes}
+          touch={touch}
+          input={input!}
+          away={away}
+          onReset={() => input?.requestReset()}
+          onCamera={() => pressRef.current.camera()}
+          onPause={() => pressRef.current.pause()}
+        />
+      )}
+      {/* THE NEW-BUILD NOTICE over the front door: a deploy most often lands
+          on a tab nobody is racing, and the HUD's own corner is not up. */}
+      {shell === "menu" && (
+        <div class="hud hud-over-card">
+          <div class="hud-right">
+            <UpdateButton />
+          </div>
+        </div>
+      )}
+      <ResultPlate
+        snap={shell === "run" && !away ? snap : null}
+        touch={touch}
+        onAgain={() => pressRef.current.restart()}
+        onNew={race}
+        onMenu={() => pressRef.current.toMenu()}
+      />
+      {shell === "pause" && snap !== null && (
+        <PauseMenu
+          snap={snap}
+          sound={settings.sound}
+          onResume={() => pressRef.current.resume()}
+          onRestart={() => pressRef.current.restart()}
+          onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
+          onMainMenu={() => pressRef.current.toMenu()}
+        />
+      )}
+      {shell === "menu" && (
+        <MainMenu
+          seed={nextSeed}
+          pinned={params.seed !== null}
+          laps={laps}
+          riders={riders}
+          sound={settings.sound}
+          keys={keys}
+          onRace={race}
+          onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
+        />
+      )}
+      {(shell === "loading" || loadLeaving) && (
+        <LoadingScreen
+          leaving={loadLeaving}
+          phase={loadingPhase}
+          failed={loadFailed}
+          onBack={() => pressRef.current.abandonLoad()}
+        />
+      )}
+      {shell === "splash" && (
+        <SplashScreen
+          warm={warm}
+          onDone={() => {
+            shellRef.current = "menu";
+            setShell("menu");
+          }}
+        />
+      )}
+    </>
+  );
+}
