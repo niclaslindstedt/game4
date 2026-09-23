@@ -83,11 +83,22 @@ export interface Level {
   basin?: { x: number; z: number; rim: number };
   /** Which sub-seed attempt the search accepted (0 = the first). */
   attempt?: number;
+  /** Every stretch of the loop lying under a drift (R17), in the order they
+   * are ridden. */
+  drifts?: Drift[];
+}
+
+/** A stretch of the loop the wind has drifted over (R17): its full-depth
+ * core from arc `from` to arc `to`, m, never wrapping the start line. The
+ * packed field eases back to groomed over `drift.fade` metres past each end. */
+export interface Drift {
+  from: number;
+  to: number;
 }
 
 /** A level as `generateLevel` hands it out: every optional field set. */
 export type GeneratedLevel = Level &
-  Required<Pick<Level, "packed" | "kickers" | "basin" | "attempt">>;
+  Required<Pick<Level, "packed" | "kickers" | "basin" | "attempt" | "drifts">>;
 
 /** A crest shaped to kick a sled into the air (R4, R9). `x, z` is the LIP. */
 export interface Kicker {

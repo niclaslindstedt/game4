@@ -15,7 +15,9 @@
 //
 // A LANDING is the suspension's job and the springs take it — the model of a
 // good one is nothing at all. What a bad one costs is decided here: past
-// `air.harshSpeed` of speed INTO the slope the suspension has bottomed and
+// the machine's own `harshSpeedOf` (`air.harshSpeed` on the reference
+// machine, more on a longer, stiffer stroke) of speed INTO the slope the
+// suspension has bottomed and
 // the machine pays a share of its way per m/s over, which is why landing on
 // the downslope of a kicker is fast and landing flat after overshooting it
 // is not.
@@ -42,9 +44,10 @@ export function airTorque(c: SledState, out: { x: number; y: number; z: number }
   out.z -= A.damping * c.wz;
 }
 
-/** What a landing met at `impact` m/s into the slope costs: the share of
- * the way lost, 0 for one the suspension took whole. */
-export function landingLoss(impact: number): number {
-  if (impact <= A.harshSpeed) return 0;
-  return clamp((impact - A.harshSpeed) * A.harshLoss, 0, A.harshMax);
+/** What a landing met at `impact` m/s into the slope costs a machine whose
+ * suspension takes `harsh` m/s whole (`harshSpeedOf`): the share of the way
+ * lost, 0 for one the suspension took whole. */
+export function landingLoss(impact: number, harsh: number = A.harshSpeed): number {
+  if (impact <= harsh) return 0;
+  return clamp((impact - harsh) * A.harshLoss, 0, A.harshMax);
 }

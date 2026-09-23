@@ -14,6 +14,7 @@ export {
   type HasTrack,
 } from "./query.ts";
 export { kickerProfile } from "./kickers.ts";
+export { dealDrifts, driftAt } from "./drift.ts";
 export { declinationOf, sunWindow } from "./sun.ts";
 export { gridAround } from "./spawn.ts";
 // The scoreboard the search gates on, re-exported here so the one surface

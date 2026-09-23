@@ -11,6 +11,8 @@
 //   npm run sim -- --count 20            seeds 1..20
 //   npm run sim -- --seeds 3,7,38        specific seeds
 //   npm run sim -- --rivals 3            a whole race, the bot on the grid's first slot
+//   npm run sim -- --sled mountain       one machine of the catalog
+//   npm run sim -- --sled all            the whole roster, seed by seed, and who won each
 //   npm run sim -- --laps 1 --json out.json
 //
 // Exits non-zero when the bot finishes NO seed at all — a sled that cannot
@@ -25,7 +27,7 @@ import process from "node:process";
 import { parseArgs } from "./lib/cli.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const { simulateRun, SIM_SECONDS, engineVersion, TUNING, SLED } = await import(
+const { simulateRun, SIM_SECONDS, engineVersion, TUNING, SLEDS, sledById, isSledId } = await import(
   join(root, "engine/index.ts")
 );
 
@@ -37,10 +39,21 @@ const args = parseArgs(
     laps: { kind: "number", help: "laps per race (the map's own when left out)" },
     rivals: { kind: "number", default: 0, help: "rivals on the grid beside the bot" },
     max: { kind: "number", default: SIM_SECONDS, help: "give up after this much race time, s" },
+    sled: {
+      kind: "string",
+      default: "crossover",
+      help: `the machine (${SLEDS.map((s) => s.id).join(", ")}), or all for the roster`,
+    },
     json: { kind: "string", help: "also write the rows (events dropped) to this file" },
   },
-  "usage: npm run sim -- [--count n | --seeds a,b,c] [--laps n] [--rivals n] [--max s] [--json path]",
+  "usage: npm run sim -- [--count n | --seeds a,b,c] [--sled id|all] [--laps n] [--rivals n] [--max s] [--json path]",
 );
+
+if (args.sled !== "all" && !isSledId(args.sled)) {
+  console.error(`unknown sled "${args.sled}" (${SLEDS.map((s) => s.id).join(", ")}, all)`);
+  process.exit(2);
+}
+const roster = args.sled === "all" ? SLEDS : [sledById(args.sled)];
 
 const seeds = args.seeds
   ? args.seeds.map(Number)
@@ -54,57 +67,88 @@ const pad = (v, n) => String(v).padStart(n);
 const kmh = (ms) => (ms * 3.6).toFixed(0);
 
 console.log(
-  `sim — engine ${engineVersion} at ${TUNING.physicsHz} Hz · sled ${SLED.name} · seeds ${seeds.join(",")} · ` +
+  `sim — engine ${engineVersion} at ${TUNING.physicsHz} Hz · sled ${args.sled} · seeds ${seeds.join(",")} · ` +
     `laps ${args.laps ?? "map"} · rivals ${args.rivals} · max ${args.max} s`,
 );
-console.log(
-  [
-    pad("seed", 5),
-    pad("fin", 4),
-    pad("time", 7),
-    pad("laps", 17),
-    pad("cps", 7),
-    pad("len", 6),
-    pad("mean", 5),
-    pad("top", 5),
-    pad("air", 5),
-    pad("best", 5),
-    pad("jmp", 4),
-    pad("hrsh", 4),
-    pad("tree", 4),
-    pad("rst", 4),
-    pad("auto", 4),
-    pad("miss", 4),
-    pad("plc", 4),
-    pad("digest", 9),
-  ].join(" "),
-);
+const header = [
+  pad("seed", 5),
+  pad("fin", 4),
+  pad("time", 7),
+  pad("laps", 17),
+  pad("cps", 7),
+  pad("len", 6),
+  pad("pow", 4),
+  pad("mean", 5),
+  pad("top", 5),
+  pad("air", 5),
+  pad("best", 5),
+  pad("jmp", 4),
+  pad("hrsh", 4),
+  pad("tree", 4),
+  pad("rst", 4),
+  pad("auto", 4),
+  pad("miss", 4),
+  pad("plc", 4),
+  pad("digest", 9),
+].join(" ");
 
 const rows = [];
-for (const seed of seeds) {
-  const r = simulateRun(seed, { laps: args.laps, rivals: args.rivals, maxSeconds: args.max });
-  rows.push(r);
+for (const spec of roster) {
+  if (roster.length > 1) console.log(`\n${spec.name}`);
+  console.log(header);
+  for (const seed of seeds) {
+    const r = simulateRun(seed, {
+      laps: args.laps,
+      rivals: args.rivals,
+      maxSeconds: args.max,
+      spec,
+    });
+    rows.push(r);
+    console.log(
+      [
+        pad(seed, 5),
+        pad(r.finished ? "yes" : "NO", 4),
+        pad(r.time.toFixed(1), 7),
+        pad(r.lapTimes.map((t) => t.toFixed(0)).join("/") || "-", 17),
+        pad(`${r.checkpoints}/${r.crossings}`, 7),
+        pad(r.trackLength.toFixed(0), 6),
+        pad(`${Math.round(r.powder * 100)}%`, 4),
+        pad(kmh(r.meanSpeed), 5),
+        pad(kmh(r.topSpeed), 5),
+        pad(r.airTime.toFixed(1), 5),
+        pad(r.bestAir.toFixed(1), 5),
+        pad(r.jumps, 4),
+        pad(r.harshLandings, 4),
+        pad(r.treeHits, 4),
+        pad(r.resets, 4),
+        pad(r.autoResets, 4),
+        pad(r.missed, 4),
+        pad(r.place, 4),
+        pad(r.digest, 9),
+      ].join(" "),
+    );
+  }
+}
+
+// THE ROSTER, SEED BY SEED: every machine's time on each map and which one
+// was quickest — the table that says whether any sled is best everywhere.
+if (roster.length > 1) {
+  console.log(`\nroster — race time, s (* the quickest on the seed)`);
+  console.log([pad("seed", 5), pad("pow", 4), ...roster.map((s) => pad(s.id, 10))].join(" "));
+  const wins = new Map(roster.map((s) => [s.id, 0]));
+  for (const seed of seeds) {
+    const mine = rows.filter((r) => r.seed === seed);
+    const best = Math.min(...mine.filter((r) => r.finished).map((r) => r.time));
+    const cells = roster.map((s) => {
+      const r = mine.find((m) => m.sled === s.id);
+      if (!r.finished) return pad("DNF", 10);
+      if (r.time === best) wins.set(s.id, wins.get(s.id) + 1);
+      return pad(`${r.time.toFixed(1)}${r.time === best ? "*" : " "}`, 10);
+    });
+    console.log([pad(seed, 5), pad(`${Math.round(mine[0].powder * 100)}%`, 4), ...cells].join(" "));
+  }
   console.log(
-    [
-      pad(seed, 5),
-      pad(r.finished ? "yes" : "NO", 4),
-      pad(r.time.toFixed(1), 7),
-      pad(r.lapTimes.map((t) => t.toFixed(0)).join("/") || "-", 17),
-      pad(`${r.checkpoints}/${r.crossings}`, 7),
-      pad(r.trackLength.toFixed(0), 6),
-      pad(kmh(r.meanSpeed), 5),
-      pad(kmh(r.topSpeed), 5),
-      pad(r.airTime.toFixed(1), 5),
-      pad(r.bestAir.toFixed(1), 5),
-      pad(r.jumps, 4),
-      pad(r.harshLandings, 4),
-      pad(r.treeHits, 4),
-      pad(r.resets, 4),
-      pad(r.autoResets, 4),
-      pad(r.missed, 4),
-      pad(r.place, 4),
-      pad(r.digest, 9),
-    ].join(" "),
+    [pad("wins", 5), pad("", 4), ...roster.map((s) => pad(`${wins.get(s.id)} `, 10))].join(" "),
   );
 }
 

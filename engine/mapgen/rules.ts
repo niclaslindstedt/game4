@@ -73,8 +73,8 @@
 //       `kickers.on.spacing` metres apart along the loop.
 //   R10 PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's
 //       width and fades to 0 over `track.shoulder.packed` metres beyond each
-//       edge; everywhere else the snow is virgin powder, the spawn's run-in
-//       included.
+//       edge — except where R17 drifts it over; everywhere else the snow is
+//       virgin powder, the spawn's run-in included.
 //   R11 CHECKPOINTS EVERY 120–200 m. Checkpoint 0 — the start and finish
 //       line — is the track point nearest the spawn, and the loop is
 //       re-indexed to begin there, so its arc length is 0. The rest follow
@@ -109,6 +109,17 @@
 //       seeded solar hour in `sun.hour` (9–16 h) at which the sun stands at
 //       least `sun.minElevation` degrees over the horizon.
 //   R16 THREE LAPS. A race is `race.laps` (3) laps of the loop.
+//   R17 DRIFTS ACROSS THE TRACK. The wind lays fresh snow over stretches of
+//       the groomer. A map is dealt a share of its loop in `drift.share`
+//       (0–50 %) to lie drifted, laid as stretches `drift.length` (60–180 m)
+//       long, at least `drift.gap` metres apart; across a stretch the
+//       packed field — the track's width and its shoulders — falls to
+//       `drift.packed` of its groomed value, easing in and out over
+//       `drift.fade` metres at either end. No drift lies within
+//       `drift.clear` metres of the start line, nor within `drift.fade`
+//       metres of a kicker's ramp or landing (R9). The drifts are dealt off
+//       a stream of their own, so a map's drifts move nothing else it
+//       draws; `Level.drifts` publishes every stretch.
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };
@@ -310,6 +321,21 @@ export const LEVEL_RULES = {
   },
   /** R16 — the race. */
   race: { laps: 3 },
+  /** R17 — the drifts. */
+  drift: {
+    /** Share of the loop dealt to lie drifted. */
+    share: { min: 0, max: 0.5 } as Band,
+    /** One stretch's length, its easing in and out not counted, m. */
+    length: { min: 60, max: 180 } as Band,
+    /** The least groomer between two stretches, m. */
+    gap: 40,
+    /** The packed share left under a drift, as a share of the groomed. */
+    packed: 0.05,
+    /** The ease in and out at either end of a stretch, m. */
+    fade: 12,
+    /** No drift this near the start line, either way along the loop, m. */
+    clear: 60,
+  },
 } as const;
 
 /** Uniform draw inside a band. */

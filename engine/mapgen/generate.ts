@@ -22,6 +22,8 @@
 //   5. the kickers off the track (R4), stamped where the corridor is not
 //   6. the spawn and its grid (R12, R13), then the loop re-indexed to start
 //      at the line nearest it, and the checkpoints from there (R11)
+//   6b the drifts across the finished loop (R17) — off a stream of their
+//      own, so they thin the packed field and move nothing else
 //   7. the forest (R14), which keeps clear of everything above
 //   8. the day (R15)
 
@@ -30,6 +32,7 @@ import { sampleField } from "../lib/heightfield.ts";
 import { analyzeLevel } from "../analysis/index.ts";
 import { debug } from "../output.ts";
 import { compileLevel } from "./compile.ts";
+import { dealDrifts, stampDrifts } from "./drift.ts";
 import { growForest } from "./forest.ts";
 import { layOffKickers, layTrackKickers, publishTrackKickers } from "./kickers.ts";
 import { LEVEL_RULES as R } from "./rules.ts";
@@ -80,7 +83,7 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
   if (!loop) return `no loop fits this country (last: ${why})`;
 
   const trackKickers = layTrackKickers(rng, loop);
-  const { packed } = stampCorridor(loop, ground);
+  const { packed, near, along } = stampCorridor(loop, ground);
   const offKickers = layOffKickers(rng, plan, ground, loop);
 
   const start = placeSpawn(rng, plan, ground, loop, trackKickers, offKickers);
@@ -93,6 +96,9 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
   const kickers = publishTrackKickers(loop, trackKickers, start.start).concat(offKickers);
   for (const k of kickers) k.y = sampleField(ground, k.x, k.z);
   const checkpoints = layCheckpoints(trackOf(loop));
+  const drifts = dealDrifts(subSeed(seed, attempt), loop.length, kickers);
+  const n = loop.points.length;
+  stampDrifts(packed, near, along, drifts, start.start, n, loop.length / n);
 
   const trees = growForest(rng, plan, ground, trackOf(loop), kickers, start.spawn, start.lane);
   const sun = dealSun(rng);
@@ -113,6 +119,7 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
     laps,
     basin: { x: plan.cx, z: plan.cz, rim: R.basin.rim.inner },
     attempt,
+    drifts,
   });
 }
 

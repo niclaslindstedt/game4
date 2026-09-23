@@ -26,6 +26,7 @@
 import { clamp } from "../lib/math.ts";
 import type { SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
+import { footprintOf } from "./footprint.ts";
 
 const T = TUNING.tread;
 const RPM_TO_RAD = (2 * Math.PI) / 60;
@@ -97,7 +98,8 @@ export function stepTread(
   dt: number,
 ): number {
   const v = treadSpeed;
-  const loss = T.lossLin * v + T.lossQuad * v * v;
+  // More belt is more rail, more idler and more rubber to flex round them.
+  const loss = (T.lossLin * v + T.lossQuad * v * v) * footprintOf(spec).beltLoss;
   const net = driveForce(spec, rpm, throttle, v) - ground - loss;
   let next = v + (net / T.beltMass) * dt;
   // The brake is a clamp: it takes up to its force's worth of belt speed

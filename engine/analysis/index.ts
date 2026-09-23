@@ -63,6 +63,8 @@ export type LevelAnalysis = {
     relief: number;
     sunElevation: number;
     attempt: number;
+    /** Share of the loop lying under a drift's core (R17). */
+    drifted: number;
   };
 };
 
@@ -228,12 +230,16 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     add("R4", "warn", `only ${offKickers.length} kicker(s) off the track`);
   }
 
-  // R10 — packed on the line, powder off it.
+  // R10 — packed on the line, powder off it — outside the drifts (R17),
+  // each read with its ease either side, which is what they published.
+  const drifts = level.drifts ?? [];
+  const F = R.drift.fade;
+  const drifted = (s: number): boolean => drifts.some((d) => s > d.from - F && s < d.to + F);
   let packedLow = 1;
   let packedHigh = 0;
   for (let i = 0; i < n; i += 5) {
     const p = pts[i];
-    packedLow = Math.min(packedLow, level.packedAt(p.x, p.z));
+    if (!drifted(p.s)) packedLow = Math.min(packedLow, level.packedAt(p.x, p.z));
     const off = p.width / 2 + R.track.shoulder.packed + 3;
     const rx = Math.cos(p.heading);
     const rz = -Math.sin(p.heading);
@@ -356,6 +362,42 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   // R16 — the race.
   if (!(level.laps >= 1)) add("R16", "error", `${level.laps} laps`);
 
+  // R17 — the drifts: their length, their spacing, clear of the line and of
+  // every kicker, and the groomer under their cores actually drifted over.
+  let driftLength = 0;
+  for (let i = 0; i < drifts.length; i++) {
+    const d = drifts[i];
+    const len = d.to - d.from;
+    driftLength += len;
+    if (len < R.drift.length.min - 1 || len > R.drift.length.max + 1) {
+      add("R17", "error", `a drift at s ${fmt(d.from, 0)} m is ${fmt(len, 0)} m long`);
+    }
+    if (d.from - F < R.drift.clear - 1 || d.to + F > L - R.drift.clear + 1) {
+      add("R17", "error", `a drift at s ${fmt(d.from, 0)} m lies on the start line's approach`);
+    }
+    const next = drifts[i + 1];
+    if (next && next.from - d.to < R.drift.gap + 2 * F - 1) {
+      add("R17", "error", `two drifts stand ${fmt(next.from - d.to, 0)} m apart`);
+    }
+    for (const k of trackKickers) {
+      const s0 = k.s ?? 0;
+      if (d.from - F < s0 + k.landing && d.to + F > s0 - k.ramp) {
+        add("R17", "error", `a drift at s ${fmt(d.from, 0)} m lies over ${k.id}`);
+      }
+    }
+    let deepest = 0;
+    for (let s = d.from; s <= d.to; s += 5) {
+      const p = trackPointAt(level, s);
+      deepest = Math.max(deepest, level.packedAt(p.x, p.z));
+    }
+    if (deepest > R.drift.packed + 0.05) {
+      add("R17", "error", `the drift at s ${fmt(d.from, 0)} m is ${fmt(deepest, 2)} packed`);
+    }
+  }
+  if (driftLength / L > R.drift.share.max + R.drift.length.min / L + 0.01) {
+    add("R17", "warn", `${fmt((100 * driftLength) / L, 0)} % of the loop is drifted`);
+  }
+
   let lo = Infinity;
   let hi = -Infinity;
   for (const p of pts) {
@@ -386,6 +428,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       relief: hi - lo,
       sunElevation: elevation,
       attempt: level.attempt ?? 0,
+      drifted: driftLength / L,
     },
   };
 }

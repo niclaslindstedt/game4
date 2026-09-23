@@ -8,9 +8,11 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  dealDrifts,
   generateLevel,
   LEVEL_RULES as R,
   nearestTrackPoint,
+  subSeed,
   trackPointAt,
   withinBand,
   type GeneratedLevel,
@@ -155,8 +157,11 @@ describe("the loop (R5–R8)", () => {
 
   it("is packed on the centreline and powder a few metres past the edge (R10)", () => {
     for (const level of corpus()) {
+      const F = R.drift.fade;
+      const drifted = (s: number): boolean =>
+        level.drifts.some((d) => s > d.from - F && s < d.to + F);
       for (const p of level.track.points.filter((_, i) => i % 7 === 0)) {
-        expect(level.packedAt(p.x, p.z)).toBeGreaterThan(0.98);
+        if (!drifted(p.s)) expect(level.packedAt(p.x, p.z)).toBeGreaterThan(0.98);
         const off = p.width / 2 + R.track.shoulder.packed + 3;
         const rx = Math.cos(p.heading);
         const rz = -Math.sin(p.heading);
@@ -263,6 +268,64 @@ describe("the start (R11–R13)", () => {
           R.grid.spacing - 1e-9,
         );
       }
+    }
+  });
+});
+
+describe("the drifts (R17)", () => {
+  it("lays every drift in its band, apart, clear of the line and of every kicker", () => {
+    for (const level of corpus()) {
+      const L = level.track.length;
+      const F = R.drift.fade;
+      level.drifts.forEach((d, i) => {
+        expect(d.to - d.from).toBeGreaterThanOrEqual(R.drift.length.min - 1);
+        expect(d.to - d.from).toBeLessThanOrEqual(R.drift.length.max + 1);
+        expect(d.from - F).toBeGreaterThanOrEqual(R.drift.clear - 1);
+        expect(d.to + F).toBeLessThanOrEqual(L - R.drift.clear + 1);
+        const next = level.drifts[i + 1];
+        if (next) expect(next.from - d.to).toBeGreaterThanOrEqual(R.drift.gap + 2 * F - 1);
+        for (const k of level.kickers.filter((kk) => kk.onTrack)) {
+          const s0 = k.s ?? 0;
+          expect(d.from - F >= s0 + k.landing || d.to + F <= s0 - k.ramp).toBe(true);
+        }
+      });
+    }
+  });
+
+  it("drifts the track's whole width over the core of every stretch", () => {
+    for (const level of corpus()) {
+      for (const d of level.drifts) {
+        for (let s = d.from; s <= d.to; s += 10) {
+          const p = trackPointAt(level, s);
+          const rx = Math.cos(p.heading);
+          const rz = -Math.sin(p.heading);
+          for (const u of [-0.45, 0, 0.45]) {
+            const x = p.x + rx * u * p.width;
+            const z = p.z + rz * u * p.width;
+            expect(level.packedAt(x, z)).toBeLessThan(R.drift.packed + 0.05);
+          }
+        }
+      }
+    }
+  });
+
+  it("deals some maps a groomer and some a powder run", () => {
+    // The dealer itself over a sweep of streams, since eight maps are a
+    // sample: the share spans the band, and never runs far past its top.
+    const L = 3000;
+    const shares = Array.from(
+      { length: 64 },
+      (_, i) => dealDrifts(subSeed(i + 1, 0), L, []).reduce((a, d) => a + d.to - d.from, 0) / L,
+    );
+    for (const share of shares) {
+      expect(share).toBeLessThanOrEqual(R.drift.share.max + R.drift.length.min / L + 0.01);
+    }
+    expect(Math.min(...shares)).toBeLessThan(0.08);
+    expect(Math.max(...shares)).toBeGreaterThan(0.35);
+    // ...and the maps carry what they were dealt.
+    for (const level of corpus()) {
+      const lvl = level.drifts.reduce((a, d) => a + d.to - d.from, 0) / level.track.length;
+      expect(lvl).toBeLessThanOrEqual(R.drift.share.max + 0.08);
     }
   });
 });

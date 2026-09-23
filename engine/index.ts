@@ -59,8 +59,15 @@ export {
 } from "./game/defs/modes.ts";
 export {
   SLED,
+  SLEDS,
+  TRAIL_SLED,
+  MOUNTAIN_SLED,
+  CROSS_SLED,
+  sledById,
+  isSledId,
   inertiaOf,
   totalMass,
+  type SledId,
   type SledSpec,
   type SuspensionSpec,
 } from "./game/defs/sled.ts";
@@ -78,7 +85,8 @@ export {
   type SnowContact,
 } from "./game/state.ts";
 export { freshSled, skiLockAt, derive } from "./game/sled.ts";
-export { probesOf, hullOf, skiShare, type Probe, type HullPoint } from "./game/suspension.ts";
+export { probesOf, hullOf, type Probe, type HullPoint } from "./game/suspension.ts";
+export { footprintOf, pressureOf, skiShare, type Footprint } from "./game/footprint.ts";
 export { sinkTarget, snowDrag, powderFloor, gripAt, type Grip } from "./game/snow.ts";
 export { powerShare, driveForce, maxDriveForce, rpmAtTop } from "./game/traction.ts";
 export { landingLoss } from "./game/flight.ts";
@@ -105,7 +113,15 @@ export {
 export { stepRun } from "./game/run.ts";
 export { placeRun, type RunMoment } from "./game/place.ts";
 export { SUN_SECONDS_PER_HOUR, sunAtRun, sunHourAt } from "./game/clock.ts";
-export { brakeDecel, cornerGrip, lockAt, maxRpm, topSpeedOf, treadCeiling } from "./game/limits.ts";
+export {
+  brakeDecel,
+  cornerGrip,
+  harshSpeedOf,
+  lockAt,
+  maxRpm,
+  topSpeedOf,
+  treadCeiling,
+} from "./game/limits.ts";
 
 // The bot rider and the headless simulator.
 export { botInput, RIDER_BOT, type BotProfile } from "./sim/bot.ts";

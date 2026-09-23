@@ -13,6 +13,12 @@ export function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
 
+/** Hermite ease from 0 at `a` to 1 at `b`, clamped either side. */
+export function smoothstep(a: number, b: number, v: number): number {
+  const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
+  return t * t * (3 - 2 * t);
+}
+
 /** Signed shortest angular difference `b - a`, in (-π, π]. */
 export function angleDiff(a: number, b: number): number {
   let d = (b - a) % TAU;

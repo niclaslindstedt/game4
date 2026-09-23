@@ -60,6 +60,21 @@ export const TUNING = {
     powderDrag: 0.008,
   },
 
+  /** THE FOOTPRINT — how much each machine's own tread is worth against the
+   * reference's (`footprint.ts`; the crossover reads 1 on every one). */
+  footprint: {
+    /** The rest sink goes as the ground pressure to this power: a sink is
+     * the snow compacted until it carries the load, and fresh snow stiffens
+     * as it packs, so halving the pressure takes off less than half. */
+    floatExp: 0.8,
+    /** The powder drive goes as the lug height to this power — a paddle
+     * twice as tall moves about half again the snow. */
+    lugPowder: 0.6,
+    /** The groomer's sideways hold goes as the INVERSE lug height to this
+     * power: a tall lug folds over under a sideways load. */
+    lugSide: 0.5,
+  },
+
   /** GRIP — the friction coefficients between the machine and the snow,
    * each a peak reached over its reference slip speed (a `tanh` curve,
    * which is how a lugged belt or a carbide keel lets go: progressively). */

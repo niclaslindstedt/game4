@@ -33,7 +33,7 @@
 // line into the ground: level across the width and the flat shoulder, a bank
 // back into the country past it, and the packed field of R10.
 
-import { TAU } from "../lib/math.ts";
+import { TAU, smoothstep } from "../lib/math.ts";
 import { sampleField, createHeightfield, type Heightfield } from "../lib/heightfield.ts";
 import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
@@ -62,11 +62,6 @@ export function trackOf(loop: Loop): { track: { points: TrackPoint[]; length: nu
 /** How finely the unit shape is sampled before it is resampled by arc
  * length, samples per turn. */
 const SAMPLES = 4096;
-
-function smoothstep(a: number, b: number, v: number): number {
-  const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
-  return t * t * (3 - 2 * t);
-}
 
 /** R5 — draw the loop's plan: its shape, its length, its width. */
 export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
@@ -337,6 +332,12 @@ export function rotateLoop(loop: Loop, start: number): void {
 export type Corridor = {
   /** R10 — 0 powder … 1 packed, on the ground's grid. */
   readonly packed: Heightfield;
+  /** Per cell of that grid, the loop point starting the segment nearest it
+   * (-1 where the corridor did not reach), and how far along that segment,
+   * 0..1 — what lets R17 lay a drift by arc length. Indexed on the loop as
+   * it stood when stamped, before `rotateLoop`. */
+  readonly near: Int32Array;
+  readonly along: Float32Array;
 };
 
 /** R8, R10 — press the finished line into the ground: level across the
@@ -350,6 +351,8 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
   const cell = ground.cell;
   const cells = cols * rows;
   const dist = new Float32Array(cells).fill(Infinity);
+  const near = new Int32Array(cells).fill(-1);
+  const along = new Float32Array(cells);
   const target = new Float32Array(cells);
   const half = new Float32Array(cells);
   const reachMax = R.track.width.max / 2 + R.track.shoulder.flat + R.track.bank.max;
@@ -373,6 +376,8 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
         const o = r * cols + c;
         if (d < dist[o]) {
           dist[o] = d;
+          near[o] = i;
+          along[o] = t;
           target[o] = a.y + (b.y - a.y) * t;
           half[o] = (a.width + (b.width - a.width) * t) / 2;
         }
@@ -396,5 +401,5 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
     g[o] += w * delta;
     p[o] = d <= hw ? 1 : 1 - smoothstep(hw, hw + R.track.shoulder.packed, d);
   }
-  return { packed };
+  return { packed, near, along };
 }

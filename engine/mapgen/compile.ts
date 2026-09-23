@@ -37,6 +37,7 @@ export type LevelParts = {
   laps: number;
   basin: GeneratedLevel["basin"];
   attempt: number;
+  drifts: GeneratedLevel["drifts"];
 };
 
 /** Bind the parts into a level. */
@@ -70,5 +71,6 @@ export function compileLevel(parts: LevelParts): GeneratedLevel {
     kickers: parts.kickers,
     basin: parts.basin,
     attempt: parts.attempt,
+    drifts: parts.drifts,
   };
 }

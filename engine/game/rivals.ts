@@ -7,9 +7,11 @@
 // player's level, rules and random stream by reference. So a rival is stepped
 // by the very function the player is (`run.ts`), ridden by the very bot the
 // sim rides (`sim/bot.ts`), and meets a tree, a kicker and a checkpoint
-// exactly as the player's sled would. What tells one from the next is one
-// number: the throttle its bot is allowed (`Rival.pace`), dealt off the run's
-// own stream at the grid, so the same seed deals the same field.
+// exactly as the player's sled would. What tells one from the next is two
+// draws off the run's own stream at the grid, so the same seed deals the
+// same field: the throttle its bot is allowed (`Rival.pace`), and the
+// machine it is on — any of the catalog's (`SLEDS`), so a drifted map has a
+// mountain sled in the field as often as a groomed one has a trail sled.
 //
 // THE GRID is the level's (`Level.grid`): four slots side by side in the
 // powder off the track, the player in the first. A field bigger than the
@@ -24,6 +26,7 @@ import { botInput } from "../sim/bot.ts";
 import type { Spawn } from "../mapgen/types.ts";
 import { freshProgress, standSled } from "./course.ts";
 import { FULL_ASSIST, RACE } from "./defs/modes.ts";
+import { SLEDS } from "./defs/sled.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledState } from "./state.ts";
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
@@ -44,14 +47,16 @@ export function gridSlot(state: GameState, slot: number): Spawn {
   };
 }
 
-/** STAND THE FIELD: `count` rivals, each on its slot with its pace dealt.
+/** STAND THE FIELD: `count` rivals, each on its slot with its pace and its
+ * machine dealt.
  * Called once, from `createGame`, and only for a run with rivals in it. */
 export function createRivals(state: GameState, count: number): void {
   state.rivals = [];
   for (let i = 0; i < count; i++) {
+    const pace = state.rng.range(RACE.paceBand.min, RACE.paceBand.max);
     const run: GameState = {
       ...state,
-      sled: freshSled(state.sled.spec),
+      sled: freshSled(state.rng.pick(SLEDS)),
       input: { ...NEUTRAL_INPUT },
       // The player's help is the player's: the bot rides every rival with
       // every hand on, so a harder setting is a harder sled, not a slower field.
@@ -65,7 +70,7 @@ export function createRivals(state: GameState, count: number): void {
     state.rivals.push({
       id: i,
       run,
-      pace: state.rng.range(RACE.paceBand.min, RACE.paceBand.max),
+      pace,
     });
   }
 }

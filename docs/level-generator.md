@@ -73,7 +73,11 @@ is the same everywhere. Inside an attempt the order is the dependency order:
 8. **The forest** (`forest.ts`, R14) — a jittered candidate per cell, kept by a forest noise, and
    refused near the track, on steep ground, up the rim, on a kicker, or in the spawn's clearing and
    its lane.
-9. **The day** (`sun.ts`, R15), and the compile (`compile.ts`) that binds it all into a `Level`.
+9. **The drifts** (`drift.ts`, R17) — stretches of the finished loop dealt to lie under fresh
+   snow, off a stream of their own (the attempt's sub-seed, salted), so they thin the packed
+   field through the corridor's own nearest-segment index and move nothing else the map draws.
+   `Level.drifts` publishes each stretch's core as arc lengths.
+10. **The day** (`sun.ts`, R15), and the compile (`compile.ts`) that binds it all into a `Level`.
 
 A map builds in about half a second on Node.
 
@@ -106,7 +110,7 @@ A map builds in about half a second on Node.
 
 - **R9** KICKERS ON THE TRACK. The loop carries `kickers.on.count` (1–3) crests that make jumps: a ramp `kickers.on.ramp` times the lip's height long rising `kickers.on.height` metres to a lip, steepest at the lip, and a landing `kickers.on.landing` times the lip's height long falling away past it. Each stands on a stretch that turns no more than `kickers.on.straight` radians from the foot of its ramp to the end of its landing, where the line comes up to the lip no steeper downhill than `kickers.on.approachGrade` and runs level or downhill past it — a brow before a descent; two stand at least `kickers.on.spacing` metres apart along the loop.
 
-- **R10** PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's width and fades to 0 over `track.shoulder.packed` metres beyond each edge; everywhere else the snow is virgin powder, the spawn's run-in included.
+- **R10** PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's width and fades to 0 over `track.shoulder.packed` metres beyond each edge — except where R17 drifts it over; everywhere else the snow is virgin powder, the spawn's run-in included.
 
 - **R11** CHECKPOINTS EVERY 120–200 m. Checkpoint 0 — the start and finish line — is the track point nearest the spawn, and the loop is re-indexed to begin there, so its arc length is 0. The rest follow in the direction of travel, evenly spaced as near `checkpoint.spacing.target` (150 m) as divides the loop, and never outside `checkpoint.spacing` (120–200 m). A checkpoint spans the track's width plus `checkpoint.margin` metres either side.
 
@@ -119,3 +123,5 @@ A map builds in about half a second on Node.
 - **R15** A CLEAR WINTER DAY. The map lies at a seeded latitude in `sun.latitude` (46–64°N) on a seeded day of the year in `sun.dayOfYear` (mid-January to mid-March), and the race starts at a seeded solar hour in `sun.hour` (9–16 h) at which the sun stands at least `sun.minElevation` degrees over the horizon.
 
 - **R16** THREE LAPS. A race is `race.laps` (3) laps of the loop.
+
+- **R17** DRIFTS ACROSS THE TRACK. The wind lays fresh snow over stretches of the groomer. A map is dealt a share of its loop in `drift.share` (0–50 %) to lie drifted, laid as stretches `drift.length` (60–180 m) long, at least `drift.gap` metres apart; across a stretch the packed field — the track's width and its shoulders — falls to `drift.packed` of its groomed value, easing in and out over `drift.fade` metres at either end. No drift lies within `drift.clear` metres of the start line, nor within `drift.fade` metres of a kicker's ramp or landing (R9). The drifts are dealt off a stream of their own, so a map's drifts move nothing else it draws; `Level.drifts` publishes every stretch.

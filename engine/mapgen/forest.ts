@@ -15,6 +15,7 @@
 // Everything is drawn off the attempt's stream in a fixed order, so the
 // same seed grows the same wood.
 
+import { smoothstep } from "../lib/math.ts";
 import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
 import { segmentDistance } from "../lib/polyline.ts";
 import { valueNoise } from "../lib/noise.ts";
@@ -24,11 +25,6 @@ import { onKicker } from "./kickers.ts";
 import { nearestWithin, type HasTrack } from "./query.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import type { Kicker, Spawn, TrackHit, TreeDef } from "./types.ts";
-
-function smoothstep(a: number, b: number, v: number): number {
-  const t = v <= a ? 0 : v >= b ? 1 : (v - a) / (b - a);
-  return t * t * (3 - 2 * t);
-}
 
 /** R14 — grow the forest. */
 export function growForest(
