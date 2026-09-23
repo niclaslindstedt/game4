@@ -36,8 +36,16 @@ import { LEVEL_RULES as R } from "./rules.ts";
 import { layCheckpoints, placeSpawn } from "./spawn.ts";
 import { dealSun } from "./sun.ts";
 import { bakeCountry, planTerrain } from "./terrain.ts";
-import { drawLoop, gradeLoop, rotateLoop, setHeadings, stampCorridor, trackOf, type Loop } from "./track.ts";
-import type { GenerateOptions, Level } from "./types.ts";
+import {
+  drawLoop,
+  gradeLoop,
+  rotateLoop,
+  setHeadings,
+  stampCorridor,
+  trackOf,
+  type Loop,
+} from "./track.ts";
+import type { GenerateOptions, GeneratedLevel } from "./types.ts";
 
 /** How many loops an attempt draws before it gives up on its country. */
 const DRAWS = 40;
@@ -49,7 +57,7 @@ export function subSeed(seed: number, attempt: number): number {
 }
 
 /** One attempt: a level, or the reason this sub-seed could not make one. */
-function attemptLevel(seed: number, attempt: number, laps: number): Level | string {
+function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLevel | string {
   const rng = createRng(subSeed(seed, attempt));
   const plan = planTerrain(rng);
   const ground = bakeCountry(plan);
@@ -109,7 +117,7 @@ function attemptLevel(seed: number, attempt: number, laps: number): Level | stri
 }
 
 /** Generate the map for a seed: the first attempt the analysis passes. */
-export function generateLevel(seed: number, opts: GenerateOptions = {}): Level {
+export function generateLevel(seed: number, opts: GenerateOptions = {}): GeneratedLevel {
   const attempts = opts.attempts ?? 16;
   const laps = opts.laps ?? R.race.laps;
   const reasons: string[] = [];
@@ -121,7 +129,8 @@ export function generateLevel(seed: number, opts: GenerateOptions = {}): Level {
     }
     const analysis = analyzeLevel(built);
     if (analysis.ok) {
-      if (reasons.length > 0) debug(`level ${seed}: accepted attempt ${a} after ${reasons.join("; ")}`);
+      if (reasons.length > 0)
+        debug(`level ${seed}: accepted attempt ${a} after ${reasons.join("; ")}`);
       return built;
     }
     const errors = analysis.findings.filter((f) => f.severity === "error");

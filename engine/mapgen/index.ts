@@ -5,7 +5,23 @@
 export * from "./types.ts";
 export { generateLevel, subSeed } from "./generate.ts";
 export { LEVEL_RULES, inBand, withinBand, type Band } from "./rules.ts";
-export { nearestTrackPoint, nearestWithin, trackPointAt, arcAhead, arcBetween, type HasTrack } from "./query.ts";
+export {
+  nearestTrackPoint,
+  nearestWithin,
+  trackPointAt,
+  arcAhead,
+  arcBetween,
+  type HasTrack,
+} from "./query.ts";
 export { kickerProfile } from "./kickers.ts";
 export { declinationOf, sunWindow } from "./sun.ts";
 export { gridAround } from "./spawn.ts";
+// The scoreboard the search gates on, re-exported here so the one surface
+// that carries the generator carries its verdict too.
+export {
+  analyzeLevel,
+  type Finding,
+  type LevelAnalysis,
+  type Severity,
+} from "../analysis/index.ts";
+export { minRadius, minSeparation } from "./track.ts";

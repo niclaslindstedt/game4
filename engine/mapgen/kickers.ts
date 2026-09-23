@@ -57,7 +57,9 @@ export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
   const n = pts.length;
   const step = loop.length / n;
   const K = R.kickers.on;
-  const want = rng.int(K.count.min, K.count.max);
+  // As many as the loop has room for, up to the rule's most: a map short of
+  // good brows carries fewer, never a bad one.
+  const want = K.count.max;
   // Every station a kicker could stand at, scored; then the best that keep
   // their spacing, with a little noise in the score so a seed with two
   // equally good crests does not always pick the same one.
@@ -118,7 +120,11 @@ export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
 }
 
 /** Publish the track's kickers against the finished (re-indexed) loop. */
-export function publishTrackKickers(loop: Loop, kickers: readonly TrackKicker[], start: number): Kicker[] {
+export function publishTrackKickers(
+  loop: Loop,
+  kickers: readonly TrackKicker[],
+  start: number,
+): Kicker[] {
   const n = loop.points.length;
   const out = kickers
     .map((k) => {
@@ -180,7 +186,8 @@ export function layOffKickers(
     // Ridden down the hill's fall line on its far side: the landing runs
     // the way the ground falls, the ramp comes up the way it rises.
     const g = fieldGradient(ground, x, z);
-    const heading = Math.hypot(g.gx, g.gz) > 0.02 ? Math.atan2(-g.gx, -g.gz) : rng.range(0, Math.PI * 2);
+    const heading =
+      Math.hypot(g.gx, g.gz) > 0.02 ? Math.atan2(-g.gx, -g.gz) : rng.range(0, Math.PI * 2);
     const y0 = sampleField(ground, x, z);
     stampKicker(ground, x, z, heading, height, ramp, landing, width);
     out.push({
@@ -236,7 +243,12 @@ function stampKicker(
 
 /** Whether a plan point stands on a kicker's footprint (R14 keeps trees
  * off them), with `margin` metres to spare. */
-export function onKicker(kickers: readonly Kicker[], x: number, z: number, margin: number): boolean {
+export function onKicker(
+  kickers: readonly Kicker[],
+  x: number,
+  z: number,
+  margin: number,
+): boolean {
   for (const k of kickers) {
     const dx = x - k.x;
     const dz = z - k.z;
@@ -244,7 +256,11 @@ export function onKicker(kickers: readonly Kicker[], x: number, z: number, margi
     const fz = Math.cos(k.heading);
     const u = dx * fx + dz * fz;
     const v = Math.abs(dx * fz - dz * fx);
-    if (u > -k.ramp - margin && u < k.landing + margin && v < k.width / 2 + R.kickers.edge + margin) {
+    if (
+      u > -k.ramp - margin &&
+      u < k.landing + margin &&
+      v < k.width / 2 + R.kickers.edge + margin
+    ) {
       return true;
     }
   }

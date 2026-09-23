@@ -156,7 +156,8 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   for (const p of points) {
     const a = (p.s / length) * TAU;
     const v = valueNoise(Math.cos(a) * ring, Math.sin(a) * ring, R.track.widthScale, wseed);
-    p.width = R.track.width.min + (R.track.width.max - R.track.width.min) * smoothstep(0.15, 0.85, v);
+    p.width =
+      R.track.width.min + (R.track.width.max - R.track.width.min) * smoothstep(0.15, 0.85, v);
   }
 
   const loop: Loop = { points, length, raw: new Float64Array(n), cx, cz };
@@ -164,7 +165,8 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   if (radius < R.track.minRadius) return `a turn tightens to ${radius.toFixed(0)} m`;
   if (selfCrossings(points) > 0) return "the warped loop crosses itself";
   const gap = minSeparation(loop);
-  if (gap < R.track.separation.plan) return `two stretches of the loop pass ${gap.toFixed(0)} m apart`;
+  if (gap < R.track.separation.plan)
+    return `two stretches of the loop pass ${gap.toFixed(0)} m apart`;
   // R2 — the whole corridor, bank and all, stays on the basin floor.
   const reach = R.track.width.max / 2 + R.track.shoulder.flat + R.track.bank.max + 10;
   for (const p of points) {
@@ -386,7 +388,10 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
     const hw = half[o];
     const flat = hw + R.track.shoulder.flat;
     const delta = target[o] - g[o];
-    const bank = Math.min(R.track.bank.max, Math.max(R.track.bank.min, Math.abs(delta) / R.track.bank.slope));
+    const bank = Math.min(
+      R.track.bank.max,
+      Math.max(R.track.bank.min, Math.abs(delta) / R.track.bank.slope),
+    );
     const w = d <= flat ? 1 : 1 - smoothstep(flat, flat + bank, d);
     g[o] += w * delta;
     p[o] = d <= hw ? 1 : 1 - smoothstep(hw, hw + R.track.shoulder.packed, d);

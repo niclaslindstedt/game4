@@ -45,8 +45,9 @@ export function powderFloor(packed: number): number {
 
 /** The resistance along a probe's line of travel, N, as a magnitude (the
  * caller gives it the sign against the motion): rolling, the plough off a
- * footprint `width` m wide sunk `sink` m, and powder drag, at `speed` m/s
- * with `load` N on it. */
+ * footprint `width` m wide sunk `sink` m into powder, and powder drag, at
+ * `speed` m/s with `load` N on it. A groomed track's few centimetres of cut
+ * is rolling resistance and nothing else: there is no powder to shove. */
 export function snowDrag(
   packed: number,
   sink: number,
@@ -56,7 +57,7 @@ export function snowDrag(
 ): number {
   const v = Math.abs(speed);
   const crr = S.crrPacked * packed + S.crrPowder * (1 - packed);
-  const plough = S.plough * width * sink * v * v;
+  const plough = S.plough * width * sink * v * v * (1 - packed);
   const powder = S.powderDrag * load * v * (1 - packed);
   return crr * load + plough + powder;
 }

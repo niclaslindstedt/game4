@@ -20,8 +20,15 @@ export function declinationOf(dayOfYear: number): number {
 
 /** The hours of the rule's band in which the sun stands over its floor on
  * that day at that latitude, or null when there are none. */
-export function sunWindow(latitude: number, dayOfYear: number): { min: number; max: number } | null {
-  const w = daylightWindow(latitude, (R.sun.minElevation * Math.PI) / 180, declinationOf(dayOfYear));
+export function sunWindow(
+  latitude: number,
+  dayOfYear: number,
+): { min: number; max: number } | null {
+  const w = daylightWindow(
+    latitude,
+    (R.sun.minElevation * Math.PI) / 180,
+    declinationOf(dayOfYear),
+  );
   if (!w) return null;
   const min = Math.max(w.min, R.sun.hour.min);
   const max = Math.min(w.max, R.sun.hour.max);

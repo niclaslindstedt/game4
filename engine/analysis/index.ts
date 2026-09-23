@@ -67,7 +67,8 @@ export type LevelAnalysis = {
 };
 
 /** R9 — the least break in grade across a track kicker's lip that still
- * throws a sled: a kicker's own ramp and landing make at least 2/9 + 2/16. */
+ * throws a sled. A kicker's own ramp and landing break at least 2/11 + 2/20
+ * at the lip itself; read over three metres either side, a little less. */
 const KICK = 0.15;
 
 const fmt = (v: number, digits = 1): string => v.toFixed(digits);
@@ -102,7 +103,11 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   if (crossings > 0) add("R5", "error", `the loop crosses itself ${crossings} time(s)`);
   const separation = minSeparation(level.track);
   if (separation < R.track.separation.plan - 0.5) {
-    add("R5", "error", `two stretches pass ${fmt(separation)} m apart (least ${R.track.separation.plan} m)`);
+    add(
+      "R5",
+      "error",
+      `two stretches pass ${fmt(separation)} m apart (least ${R.track.separation.plan} m)`,
+    );
   }
 
   // R6 — the turns.
@@ -119,11 +124,16 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     widthMax = Math.max(widthMax, p.width);
   }
   if (!withinBand(widthMin, R.track.width) || !withinBand(widthMax, R.track.width)) {
-    add("R7", "error", `width runs ${fmt(widthMin)}–${fmt(widthMax)} m (band ${bandText(R.track.width, " m")})`);
+    add(
+      "R7",
+      "error",
+      `width runs ${fmt(widthMin)}–${fmt(widthMax)} m (band ${bandText(R.track.width, " m")})`,
+    );
   }
 
   // R8 — the grade along, outside the kickers, and the ground across.
-  const trackKickers = level.kickers.filter((k) => k.onTrack);
+  const kickers = level.kickers ?? [];
+  const trackKickers = kickers.filter((k) => k.onTrack);
   const skip = new Uint8Array(n);
   for (const k of trackKickers) {
     const s0 = k.s ?? 0;
@@ -157,15 +167,30 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     }
   }
   if (maxCross > 0.08) {
-    add("R8", "error", `the ground falls ${fmt(maxCross, 3)} across the track at s ${fmt(worstCross, 0)} m`);
+    add(
+      "R8",
+      "error",
+      `the ground falls ${fmt(maxCross, 3)} across the track at s ${fmt(worstCross, 0)} m`,
+    );
   } else if (maxCross > 0.05) {
-    add("R8", "warn", `the ground falls ${fmt(maxCross, 3)} across the track at s ${fmt(worstCross, 0)} m`);
+    add(
+      "R8",
+      "warn",
+      `the ground falls ${fmt(maxCross, 3)} across the track at s ${fmt(worstCross, 0)} m`,
+    );
   }
 
   // R9 — the kickers on the track: how many, how far apart, and that each
   // is a crest.
-  if (trackKickers.length < R.kickers.on.count.min || trackKickers.length > R.kickers.on.count.max) {
-    add("R9", "error", `${trackKickers.length} kicker(s) on the track (band ${bandText(R.kickers.on.count)})`);
+  if (
+    trackKickers.length < R.kickers.on.count.min ||
+    trackKickers.length > R.kickers.on.count.max
+  ) {
+    add(
+      "R9",
+      "error",
+      `${trackKickers.length} kicker(s) on the track (band ${bandText(R.kickers.on.count)})`,
+    );
   }
   for (let a = 0; a < trackKickers.length; a++) {
     const k = trackKickers[a];
@@ -178,15 +203,20 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     };
     const lip = at(0);
     const kick = (lip - at(-3)) / 3 - (at(3) - lip) / 3;
-    if (kick < KICK) add("R9", "warn", `${k.id} at s ${fmt(s0, 0)} m breaks only ${fmt(kick, 2)} over its lip`);
+    if (kick < KICK)
+      add("R9", "warn", `${k.id} at s ${fmt(s0, 0)} m breaks only ${fmt(kick, 2)} over its lip`);
     for (let b = a + 1; b < trackKickers.length; b++) {
       const ds = Math.abs((k.s ?? 0) - (trackKickers[b].s ?? 0));
       if (Math.min(ds, L - ds) < R.kickers.on.spacing - 1) {
-        add("R9", "error", `${k.id} and ${trackKickers[b].id} stand ${fmt(Math.min(ds, L - ds), 0)} m apart`);
+        add(
+          "R9",
+          "error",
+          `${k.id} and ${trackKickers[b].id} stand ${fmt(Math.min(ds, L - ds), 0)} m apart`,
+        );
       }
     }
   }
-  const offKickers = level.kickers.filter((k) => !k.onTrack);
+  const offKickers = kickers.filter((k) => !k.onTrack);
   for (const k of offKickers) {
     const hit = nearestTrackPoint(level, k.x, k.z);
     const reach = Math.max(k.ramp, k.landing) + k.width / 2 + R.kickers.edge;
@@ -210,8 +240,10 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     packedHigh = Math.max(packedHigh, level.packedAt(p.x + rx * off, p.z + rz * off));
   }
   if (packedLow < 0.98) add("R10", "error", `the centreline is only ${fmt(packedLow, 2)} packed`);
-  if (packedHigh > 0.02) add("R10", "error", `powder beside the track is ${fmt(packedHigh, 2)} packed`);
-  if (level.packedAt(level.spawn.x, level.spawn.z) > 0) add("R10", "error", "the spawn is on packed snow");
+  if (packedHigh > 0.02)
+    add("R10", "error", `powder beside the track is ${fmt(packedHigh, 2)} packed`);
+  if (level.packedAt(level.spawn.x, level.spawn.z) > 0)
+    add("R10", "error", "the spawn is on packed snow");
 
   // R11 — the checkpoints.
   const cps = level.checkpoints;
@@ -224,12 +256,18 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     spacingMin = Math.min(spacingMin, d);
     spacingMax = Math.max(spacingMax, d);
     const hit = nearestTrackPoint(level, a.x, a.z);
-    if (hit.distance > 0.5) add("R11", "error", `checkpoint ${i} stands ${fmt(hit.distance)} m off the line`);
+    if (hit.distance > 0.5)
+      add("R11", "error", `checkpoint ${i} stands ${fmt(hit.distance)} m off the line`);
   }
-  if (cps.length < 2 || spacingMin < R.checkpoint.spacing.min - 0.5 || spacingMax > R.checkpoint.spacing.max + 0.5) {
+  if (
+    cps.length < 2 ||
+    spacingMin < R.checkpoint.spacing.min - 0.5 ||
+    spacingMax > R.checkpoint.spacing.max + 0.5
+  ) {
     add("R11", "error", `checkpoints ${fmt(spacingMin, 0)}–${fmt(spacingMax, 0)} m apart`);
   }
-  if (cps.length > 0 && Math.abs(cps[0].s) > 1e-6) add("R11", "error", "checkpoint 0 is not at arc length 0");
+  if (cps.length > 0 && Math.abs(cps[0].s) > 1e-6)
+    add("R11", "error", "checkpoint 0 is not at arc length 0");
   let nearest = 0;
   let nearestD = Infinity;
   for (let i = 0; i < n; i++) {
@@ -239,14 +277,25 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       nearest = i;
     }
   }
-  if (nearest !== 0 && nearestD < Math.hypot(pts[0].x - level.spawn.x, pts[0].z - level.spawn.z) - 0.01) {
-    add("R11", "error", `the start line is not the track point nearest the spawn (that is point ${nearest})`);
+  if (
+    nearest !== 0 &&
+    nearestD < Math.hypot(pts[0].x - level.spawn.x, pts[0].z - level.spawn.z) - 0.01
+  ) {
+    add(
+      "R11",
+      "error",
+      `the start line is not the track point nearest the spawn (that is point ${nearest})`,
+    );
   }
 
   // R12 — the spawn.
   const spawnHit = nearestTrackPoint(level, level.spawn.x, level.spawn.z);
   if (!withinBand(spawnHit.distance, R.spawn.distance)) {
-    add("R12", "error", `the spawn stands ${fmt(spawnHit.distance)} m from the track (band ${bandText(R.spawn.distance, " m")})`);
+    add(
+      "R12",
+      "error",
+      `the spawn stands ${fmt(spawnHit.distance)} m from the track (band ${bandText(R.spawn.distance, " m")})`,
+    );
   }
   const aim = Math.atan2(pts[0].x - level.spawn.x, pts[0].z - level.spawn.z);
   if (Math.abs(angleDiff(level.spawn.heading, aim)) > 0.02) {
@@ -257,7 +306,10 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   let laneTrees = 0;
   for (const t of level.trees) {
     if ((t.x - level.spawn.x) ** 2 + (t.z - level.spawn.z) ** 2 < clear2) spawnTrees++;
-    else if (segmentDistance(t.x, t.z, level.spawn.x, level.spawn.z, pts[0].x, pts[0].z) < R.spawn.lane / 2 - 0.5) {
+    else if (
+      segmentDistance(t.x, t.z, level.spawn.x, level.spawn.z, pts[0].x, pts[0].z) <
+      R.spawn.lane / 2 - 0.5
+    ) {
       laneTrees++;
     }
   }
@@ -268,7 +320,8 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   if (level.grid.length !== R.grid.slots) add("R13", "error", `${level.grid.length} grid slots`);
   for (let i = 1; i < level.grid.length; i++) {
     const d = Math.hypot(level.grid[i].x - level.grid[0].x, level.grid[i].z - level.grid[0].z);
-    if (d < R.grid.spacing - 0.01) add("R13", "error", `grid slot ${i} stands ${fmt(d)} m from the player`);
+    if (d < R.grid.spacing - 0.01)
+      add("R13", "error", `grid slot ${i} stands ${fmt(d)} m from the player`);
   }
 
   // R14 — the forest.
@@ -277,9 +330,11 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   for (const t of level.trees) {
     nearestWithin(level, t.x, t.z, R.track.width.max / 2 + R.forest.corridor, hit);
     if (hit.distance < pts[hit.index].width / 2 + R.forest.corridor - 0.5) treesOnCorridor++;
-    if (!withinBand(t.height, R.forest.height)) add("R14", "error", `a tree ${fmt(t.height)} m tall`);
+    if (!withinBand(t.height, R.forest.height))
+      add("R14", "error", `a tree ${fmt(t.height)} m tall`);
   }
-  if (treesOnCorridor > 0) add("R14", "error", `${treesOnCorridor} tree(s) stand on the track's corridor`);
+  if (treesOnCorridor > 0)
+    add("R14", "error", `${treesOnCorridor} tree(s) stand on the track's corridor`);
   if (level.trees.length < 1000) add("R14", "warn", `only ${level.trees.length} trees`);
 
   // R15 — the day.
@@ -291,7 +346,11 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     !withinBand(level.sun.dayOfYear, R.sun.dayOfYear) ||
     elevation < R.sun.minElevation - 0.05
   ) {
-    add("R15", "error", `the sun: ${fmt(level.sun.hour)} h on day ${level.sun.dayOfYear} at ${fmt(level.sun.latitude)}°N, ${fmt(elevation)}° up`);
+    add(
+      "R15",
+      "error",
+      `the sun: ${fmt(level.sun.hour)} h on day ${level.sun.dayOfYear} at ${fmt(level.sun.latitude)}°N, ${fmt(elevation)}° up`,
+    );
   }
 
   // R16 — the race.
@@ -326,7 +385,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       treesOnCorridor,
       relief: hi - lo,
       sunElevation: elevation,
-      attempt: level.attempt,
+      attempt: level.attempt ?? 0,
     },
   };
 }

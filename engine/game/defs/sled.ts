@@ -116,7 +116,7 @@ export const SLED: SledSpec = {
   gearTop: 36,
   gearSpan: 3.6,
   driveline: 0.8,
-  cdA: 0.95,
+  cdA: 1.05,
   skiLock: 0.42,
   brakeForce: 3400,
   riderHeight: 0.45,

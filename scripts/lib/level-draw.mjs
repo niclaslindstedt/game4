@@ -119,7 +119,11 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
       const base = snowColor(Math.sqrt((h - lo) / Math.max(1, hi - lo)));
       const packed = level.packedAt(x, z);
       const c = base.map((v, k) => v + (MARK.packed[k] - v) * packed * 0.7);
-      canvas.set(ox + i, oy + j, c.map((v) => Math.max(0, Math.min(255, v * shade))));
+      canvas.set(
+        ox + i,
+        oy + j,
+        c.map((v) => Math.max(0, Math.min(255, v * shade))),
+      );
     }
   }
   // ── Contours, marched pixel to pixel ───────────────────────────────────

@@ -10,7 +10,16 @@
 // read. Nothing downstream regenerates any of it.
 
 import { sampleField, sampleFieldGradient, type Heightfield } from "../lib/heightfield.ts";
-import type { Checkpoint, Kicker, Level, Spawn, TrackPoint, TreeDef, Vec3 } from "./types.ts";
+import type {
+  Checkpoint,
+  GeneratedLevel,
+  Kicker,
+  Level,
+  Spawn,
+  TrackPoint,
+  TreeDef,
+  Vec3,
+} from "./types.ts";
 
 export type LevelParts = {
   seed: number;
@@ -26,12 +35,12 @@ export type LevelParts = {
   kickers: Kicker[];
   sun: Level["sun"];
   laps: number;
-  basin: Level["basin"];
+  basin: GeneratedLevel["basin"];
   attempt: number;
 };
 
 /** Bind the parts into a level. */
-export function compileLevel(parts: LevelParts): Level {
+export function compileLevel(parts: LevelParts): GeneratedLevel {
   const { ground, packed } = parts;
   const scratch = new Float64Array(3);
   return {

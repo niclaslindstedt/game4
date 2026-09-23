@@ -73,15 +73,21 @@ export interface Level {
   laps: number;
 
   // ── Beyond the contract: what the generator also publishes ──────────
+  // Optional in the TYPE so a hand-built level (a test's synthetic one)
+  // need not invent them; `generateLevel` always sets every one.
   /** The packed-snow field `packedAt` samples (R10), on the ground's grid. */
-  packed: Heightfield;
+  packed?: Heightfield;
   /** Every crest shaped to throw a sled, on the track and off it (R4, R9). */
-  kickers: Kicker[];
+  kickers?: Kicker[];
   /** The basin's middle, and how far out its rim starts (R2). */
-  basin: { x: number; z: number; rim: number };
+  basin?: { x: number; z: number; rim: number };
   /** Which sub-seed attempt the search accepted (0 = the first). */
-  attempt: number;
+  attempt?: number;
 }
+
+/** A level as `generateLevel` hands it out: every optional field set. */
+export type GeneratedLevel = Level &
+  Required<Pick<Level, "packed" | "kickers" | "basin" | "attempt">>;
 
 /** A crest shaped to kick a sled into the air (R4, R9). `x, z` is the LIP. */
 export interface Kicker {

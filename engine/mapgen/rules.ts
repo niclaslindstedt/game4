@@ -28,8 +28,8 @@
 //       `hills.amplitude` metres over wavelengths of `hills.scale`, ridges of
 //       `ridges.amplitude` metres, the whole floor tilted by up to
 //       `tilt.grade` in a seeded direction so a lap climbs one side and
-//       runs down the other, and `bowls.count` bowls — round hollows
-//       `bowls.radius` across and `bowls.depth` deep.
+//       runs down the other, and `bowls.count` bowls — round hollows of
+//       `bowls.radius` metres radius and `bowls.depth` metres deep.
 //   R4  KICKERS OFF THE TRACK. The country carries `kickers.off.count`
 //       crests shaped to throw a sled: each stands on a hilltop, rises
 //       `kickers.off.height` metres over a ramp of `kickers.off.ramp` metres
@@ -182,10 +182,10 @@ export const LEVEL_RULES = {
       height: { min: 1.4, max: 2.6 } as Band,
       /** Ramp length as a multiple of the lip's height: 2/ratio is the
        * ramp's slope at the lip. */
-      ramp: { min: 6.5, max: 9 } as Band,
+      ramp: { min: 8, max: 11 } as Band,
       /** Landing length as a multiple of the lip's height: 2/ratio is how
        * steeply it falls away from the lip. */
-      landing: { min: 11, max: 16 } as Band,
+      landing: { min: 14, max: 20 } as Band,
       /** Most the line may turn from ramp foot to landing foot, rad. */
       straight: 0.3,
       /** Least arc length between two lips, m. */

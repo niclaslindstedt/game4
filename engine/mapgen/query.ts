@@ -17,7 +17,9 @@ import type { TrackHit, TrackPoint } from "./types.ts";
 
 /** Anything carrying a closed loop: a finished `Level`, or the generator's
  * own loop before it is one. */
-export type HasTrack = { readonly track: { readonly points: readonly TrackPoint[]; readonly length: number } };
+export type HasTrack = {
+  readonly track: { readonly points: readonly TrackPoint[]; readonly length: number };
+};
 
 /** Hash cell, m. Several segments to a cell and a handful of cells to a
  * query: the loop's own corridor fits inside one ring. */

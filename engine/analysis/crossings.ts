@@ -28,8 +28,16 @@ export function selfCrossings(points: readonly Point[]): number {
   for (let i = 0; i < n; i++) {
     const a = points[i];
     const b = points[(i + 1) % n];
-    for (let c = Math.floor(Math.min(a.x, b.x) / CELL); c <= Math.floor(Math.max(a.x, b.x) / CELL); c++) {
-      for (let r = Math.floor(Math.min(a.z, b.z) / CELL); r <= Math.floor(Math.max(a.z, b.z) / CELL); r++) {
+    for (
+      let c = Math.floor(Math.min(a.x, b.x) / CELL);
+      c <= Math.floor(Math.max(a.x, b.x) / CELL);
+      c++
+    ) {
+      for (
+        let r = Math.floor(Math.min(a.z, b.z) / CELL);
+        r <= Math.floor(Math.max(a.z, b.z) / CELL);
+        r++
+      ) {
         const key = c * 8192 + r;
         const list = cells.get(key);
         if (list) list.push(i);

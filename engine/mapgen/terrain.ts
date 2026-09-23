@@ -21,7 +21,12 @@ import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 
 /** A bowl: a round hollow in the basin floor (R3). */
-export type Bowl = { readonly x: number; readonly z: number; readonly r: number; readonly depth: number };
+export type Bowl = {
+  readonly x: number;
+  readonly z: number;
+  readonly r: number;
+  readonly depth: number;
+};
 
 /** Everything the country is drawn from, dealt once per attempt. */
 export type TerrainPlan = {
@@ -147,7 +152,14 @@ export function countryAt(plan: TerrainPlan, x: number, z: number): number {
   }
   if (rim > 0) {
     h += plan.mountain * rim ** 1.6;
-    h += R.basin.crests * rim * ridged(wx, wz, 150, s.crests);
+    // The crests on a lattice turned off the hills' own, so the two do not
+    // line up into the noise's squares.
+    const rx = wx * 0.866 - wz * 0.5;
+    const rz = wx * 0.5 + wz * 0.866;
+    h +=
+      R.basin.crests *
+      rim *
+      (ridged(rx, rz, 170, s.crests) * 0.75 + ridged(rz, rx, 60, s.crests + 5) * 0.25);
   }
   return h;
 }

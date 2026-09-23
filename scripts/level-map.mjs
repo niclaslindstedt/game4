@@ -49,7 +49,7 @@ const level = generateLevel(args.seed);
 const built = performance.now() - t0;
 const analysis = analyzeLevel(level);
 const st = analysis.stats;
-const deg = (rad) => (((rad * 180) / Math.PI) % 360 + 360) % 360;
+const deg = (rad) => ((((rad * 180) / Math.PI) % 360) + 360) % 360;
 const f = (v, d = 1) => v.toFixed(d);
 
 // ── The listing ─────────────────────────────────────────────────────────
@@ -75,7 +75,10 @@ out.push(
 out.push("");
 out.push("  cp      s(m)      x      z      y   width  from last");
 level.checkpoints.forEach((c, i) => {
-  const prev = i === 0 ? level.checkpoints[level.checkpoints.length - 1].s - level.track.length : level.checkpoints[i - 1].s;
+  const prev =
+    i === 0
+      ? level.checkpoints[level.checkpoints.length - 1].s - level.track.length
+      : level.checkpoints[i - 1].s;
   out.push(
     `  ${String(i === 0 ? "S/F" : i).padStart(3)} ${f(c.s, 0).padStart(8)} ${f(c.x, 0).padStart(6)} ${f(c.z, 0).padStart(6)} ` +
       `${f(c.y).padStart(6)} ${f(c.width).padStart(7)} ${f(c.s - prev, 0).padStart(10)}`,
@@ -97,7 +100,15 @@ console.log(text);
 if (args.json) {
   console.log(
     JSON.stringify(
-      { seed: level.seed, stats: st, checkpoints: level.checkpoints, kickers: level.kickers, spawn: level.spawn, grid: level.grid, sun: level.sun },
+      {
+        seed: level.seed,
+        stats: st,
+        checkpoints: level.checkpoints,
+        kickers: level.kickers,
+        spawn: level.spawn,
+        grid: level.grid,
+        sun: level.sun,
+      },
       null,
       2,
     ),

@@ -50,14 +50,14 @@ export const TUNING = {
     /** ROLLING RESISTANCE, as a share of the load on each probe: on the
      * groomed surface, and in powder. */
     crrPacked: 0.03,
-    crrPowder: 0.09,
+    crrPowder: 0.07,
     /** THE PLOUGH: the snow a sunk footprint shoves aside, N per metre of
      * footprint width per metre of sink per (m/s)² — the bow wave of a
      * displacement hull, and why a bogged sled wants momentum. */
-    plough: 420,
+    plough: 80,
     /** POWDER DRAG: what compacting fresh snow costs at speed, as a share
      * of the probe's load per m/s — gone on packed snow. */
-    powderDrag: 0.0055,
+    powderDrag: 0.008,
   },
 
   /** GRIP — the friction coefficients between the machine and the snow,
@@ -66,8 +66,8 @@ export const TUNING = {
   grip: {
     /** The tread driving along its length: studded lugs on groomed snow,
      * and paddling in powder. */
-    treadPacked: 1.15,
-    treadPowder: 0.55,
+    treadPacked: 1.0,
+    treadPowder: 0.6,
     /** ...and holding sideways. */
     treadSidePacked: 0.7,
     treadSidePowder: 0.45,
@@ -127,17 +127,17 @@ export const TUNING = {
      * full over, rad — on packed snow, and in powder, where it is the
      * whole of how a sled turns. */
     rollPacked: 0.08,
-    rollPowder: 0.32,
+    rollPowder: 0.4,
     /** The righting the rider and the suspension together hold that roll
      * with, N·m per rad, the damping on the roll rate, N·m·s, and the most
      * it can ever be, N·m — a load past this rolls the sled over. */
-    rollStiff: 2600,
+    rollStiff: 5000,
     rollDamp: 420,
-    rollMax: 1500,
+    rollMax: 2600,
     /** THE CARVE: in powder a sled rolled over onto its tread's edge turns
      * toward the low side, as a share of the tread's load per radian of
      * roll. It needs way on, reached by `carveSpeed` m/s. */
-    carve: 0.9,
+    carve: 1.4,
     carveSpeed: 6,
   },
 
@@ -149,7 +149,7 @@ export const TUNING = {
     /** THE GYRO: the throttle spinning the tread up lifts the nose, and
      * the brake stopping it drops the nose — the reaction of a 20-kilo belt
      * on its drivers, N·m at full lever. */
-    throttleTorque: 300,
+    throttleTorque: 80,
     brakeTorque: 420,
     /** The bars in the air: a little yaw, N·m at full lock. */
     steerTorque: 90,
@@ -161,7 +161,7 @@ export const TUNING = {
     /** A LANDING: the speed INTO the slope, m/s, past which the suspension
      * cannot take it all and the sled pays for it — a share of its way per
      * m/s over, up to `harshMax`. */
-    harshSpeed: 5,
+    harshSpeed: 6,
     harshLoss: 0.05,
     harshMax: 0.35,
   },
