@@ -27,6 +27,19 @@ export {
   withSky,
 } from "./weather.ts";
 export { gridOnTrack } from "./spawn.ts";
+export { CLEAR as SURFACE_CLEAR } from "./surface.ts";
+export {
+  DEFAULT_REGION,
+  REGIONS,
+  REGION_IDS,
+  isRegionId,
+  regionOf,
+  regionRow,
+  treeKindAt,
+  type Region,
+  type RegionId,
+  type TreeKind,
+} from "./regions.ts";
 // The scoreboard the search gates on, re-exported here so the one surface
 // that carries the generator carries its verdict too.
 export {

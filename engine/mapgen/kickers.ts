@@ -26,6 +26,7 @@ import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield
 import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { nearestTrackPoint } from "./query.ts";
+import { scaleCount } from "./regions.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import { trackOf, type Loop } from "./track.ts";
 import type { Kicker } from "./types.ts";
@@ -143,6 +144,18 @@ export function publishTrackKickers(
   return out;
 }
 
+/** Whether any ice lies within `reach` of a plan point: its middle and a
+ * ring of sixteen at the reach and half of it. */
+function onIce(ice: Heightfield, x: number, z: number, reach: number): boolean {
+  if (sampleField(ice, x, z) > 0) return true;
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * Math.PI * 2;
+    const r = i % 2 === 0 ? reach : reach / 2;
+    if (sampleField(ice, x + Math.sin(a) * r, z + Math.cos(a) * r) > 0) return true;
+  }
+  return false;
+}
+
 /** R4 — stand the off-track kickers on hilltops clear of the track, and
  * stamp them into the ground. */
 export function layOffKickers(
@@ -150,9 +163,12 @@ export function layOffKickers(
   plan: TerrainPlan,
   ground: Heightfield,
   loop: Loop,
+  ice: Heightfield | null = null,
 ): Kicker[] {
   const K = R.kickers.off;
-  const want = rng.int(K.count.min, K.count.max);
+  // R21 — the region's multiple of the rule's count; the same band at one.
+  const count = scaleCount(K.count, plan.region.kickers);
+  const want = rng.int(count.min, count.max);
   const out: Kicker[] = [];
   const size = R.world.size;
   for (let tries = 0; tries < want * 30 && out.length < want; tries++) {
@@ -173,6 +189,8 @@ export function layOffKickers(
     const width = inBand(rng, K.width);
     const reach = Math.max(ramp, landing) + width / 2 + R.kickers.edge;
     if (rimAt(plan, x, z) > 0.02 || rimAt(plan, x, z + reach) > 0.05) continue;
+    // Never on a frozen river (R21): a crest of snow is not shaped on ice.
+    if (ice && onIce(ice, x, z, reach)) continue;
     const hit = nearestTrackPoint(trackOf(loop), x, z);
     if (hit.distance - reach < R.track.width.max / 2 + K.clearance) continue;
     if (out.some((k) => Math.hypot(k.x - x, k.z - z) < reach + Math.max(k.ramp, k.landing) + 20)) {

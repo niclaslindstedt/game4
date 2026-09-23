@@ -51,6 +51,7 @@ sibling's the day one lands, and add its registry row.
 | `crash` | The sled past saving and the rider off it: the wipeout and his tumble, the trench and rocking it out, damage when it is on (the rally game's `crash`, rewritten for a rider and snow) |
 | `engine-system` | Adding or changing a gameplay system, engine-first |
 | `mapgen-improvement` | The world generator: the basin, the loop, the kickers, the spawn, the forest, the day; the R-rules; track-and-terrain craft; the analyze → fix → `make level` loop |
+| `add-region` | A new kind of snow country (R21) end to end: the row, the surface, the look and the grade, the word, the suite and the labs — the boreal kept all ones (the jet-ski game's `add-biome`, retyped) |
 | `nature` | The snow-loaded woods (where they stand, how they are drawn), the country as a landscape, the ground's clipmap |
 | `atmosphere` | The clear winter sky: the sun by the race's own hour, the colour model, the blue in the shadows, the haze |
 | `snow-look` | The snow as DRAWN: the shader, the glitter, the groomed track, the trail map and the furrows it lowers |

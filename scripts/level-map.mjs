@@ -41,13 +41,18 @@ const args = parseArgs(
     out: { kind: "string", help: "file name under previews/ (no extension)" },
     json: { kind: "flag", help: "also print the listing as JSON" },
     tricks: { kind: "flag", help: "build the map a tricks run rides: its trick field laid (R20)" },
+    region: {
+      kind: "string",
+      default: "boreal",
+      help: "the kind of snow country (R21): boreal, alpine, tundra, birch",
+    },
   },
-  "usage: npm run level -- --seed n [--scale px/m] [--out name] [--json] [--tricks]",
+  "usage: npm run level -- --seed n [--scale px/m] [--out name] [--json] [--tricks] [--region id]",
 );
 
 // ── Build it ────────────────────────────────────────────────────────────
 const t0 = performance.now();
-const level = generateLevel(args.seed, { tricks: args.tricks });
+const level = generateLevel(args.seed, { tricks: args.tricks, region: args.region });
 const built = performance.now() - t0;
 const analysis = analyzeLevel(level);
 const st = analysis.stats;
@@ -69,7 +74,7 @@ out.push(
     `on the track behind the start line, ${level.grid.length} slots`,
 );
 out.push(
-  `forest: ${level.trees.length} trees; kickers: ${st.trackKickers} on the track, ${st.offKickers} off it`,
+  `region: ${level.region}; forest: ${level.trees.length} trees; kickers: ${st.trackKickers} on the track, ${st.offKickers} off it`,
 );
 out.push(
   `sun: ${f(level.sun.hour, 2)} h solar on day ${level.sun.dayOfYear} at ${f(level.sun.latitude)}°N — ${f(st.sunElevation)}° up`,
@@ -126,7 +131,7 @@ if (args.json) {
 const canvas = renderLevelMap({
   level,
   scale: args.scale,
-  title: `LEVEL ${level.seed}  ${f(st.length / 1000, 2)} KM LOOP  ${level.checkpoints.length} CHECKPOINTS  ${st.trackKickers}+${st.offKickers} KICKERS`,
+  title: `LEVEL ${level.seed}${args.region !== "boreal" ? ` ${args.region.toUpperCase()}` : ""}  ${f(st.length / 1000, 2)} KM LOOP  ${level.checkpoints.length} CHECKPOINTS  ${st.trackKickers}+${st.offKickers} KICKERS`,
   lines: [
     `WIDTH ${f(st.widthMin)}-${f(st.widthMax)} M`,
     `TIGHTEST TURN ${f(st.minRadius, 0)} M`,
@@ -141,7 +146,9 @@ const canvas = renderLevelMap({
 });
 const dir = join(root, "previews");
 mkdirSync(dir, { recursive: true });
-const name = args.out ?? `level-${level.seed}${args.tricks ? "-tricks" : ""}`;
+const name =
+  args.out ??
+  `level-${level.seed}${args.region !== "boreal" ? `-${args.region}` : ""}${args.tricks ? "-tricks" : ""}`;
 writeFileSync(join(dir, `${name}.png`), canvas.toPng());
 writeFileSync(join(dir, `${name}.txt`), text + "\n");
 console.log(`\nwrote previews/${name}.png and previews/${name}.txt`);

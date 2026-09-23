@@ -11,7 +11,16 @@
 // furrows and flies its spray, it only skips drawing the picture — which in a
 // software rasterizer is most of the cost.
 
-import { botInput, createGame, NEUTRAL_INPUT, placeRun, step, type GameState } from "@engine";
+import {
+  botInput,
+  createGame,
+  isRegionId,
+  NEUTRAL_INPUT,
+  placeRun,
+  step,
+  type GameState,
+  type RegionId,
+} from "@engine";
 
 import { beastById } from "../game/beast-defs.ts";
 import { beastPlanFor, beastPose, freshBeastPose, roundAt } from "../game/beast-plan.ts";
@@ -42,6 +51,8 @@ declare global {
 
 const params = new URLSearchParams(location.search);
 const seed = Number(params.get("seed") ?? 38);
+/** The kind of snow country (R21); the boreal unless named. */
+const region = isRegionId(params.get("region")) ? (params.get("region") as RegionId) : undefined;
 /** The picture, a preset at a time (`settings-video.ts`); HIGH unless named. */
 const tier = (TIERS as readonly string[]).includes(params.get("quality") ?? "")
   ? (params.get("quality") as Tier)
@@ -63,7 +74,7 @@ const renderer = createWorldRenderer(canvas, {
   preserveDrawingBuffer: true,
 });
 renderer.resize(width, height, 1);
-const state: GameState = createGame({ seed });
+const state: GameState = createGame({ seed, region });
 
 const FRAME = 1 / 60;
 
@@ -463,7 +474,7 @@ window.__world = {
     const run = shots[name];
     if (!run) throw new Error(`no view "${name}" — known: ${Object.keys(shots).join(", ")}`);
     const note = run();
-    label.textContent = `${name.toUpperCase()} · seed ${seed} · ${note}`;
+    label.textContent = `${name.toUpperCase()} · seed ${seed}${region ? ` · ${region}` : ""} · ${note}`;
     return { name, note };
   },
   async frameMs(frames) {

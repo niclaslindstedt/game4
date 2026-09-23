@@ -88,6 +88,20 @@ export function snowDrag(
 
 export type Grip = { tread: number; treadSide: number; ski: number };
 
+/** What BARE ICE leaves of a grip already read (`gripAt`), `ice` 0..1 of
+ * the probe's footprint on it (R21's frozen river, `Level.iceAt`): each
+ * coefficient eased toward its share of `grip.ice`. The ice is packed —
+ * the level folds it into `packedAt` as hard as the groomer — so the
+ * sink, the drag and the rolling are the groomer's already, and the grip
+ * is the one thing ice takes away. */
+export function onIce(out: Grip, ice: number): Grip {
+  const I = G.ice;
+  out.tread *= 1 - ice * (1 - I.tread);
+  out.treadSide *= 1 - ice * (1 - I.side);
+  out.ski *= 1 - ice * (1 - I.ski);
+  return out;
+}
+
 /** The friction coefficients at `packed` 0..1, into `out`, for a tread
  * whose lugs bite `powderDrive` times the reference's in powder — driving
  * and holding sideways alike, a paddle digs whichever way the snow is

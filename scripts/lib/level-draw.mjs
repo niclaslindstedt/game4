@@ -28,13 +28,24 @@ export const MARK = {
   track: [244, 128, 36],
   packed: [150, 156, 166],
   tree: [22, 64, 44],
+  birch: [196, 178, 120],
   treeEdge: [12, 36, 24],
+  crust: [120, 160, 205],
+  ice: [40, 150, 215],
   checkpoint: [232, 65, 44],
   start: [30, 168, 72],
   kicker: [210, 40, 170],
   offKicker: [120, 50, 210],
   contour: [60, 90, 130],
 };
+
+/** A grid's nearest cell to a plan point — plenty for a map drawn at a
+ * pixel a metre or coarser. */
+function cellOf(f, x, z) {
+  const c = Math.min(f.cols - 1, Math.max(0, Math.round((x - f.originX) / f.cell)));
+  const r = Math.min(f.rows - 1, Math.max(0, Math.round((z - f.originZ) / f.cell)));
+  return f.data[r * f.cols + c];
+}
 
 /** Snow by height over the map's own range: blue-grey hollows, white tops. */
 function snowColor(t) {
@@ -117,8 +128,15 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
       const lit = Math.max(0, (normal.x * L.x + normal.y * L.y + normal.z * L.z) / ll);
       const shade = 0.55 + 0.55 * lit;
       const base = snowColor(Math.sqrt((h - lo) / Math.max(1, hi - lo)));
-      const packed = level.packedAt(x, z);
-      const c = base.map((v, k) => v + (MARK.packed[k] - v) * packed * 0.7);
+      // R21's own snow first, so the groomer reads over it: the crust a
+      // blue wash, the river's ice a stronger blue.
+      const crust = level.crust ? cellOf(level.crust, x, z) : 0;
+      const ice = level.iceAt ? level.iceAt(x, z) : 0;
+      const wild = base.map(
+        (v, k) => v + (MARK.crust[k] - v) * crust * 0.45 + (MARK.ice[k] - v) * ice * 0.75,
+      );
+      const packed = Math.max(0, level.packedAt(x, z) - Math.max(ice, crust));
+      const c = wild.map((v, k) => v + (MARK.packed[k] - v) * packed * 0.7);
       canvas.set(
         ox + i,
         oy + j,
@@ -144,7 +162,7 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
   // ── The forest ─────────────────────────────────────────────────────────
   for (const t of level.trees) {
     const r = Math.max(0.8, t.crown * scale * 0.8);
-    canvas.disk(px(t.x), py(t.z), r, [...MARK.tree, 230]);
+    canvas.disk(px(t.x), py(t.z), r, [...(t.kind === "birch" ? MARK.birch : MARK.tree), 230]);
   }
 
   // ── The track: the centreline over the packed band ────────────────────
@@ -222,6 +240,9 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
   key(MARK.kicker, "KICKER ON TRACK");
   key(MARK.offKicker, "KICKER OFF TRACK");
   key(MARK.tree, "TREE (CROWN)");
+  if (level.trees.some((t) => t.kind === "birch")) key(MARK.birch, "BIRCH (CROWN)");
+  if (level.crust) key(MARK.crust, "WIND CRUST");
+  if (level.ice) key(MARK.ice, "RIVER ICE");
   key(MARK.start, "SPAWN + GRID");
   key(MARK.contour, "CONTOURS 5 / 25 M");
   ky += 8;

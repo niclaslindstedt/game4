@@ -101,6 +101,11 @@ export const TUNING = {
      * same for the sideways grip. */
     slipRef: 1.4,
     sideRef: 0.5,
+    /** BLUE ICE (R21's frozen river): the share of the groomer's grip left
+     * on bare ice — the tread's studs still find some drive, a carbide
+     * keel scratches a line and little more. Rubber on ice at 0.1–0.2 against
+     * packed snow's 0.3–0.5, the studs lifting the tread's share. */
+    ice: { tread: 0.45, side: 0.35, ski: 0.3 },
   },
 
   /** THE TREAD'S DRIVE — the belt between the engine and the snow. */

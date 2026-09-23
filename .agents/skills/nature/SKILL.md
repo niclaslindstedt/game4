@@ -13,12 +13,15 @@ horizon. The snow's own light — the glitter, the blue shadows, the groomed
 grain, the furrows — is `snow-look`'s; the rules that shape the country and
 the loop are `mapgen-improvement`'s.
 
-**ONE NATURE.** This slice has one kind of country — snowy hills, mountain
-flanks, forests of snow-covered conifers, open powder meadows, and what lives
-in them. There are no biomes, no water and no rocks, and nothing here should
-grow a table keyed by a biome id until a second kind of country is asked for —
-the wildlife's rosters are plain arrays so a region is a field and a filter
-added to a row, not a table rebuilt.
+**FOUR KINDS OF COUNTRY (R21).** The boreal forest — snowy hills, mountain
+flanks, snow-covered conifers, open powder meadows — is the country every
+rule and every paint was written against; the high alpine, the tundra plateau
+and the birch valley are rows over it (`engine/mapgen/regions.ts`: the woods'
+density, height, tree line and roster; `pwa/src/game/region-look.ts`: the
+needles, the bough load, the birch's bark and twigs, the far woods' tint). A
+new one is `add-region`'s checklist. There is no water but a frozen river, and
+no rocks as objects; the wildlife's rosters name the regions each row lives
+in (`regions` on a row, filtered by `level.region`).
 
 **THE WILDLIFE NEVER MOVES A MAP.** Every flock and group is placed off
 `level.seed` XOR a salt of its own (`BIRD_SALT`, `BEAST_SALT`) on a fresh
