@@ -256,10 +256,15 @@ export type LevelScores = Record<string, number>;
 
 /** What the player got out of a map, best of every afternoon: the time, the
  * sled that set it, the best place against the field (1 on a trial, where
- * there is no field) and — on a trial — the best medal. */
+ * there is no field) and — on a trial — the best medal.
+ *
+ * The time and the sled are absent together on a map opened by hand
+ * (`campaign-unlocks.ts`): it has a place and a medal because that is what a
+ * lock reads, and no time because nobody rode one. The first real run fills
+ * the pair in. */
 export type LevelResult = {
-  best: number;
-  sled: SledId;
+  best?: number;
+  sled?: SledId;
   place: number;
   medal: Medal | null;
 };
@@ -299,7 +304,7 @@ export function recordRun(
   // The time and the sled are kept or replaced TOGETHER — a best time beside
   // the wrong machine is a line the card would read out loud.
   const figure =
-    stood === undefined || run.time < stood.best
+    stood?.best === undefined || run.time < stood.best
       ? { best: run.time, sled: run.sled }
       : { best: stood.best, sled: stood.sled };
   const result: LevelResult = {
@@ -515,10 +520,15 @@ export function mergeProgress(parsed: unknown): CampaignProgress {
       if (!known.has(id) || typeof row !== "object" || row === null) continue;
       const r = row as Partial<LevelResult>;
       if (!Number.isInteger(r.place) || (r.place as number) < 1) continue;
-      if (typeof r.best !== "number" || !Number.isFinite(r.best) || r.best < 0) continue;
-      if (typeof r.sled !== "string" || !isSledId(r.sled)) continue;
       const medal = MEDALS.find((m) => m === r.medal) ?? null;
-      out.results[id] = { best: r.best, sled: r.sled, place: r.place as number, medal };
+      const kept: LevelResult = { place: r.place as number, medal };
+      // The time and the sled come as a pair or not at all.
+      const timed = typeof r.best === "number" && Number.isFinite(r.best) && r.best >= 0;
+      if (timed && typeof r.sled === "string" && isSledId(r.sled)) {
+        kept.best = r.best;
+        kept.sled = r.sled;
+      } else if (r.best !== undefined || r.sled !== undefined) continue;
+      out.results[id] = kept;
     }
   }
   if (typeof blob.points === "object" && blob.points !== null) {

@@ -63,6 +63,7 @@ sibling's the day one lands, and add its registry row.
 | `playtest` | Looking at the real game: `make world`'s views and `make screenshots`' moments |
 | `test-scenario` | Exact situations: the synthetic maps, `placeRun`, scripted inputs, the ride lab's scenarios |
 | `debug-game` | Deterministic repros, classifying by layer, the failing test first |
+| `debug-tools` | The developer page behind the title's seven-second hold: the overlay's instruments, the free camera, the REPRO line, UNLOCKS, and the BENCHMARK with its report and history; `make bench` (the rally game's overlay and the jet-ski game's benchmark) |
 | `simulate-run` | `make sim`: the `RunReport` table, its columns, which movements are regressions |
 | `level-rating` | Whether a generated map is any GOOD and how HARD: `engine/rating/`'s eight axes and the index, the ladder scorer, `make rate` and `make difficulty` (the jet-ski game's, retyped for snow) |
 | `campaign` | The pinned maps and the ladder they make — three shelves of six, the points, the locks, the level card a measured run picks its map on, the generator-version contract and the digest a pinned map stands on (the jet-ski game's) |
@@ -80,6 +81,5 @@ starting point.
 | --- | --- |
 | `soundtrack` | The scores — a second view of the one synth in `audio/bus.ts`, its own fader (the rally game's) |
 | `tricks` | The aerial vocabulary and its scoring (the jet-ski game's `tricks.ts`) |
-| `debug-tools` | An in-game developer overlay, the REPRO line, `make debug-shot` (the rally game's) |
 | `replay` | A race recorded as its controls and watched again (the jet-ski game's `replay.ts`; the tape it would read is built — `pwa/src/game/ghost.ts`, the time trial's ghost) |
 | `store-listing`, `store-shots` | The storefront's words and its screenshot set |

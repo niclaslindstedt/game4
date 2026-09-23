@@ -29,13 +29,19 @@
 // EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, OPTIONS
 // (`menu-options.tsx`), the GALLERY of pictures kept (`menu-gallery.tsx`),
 // the keys on a machine that has them — read off the
-// bindings the rider actually has — and the build. Low, and not tile-shaped at
+// bindings the rider actually has — and the build. And DEVELOPER, once it
+// has been let out: the title HELD for seven seconds (`menu-hold.ts`) is the
+// one door to it, and the chip appearing is the receipt. Low, and not tile-shaped at
 // all, because a thing that does not start a race should not wear the shape
 // of one.
+
+import { useEffect, useRef } from "preact/hooks";
 
 import { APP_NAME, REPO_URL } from "../identity.ts";
 import { MarkTrails } from "./mark-trails.tsx";
 import { Glyph } from "./menu-glyphs.tsx";
+import { NO_HOLD, holdWait, tickHold, type HoldState } from "./menu-hold.ts";
+import { DEV_HOLD_MS } from "./settings.ts";
 import { STRINGS } from "./strings.ts";
 
 /** The build, bottom right, linking to the exact commit it was cut from. A
@@ -81,6 +87,9 @@ export function MainMenu({
   onGallery,
   tricks,
   onTricks,
+  developer,
+  onDeveloper,
+  onHeld,
 }: {
   /** THE CAMPAIGN tile's face: how far up the ladder, and the rung next. */
   campaign: { cleared: number; of: number; next: string | null };
@@ -111,11 +120,17 @@ export function MainMenu({
   /** The TRICKS tile: its seed and how long the run lasts, s. */
   tricks?: { seed: number; seconds: number };
   onTricks?: () => void;
+  /** Whether the DEVELOPER chip is out, the press that opens its page, and
+   * what a seven-second hold on the title does (let it out). */
+  developer?: boolean;
+  onDeveloper?: () => void;
+  onHeld?: () => void;
 }) {
+  const hold = useTitleHold(onHeld);
   return (
     <div class="menu">
       <div class="menu-card menu-card-root">
-        <div class="menu-brand">
+        <div class="menu-brand" {...hold}>
           <div class="menu-brand-line">
             <MarkTrails lay="once" className="menu-brand-mark" />
             <span class="menu-brand-name">{APP_NAME.toUpperCase()}</span>
@@ -227,10 +242,57 @@ export function MainMenu({
             <Glyph name="camera" />
             <span class="menu-tile-name">{STRINGS.menuGallery}</span>
           </button>
+          {developer && (
+            <button type="button" class="menu-chip" data-menu="developer" onClick={onDeveloper}>
+              <Glyph name="gauge" />
+              <span class="menu-tile-name">{STRINGS.devTitle}</span>
+            </button>
+          )}
           {keys !== null && <span class="menu-keys">{keys}</span>}
           <VersionStamp />
         </div>
       </div>
     </div>
   );
+}
+
+/** The page's clock, ms — read from the pointer handlers and the timer,
+ * never while rendering. */
+const clockMs = (): number => performance.now();
+
+/** THE HOLD on the title, as pointer handlers: silent while it runs, and
+ * `onHeld` once it has run `DEV_HOLD_MS`. The timer asks again for whatever
+ * is left rather than trusting one timeout (`holdWait`). */
+function useTitleHold(onHeld: (() => void) | undefined) {
+  const held = useRef<HoldState>(NO_HOLD);
+  const timer = useRef(0);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const check = (): void => {
+    const now = clockMs();
+    const next = tickHold(held.current, now, DEV_HOLD_MS);
+    if (next !== held.current && next.fired) {
+      held.current = next;
+      onHeld?.();
+      return;
+    }
+    const wait = holdWait(held.current, now, DEV_HOLD_MS);
+    if (wait > 0) timer.current = window.setTimeout(check, wait);
+  };
+  const release = (): void => {
+    held.current = NO_HOLD;
+    clearTimeout(timer.current);
+  };
+  return {
+    onPointerDown: () => {
+      if (!onHeld) return;
+      held.current = { from: clockMs(), fired: false };
+      clearTimeout(timer.current);
+      timer.current = window.setTimeout(check, DEV_HOLD_MS);
+    },
+    onPointerUp: release,
+    onPointerLeave: release,
+    onPointerCancel: release,
+    // A long press on a phone opens the page's own menu over the title.
+    onContextMenu: (e: Event) => e.preventDefault(),
+  };
 }

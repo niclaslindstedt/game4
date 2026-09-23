@@ -34,6 +34,8 @@ export type CampaignApp = {
   /** A map picked, on to the sled card: a campaign RUNG, or a map off the
    * level card — which is kept as the one the RACE and TIME TRIAL ride. */
   choose: (level: CampaignLevel, rung: boolean) => void;
+  /** The board SET rather than earned — DEVELOPER ▸ UNLOCKS. */
+  setProgress: (progress: CampaignProgress) => void;
 };
 
 export function useCampaign(world: {
@@ -57,6 +59,7 @@ export function useCampaign(world: {
     progress,
     rig,
     rung,
+    setProgress: (next) => setProgress((held.current = next)),
     openCard: (mode, page) => {
       world.mode.current = mode;
       rung.current = null;

@@ -13,6 +13,11 @@
 //                   day and snow (the seed a `?seed=` names over it).
 //   ?t=<s>          ...with this many seconds of it already ridden — by the
 //                   BOT, so a picture of a race is a picture of one moving.
+//   ?pose=x,z,h,v   ...and then the player's sled stood HERE — plan metres,
+//                   heading (rad), forward speed (m/s) — over where the
+//                   bot's pre-roll left it: the REPRO line's last word
+//                   (`debug-readout.ts`), so a frame found on the developer
+//                   page is a link.
 //   ?shot=1         ...and held still once drawn, so nothing moves under a
 //                   screenshot's shutter.
 //   ?paused=1       ...or held under the pause card.
@@ -33,7 +38,10 @@
 //                   start card; `campaign` on the campaign card; `levels` on
 //                   the level card a RACE (or, with `mode=trial`, a TIME
 //                   TRIAL) picks its pinned map on; `gallery` on the pictures
-//                   kept.
+//                   kept; `dev` on the DEVELOPER page (let out, as the
+//                   title's hold lets it out), `unlocks` and `benchHistory` behind it.
+//   ?bench=1        run DEVELOPER ▸ BENCHMARK the moment the app is up —
+//                   how a lab takes a score off the built site.
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -61,13 +69,17 @@ import {
   type WeatherKind,
 } from "@engine";
 
+import { readPose, type SledPose } from "./debug-readout.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
 import { TIERS, type Tier } from "./settings-video.ts";
 
+/** The developer's pages (`menu-dev.tsx`). */
+export type DevPage = "dev" | "unlocks" | "benchHistory";
+
 /** The cards a link may open on. */
 export type MenuPage =
-  "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels" | "gallery";
+  "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels" | "gallery" | DevPage;
 const MENU_PAGES: readonly MenuPage[] = [
   "root",
   "sled",
@@ -77,6 +89,9 @@ const MENU_PAGES: readonly MenuPage[] = [
   "campaign",
   "levels",
   "gallery",
+  "dev",
+  "unlocks",
+  "benchHistory",
 ];
 
 export type UrlParams = {
@@ -87,6 +102,10 @@ export type UrlParams = {
   free: boolean;
   /** Seconds of the race to pre-ride before the first frame is shown. */
   t: number;
+  /** Where the player's sled is stood once the pre-roll is ridden. */
+  pose: SledPose | null;
+  /** Run the benchmark on boot. */
+  bench: boolean;
   shot: boolean;
   paused: boolean;
   camera: CameraRung | null;
@@ -140,6 +159,8 @@ export function readParams(search: string): UrlParams {
     rides: start === "race" || start === "free" || start === "1" || paused || q.get("shot") === "1",
     free: start === "free",
     t: Number.isFinite(t) && t > 0 ? Math.min(t, 600) : 0,
+    pose: readPose(q.get("pose")),
+    bench: q.get("bench") === "1",
     shot: q.get("shot") === "1",
     paused,
     camera:

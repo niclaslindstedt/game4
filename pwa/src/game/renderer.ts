@@ -38,6 +38,7 @@ import {
   type Wind,
 } from "@engine";
 
+import { noCost } from "./benchmark-report.ts";
 import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
 import { createTvCamera } from "./camera-tv.ts";
@@ -48,7 +49,7 @@ import { createGates, type Gates } from "./gates.ts";
 import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
 import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
-import type { CameraRung, WorldRenderer } from "./renderer-api.ts";
+import type { CameraRung, DevRenderer, WorldRenderer } from "./renderer-api.ts";
 import type { ReplayShot } from "./replay-shots.ts";
 import {
   createSledModel,
@@ -73,8 +74,10 @@ import {
   type ShadowLook,
   type VideoSettings,
 } from "./settings-video.ts";
+import { tallyScene } from "./scene-tally.ts";
 import { createTerrain, type Terrain } from "./terrain.ts";
 import { createTrailMap, type TrailMap } from "./trail-map.ts";
+import { createTrailOverlay } from "./trail-overlay.ts";
 import {
   bodyStampOf,
   createPen,
@@ -97,24 +100,23 @@ export type RendererOptions = {
 /** What the renderer can say about its own last frame. */
 export type FrameInfo = { calls: number; triangles: number; points: number };
 
-/** The seam, plus what a lab or a debug overlay may also ask. */
-export type WorldRendererExt = WorldRenderer & {
-  /** Change rung; `cut` skips the flown hand-over. */
-  setCamera(rung: CameraRung, cut?: boolean): void;
-  /** `present` false does everything a frame does — the trails stamped,
-   * the spray flown, the lens moved — except draw the picture: how a lab
-   * fast-forwards a run without losing the furrows it cut. */
-  draw(state: GameState, alpha: number, dt: number, present?: boolean): void;
-  /** Stand the lens at a fixed place instead of the ladder (a lab's view);
-   * null hands it back. */
-  setOverride(view: LensPose | null): void;
-  info(): FrameInfo;
-  /** Ride the map under another sky, or from another hour, without loading
-   * it again (`withSky`) — a lab's sheet; null hands it back to the map's. */
-  setSky(sky: SkyOverride | null): void;
-  /** The three.js renderer, for a lab that needs to read pixels. */
-  readonly gl: THREE.WebGLRenderer;
-};
+/** The seam, plus what a lab, the developer page and the benchmark may also
+ * ask. */
+export type WorldRendererExt = WorldRenderer &
+  DevRenderer & {
+    /** Change rung; `cut` skips the flown hand-over. */
+    setCamera(rung: CameraRung, cut?: boolean): void;
+    /** `present` false does everything a frame does — the trails stamped,
+     * the spray flown, the lens moved — except draw the picture: how a lab
+     * fast-forwards a run without losing the furrows it cut. */
+    draw(state: GameState, alpha: number, dt: number, present?: boolean): void;
+    info(): FrameInfo;
+    /** Ride the map under another sky, or from another hour, without loading
+     * it again (`withSky`) — a lab's sheet; null hands it back to the map's. */
+    setSky(sky: SkyOverride | null): void;
+    /** The three.js renderer, for a lab that needs to read pixels. */
+    readonly gl: THREE.WebGLRenderer;
+  };
 
 const NEAR = 0.1;
 const FAR = 6000;
@@ -184,6 +186,7 @@ export function createWorldRenderer(
   const wrap = <M extends THREE.Material>(m: M, name: string): M => hazeMaterial(m, env.haze, name);
   const snowfall = createSnowfall(env.haze);
   snowfall.setBudget(SPRAY_SHARE[video.spray]);
+  snowfall.group.name = "snowfall";
   scene.add(snowfall.group);
   let skyOverride: SkyOverride | null = null;
   let skyLevel: Level | null = null;
@@ -211,6 +214,11 @@ export function createWorldRenderer(
   let box = { width: 1, height: 1, pixelRatio: 1 };
   /** The one pixel `drain` reads back. */
   const drained = new Uint8Array(4);
+  /** What the last frame cost (`DevRenderer.cost`), rewritten every frame. */
+  const cost = noCost();
+  const overlay = createTrailOverlay();
+  let overlayOn = false;
+  const lensDir = new THREE.Vector3();
   const rigPose: RigPose = {
     x: 0,
     y: 0,
@@ -260,6 +268,7 @@ export function createWorldRenderer(
   }
   function buildTerrain(lv: Level, map: TrailMap): Terrain {
     const ground = createTerrain(lv, env.haze, map.uniforms, terrainLook(video.terrain));
+    ground.group.name = "terrain";
     scene.add(ground.group);
     return ground;
   }
@@ -271,6 +280,7 @@ export function createWorldRenderer(
 
   function riderFor(i: number, spec: SledSpec): Rider {
     const model = createSledModel(spec, SLED_STYLES[i % SLED_STYLES.length], wrap);
+    model.root.name = "field";
     scene.add(model.root);
     return {
       model,
@@ -368,11 +378,14 @@ export function createWorldRenderer(
       terrain = buildTerrain(lv, trail);
       await breathe();
       forest = createForest(lv, env.haze, forestOptions());
+      forest.group.name = "forest";
       scene.add(forest.group);
       gates = createGates(lv, env.haze);
+      gates.group.name = "checkpoints";
       clear = createLineClear(lv);
       scene.add(gates.group);
       spray = createSpray(env.haze);
+      spray.points.name = "spray";
       spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
       riders = runsOf(state).map((run, i) => riderFor(i, run.sled.spec));
@@ -397,6 +410,7 @@ export function createWorldRenderer(
 
     draw(state: GameState, alpha: number, dt: number, present = true) {
       if (!level || state.level !== level || !terrain || !trail || !spray) return;
+      const opened = performance.now();
       const runs = runsOf(state);
       while (riders.length < runs.length) {
         riders.push(riderFor(riders.length, runs[riders.length].sled.spec));
@@ -491,7 +505,9 @@ export function createWorldRenderer(
         player.model.setRiderVisible(true);
       }
 
+      const posed = performance.now();
       trail.update(gl, stamps, sled.x, sled.z);
+      const trailed = performance.now();
       terrain.follow(lens.camera.position.x, lens.camera.position.z);
       const sky = skyLevel ?? level;
       const look = skyLookAt(sky, state.t);
@@ -513,7 +529,39 @@ export function createWorldRenderer(
       snowfall.setScale(pixels);
       snowfall.update(look, wind, lens.camera, level, dt);
 
+      const built = performance.now();
       if (present) gl.render(scene, lens.camera);
+      const closed = performance.now();
+      const r = gl.info.render;
+      cost.poseMs = posed - opened;
+      cost.trailMs = trailed - posed;
+      cost.worldMs = built - trailed;
+      cost.submitMs = closed - built;
+      cost.frameMs = closed - opened;
+      cost.calls = r.calls;
+      cost.triangles = r.triangles;
+      cost.programs = gl.info.programs?.length ?? 0;
+      cost.geometries = gl.info.memory.geometries;
+      cost.textures = gl.info.memory.textures;
+      if (present && overlayOn) overlay.draw(gl, trail.uniforms);
+    },
+
+    cost: () => cost,
+    sceneTally: () => tallyScene(scene),
+    bufferSize: () => ({ w: gl.domElement.width, h: gl.domElement.height }),
+    setTrailOverlay(on) {
+      overlayOn = on;
+    },
+    lensPose() {
+      const cam = lens.camera;
+      cam.getWorldDirection(lensDir);
+      return {
+        x: cam.position.x,
+        y: cam.position.y,
+        z: cam.position.z,
+        yaw: Math.atan2(lensDir.x, lensDir.z),
+        pitch: Math.asin(Math.max(-1, Math.min(1, lensDir.y))),
+      };
     },
 
     setGhost(run) {
@@ -585,6 +633,7 @@ export function createWorldRenderer(
     },
     dispose() {
       unload();
+      overlay.dispose();
       snowfall.dispose();
       env.dispose();
       gl.dispose();
