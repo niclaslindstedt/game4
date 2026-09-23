@@ -26,6 +26,8 @@
 //      own, so they thin the packed field and move nothing else
 //   7. the forest (R14), which keeps clear of everything above
 //   8. the day (R15)
+//   9. the weather (R19) — off a stream of its own, last, so it moves
+//      nothing above; an evening it deals moves only the day's start hour
 
 import { createRng } from "../lib/prng.ts";
 import { sampleField } from "../lib/heightfield.ts";
@@ -39,6 +41,7 @@ import { LEVEL_RULES as R } from "./rules.ts";
 import { chooseStart, gridOnTrack, layCheckpoints } from "./spawn.ts";
 import { dealSun } from "./sun.ts";
 import { bakeCountry, planTerrain } from "./terrain.ts";
+import { dealWeather, withSky } from "./weather.ts";
 import {
   drawLoop,
   gradeLoop,
@@ -102,7 +105,9 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
   stampDrifts(packed, near, along, drifts, start, n, loop.length / n);
 
   const trees = growForest(rng, plan, ground, trackOf(loop), kickers);
-  const sun = dealSun(rng);
+  const day = dealSun(rng);
+  const { weather, hour } = dealWeather(subSeed(seed, attempt), day);
+  const sun = { ...day, hour };
 
   return compileLevel({
     seed,
@@ -121,6 +126,7 @@ function attemptLevel(seed: number, attempt: number, laps: number): GeneratedLev
     basin: { x: plan.cx, z: plan.cz, rim: R.basin.rim.inner },
     attempt,
     drifts,
+    weather,
   });
 }
 
@@ -139,7 +145,7 @@ export function generateLevel(seed: number, opts: GenerateOptions = {}): Generat
     if (analysis.ok) {
       if (reasons.length > 0)
         debug(`level ${seed}: accepted attempt ${a} after ${reasons.join("; ")}`);
-      return built;
+      return opts.sky ? withSky(built, opts.sky) : built;
     }
     const errors = analysis.findings.filter((f) => f.severity === "error");
     reasons.push(`#${a}: ${errors.map((f) => `${f.rule} ${f.message}`).join(", ")}`);

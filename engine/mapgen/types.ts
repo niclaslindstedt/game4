@@ -87,6 +87,36 @@ export interface Level {
   /** Every stretch of the loop lying under a drift (R17), in the order they
    * are ridden. */
   drifts?: Drift[];
+  /** The sky the map is ridden under (R19). A hand-built level without one
+   * is ridden under `CLEAR_WEATHER` — ask `weatherOf`, never this field. */
+  weather?: Weather;
+}
+
+/** The skies R19 deals, lightest first. */
+export type WeatherKind = "clear" | "fair" | "high" | "overcast" | "snow" | "fog";
+
+/** The weather a map is ridden under (R19): the word and its numbers. What a
+ * sky LOOKS like is the app's; the engine says only what is in the air. */
+export interface Weather {
+  kind: WeatherKind;
+  /** How hard it is snowing, 0 (nothing falling) … 1 (a blizzard). */
+  snowfall: number;
+  /** How thick the fog lying in the basin is, 0 (none) … 1. */
+  fog: number;
+  /** The mean wind at 10 m, m/s. */
+  wind: number;
+  /** The world heading the wind blows FROM (heading convention). */
+  windFrom: number;
+  /** Whether R19 sent this map out in the evening (R15's exception). */
+  evening: boolean;
+}
+
+/** A sky chosen by hand rather than dealt: FREE's start card, a lab's sheet.
+ * A kind alone takes that sky at its typical numbers (`weatherFor`); an
+ * `hour` is the solar hour the race starts at, whatever R15 dealt. */
+export interface SkyOverride {
+  weather?: WeatherKind | Partial<Weather>;
+  hour?: number;
 }
 
 /** A stretch of the loop the wind has drifted over (R17): its full-depth
@@ -99,7 +129,7 @@ export interface Drift {
 
 /** A level as `generateLevel` hands it out: every optional field set. */
 export type GeneratedLevel = Level &
-  Required<Pick<Level, "packed" | "kickers" | "basin" | "attempt" | "drifts">>;
+  Required<Pick<Level, "packed" | "kickers" | "basin" | "attempt" | "drifts" | "weather">>;
 
 /** A crest shaped to kick a sled into the air (R4, R9). `x, z` is the LIP. */
 export interface Kicker {
@@ -130,6 +160,10 @@ export interface GenerateOptions {
   attempts?: number;
   /** Laps a race on this map is ridden over (default R16's). */
   laps?: number;
+  /** Ride the map under this sky and from this hour instead of the ones
+   * R15 and R19 dealt (`withSky`). Applied AFTER the search accepts the
+   * map, so it moves nothing the map builds. */
+  sky?: SkyOverride;
 }
 
 /** The answer to "where on the track is this point nearest?" */

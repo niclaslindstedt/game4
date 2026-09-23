@@ -39,6 +39,8 @@ import { cornerGrip, harshSpeedOf } from "./limits.ts";
 import { footprintOf } from "./footprint.ts";
 import { probesOf } from "./suspension.ts";
 import { stepRpm, stepTread } from "./traction.ts";
+import { dampShare, harshShare, skiBite, skiPull, springShare } from "./damage.ts";
+import { stepTrench, trenchGrip } from "./trench.ts";
 import type { GameEvent, GameState, SledInput, SledState, SnowContact } from "./state.ts";
 
 const dt = TUNING.dt;
@@ -121,6 +123,12 @@ export function freshSled(spec: SledSpec): SledState {
     landing: 1e6,
     overFor: 0,
     stuckFor: 0,
+    trench: 0,
+    trenchFor: 0,
+    boggedFor: 0,
+    rolledFor: 0,
+    thrown: null,
+    damage: { ski: [0, 0], suspension: 0 },
     hitCooldown: 0,
     bumpCooldown: 0,
     sinks: probes.map(() => 0),
@@ -159,10 +167,14 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.lean = approach(c.lean, clamp(input.lean, -1, 1), dt / R.lag);
   const speed0 = Math.hypot(c.vx, c.vy, c.vz);
   const lock = skiLockAt(spec, speed0);
-  c.skiAngle = approach(c.skiAngle, c.steer * lock, TUNING.steer.rate * dt);
+  // A bent ski (`damage.ts`) pulls the line the bars ask for toward its side.
+  c.skiAngle = approach(c.skiAngle, c.steer * lock + skiPull(c), TUNING.steer.rate * dt);
   const k = Math.min(1, dt / R.lag);
+  const right0 = c.riderRight;
+  const aft0 = c.riderAft;
   c.riderRight += (c.steer * spec.riderReach - c.riderRight) * k;
   c.riderAft += (c.lean * R.aftReach - c.riderAft) * k;
+  const moved = Math.abs(c.riderRight - right0) + Math.abs(c.riderAft - aft0);
 
   // ── The frame ─────────────────────────────────────────────────────────
   const q = c.q;
@@ -200,6 +212,11 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   // ── The suspension and the grip, probe by probe ───────────────────────
   const probes = probesOf(spec);
   const fit = footprintOf(spec);
+  // What the machine has taken (`damage.ts`) and the hole it has dug
+  // (`trench.ts`) — each exactly 1 on a sound sled out of any hole.
+  const soft = springShare(c);
+  const dampen = dampShare(c);
+  const bite = trenchGrip(c.trench);
   let touching = 0;
   let beltReaction = 0;
   let loadSum = 0;
@@ -233,7 +250,10 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const dx = -up.x;
     const dz = -up.z;
     const packed = level.packedAt(ax, az);
-    const target = sinkTarget(packed, speed0, p.sinkScale, p.planeScale);
+    // A trenched tread (`trench.ts`) hangs in the hole it has dug.
+    const target =
+      sinkTarget(packed, speed0, p.sinkScale, p.planeScale, state.snowDepth) +
+      (p.kind === "tread" ? c.trench : 0);
     c.sinks[i] += (target - c.sinks[i]) * Math.min(1, dt / TUNING.snow.sinkLag);
     const sink = c.sinks[i];
     // Where the ray meets the support: Newton's method along the ray, off
@@ -294,7 +314,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
           Math.max(0.3, up.x * normal.x + up.y * normal.y + up.z * normal.z);
     c.comps[i] = comp;
     const damp = rate > 0 ? p.susp.bump : p.susp.rebound;
-    let spring = p.susp.rate * comp + damp * rate;
+    let spring = p.susp.rate * soft * comp + damp * dampen * rate;
     if (comp > p.susp.travel) {
       spring +=
         STOP_RATE * p.susp.rate * (comp - p.susp.travel) +
@@ -331,7 +351,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     let across = 0;
     if (p.kind === "tread") {
       const slip = c.treadSpeed - vf;
-      const drive = grip.tread * load * Math.tanh(slip / G.slipRef);
+      const drive = grip.tread * bite * load * Math.tanh(slip / G.slipRef);
       beltReaction += drive;
       slipSum += slip;
       along += drive;
@@ -345,7 +365,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
         Math.sin(rollRel) *
         clamp(Math.abs(vf) / R.carveSpeed, 0, 1);
     } else {
-      across -= grip.ski * load * Math.tanh(vl / G.sideRef);
+      across -= grip.ski * skiBite(c, p.side) * load * Math.tanh(vl / G.sideRef);
     }
     const drag = snowDrag(
       packed,
@@ -353,7 +373,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
       p.ploughs ? p.width : 0,
       load,
       vf,
-      p.kind === "tread" ? fit.sink : 1,
+      (p.kind === "tread" ? fit.sink : 1) * state.snowDepth,
     );
     along -= drag * Math.tanh(vf / DRAG_FADE);
     push(
@@ -439,7 +459,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.vx += (fx / m) * dt;
   c.vy += (fy / m) * dt;
   c.vz += (fz / m) * dt;
-  const chassis = chassisContacts(c, level);
+  const chassis = chassisContacts(c, level, state.snowDepth);
   const hullTouch = chassis > 0;
   if (chassis > impact) impact = chassis;
   c.x += c.vx * dt;
@@ -466,7 +486,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     c.airborne = false;
     c.airTime = 0;
     if (flew >= TUNING.air.counts) {
-      const lost = landingLoss(impact, harshSpeedOf(spec));
+      const lost = landingLoss(impact, harshSpeedOf(spec) * harshShare(c));
       if (lost > 0) {
         // The bottomed suspension takes it out of the way along the slope.
         level.normalAt(c.x, c.z, normal);
@@ -493,6 +513,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   const upright = rotate(c.q, { x: 0, y: 1, z: 0 }).y;
   c.overFor = upright < TUNING.reset.overUp ? c.overFor + dt : 0;
   c.stuckFor = input.throttle > 0.5 && c.speed < TUNING.reset.stuckSpeed ? c.stuckFor + dt : 0;
+  stepTrench(state, moved, events);
   if (c.hitCooldown > 0) c.hitCooldown -= dt;
   if (c.bumpCooldown > 0) c.bumpCooldown -= dt;
 }

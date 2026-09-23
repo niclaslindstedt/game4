@@ -105,11 +105,14 @@
 //       No tree stands within `forest.corridor` metres of the track's edge,
 //       on ground steeper than `forest.maxSlope`, above `forest.treeLine` of
 //       the way up the rim, or on a kicker.
-//   R15 A CLEAR WINTER DAY. The map lies at a seeded latitude in
+//   R15 A WINTER DAY. The map lies at a seeded latitude in
 //       `sun.latitude` (46–64°N) on a seeded day of the year in
 //       `sun.dayOfYear` (mid-January to mid-March), and the race starts at a
 //       seeded solar hour in `sun.hour` (9–16 h) at which the sun stands at
-//       least `sun.minElevation` degrees over the horizon.
+//       least `sun.minElevation` degrees over the horizon — except on the
+//       maps R19 deals an EVENING, which start instead `sun.evening`
+//       (−0.5 to +3.5 h) from that day's sunset: from the last of the sun
+//       into full night.
 //   R16 THREE LAPS. A race is `race.laps` (3) laps of the loop.
 //   R17 DRIFTS ACROSS THE TRACK. The wind lays fresh snow over stretches of
 //       the groomer. A map is dealt a share of its loop in `drift.share`
@@ -133,6 +136,17 @@
 //       `berm.height.min`, as a windrow does. No tree stands on a berm
 //       (R14's corridor reaches past it). The berms draw nothing from any
 //       stream.
+//   R19 THE WEATHER. Every map is dealt one sky off a stream of its own —
+//       the attempt's sub-seed, salted — so its weather moves nothing else
+//       the map draws: `clear`, `fair` (fair-weather cumulus), `high` (a
+//       sheet of high cloud), `overcast` (a lid of stratus and its flat
+//       light), `snow` (a fall, from light to a blizzard) or `fog` (a valley
+//       fog lying in the basin), at the odds in `weather.odds`. A fall is
+//       dealt an intensity in `weather.snowfall` and a fog a density in
+//       `weather.fog`; the wind is dealt a mean speed in that sky's band of
+//       `weather.wind` — a heavier fall a harder wind — and a bearing it
+//       blows from. The same stream sends `weather.evening` of the maps out
+//       in the EVENING of R15. `Level.weather` publishes all of it.
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };
@@ -332,6 +346,10 @@ export const LEVEL_RULES = {
     hour: { min: 9, max: 16 } as Band,
     /** Degrees over the horizon at the start. */
     minElevation: 5,
+    /** An evening start (R19), hours from sunset: half an hour of low sun
+     * before it, three and a half after — past nautical twilight into the
+     * dark on every day and latitude of the band. */
+    evening: { min: -0.5, max: 3.5 } as Band,
   },
   /** R16 — the race. */
   race: { laps: 3 },
@@ -362,6 +380,29 @@ export const LEVEL_RULES = {
     /** Steepest a face may be: a half-sine `height.max` tall across the
      * width climbs at most π·1.0/6 = 0.52. */
     maxSlope: 0.6,
+  },
+  /** R19 — the weather. */
+  weather: {
+    /** How often each sky is dealt; the shares sum to 1. Fair weather is
+     * most of a winter's racing days, a lid or a fall about a third. */
+    odds: { clear: 0.28, fair: 0.2, high: 0.12, overcast: 0.14, snow: 0.16, fog: 0.1 },
+    /** A fall's intensity: 0.15 is a few flakes drifting past the lens, 1 a
+     * blizzard that takes the far side of the basin away. */
+    snowfall: { min: 0.15, max: 1 } as Band,
+    /** A fog's density, 0..1 of the thickest the renderer draws. */
+    fog: { min: 0.35, max: 1 } as Band,
+    /** Each sky's mean wind at 10 m, m/s. A fog lies in a calm; a blizzard
+     * is a gale. */
+    wind: {
+      clear: { min: 0.5, max: 5 },
+      fair: { min: 2, max: 7 },
+      high: { min: 3, max: 9 },
+      overcast: { min: 2, max: 8 },
+      snow: { min: 2, max: 16 },
+      fog: { min: 0, max: 2 },
+    } as Record<string, Band>,
+    /** The share of maps ridden in the evening (R15). */
+    evening: 0.25,
   },
 } as const;
 

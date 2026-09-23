@@ -45,8 +45,10 @@ describe("trees", () => {
   });
 
   it("a trunk met square stops the sled and is reported once", () => {
+    // Three seconds: the trunk, and the rider off it — not yet the reset
+    // that stands them back up (`crash_test.ts`).
     const state = atTree(0, 50 / 3.6);
-    const events = ride(state, 4, FULL);
+    const events = ride(state, 3, FULL);
     const hits = events.filter((e) => e.kind === "hit");
     expect(hits.length).toBeGreaterThanOrEqual(1);
     const first = hits[0];

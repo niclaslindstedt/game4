@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // The game orchestrator: `createGame` builds a run (a map, a sled on the
-// grid, the field beside it), `step` advances it exactly one fixed timestep
+// grid, the field beside it — or, on a free ride, the sled alone wherever
+// the rider asked to start), `step` advances it exactly one fixed timestep
 // and leaves the events that step emitted on the state. The app's render
 // loop and the headless simulator drive this same function — there is no
 // other way to advance a run.
@@ -10,11 +11,19 @@
 // rival's run by the same function; then every sled against every other.
 
 import { createRng } from "../lib/prng.ts";
-import { generateLevel } from "../mapgen/index.ts";
-import type { Level } from "../mapgen/types.ts";
+import { generateLevel, withDay, withSky } from "../mapgen/index.ts";
+import type { Level, SkyOverride } from "../mapgen/types.ts";
 import { status } from "../output.ts";
-import { freshProgress, standSled } from "./course.ts";
-import { FULL_ASSIST, RACE, raceRules, type Assist, type RunRules } from "./defs/modes.ts";
+import { freeSpawn, freshProgress, standSled } from "./course.ts";
+import {
+  FULL_ASSIST,
+  MODE_RULES,
+  RACE,
+  clampSnowDepth,
+  type Assist,
+  type GameMode,
+  type RunRules,
+} from "./defs/modes.ts";
 import { SLED, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { clipRiders, createRivals, gridSlot, stepRivals } from "./rivals.ts";
@@ -28,6 +37,9 @@ export type CreateGameOptions = {
   seed?: number;
   /** A map to ride instead of the one the seed generates (tests, labs). */
   level?: Level;
+  /** The mode whose rules the run is dealt (`MODE_RULES`); a race when left
+   * out. Each option below still overrides its own rule. */
+  mode?: GameMode;
   /** How many rivals stand on the grid (`RACE.rivals` when left out; 0 is a
    * solo run — what the sim and the labs ride). */
   rivals?: number;
@@ -42,23 +54,48 @@ export type CreateGameOptions = {
   /** The arcade's help for the player's own sled (`Assist`); every hand on
    * when left out. The field rides with every hand on whatever this says. */
   assist?: Assist;
+  /** Whether blows bend the player's machine (`damage.ts`); off when left
+   * out. */
+  damage?: boolean;
   /** Build without announcing the map (the sim's sweeps). */
   quiet?: boolean;
+  /** Where a FREE RIDE (`mode: "free"`) starts, a plan point on the map
+   * (`freeSpawn` holds it inside the edge and out of the trees); the grid's
+   * first slot when left out. Ignored by every other mode, which starts on
+   * its grid. */
+  spawn?: { x: number; z: number };
+  /** THE SNOW DIAL (`SNOW_DIAL`): the powder's sink as a multiple of the
+   * ordinary snow's. 1 when left out. */
+  snowDepth?: number;
+  /** The day to ride the map on instead of the one R15 dealt: an hour of
+   * solar time and a day of the year, either or both (`withDay`). */
+  day?: { hour?: number | null; dayOfYear?: number | null };
+  /** Ride the map under this sky instead of the one R19 dealt it
+   * (`withSky`). Applied AFTER `day`: the day owns the date and the
+   * daylight hour a rider picks; `sky.hour` is a lab's or a link's, never
+   * held to daylight, and wins over `day.hour` when both are given — so a
+   * race can be stood in the dark. The map itself — the ground, the loop,
+   * the trees — is the seed's either way, and nothing the physics reads
+   * moves. */
+  sky?: SkyOverride;
 };
 
 /** The rules a run is dealt from what it asked for. */
 export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
-  const base = raceRules(options.laps ?? level.laps);
+  const base = MODE_RULES[options.mode ?? "race"](options.laps ?? level.laps);
   return {
     rivals: options.rivals ?? base.rivals,
     laps: base.laps,
     countdown: options.countdown ?? base.countdown,
     contact: options.contact ?? base.contact,
+    course: base.course,
   };
 }
 
 export function createGame(options: CreateGameOptions = {}): GameState {
-  const level = options.level ?? generateLevel(options.seed ?? 1);
+  const built = options.level ?? generateLevel(options.seed ?? 1);
+  const dayed = options.day ? withDay(built, options.day) : built;
+  const level = options.sky ? withSky(dayed, options.sky) : dayed;
   const seed = options.seed ?? level.seed;
   const rules = rulesFor(options, level);
   const state: GameState = {
@@ -72,12 +109,17 @@ export function createGame(options: CreateGameOptions = {}): GameState {
     progress: freshProgress(level),
     rules,
     assist: { ...(options.assist ?? FULL_ASSIST) },
+    damage: options.damage ?? false,
+    snowDepth: clampSnowDepth(options.snowDepth),
     rivals: [],
     countdown: rules.countdown,
     phase: rules.countdown > 0 ? "countdown" : "racing",
     events: [],
   };
-  const at = gridSlot(state, 0);
+  const at =
+    options.mode === "free" && options.spawn
+      ? freeSpawn(level, options.spawn.x, options.spawn.z)
+      : gridSlot(state, 0);
   standSled(state, at.x, at.z, at.heading);
   if (rules.rivals > 0) createRivals(state, rules.rivals);
   if (!options.quiet) {

@@ -162,3 +162,32 @@ export function daylightWindow(
   if (up === null || down === null) return { min: 0, max: 24 };
   return { min: up, max: down };
 }
+
+/** The synodic month, days: new moon to new moon. */
+export const SYNODIC_MONTH = 29.530589;
+
+export type MoonPlace = SunPlace & {
+  /** How much of the disc is lit, 0 (new) … 1 (full). */
+  lit: number;
+};
+
+/**
+ * WHERE THE MOON IS, to the accuracy a sky needs and no further: a moon
+ * `age` days past new rides the sky `age / SYNODIC_MONTH` of a day behind
+ * the sun, so it rises with the sun at new, at sunset when full, and its
+ * declination swings from the sun's own at new to the opposite at full —
+ * which is why a winter's full moon rides high when the sun rides low.
+ * The orbit's five-degree tilt and its own wobbles are left out.
+ */
+export function moonAt(
+  hour: number,
+  latitude: number,
+  sunDeclination: number,
+  age: number,
+): MoonPlace {
+  const phase = (((age / SYNODIC_MONTH) % 1) + 1) % 1;
+  const lag = phase * 24;
+  const declination = sunDeclination * Math.cos(2 * Math.PI * phase);
+  const place = sunAt(hour - lag, latitude, declination);
+  return { ...place, hour, lit: (1 - Math.cos(2 * Math.PI * phase)) / 2 };
+}

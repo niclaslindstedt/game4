@@ -15,7 +15,17 @@ export {
 } from "./query.ts";
 export { kickerProfile } from "./kickers.ts";
 export { dealDrifts, driftAt } from "./drift.ts";
-export { declinationOf, sunWindow } from "./sun.ts";
+export { dayOfYearOf, declinationOf, freeHours, sunWindow, withDay } from "./sun.ts";
+export {
+  CLEAR_WEATHER,
+  WEATHER_KINDS,
+  dealWeather,
+  hasLid,
+  sunsetOf,
+  weatherFor,
+  weatherOf,
+  withSky,
+} from "./weather.ts";
 export { gridOnTrack } from "./spawn.ts";
 // The scoreboard the search gates on, re-exported here so the one surface
 // that carries the generator carries its verdict too.

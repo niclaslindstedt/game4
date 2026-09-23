@@ -16,6 +16,7 @@ The headless harness (`engine/sim/simulate.ts`) runs the REAL engine — `create
 | `airTime`, `bestAir`, `jumps`    | Seconds of air summed over flights longer than 0.3 s, the longest flight, how many                    |
 | `harshLandings`                  | Landings the suspension could not take whole (`land.harsh`)                                           |
 | `treeHits`, `bumps`              | Trunks met and (in a race) rivals leaned on                                                           |
+| `wipeouts`                       | Times the rider was thrown off (`crash.ts`) — the table's `wipe`                                      |
 | `resets`, `autoResets`, `missed` | Resets, the engine's own among them, and checkpoints ridden past                                      |
 | `place`                          | Where the bot finished against the field (1 solo)                                                     |
 | `digest`                         | FNV-1a over the sled's position and speed every quarter second — the determinism fingerprint          |
@@ -35,17 +36,17 @@ npm run sim -- --laps 1 --json out.json
 It exits non-zero when the bot finishes NO seed at all — a sled that cannot get round any map is broken, not slow. At the tuning in this tree:
 
 ```
- seed  fin    time              laps     cps    len  pow  mean   top   air  best  jmp hrsh tree  rst auto miss  plc    digest
-    1  yes   431.7       144/143/143   67/67   3277  14%    82   140  11.2   1.3    9    0    0    0    0    0    1  f36e28fb
-    2  yes   459.0       153/152/152   58/58   2915  43%    69   137  13.0   1.6    9    3    0    0    0    0    1  b087c700
-    3  yes   415.1       138/138/138   61/61   2992   2%    79   136  10.9   1.4    9    3    0    0    0    0    1  af33f7c9
-    4  yes   384.5       129/127/127   58/58   2908   6%    82   145  10.0   1.2    9    0    0    0    0    0    1  178bf2f3
-    5  yes   448.6       150/149/149   61/61   2986  37%    72   144  11.3   1.3    9    0    0    0    0    0    1  c79879ca
-    6  yes   505.6       168/168/168   67/67   3281  40%    71   140  11.6   1.4    9    0    0    0    0    0    1  b3ca7172
-    7  yes   371.7       124/123/123   55/55   2687   4%    79   130  12.2   1.4    9    0    0    0    0    0    1  1a607aaf
-    8  yes   433.5       145/143/144   61/61   2927  29%    73   135  11.3   1.4    9    3    0    0    0    0    1  06a38ad2
+ seed  fin    time              laps     cps    len  pow  mean   top   air  best  jmp hrsh tree wipe  rst auto miss  plc    digest
+    1  yes   431.7       144/143/143   67/67   3277  14%    82   140  11.2   1.3    9    0    0    0    0    0    0    1  f36e28fb
+    2  yes   459.0       153/152/152   58/58   2915  43%    69   137  13.0   1.6    9    3    0    0    0    0    0    1  b087c700
+    3  yes   415.1       138/138/138   61/61   2992   2%    79   136  10.9   1.4    9    3    0    0    0    0    0    1  af33f7c9
+    4  yes   384.5       129/127/127   58/58   2908   6%    82   145  10.0   1.2    9    0    0    0    0    0    0    1  178bf2f3
+    5  yes   448.6       150/149/149   61/61   2986  37%    72   144  11.3   1.3    9    0    0    0    0    0    0    1  c79879ca
+    6  yes   505.6       168/168/168   67/67   3281  40%    71   140  11.6   1.4    9    0    0    0    0    0    0    1  b3ca7172
+    7  yes   371.7       124/123/123   55/55   2687   4%    79   130  12.2   1.4    9    0    0    0    0    0    0    1  1a607aaf
+    8  yes   433.5       145/143/144   61/61   2927  29%    73   135  11.3   1.4    9    3    0    0    0    0    0    1  06a38ad2
 
-8/8 finished · mean 76 km/h · top 145 km/h · air 11.4 s/run · jumps 72 · harsh 9 · trees 0 · resets 0 (auto 0) · missed 0
+8/8 finished · mean 76 km/h · top 145 km/h · air 11.4 s/run · jumps 72 · harsh 9 · trees 0 · wipeouts 0 · resets 0 (auto 0) · missed 0
 ```
 
 ## Reading the table
@@ -58,6 +59,7 @@ It exits non-zero when the bot finishes NO seed at all — a sled that cannot ge
 - **`air`/`jmp`** are the on-track kickers (three a lap on most seeds). Fewer jumps is a kicker the bot is taking too slowly to leave the snow; `best` over 2.5 s is a kicker overshot.
 - **`hrsh`** counts landings past `air.harshSpeed`: a few is a kicker whose landing the bot's plan misjudges; many is a landing model gone hard.
 - **`tree`, `rst`, `auto`** should be zero or nearly. A tree hit on a generated map is the bot leaving the track; an automatic reset is a sled on its back or stuck.
+- **`wipe`** must be zero on a solo run: every wipeout threshold (`TUNING.crash`) sits well past anything a clean ride meets, so a wipeout there is a threshold come down into clean riding or a bot that got worse. In a race (`--rivals 3`) the field shoulders riders into the woods, and a wipeout there can be honest.
 - **`digest`** changes with ANY change to the physics, the bot or the generator, and must not change between two runs of the same tree — `tests/determinism_test.ts` holds that.
 
 ## The bot (`engine/sim/bot.ts`)

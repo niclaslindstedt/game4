@@ -102,7 +102,7 @@ inventing a proxy nobody believes.
 | File | Job |
 | --- | --- |
 | `types.ts` | **The map as everyone else sees it.** `Level`, `TrackPoint`, `Checkpoint`, `Spawn`, `TreeDef`, `Kicker`, `GenerateOptions`, `TrackHit`. Read by the sled, the course, the bot, the renderer and every lab — extend it; never rename a field without moving every reader. The optional fields (`packed`, `kickers`, `basin`, `attempt`) are what a hand-built synthetic level need not invent; `GeneratedLevel` has them all. |
-| `rules.ts` | **The rule book.** R1–R18 in prose in the header, every number in `LEVEL_RULES`, each with its unit. Tuning the generator means editing this file — and the prose is mirrored VERBATIM in `docs/level-generator.md` (`tests/docs_rules_test.ts`). |
+| `rules.ts` | **The rule book.** R1–R19 in prose in the header, every number in `LEVEL_RULES`, each with its unit. Tuning the generator means editing this file — and the prose is mirrored VERBATIM in `docs/level-generator.md` (`tests/docs_rules_test.ts`). |
 | `terrain.ts` | **The country (R2, R3):** the basin and its rim on a warped rounded square, the hills, ridges, tilt and bowls — a pure function of a PLAN drawn once, baked ONCE onto the grid (`planTerrain`, `bakeCountry`). |
 | `track.ts` | **The loop (R5–R8, R10):** drawn polar (`r(θ) = 1 + Σ aₖ sin(kθ + φₖ)`, star-shaped so the harmonics cannot cross), warped, scaled, resampled every 2 m; refused on a crossing, a tight corner or a reach up the rim; graded into the country; the corridor pressed into the ground and the packed field stamped (`drawLoop`, `gradeLoop`, `stampCorridor`). |
 | `kickers.ts` | **The kickers (R4, R9):** the ramp-and-landing profile, added to the graded line on the track, stamped into the ground in plan off it. |

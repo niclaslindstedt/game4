@@ -16,8 +16,17 @@
 // the front door's RACE, pressed from here so a rider who wants another map
 // is not sent through a card to get it.
 //
+// A TIME TRIAL'S PLATE is the same card with the time where the place was
+// and no table under it — there is nobody else to list — and under either
+// the RECORD BOOK's line (`records.ts`): a new record, or the row that
+// stood with its sled, its date and how far off it this run was. The row
+// is the one that stood when the run began (`HudSnapshot.best`), so the
+// plate can say the run beat it after the book has been rewritten.
+//
 // ITS OWN LAYER, drawn by App.tsx outside the HUD, and gated here: it is up
 // over a finished race and down under the pause card, which offers its own.
+
+import { isSledId, sledById } from "@engine";
 
 import { formatTime } from "../lib/util.ts";
 import type { HudSnapshot } from "./snapshot.ts";
@@ -40,34 +49,55 @@ export function ResultPlate({
   onMenu: () => void;
 }) {
   if (!snap?.result || !snap.standings) return null;
-  const { result, standings } = snap;
+  const { result, standings, best } = snap;
+  const trial = snap.mode === "timeTrial";
+  const record = best === null || result.time < best.time;
+  const gold = trial ? record : result.place === 1;
+  const sledName = (id: string): string => (isSledId(id) ? sledById(id).name : id);
   return (
     <div class="hud hud-result-layer">
       <div class="hud-center">
-        <div class={`hud-card hud-result${result.place === 1 ? " hud-result-record" : ""}`}>
-          <span class="hud-card-note hud-result-label">{STRINGS.resultTitle}</span>
-          <span class="hud-card-title">{STRINGS.resultPlace(result.place, snap.riders)}</span>
-          <span class="hud-card-note">{STRINGS.resultTime(result.time)}</span>
+        <div class={`hud-card hud-result${gold ? " hud-result-record" : ""}`}>
+          <span class="hud-card-note hud-result-label">
+            {trial ? STRINGS.resultTrialTitle : STRINGS.resultTitle}
+          </span>
+          {trial ? (
+            <span class="hud-card-title">{STRINGS.resultTime(result.time)}</span>
+          ) : (
+            <>
+              <span class="hud-card-title">{STRINGS.resultPlace(result.place, snap.riders)}</span>
+              <span class="hud-card-note">{STRINGS.resultTime(result.time)}</span>
+            </>
+          )}
+          {/* THE RECORD BOOK's line: the row this run set, or the one that
+              stood and how far off it the run was. */}
+          <span class="hud-card-note hud-result-book" data-record={record ? "1" : undefined}>
+            {record || best === null
+              ? STRINGS.resultRecord
+              : `${STRINGS.resultBest(best.time, sledName(best.sled), best.at)} · ${STRINGS.resultOff(result.time - best.time)}`}
+          </span>
           {/* THE FIELD, best first. A rider still out is billed by the lap
               they are on, so the table fills in as they come home. */}
-          <ol class="hud-standings">
-            {standings.map((s) => (
-              <li key={s.slot} class={`hud-standing${s.you ? " hud-standing-you" : ""}`}>
-                <span class="hud-standing-place">{s.place}</span>
-                <span class="hud-standing-name">
-                  {s.you ? STRINGS.riderYou : STRINGS.riderRival(s.slot)}
-                </span>
-                <span class="hud-standing-time">
-                  {s.time !== null ? formatTime(s.time) : STRINGS.standingOut(s.lap, snap.laps)}
-                </span>
-              </li>
-            ))}
-          </ol>
+          {standings.length > 1 && (
+            <ol class="hud-standings">
+              {standings.map((s) => (
+                <li key={s.slot} class={`hud-standing${s.you ? " hud-standing-you" : ""}`}>
+                  <span class="hud-standing-place">{s.place}</span>
+                  <span class="hud-standing-name">
+                    {s.you ? STRINGS.riderYou : STRINGS.riderRival(s.slot)}
+                  </span>
+                  <span class="hud-standing-time">
+                    {s.time !== null ? formatTime(s.time) : STRINGS.standingOut(s.lap, snap.laps)}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
           {/* THE WAYS ON. Racing again first — it is what a rider wants most
               of the time and the only one with a key behind it. */}
           <div class="hud-result-acts">
             <button type="button" class="hud-mini hud-result-act" data-nav-next onClick={onAgain}>
-              {STRINGS.resultAgain}
+              {trial ? STRINGS.resultTrialAgain : STRINGS.resultAgain}
             </button>
             <button type="button" class="hud-mini hud-result-act" onClick={onNew}>
               {STRINGS.resultNew}

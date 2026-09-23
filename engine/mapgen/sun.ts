@@ -47,3 +47,41 @@ export function dealSun(rng: Rng): { hour: number; dayOfYear: number; latitude: 
   // The band's own southern edge in its latest week always has a noon.
   return { latitude: R.sun.latitude.min, dayOfYear: R.sun.dayOfYear.max, hour: 12 };
 }
+
+/** THE HOURS A FREE RIDE MAY START AT on a day at a latitude: every hour the
+ * sun stands over R15's floor, not only the rule's band — a rider choosing
+ * the day may ride the long low light of an early morning the generator
+ * never deals. Null when the sun never clears the floor at all. */
+export function freeHours(
+  latitude: number,
+  dayOfYear: number,
+): { min: number; max: number } | null {
+  return daylightWindow(latitude, (R.sun.minElevation * Math.PI) / 180, declinationOf(dayOfYear));
+}
+
+/** A day of the year on 1..365, from any whole count of days off Jan 1 —
+ * so a winter that starts in December (day −30) is still a date. */
+export function dayOfYearOf(day: number): number {
+  const d = Math.round(day - 1) % 365;
+  return (d < 0 ? d + 365 : d) + 1;
+}
+
+/** THE SAME MAP ON ANOTHER DAY: a copy of `level` with its sun moved to the
+ * hour and the day asked for — whichever of them is given — and everything
+ * else the very objects the seed built. A free ride asks for its own day;
+ * the ground, the track and the woods are the seed's and are never rebuilt
+ * for it. The hour is held inside the day's daylight (`freeHours`). */
+export function withDay<L extends { sun: { hour: number; dayOfYear: number; latitude: number } }>(
+  level: L,
+  day: { hour?: number | null; dayOfYear?: number | null },
+): L {
+  const dayOfYear =
+    day.dayOfYear === undefined || day.dayOfYear === null
+      ? level.sun.dayOfYear
+      : dayOfYearOf(day.dayOfYear);
+  let hour = day.hour === undefined || day.hour === null ? level.sun.hour : day.hour;
+  const w = freeHours(level.sun.latitude, dayOfYear);
+  if (w) hour = Math.min(w.max, Math.max(w.min, hour));
+  if (hour === level.sun.hour && dayOfYear === level.sun.dayOfYear) return level;
+  return { ...level, sun: { ...level.sun, hour, dayOfYear } };
+}

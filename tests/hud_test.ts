@@ -108,6 +108,22 @@ describe("the snapshot (snapshot.ts)", () => {
   });
 });
 
+describe("the damage instrument and the trench's hint (snapshot.ts)", () => {
+  it("draws the damage only on a race run with it, off the engine's figures", () => {
+    expect(takeSnapshot(race()).damage).toBe(null);
+    const state = createGame({ level: syntheticLevel(), damage: true, quiet: true });
+    state.sled.damage.ski[1] = 0.4;
+    expect(takeSnapshot(state).damage).toEqual({ skiLeft: 0, skiRight: 0.4, suspension: 0 });
+  });
+
+  it("says STUCK while the tread is dug in, and not while the rider is off it", () => {
+    const state = race();
+    expect(takeSnapshot(state).stuck).toBe(false);
+    state.sled.trench = TUNING.trench.max;
+    expect(takeSnapshot(state).stuck).toBe(true);
+  });
+});
+
 describe("the news column (run-news.ts)", () => {
   const state = race();
   const line = (e: GameEvent) => newsFor(e, state);
@@ -130,6 +146,19 @@ describe("the news column (run-news.ts)", () => {
     );
     expect(line({ kind: "lap", t: 1, lap: laps, time: 60 })).toBe(null);
     expect(line({ kind: "finish", t: 1, time: 180, place: 2 })?.tone).toBe("good");
+  });
+
+  it("says why the rider came off, that he is dug in, and what bent", () => {
+    for (const cause of ["tree", "nose", "roll"] as const) {
+      expect(line({ kind: "wipeout", t: 1, cause, speed: 14, x: 0, z: 0 })).toEqual({
+        text: STRINGS.newsWipeout(cause),
+        tone: "bad",
+      });
+    }
+    expect(line({ kind: "stuck", t: 1 })?.text).toBe(STRINGS.newsStuck);
+    expect(line({ kind: "damage", t: 1, part: "skiRight", level: 0.3 })?.text).toBe(
+      STRINGS.newsDamage("skiRight"),
+    );
   });
 
   it("says the bad news in the bad tone, and a clean landing not at all", () => {

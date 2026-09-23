@@ -54,6 +54,18 @@ export function soundForEvent(event: GameEvent): { id: string; shape?: PlayShape
       };
     }
 
+    // THE WIPEOUT: a man and a machine arriving in the snow separately —
+    // the hard landing's thud, at its biggest and lowest. What bent (the
+    // `damage` event) and a trench dug (`stuck`) are the blow's and the
+    // engine's own sounds already, and say nothing of their own.
+    case "wipeout": {
+      const hard = ramp(event.speed, 6, HIT_FULL);
+      return {
+        id: "land_hard",
+        shape: { gain: 1.1 + 0.4 * hard, pitch: 0.8 - 0.15 * hard, stretch: 1.3 + 0.4 * hard },
+      };
+    }
+
     case "bump": {
       const hard = ramp(event.speed, 1, HIT_FULL);
       return {

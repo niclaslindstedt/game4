@@ -31,10 +31,18 @@ const G = TUNING.grip;
  * surface's share of groomed track, `speed` the machine's, `scale` the
  * probe's own share of the reference tread's sink (the skis sink less, a
  * lightly loaded tread less again) and `plane` its planing speed as a
- * multiple of `snow.planeSpeed` (`footprint.ts`). */
-export function sinkTarget(packed: number, speed: number, scale: number, plane = 1): number {
+ * multiple of `snow.planeSpeed` (`footprint.ts`). `depth` is the run's
+ * SNOW DIAL (`GameState.snowDepth`, `SNOW_DIAL`): the powder's own sink
+ * scaled, the groomer's cut left alone. */
+export function sinkTarget(
+  packed: number,
+  speed: number,
+  scale: number,
+  plane = 1,
+  depth = 1,
+): number {
   const r = speed / (S.planeSpeed * plane);
-  const powder = S.powderSink * scale * Math.exp(-r * r);
+  const powder = S.powderSink * depth * scale * Math.exp(-r * r);
   return powder * (1 - packed) + S.packedSink * packed;
 }
 
@@ -42,9 +50,16 @@ export function sinkTarget(packed: number, speed: number, scale: number, plane =
  * that sinks `scale` times the reference's (`Footprint.sink`). What the
  * chassis contacts read as the bottom of the snow (`chassis.ts`): deep
  * powder does not hold a belly up, it is pushed aside by it — down to the
- * base the machine's own tread has pressed, and no further. */
-export function powderFloor(packed: number, scale = 1): number {
-  return S.powderSink * Math.max(1, scale) * (1 - packed) + S.packedSink * packed;
+ * base the machine's own tread has pressed, and no further. `depth` is the
+ * run's snow dial, as `sinkTarget` takes it. */
+export function powderFloor(packed: number, scale = 1, depth = 1): number {
+  return S.powderSink * depth * Math.max(1, scale) * (1 - packed) + S.packedSink * packed;
+}
+
+/** How deep a sled at rest sinks into untouched powder at a run's snow
+ * dial, m — the figure the start card reads the dial back as. */
+export function restSinkOf(depth: number): number {
+  return S.powderSink * depth;
 }
 
 /** The resistance along a probe's line of travel, N, as a magnitude (the

@@ -8,13 +8,23 @@
 
 import * as THREE from "three";
 
-import { BODY, riderPose, type RiderInput, type V3 } from "./rider-pose.ts";
+import {
+  BODY,
+  riderPose,
+  sprawlPose,
+  type RiderInput,
+  type RiderPose,
+  type V3,
+} from "./rider-pose.ts";
 
 export type RiderStyle = { jacket: number; pants: number; helmet: number; visor: number };
 
 export type RiderFigure = {
   group: THREE.Group;
   pose(input: RiderInput): void;
+  /** Pose him THROWN (`sprawlPose`): his own clock, s, and how hard he is
+   * still flailing, 0..1. The caller places the group. */
+  sprawl(phase: number, flail: number): void;
   dispose(): void;
 };
 
@@ -110,27 +120,34 @@ export function createRider(
   return {
     group,
     pose(input) {
-      const p = riderPose(input);
-      for (let i = 0; i < 2; i++) {
-        const hip = {
-          x: p.hips.x + (i === 0 ? -1 : 1) * BODY.hip * Math.cos(p.roll),
-          y: p.hips.y - (i === 0 ? -1 : 1) * BODY.hip * Math.sin(p.roll),
-          z: p.hips.z,
-        };
-        place(thighs[i], hip, p.knees[i]);
-        place(shins[i], p.knees[i], p.feet[i]);
-        place(upper[i], p.shoulders[i], p.elbows[i]);
-        place(fore[i], p.elbows[i], p.hands[i]);
-        boots[i].position.set(p.feet[i].x, p.feet[i].y - 0.02, p.feet[i].z + 0.06);
-        hands[i].position.set(p.hands[i].x, p.hands[i].y, p.hands[i].z);
-      }
-      place(torso, p.hips, p.neck);
-      headGroup.position.set(p.head.x, p.head.y, p.head.z);
-      headGroup.rotation.set(-0.25 + p.pitch * 0.35, 0, -p.roll * 0.5);
+      lay(riderPose(input));
+    },
+    sprawl(phase, flail) {
+      lay(sprawlPose(phase, flail));
     },
     dispose() {
       for (const g of geos) g.dispose();
       for (const m of mats) m.dispose();
     },
   };
+
+  /** Hang the figure on a pose's points. */
+  function lay(p: RiderPose): void {
+    for (let i = 0; i < 2; i++) {
+      const hip = {
+        x: p.hips.x + (i === 0 ? -1 : 1) * BODY.hip * Math.cos(p.roll),
+        y: p.hips.y - (i === 0 ? -1 : 1) * BODY.hip * Math.sin(p.roll),
+        z: p.hips.z,
+      };
+      place(thighs[i], hip, p.knees[i]);
+      place(shins[i], p.knees[i], p.feet[i]);
+      place(upper[i], p.shoulders[i], p.elbows[i]);
+      place(fore[i], p.elbows[i], p.hands[i]);
+      boots[i].position.set(p.feet[i].x, p.feet[i].y - 0.02, p.feet[i].z + 0.06);
+      hands[i].position.set(p.hands[i].x, p.hands[i].y, p.hands[i].z);
+    }
+    place(torso, p.hips, p.neck);
+    headGroup.position.set(p.head.x, p.head.y, p.head.z);
+    headGroup.rotation.set(-0.25 + p.pitch * 0.35, 0, -p.roll * 0.5);
+  }
 }
