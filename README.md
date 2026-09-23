@@ -16,7 +16,7 @@ Every map is **generated from a seed** by a rules engine: a basin of rolling hil
 
 One sled ships, an invented trail sled with no real brand behind it, with its rider on the seat. Every hill, every tree and every sled is written in code; the game ships no asset files, and every sound is synthesized.
 
-**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock and your place, keyboard and touch controls, and a shell of attract card, front door, loading card, pause card and finish plate. Weather, night, more modes, more sleds and the desktop and store apps are planned, not built.
+**What exists today is the first vertical slice**: one generated map, one sled, RACE mode only (you and three bot rivals, three laps) under a clear sky, the trails every sled leaves in the snow, a HUD with the speed, the lap and checkpoint count, the race clock and your place, keyboard and touch controls, and a shell of attract card, front door, loading card, pause card and finish plate. The same build also ships as a desktop app (`tauri/`) and a store app for phones (`native/`). Weather, night, more modes and more sleds are planned, not built.
 
 ## Why
 
@@ -24,7 +24,7 @@ One sled ships, an invented trail sled with no real brand behind it, with its ri
 - **A sled, not a car.** Two sprung skis steer, a sprung tread drives through a traction limit, and the rider's weight carves the sled in powder. Each force is stated once, with its unit.
 - **Maps, endlessly.** A rules engine builds every map and every track under hard constraints — same seed, same map, shareable and replayable.
 - **Measured, not guessed.** A headless simulator rides a bot through the real engine; the balance table and the labs keep the sled, the snow and the generator honest with each other.
-- **Web-native.** One codebase, phone-first, portrait and landscape, installable, offline-capable. Desktop and store shells come later ([docs/platforms.md](docs/platforms.md)).
+- **Web-native.** One codebase, phone-first, portrait and landscape, installable, offline-capable. The same site is wrapped as a desktop app and a store app ([docs/platforms.md](docs/platforms.md)).
 
 ## Prerequisites
 
@@ -83,9 +83,9 @@ The browser-driven labs (`screenshots`, `profile`, `world`, `audition ARGS=--met
 
 ## Controls
 
-**Keyboard:** W throttle, A D / ← → steer, S / Space brake, ↑ ↓ lean the rider forward and back (in the air they pitch the sled), R back onto the track at the last checkpoint you passed, C camera, Escape pause. In the air the throttle spins the tread and lifts the nose; the brake stops it and drops the nose.
+**Keyboard:** W / ↑ throttle, S / ↓ / Space brake, A D / ← → steer, E / Shift lean back and Q / Z lean forward (in the air they pitch the sled), R back onto the track at the last checkpoint you passed, B restart the race from the grid, C camera, Escape pause. In the air the throttle spins the tread and lifts the nose; the brake stops it and drops the nose.
 
-**Touch:** the lower-left of the screen is the handlebar — touch anywhere and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the throttle lever — drag DOWN to open it, further for the brake. Works in portrait and landscape; the HUD re-flows to fit.
+**Touch:** the lower-left of the screen is the handlebar — touch anywhere and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the lever — it anchors where your thumb lands: drag DOWN to open the throttle, push UP to brake. The top-right corner carries three presses: pause, reset, camera. Works in portrait and landscape; the HUD re-flows to fit.
 
 **On the phone:** the game is an installable PWA — open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/), then "Add to Home Screen" (iOS Safari: Share → Add to Home Screen; Android Chrome: menu → Install app). It launches fullscreen, works offline and prompts in-app when a new build ships.
 
@@ -121,7 +121,10 @@ Three layers, one direction of dependency: `engine/` is the whole game as a fram
 ## Documentation
 
 - [Configuration](docs/configuration.md) — URL parameters, the deploy slots, the identity
-- [Platforms](docs/platforms.md) — the web, and the desktop and store apps planned beside it
+- [Getting started](docs/getting-started.md) — a first race, every control, running from a checkout
+- [Troubleshooting](docs/troubleshooting.md) — what goes wrong playing and developing, and why
+- [Audio](docs/audio.md) — how every sound is synthesized and mixed
+- [Platforms](docs/platforms.md) — the web, the desktop app and the store app
 - [Spec conformance](docs/spec-conformance.md) — where this repo stands against [OSS_GAME_SPEC.md](OSS_GAME_SPEC.md), chapter by chapter
 
 ## Contributing
