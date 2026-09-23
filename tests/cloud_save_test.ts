@@ -28,12 +28,12 @@ import { GHOST_FORMAT, GHOST_PREFIX, type GhostRun } from "../pwa/src/game/ghost
 import { RECORDS_KEY, recordId, type RecordBook } from "../pwa/src/game/records.ts";
 import { freshSettings } from "../pwa/src/game/settings.ts";
 
-const raceId = recordId({ seed: 5, sled: "trail", mode: "race", laps: 3 });
-const trialId = recordId({ seed: 5, sled: "trail", mode: "timeTrial", laps: 1 });
+const raceId = recordId({ seed: 5, sled: "hare", mode: "race", laps: 3 });
+const trialId = recordId({ seed: 5, sled: "hare", mode: "timeTrial", laps: 1 });
 
 const book = (rows: Record<string, number>): RecordBook =>
   Object.fromEntries(
-    Object.entries(rows).map(([id, value]) => [id, { value, sled: "trail", at: 1, splits: [] }]),
+    Object.entries(rows).map(([id, value]) => [id, { value, sled: "hare", at: 1, splits: [] }]),
   );
 
 const tape = (id: string, value: number, steps = 100): GhostRun => ({
@@ -41,7 +41,7 @@ const tape = (id: string, value: number, steps = 100): GhostRun => ({
   map: "0badf00d",
   format: GHOST_FORMAT,
   seed: 5,
-  sled: "trail",
+  sled: "hare",
   mode: "timeTrial",
   laps: 1,
   assist: { yaw: 1, air: 1 },
@@ -88,7 +88,7 @@ describe("the record book: best per row", () => {
 
 describe("the ghosts: the faster tape per row", () => {
   it("keeps the faster tape, and every tape only one side has", () => {
-    const other = recordId({ seed: 9, sled: "cross", mode: "timeTrial", laps: 3 });
+    const other = recordId({ seed: 9, sled: "stoat", mode: "timeTrial", laps: 3 });
     const merged = mergeGhosts([tape(trialId, 64)], [tape(trialId, 60), tape(other, 180)]);
     expect(merged.map((g) => [g.id, g.value])).toEqual(
       [
@@ -99,7 +99,7 @@ describe("the ghosts: the faster tape per row", () => {
   });
 
   it("packs the smallest tapes first and leaves one that does not fit", () => {
-    const small = tape(recordId({ seed: 1, sled: "trail", mode: "timeTrial", laps: 1 }), 50);
+    const small = tape(recordId({ seed: 1, sled: "hare", mode: "timeTrial", laps: 1 }), 50);
     const big = { ...tape(trialId, 60), steer: "A".repeat(5000) };
     const base = JSON.stringify(save({ ghosts: [] })).length;
     const text = packSave(save({ ghosts: [big, small] }), base + JSON.stringify(small).length + 10);
@@ -111,16 +111,16 @@ describe("the ghosts: the faster tape per row", () => {
 
 describe("the campaign: furthest progress", () => {
   const board = (result: Partial<CampaignProgress["results"][string]>): CampaignProgress => ({
-    results: { "foothills-1": { best: 100, sled: "trail", place: 4, medal: null, ...result } },
+    results: { "foothills-1": { best: 100, sled: "hare", place: 4, medal: null, ...result } },
     points: {},
   });
 
   it("keeps the better time, and the sled that set it, together", () => {
     const merged = mergeBoards(
-      board({ best: 95, sled: "trail", place: 3 }),
-      board({ best: 90, sled: "cross", place: 2 }),
+      board({ best: 95, sled: "hare", place: 3 }),
+      board({ best: 90, sled: "stoat", place: 2 }),
     );
-    expect(merged.results["foothills-1"]).toMatchObject({ best: 90, sled: "cross" });
+    expect(merged.results["foothills-1"]).toMatchObject({ best: 90, sled: "stoat" });
   });
 
   it("keeps the HIGHER place even when the other device was slower", () => {
@@ -134,16 +134,16 @@ describe("the campaign: furthest progress", () => {
       points: {},
     };
     expect(
-      mergeBoards(unlocked, board({ best: 97, sled: "cross" })).results["foothills-1"],
+      mergeBoards(unlocked, board({ best: 97, sled: "stoat" })).results["foothills-1"],
     ).toMatchObject({
       best: 97,
-      sled: "cross",
+      sled: "stoat",
     });
     expect(
-      mergeBoards(board({ best: 97, sled: "cross" }), unlocked).results["foothills-1"],
+      mergeBoards(board({ best: 97, sled: "stoat" }), unlocked).results["foothills-1"],
     ).toMatchObject({
       best: 97,
-      sled: "cross",
+      sled: "stoat",
     });
   });
 
@@ -157,7 +157,7 @@ describe("the campaign: furthest progress", () => {
 
   it("drops a map this ladder no longer has", () => {
     const merged = mergeBoards(EMPTY_PROGRESS, {
-      results: { "a-shelf-that-was-recut-9": { best: 1, sled: "trail", place: 1, medal: "gold" } },
+      results: { "a-shelf-that-was-recut-9": { best: 1, sled: "hare", place: 1, medal: "gold" } },
       points: { "a-shelf-that-was-recut-9": { you: 3 } },
     });
     expect(merged).toEqual(EMPTY_PROGRESS);
@@ -196,13 +196,13 @@ describe("the settings: the rider's half, the later change", () => {
 
   it("reads a stamp off the wire through the settings' own validator", () => {
     const text = JSON.stringify({
-      settings: { at: 5, values: { camera: "orbit", sled: "cross", video: { pixels: 9 } } },
+      settings: { at: 5, values: { camera: "orbit", sled: "stoat", video: { pixels: 9 } } },
     });
     const read = parseSave(text)?.settings;
     // `orbit` is no rung C can walk to, so it is the default rung; the picture
     // never arrives at all.
     expect(read?.values.camera).toBe(freshSettings().camera);
-    expect(read?.values.sled).toBe("cross");
+    expect(read?.values.sled).toBe("stoat");
     expect(read?.values).not.toHaveProperty("video");
     // A stamp that is not a moment never wins.
     expect(parseSave(JSON.stringify({ settings: { at: 0, values: {} } }))?.settings).toBeNull();
@@ -219,7 +219,7 @@ describe("what comes off the wire", () => {
   it("puts a blob through the same validators local storage uses", () => {
     const read = parseSave(
       JSON.stringify({
-        records: { [raceId]: { value: -1, sled: "trail", at: 1, splits: [] } },
+        records: { [raceId]: { value: -1, sled: "hare", at: 1, splits: [] } },
         ghosts: [{ id: trialId, value: 60 }, tape(trialId, 61)],
         campaign: { results: {}, points: {} },
       }),

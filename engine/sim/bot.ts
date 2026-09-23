@@ -150,6 +150,10 @@ function bendAt(level: Level, s: number, span: number): number {
  * speed in turn, until the impact into the slope would bottom the
  * suspension of the machine he is on. A rider learns this on his first lap;
  * the bot is handed it. Worked out once per kicker per machine. */
+/** How far short of a kicker's lip the bot is at the speed it takes it at,
+ * m — about the length of the ramp. */
+const KICKER_RUNUP = 10;
+
 const kickerSpeeds = new WeakMap<SledSpec, WeakMap<Kicker, number>>();
 function kickerSpeed(level: Level, k: Kicker, spec: SledSpec, profile: BotProfile): number {
   let mine = kickerSpeeds.get(spec);
@@ -213,7 +217,10 @@ function speedAllowed(state: GameState, s: number, speed: number, profile: BotPr
     const d = arcAhead(level, s, k.s);
     if (d > reach) continue;
     const v = kickerSpeed(level, k, spec, profile);
-    const now = Math.sqrt(v * v + 2 * decel * d);
+    // At its speed a ramp's length SHORT of the lip, and steady up the ramp:
+    // a sled braked on the lip loads its skis, and with them gone over the
+    // crest it pitches onto its nose before it has left the snow.
+    const now = Math.sqrt(v * v + 2 * decel * Math.max(0, d - KICKER_RUNUP));
     if (now < allowed) allowed = now;
   }
   return allowed;

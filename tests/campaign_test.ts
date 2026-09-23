@@ -65,7 +65,7 @@ function winShelf(progress: CampaignProgress, shelf = FIRST): CampaignProgress {
   for (const level of shelf.levels) {
     out = recordRun(out, level, {
       time: level.medals ? level.medals.gold - 1 : 300,
-      sled: "trail",
+      sled: "hare",
       order: orderWith(1),
     });
   }
@@ -153,28 +153,28 @@ describe("the board keeps the better afternoon", () => {
   it("books the whole field's points on a race", () => {
     const after = recordRun(EMPTY_PROGRESS, level, {
       time: 400,
-      sled: "trail",
+      sled: "hare",
       order: orderWith(2),
     });
-    expect(after.results[level.id]).toEqual({ best: 400, sled: "trail", place: 2, medal: null });
+    expect(after.results[level.id]).toEqual({ best: 400, sled: "hare", place: 2, medal: null });
     expect(after.points[level.id][PLAYER_ID]).toBe(2);
     expect(after.points[level.id][riderKey(0)]).toBe(3);
     expect(Object.values(after.points[level.id]).reduce((a, b) => a + b, 0)).toBe(6);
   });
 
   it("keeps a better place's board over a worse run, and a faster time on its own", () => {
-    const won = recordRun(EMPTY_PROGRESS, level, { time: 420, sled: "trail", order: orderWith(1) });
-    const worse = recordRun(won, level, { time: 390, sled: "cross", order: orderWith(4) });
+    const won = recordRun(EMPTY_PROGRESS, level, { time: 420, sled: "hare", order: orderWith(1) });
+    const worse = recordRun(won, level, { time: 390, sled: "stoat", order: orderWith(4) });
     expect(worse.points[level.id]).toEqual(won.points[level.id]);
-    expect(worse.results[level.id]).toEqual({ best: 390, sled: "cross", place: 1, medal: null });
+    expect(worse.results[level.id]).toEqual({ best: 390, sled: "stoat", place: 1, medal: null });
   });
 
   it("books no points on a trial, and keeps the best medal", () => {
     const t = trial();
     const m = t.medals!;
-    const gold = recordRun(EMPTY_PROGRESS, t, { time: m.gold, sled: "trail", order: [null] });
+    const gold = recordRun(EMPTY_PROGRESS, t, { time: m.gold, sled: "hare", order: [null] });
     expect(gold.points[t.id]).toBeUndefined();
-    const slower = recordRun(gold, t, { time: m.bronze, sled: "trail", order: [null] });
+    const slower = recordRun(gold, t, { time: m.bronze, sled: "hare", order: [null] });
     expect(slower.results[t.id].medal).toBe("gold");
     expect(slower.results[t.id].best).toBe(m.gold);
   });
@@ -193,12 +193,12 @@ describe("the locks", () => {
     const level = FIRST.levels[0];
     const fourth = recordRun(EMPTY_PROGRESS, level, {
       time: 1,
-      sled: "trail",
+      sled: "hare",
       order: orderWith(4),
     });
     expect(levelCleared(fourth, level)).toBe(false);
     expect(levelUnlocked(FIRST, 1, fourth)).toBe(false);
-    const third = recordRun(fourth, level, { time: 1, sled: "trail", order: orderWith(3) });
+    const third = recordRun(fourth, level, { time: 1, sled: "hare", order: orderWith(3) });
     expect(levelCleared(third, level)).toBe(true);
     expect(levelUnlocked(FIRST, 1, third)).toBe(true);
   });
@@ -207,11 +207,11 @@ describe("the locks", () => {
     const t = trial();
     const none = recordRun(EMPTY_PROGRESS, t, {
       time: t.medals!.bronze + 5,
-      sled: "trail",
+      sled: "hare",
       order: [null],
     });
     expect(levelCleared(none, t)).toBe(false);
-    const bronze = recordRun(none, t, { time: t.medals!.bronze, sled: "trail", order: [null] });
+    const bronze = recordRun(none, t, { time: t.medals!.bronze, sled: "hare", order: [null] });
     expect(levelCleared(bronze, t)).toBe(true);
   });
 
@@ -228,7 +228,7 @@ describe("the locks", () => {
     for (const level of FIRST.levels) {
       out = recordRun(out, level, {
         time: level.medals ? level.medals.gold : 300,
-        sled: "trail",
+        sled: "hare",
         order: orderWith(3),
       });
     }
@@ -250,7 +250,7 @@ describe("where the campaign picks back up", () => {
     expect(continueAt(FIRST, EMPTY_PROGRESS)).toBe(FIRST.levels[0]);
     const one = recordRun(EMPTY_PROGRESS, FIRST.levels[0], {
       time: 1,
-      sled: "trail",
+      sled: "hare",
       order: orderWith(2),
     });
     expect(continueAt(FIRST, one)).toBe(FIRST.levels[1]);
@@ -260,7 +260,7 @@ describe("where the campaign picks back up", () => {
   it("names the next rung, the next shelf, or the end", () => {
     const one = recordRun(EMPTY_PROGRESS, FIRST.levels[0], {
       time: 1,
-      sled: "trail",
+      sled: "hare",
       order: orderWith(1),
     });
     expect(ladderAfter(FIRST.levels[0].id, one)).toEqual({ kind: "next", level: FIRST.levels[1] });
@@ -281,11 +281,11 @@ describe("a stored board", () => {
   it("drops anything this ladder does not have or cannot read", () => {
     const out = mergeProgress({
       results: {
-        "nowhere-1": { best: 1, sled: "trail", place: 1, medal: null },
-        "foothills-1": { best: "fast", sled: "trail", place: 1, medal: null },
+        "nowhere-1": { best: 1, sled: "hare", place: 1, medal: null },
+        "foothills-1": { best: "fast", sled: "hare", place: 1, medal: null },
         "foothills-2": { best: 100, sled: "sofa", place: 1, medal: "gold" },
-        "foothills-3": { best: 100, sled: "trail", place: 0, medal: null },
-        "foothills-4": { best: 100, sled: "trail", place: 2, medal: "platinum" },
+        "foothills-3": { best: 100, sled: "hare", place: 0, medal: null },
+        "foothills-4": { best: 100, sled: "hare", place: 2, medal: "platinum" },
       },
       points: { "nowhere-1": { you: 3 }, "foothills-4": { you: 2, r0: "x" } },
     });
@@ -364,7 +364,7 @@ describe("which map a run is on", () => {
 describe("the finish plate on a rung", () => {
   it("pays the podium and says what opened", () => {
     const level = FIRST.levels[0];
-    const after = recordRun(EMPTY_PROGRESS, level, { time: 1, sled: "trail", order: orderWith(1) });
+    const after = recordRun(EMPTY_PROGRESS, level, { time: 1, sled: "hare", order: orderWith(1) });
     const plate = campaignPlateFor(level, 1, 1, EMPTY_PROGRESS, after);
     expect(plate.cleared).toBe(true);
     expect(plate.award).toContain("3");
@@ -374,7 +374,7 @@ describe("the finish plate on a rung", () => {
 
   it("says a fourth place clears nothing and offers no next map", () => {
     const level = FIRST.levels[0];
-    const after = recordRun(EMPTY_PROGRESS, level, { time: 1, sled: "trail", order: orderWith(4) });
+    const after = recordRun(EMPTY_PROGRESS, level, { time: 1, sled: "hare", order: orderWith(4) });
     const plate = campaignPlateFor(level, 1, 4, EMPTY_PROGRESS, after);
     expect(plate.cleared).toBe(false);
     expect(plate.next).toBeNull();

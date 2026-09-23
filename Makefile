@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky birds build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky sled birds build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -45,6 +45,16 @@ icons:
 # session. SEED=n picks the map; ARGS="--views=powder,lookback" a subset.
 world:
 	npm run world -- $(if $(SEED),--seed $(SEED),) $(if $(REGION),--region $(REGION),) $(ARGS)
+
+# THE SLED LAB: every machine and its rider built with the game's own
+# builder and drawn on labelled contact sheets — previews/sled-<sheet>.png:
+# the catalog by view (side, front, rear, three-quarter, chase), one
+# machine's rider in every pose, and a landing as a time-lapse of the body
+# on its legs. Its own one-off bundle from pwa/sled-preview.html (never
+# deployed); needs a Chromium like `world`. SLED=id picks the machine the
+# poses and the landing ride; ARGS="--sheet=poses" one sheet.
+sled:
+	npm run sled -- $(if $(SLED),--sled $(SLED),) $(ARGS)
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact

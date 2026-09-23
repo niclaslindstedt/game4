@@ -22,8 +22,8 @@
 //                   screenshot's shutter.
 //   ?paused=1       ...or held under the pause card.
 //   ?camera=<rung>  the run's camera (hood, bars, chase, far, high).
-//   ?sled=<id>      the player's machine for this visit (trail, crossover,
-//                   mountain, cross), over the stored one and never written
+//   ?sled=<id>      the player's machine for this visit (hare, fox, ibex,
+//                   stoat, beaver, bison), over the stored one and never written
 //                   back — how a lab photographs a sled it did not pick.
 //   ?mode=trial     the run a link boots into (or the next one pressed) is
 //                   a TIME TRIAL — alone, against the record and the ghost —

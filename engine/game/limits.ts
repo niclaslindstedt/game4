@@ -7,8 +7,11 @@
 import { SLED, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { footprintOf, skiShare } from "./footprint.ts";
+import { gripAt, type Grip } from "./snow.ts";
 import { probesOf } from "./suspension.ts";
 import { skiLockAt } from "./sled.ts";
+
+const scratch: Grip = { tread: 0, treadSide: 0, ski: 0 };
 
 /** The redline, rpm. */
 export function maxRpm(spec: SledSpec): number {
@@ -40,7 +43,7 @@ export function lockAt(spec: SledSpec, speed: number): number {
  * a ski in, and why long travel (a taller machine) gives some of it back. */
 export function tipLimit(spec: SledSpec): number {
   const hang = (spec.riderReach * spec.riderMass) / totalMass(spec);
-  return (spec.skiStance / 2 + hang) / spec.cogHeight;
+  return ((spec.skiStance / 2 + hang) / spec.cogHeight) * TUNING.arcade.hangOff;
 }
 
 /** HOW HARD A SLED CAN CORNER, m/s², on snow `packed` 0..1: the skis' and
@@ -49,22 +52,20 @@ export function tipLimit(spec: SledSpec): number {
  * comes first. That is what a sled holding a line round a bend can call on;
  * the bot reads it to judge a corner's speed. */
 export function cornerGrip(spec: SledSpec, packed: number): number {
-  const G = TUNING.grip;
-  const fit = footprintOf(spec);
-  const ski = G.skiPacked * packed + G.skiPowder * (1 - packed);
-  const tread =
-    G.treadSidePacked * fit.packedSide * packed +
-    G.treadSidePowder * fit.powderDrive * (1 - packed);
+  const grip = gripAt(packed, scratch, footprintOf(spec));
+  const ski = grip.ski;
+  const tread = grip.treadSide;
   const share = skiShare(spec);
-  return TUNING.g * Math.min(ski * share + tread * (1 - share), tipLimit(spec));
+  return (
+    TUNING.g *
+    Math.min((ski * share + tread * (1 - share)) * TUNING.arcade.sideGrip, tipLimit(spec))
+  );
 }
 
 /** How hard a sled can stop, m/s², on snow `packed` 0..1: the tread locked
  * on its grip, less what the skis carry. */
 export function brakeDecel(spec: SledSpec, packed: number): number {
-  const G = TUNING.grip;
-  const fit = footprintOf(spec);
-  const tread = G.treadPacked * packed + G.treadPowder * fit.powderDrive * (1 - packed);
+  const tread = gripAt(packed, scratch, footprintOf(spec)).tread;
   return TUNING.g * tread * (1 - skiShare(spec));
 }
 

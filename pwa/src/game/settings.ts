@@ -26,6 +26,7 @@ import { freshRide, mergeRide, type FreeRide } from "./free-ride.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
 import { DEFAULT_VIDEO, mergeVideo, type VideoSettings } from "./settings-video.ts";
+import { LIVERIES } from "./sled-liveries.ts";
 
 /** THE LADDER C WALKS, nearest first. "orbit" is not on it: that is the
  * cards' own slow turn round the sled, and a rung a rider could land on by
@@ -80,6 +81,10 @@ export type Settings = {
   camera: CameraRung;
   /** The machine the player races on (`SLEDS`). */
   sled: SledId;
+  /** The livery the player dresses each machine in (`sled-liveries.ts`),
+   * an index into its list — kept per machine, so trying another machine's
+   * colours does not lose this one's. A machine with none is in its own. */
+  liveries: Partial<Record<SledId, number>>;
   /** Whether the game makes a sound at all. */
   sound: boolean;
   audio: AudioLevels;
@@ -112,6 +117,11 @@ export type Settings = {
   dev: DevSettings;
 };
 
+/** Settings with machine `id` dressed in livery `index`. */
+export function withLivery(s: Settings, id: SledId, index: number): Settings {
+  return { ...s, liveries: { ...s.liveries, [id]: index } };
+}
+
 /** How long the front door's title is held to let the developer page out,
  * ms: long enough that no thumb resting on it does it by accident. */
 export const DEV_HOLD_MS = 7000;
@@ -134,6 +144,7 @@ export function freshSettings(): Settings {
   return {
     camera: DEFAULT_CAMERA,
     sled: SLED.id,
+    liveries: {},
     sound: true,
     audio: { master: 1, engine: 1, effects: 1 },
     video: { ...DEFAULT_VIDEO },
@@ -189,6 +200,12 @@ export function mergeSettings(parsed: unknown): Settings {
     out.camera = blob.camera as CameraRung;
   }
   if (typeof blob.sled === "string" && isSledId(blob.sled)) out.sled = blob.sled;
+  const liveries = record(blob.liveries);
+  for (const id of Object.keys(liveries)) {
+    const pick = liveries[id];
+    if (!isSledId(id) || typeof pick !== "number" || !Number.isInteger(pick)) continue;
+    if (pick >= 0 && pick < LIVERIES[id].length) out.liveries[id] = pick;
+  }
   if (typeof blob.sound === "boolean") out.sound = blob.sound;
   const audio = record(blob.audio);
   for (const k of ["master", "engine", "effects"] as const) {

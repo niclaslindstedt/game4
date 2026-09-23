@@ -777,6 +777,7 @@ export function App() {
   // renderer's own effect above, so the first call finds it standing.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => rendererRef.current?.setVideo(videoOf(settings)), [renderKit, settings.video]);
+  useEffect(() => rendererRef.current?.dress(settings.liveries), [renderKit, settings.liveries]);
 
   /** THE TIME TRIAL'S MAP: a pinned one, or the one the menu stands over. */
   const trialSeed = params.seed ?? mapSeed;
@@ -918,10 +919,12 @@ export function App() {
           ) : page === "sled" ? (
             <SledPage
               sled={specOf(settings).id}
+              liveries={settings.liveries}
               onPick={(sled) => {
                 setLinkSled(null);
                 setSettings((s) => ({ ...s, sled }));
               }}
+              onLivery={(liveries) => setSettings((s) => ({ ...s, liveries }))}
               onBack={() => setPage(sledBack(campaign.rung.current, modeRef.current, params.seed))}
               onRide={modeRef.current === "free" ? freeRide : race}
             />

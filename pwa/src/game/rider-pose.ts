@@ -12,12 +12,20 @@
 // forward up a climb, back for a landing. So the base pose is a crouch over
 // the seat, and every input the engine reports moves it:
 //
+//   * `stand` is how far up off the seat he is: sat down at a crawl, half
+//     standing on the move (the way the photographs of a sled ridden hard
+//     show it: knees bent, torso over the bars, elbows up), fully up in the
+//     air, where the legs are the suspension he lands on;
 //   * `riderRight` / `riderAft` are where the engine has put his mass (m),
-//     and the hips go there — the physics' own lag is the pose's lag;
+//     and the hips go there — the physics' own lag is the pose's lag. HUNG
+//     OFF into a turn, the hips go past the seat's edge and the upper body
+//     further still, the head held level: the inside knee folds, the outside
+//     leg braces;
 //   * `lean` (+1 back) pitches the torso back and drops the hips toward the
 //     seat, -1 throws it forward over the bars;
+//   * `bump` is his legs taking a hit — the body lagging the machine on the
+//     knees (`riderSpring`): a landing folds him down and he comes back up;
 //   * the bars turn with `steer`, and the hands stay on the grips;
-//   * in the air he stands taller, and a hard landing folds the knees;
 //   * on a tricks run a POSE held in the air takes a foot off the boards
 //     (`RiderInput.trick`).
 //
@@ -53,9 +61,21 @@ export const MOUNTS = {
   pivot: { x: 0, y: 0.45, z: 0.32 },
   /** The feet on the running boards. */
   foot: { x: 0.28, y: -0.22, z: -0.2 },
-  /** The hips at the base pose. */
+  /** The hips sat on the seat — and stood up over the boards, legs a
+   * little bent, which is where they go as `stand` comes up to 1. */
   hips: { x: 0, y: 0.34, z: -0.42 },
+  standHips: { x: 0, y: 0.58, z: -0.3 },
 };
+
+/** How far the hips hang past the machine's centre for every metre the
+ * engine has moved his mass — the body goes further than its centre of
+ * mass does, because the legs stay on the machine. */
+const HANG = 1.1;
+/** The upper body's roll into a turn at the engine's full reach, rad. */
+const HANG_ROLL = 0.42;
+/** The torso's pitch over the bars sat down and stood up, rad. */
+const PITCH_SAT = 0.38;
+const PITCH_STOOD = 0.78;
 
 export type RiderInput = {
   riderRight: number;
@@ -63,8 +83,15 @@ export type RiderInput = {
   lean: number;
   steer: number;
   airborne: boolean;
-  /** Seconds since the last landing — a fresh landing folds the knees. */
+  /** Seconds since the last landing — a fresh landing folds the knees when
+   * no `bump` is handed in. */
   landing: number;
+  /** Up off the seat, 0 (sat) … 1 (stood tall); by default half standing on
+   * the snow and fully up in the air (`riderSpring` eases it). */
+  stand?: number;
+  /** How far his legs are folded by a hit, m — positive is the body sunk
+   * toward the machine (`riderSpring`). */
+  bump?: number;
   /** A TRICKS run's pose held in the air (`strokes.ts`), or none. */
   trick?: TrickPose | null;
 };
@@ -193,34 +220,49 @@ export function sprawlPose(phase: number, flail: number): RiderPose {
 export function riderPose(input: RiderInput): RiderPose {
   const lean = Math.max(-1, Math.min(1, input.lean));
   const bars = input.steer * 0.42;
-  // A fresh landing takes it in the knees, over a third of a second.
-  const absorb = input.airborne ? 0 : Math.max(0, 1 - input.landing / 0.35) * 0.12;
-  const stand = input.airborne ? 0.06 : 0;
+  // A fresh landing takes it in the knees — the spring's, when there is
+  // one, or else a fold over a third of a second.
+  const bump = input.bump ?? (input.airborne ? 0 : Math.max(0, 1 - input.landing / 0.35) * 0.12);
+  const fold = Math.max(0, bump);
+  const stand = Math.max(0, Math.min(1, input.stand ?? (input.airborne ? 1 : 0.6)));
+  // Hung off: how far, as a share of a full hang, signed to the side.
+  const hang = Math.max(-1, Math.min(1, input.riderRight / 0.3));
+  const sat = MOUNTS.hips;
+  const up = MOUNTS.standHips;
   const hips: V3 = {
-    x: MOUNTS.hips.x + input.riderRight * 0.9,
-    y: MOUNTS.hips.y - 0.05 * Math.max(0, lean) + stand - absorb,
-    z: MOUNTS.hips.z - input.riderAft * 0.8 - 0.06 * lean,
+    x: sat.x + input.riderRight * HANG,
+    y:
+      sat.y +
+      (up.y - sat.y) * stand -
+      0.05 * Math.max(0, lean) -
+      0.07 * Math.abs(hang) * stand -
+      bump,
+    z: sat.z + (up.z - sat.z) * stand - input.riderAft * 0.8 - 0.06 * lean,
   };
-  const pitch = 0.62 - 0.32 * lean + absorb * 1.2;
+  const pitch = PITCH_SAT + (PITCH_STOOD - PITCH_SAT) * stand - 0.32 * lean + fold * 1.6;
   // Hung off into a turn, the upper body leans further in than the hips.
-  const roll = input.riderRight * 1.1;
+  const roll = hang * HANG_ROLL;
   const spineDir: V3 = {
     x: Math.sin(roll) * Math.cos(pitch),
     y: Math.cos(roll) * Math.cos(pitch),
     z: Math.sin(pitch),
   };
   const neck = add(hips, scale(norm(spineDir), BODY.spine));
+  // The head is held LEVEL — a rider looks at the snow ahead, not at the
+  // sky his shoulders are tipped toward.
   const head = add(
     neck,
-    scale(norm({ x: spineDir.x * 0.5, y: 1, z: spineDir.z * 0.4 }), BODY.neck),
+    scale(norm({ x: spineDir.x * 0.35, y: 1, z: spineDir.z * 0.55 }), BODY.neck),
   );
   // The right-hand direction of the torso, flattened.
   const across: V3 = norm({ x: Math.cos(roll), y: -Math.sin(roll), z: 0 });
 
+  // The boots on the boards — a little forward when he is up, over the
+  // balls of his feet.
   const feet: [V3, V3] = [-1, 1].map((side) => ({
     x: side * MOUNTS.foot.x,
     y: MOUNTS.foot.y,
-    z: MOUNTS.foot.z,
+    z: MOUNTS.foot.z + 0.08 * stand,
   })) as [V3, V3];
   // THE POSES, the hands still on the grips: a foot off the right-hand
   // board and kicked out to the side; the right leg swung over the seat to
@@ -230,20 +272,92 @@ export function riderPose(input: RiderInput): RiderPose {
   else if (input.trick === "tuck") {
     for (let i = 0; i < 2; i++) feet[i] = { x: feet[i].x * 0.7, y: hips.y - 0.18, z: 0.22 };
   }
-  const knees = [-1, 1].map((side, i) =>
-    solveLimb(add(hips, scale(across, side * BODY.hip)), feet[i], BODY.thigh, BODY.shin, {
-      x: side * 0.35,
+  // The knees go forward and out; the INSIDE knee of a hang is thrown out
+  // over its board and the outside one tucked against the seat.
+  const knees = [-1, 1].map((side, i) => {
+    const inside = side * hang > 0 ? Math.abs(hang) : 0;
+    return solveLimb(add(hips, scale(across, side * BODY.hip)), feet[i], BODY.thigh, BODY.shin, {
+      x: side * (0.3 + 0.45 * inside) - 0.15 * hang,
       y: 0.2,
       z: 1,
-    }),
-  ) as [V3, V3];
+    });
+  }) as [V3, V3];
   const shoulders = [-1, 1].map((side) => add(neck, scale(across, side * BODY.shoulder))) as [
     V3,
     V3,
   ];
   const hands = [-1, 1].map((side) => gripAt(side, bars)) as [V3, V3];
+  // Elbows UP and out — the attack position a sled is ridden hard in.
   const elbows = [-1, 1].map((side, i) =>
-    solveLimb(shoulders[i], hands[i], BODY.upperArm, BODY.forearm, { x: side, y: -0.6, z: -0.2 }),
+    solveLimb(shoulders[i], hands[i], BODY.upperArm, BODY.forearm, {
+      x: side,
+      y: -0.1 + 0.3 * stand,
+      z: -0.3,
+    }),
   ) as [V3, V3];
   return { hips, neck, head, pitch, roll, knees, feet, shoulders, elbows, hands, bars };
+}
+
+/** THE BODY ON ITS LEGS — the secondary motion a rider's own mass has on
+ * top of the machine, kept by the view (it is the picture's, not the
+ * physics'): a spring-damper in the machine's vertical, kicked by every
+ * change in the machine's own climb, so a landing that stops the sled dead
+ * leaves the body still coming down — the knees fold and spring back — and
+ * the chatter of a rough groomer is a jiggle; and the STAND, eased toward
+ * the height the moment asks for. */
+export type RiderSpring = {
+  /** The fold, m (positive sunk), and its rate, m/s. */
+  bump: number;
+  rate: number;
+  /** Up off the seat, 0..1. */
+  stand: number;
+  /** The machine's climb at the last frame, m/s, or NaN before the first. */
+  lastVy: number;
+};
+
+/** The body's natural frequency on its legs, rad/s (about 2.3 Hz), its
+ * damping ratio, the share of the machine's change of climb the body is
+ * kicked by (the legs soak up the rest before the knees move), and the most
+ * they fold or extend, m. */
+const LEGS = { omega: 14.5, zeta: 0.42, kick: 0.45, fold: 0.24, extend: 0.06 };
+/** How quickly he gets up or sits down, 1/s. */
+const STAND_RATE = 5;
+
+export function createRiderSpring(): RiderSpring {
+  return { bump: 0, rate: 0, stand: 0.6, lastVy: Number.NaN };
+}
+
+/** Advance the body on its legs by `dt` s for a machine climbing at `vy`
+ * m/s (the engine's own), going `speed` m/s, in the air or not. */
+export function stepRiderSpring(
+  s: RiderSpring,
+  vy: number,
+  speed: number,
+  airborne: boolean,
+  dt: number,
+): void {
+  if (!(dt > 0)) return;
+  if (!Number.isNaN(s.lastVy)) {
+    // The machine's change of climb since the last frame is a kick the body
+    // does not share: it keeps going the way it was.
+    s.rate += (vy - s.lastVy) * LEGS.kick * (airborne ? 0 : 1);
+  }
+  s.lastVy = vy;
+  const n = Math.max(1, Math.ceil(dt / (1 / 120)));
+  const h = dt / n;
+  for (let i = 0; i < n; i++) {
+    const acc = -LEGS.omega * LEGS.omega * s.bump - 2 * LEGS.zeta * LEGS.omega * s.rate;
+    s.rate += acc * h;
+    s.bump += s.rate * h;
+  }
+  if (s.bump > LEGS.fold) {
+    s.bump = LEGS.fold;
+    s.rate = Math.min(0, s.rate);
+  } else if (s.bump < -LEGS.extend) {
+    s.bump = -LEGS.extend;
+    s.rate = Math.max(0, s.rate);
+  }
+  // Sat at a crawl, half up on the move, stood tall in the air.
+  const want = airborne ? 1 : Math.min(0.62, 0.62 * Math.max(0, (speed - 1.5) / 5));
+  s.stand += (want - s.stand) * (1 - Math.exp(-STAND_RATE * dt));
 }

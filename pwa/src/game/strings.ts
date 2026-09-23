@@ -196,6 +196,7 @@ export const STRINGS = {
   sledRide: "RIDE",
   sledPrev: "Previous sled",
   sledNext: "Next sled",
+  sledLivery: "Livery",
   sledOf: (at: number, of: number): string => `${at} / ${of}`,
   sledFacts: { top: "TOP SPEED", sprint: "0–100", power: "POWER" },
   sledUnits: { speed: "KM/H", seconds: "S", power: "HP" },
@@ -203,7 +204,8 @@ export const STRINGS = {
     accel: "ACCELERATION",
     top: "TOP SPEED",
     corner: "CORNERING",
-    powder: "POWDER",
+    float: "FLOAT",
+    climb: "CLIMB",
     landing: "LANDINGS",
   },
 

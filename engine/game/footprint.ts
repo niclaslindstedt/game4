@@ -33,6 +33,24 @@
 // riders put a 144-inch belt at a tenth off a 136-inch one at 60 mph, and a
 // 156-inch belt with 2-inch lugs at a quarter off — and that is the long
 // tread's top end gone, and nothing else takes it.
+//
+// THE STUDS bite the groomer: carbide spikes through the belt that key into
+// packed snow, worth `studGrip` of the tread's packed grip per hundred —
+// driving, braking and holding sideways alike — and nothing in powder,
+// where there is nothing hard enough to key into.
+//
+// THE SKIS' TWO FACES: on the groomer a ski turns the sled on the CARBIDE
+// under its keel, and a longer runner cuts a longer groove — `(c / c₀)^
+// carbideExp` on the skis' packed grip, which is why a race or touring ski
+// on twin runners bites a bend a mountain ski on a stub pushes through; in
+// powder the keel is buried and the ski steers on its BASE, the wider the
+// more — `(w / w₀)^skiFloat` on the skis' powder grip.
+//
+// THE BELT'S MASS — the rubber the engine has to spin up, and the
+// gyroscope the throttle and the brake pitch the machine with in the air —
+// goes as its area and, less, its lugs: `(L·W / L₀·W₀) · (h / h₀)^lugMass`.
+// A long, wide paddle belt is slower to spin up and swings a flight
+// harder; a short trail belt answers the lever at once.
 
 import { SLED, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
@@ -54,6 +72,18 @@ export type Footprint = {
   /** The belt's internal losses, as a multiple of `tread.lossQuad` /
    * `.lossLin`. */
   beltLoss: number;
+  /** The tread's grip on packed snow — driving, braking and sideways —
+   * as a multiple of `grip.treadPacked` / `.treadSidePacked`: the studs. */
+  studded: number;
+  /** The skis' grip on packed snow, as a multiple of `grip.skiPacked`: the
+   * carbides. */
+  skiBite: number;
+  /** The skis' grip in powder, as a multiple of `grip.skiPowder`: their
+   * width. */
+  skiFloat: number;
+  /** The belt's mass, as a multiple of `tread.beltMass` — what the drive
+   * spins up and what the throttle and the brake swing a flight with. */
+  belt: number;
 };
 
 /** The share of the weight the skis carry together at rest: the moment
@@ -86,6 +116,12 @@ export function footprintOf(spec: SledSpec): Footprint {
     powderDrive: Math.pow(lug, F.lugPowder),
     packedSide: Math.pow(1 / lug, F.lugSide),
     beltLoss: (spec.treadLength / SLED.treadLength) * Math.pow(lug, F.lugLoss),
+    studded: 1 + (F.studGrip * (spec.studs - SLED.studs)) / 100,
+    skiBite: Math.pow(spec.carbide / SLED.carbide, F.carbideExp),
+    skiFloat: Math.pow(spec.skiWidth / SLED.skiWidth, F.skiFloat),
+    belt:
+      ((spec.treadLength * spec.treadWidth) / (SLED.treadLength * SLED.treadWidth)) *
+      Math.pow(lug, F.lugMass),
   };
   cache.set(spec, fit);
   return fit;

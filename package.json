@@ -33,6 +33,7 @@
     "profile": "node scripts/profile-render.mjs",
     "bench": "node scripts/benchmark.mjs",
     "world": "node scripts/world-preview.mjs",
+    "sled": "node scripts/sled-preview.mjs",
     "sky": "node scripts/sky-preview.mjs",
     "birds": "node scripts/birds-preview.mjs",
     "tauri": "npm --prefix tauri run start --",

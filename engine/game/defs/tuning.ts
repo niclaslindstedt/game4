@@ -76,10 +76,22 @@ export const TUNING = {
     lugPowder: 0.35,
     /** The groomer's sideways hold goes as the INVERSE lug height to this
      * power: a tall lug folds over under a sideways load. */
-    lugSide: 0.5,
+    lugSide: 0.35,
     /** The belt's own losses go as the lug height to this power, beside
      * its length — a tall paddle is more rubber flexed round every idler. */
     lugLoss: 0.8,
+    /** The tread's packed grip gained per hundred studs through the belt,
+     * as a share — a studded belt drives, stops and holds a groomed bend a
+     * twelfth harder than a bare one. */
+    studGrip: 0.08,
+    /** The skis' packed grip goes as the carbide's length to this power: a
+     * runner twice as long cuts a groove half again as hard. */
+    carbideExp: 0.6,
+    /** The skis' powder grip goes as their width to this power. */
+    skiFloat: 0.8,
+    /** The belt's mass goes as its lugs' height to this power, beside its
+     * area. */
+    lugMass: 0.3,
   },
 
   /** GRIP — the friction coefficients between the machine and the snow,
@@ -122,9 +134,6 @@ export const TUNING = {
     lossQuad: 0.3,
     /** ...and a linear part, N per m/s. */
     lossLin: 5,
-    /** Engine braking with the throttle shut, N per m/s of belt speed while
-     * the driven clutch is still engaged. */
-    engineBrake: 45,
     /** The throttle's lag toward the lever, 1/s. */
     throttleRate: 8,
     /** The engine speed's lag toward what the CVT holds it at, 1/s. */
@@ -154,13 +163,37 @@ export const TUNING = {
      * and the nose is held to the way the sled is going, `slipHold` N·m per
      * rad of slide once it is going faster than `slipFrom` m/s; the two
      * together no more than `yawHoldMax` N·m. Zero is the bare physics. */
-    yawHold: 1500,
+    yawHold: 8000,
     slipHold: 2500,
-    yawHoldMax: 3000,
+    yawHoldMax: 5000,
     pathShare: 1,
     slipFrom: 3,
     /** The base the skis steer about, m: ski line to the tread's centroid. */
     base: 1.7,
+  },
+
+  /** THE ARCADE'S HANDS — dials that model nothing, stated as such, and the
+   * reason the game FEELS like a sled rather than measuring like one. Each is
+   * a multiplier on a measured quantity, so 1 is the bare physics and the
+   * distance from 1 is how far the game leans on the rider's side. Real
+   * machines corner at about their static tipping point on a groomed trail
+   * (0.9–1.1 g) and lift the inside ski doing it; a racer at the arcade's pace
+   * wants a little more than that and never the ski lift. */
+  arcade: {
+    /** Every SIDEWAYS grip on the snow — the skis' keels and the tread's
+     * lugs, on the groomer and in powder alike. */
+    sideGrip: 1.35,
+    /** The tipping point: the rider hung off the inside is worth this many
+     * times the static stability factor, which is what lets a sled carry the
+     * grip above without lifting a ski. Read by `tipLimit`, and by the roll
+     * the rider and the chassis hold (`rider.rollMax`, scaled). */
+    hangOff: 1.3,
+    /** THE RIDER'S THUMB on the brake: a lever held pinned never slows the
+     * belt more than this far below the way, m/s — where its drag is near
+     * its peak (`grip.slipRef` twice over) and some sideways hold is left.
+     * A real rider modulates to just short of lock; the arcade does it for
+     * him, so a locked belt's slew is never what a pinned lever buys. */
+    brakeSlip: 2.8,
   },
 
   /** THE RIDER — the man on the saddle is a quarter of the moving mass,
@@ -178,8 +211,8 @@ export const TUNING = {
     /** The righting the rider and the suspension together hold that roll
      * with, N·m per rad, the damping on the roll rate, N·m·s, and the most
      * it can ever be, N·m — a load past this rolls the sled over. */
-    rollStiff: 5000,
-    rollDamp: 420,
+    rollStiff: 8000,
+    rollDamp: 560,
     rollMax: 2600,
     /** THE CARVE: in powder a sled rolled over onto its tread's edge turns
      * toward the low side, as a share of the tread's load per radian of
@@ -210,6 +243,18 @@ export const TUNING = {
     rollDamp: 160,
     /** ...up to this roll off level, rad, fading out over the last 0.3. */
     rollGiveUp: 1.1,
+    /** THE ARCADE'S HAND ON THE PITCH (`flight.ts`): with the lean left
+     * alone the rider's body eases the nose toward half the flight path,
+     * never more than `pitchAim` rad either way, at `pitchLevel` N·m per rad
+     * off it and never past `pitchLevelMax` N·m — both on the reference
+     * machine, scaled by each one's pitch inertia — under two thirds of the
+     * lean's authority, so a lean still flies the sled, and not once it is
+     * `pitchGiveUp` rad off (a flip carried round). Models nothing: a real
+     * rider does it with his whole body and not every time. */
+    pitchLevel: 520,
+    pitchLevelMax: 320,
+    pitchAim: 0.35,
+    pitchGiveUp: 1.0,
     /** How long off the snow before it counts as air, s — anything shorter
      * is a sled skipping over a bump. */
     counts: 0.15,

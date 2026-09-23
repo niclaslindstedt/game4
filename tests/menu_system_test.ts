@@ -472,7 +472,7 @@ describe("what the pause card bills a held race with (pause-stats.ts)", () => {
       lap: 2,
       bestAir: 1.4,
       distance: 900,
-      best: { time: 150, sled: "trail", at: 0 },
+      best: { time: 150, sled: "hare", at: 0 },
     });
     expect(pauseStats(everything)).toHaveLength(PAUSE_STATS);
     expect(pauseStats(everything, 2)).toHaveLength(2);
@@ -491,13 +491,13 @@ describe("what the pause card bills a held race with (pause-stats.ts)", () => {
   });
 
   it("puts the record a time trial is ridden against ahead of the flights", () => {
-    expect(keys({ best: { time: 95, sled: "trail", at: 0 }, bestAir: 1, distance: 50 })).toEqual([
+    expect(keys({ best: { time: 95, sled: "hare", at: 0 }, bestAir: 1, distance: 50 })).toEqual([
       "time",
       "record",
       "air",
       "distance",
     ]);
-    const record = pauseStats(run({ best: { time: 95, sled: "trail", at: 0 } })).find(
+    const record = pauseStats(run({ best: { time: 95, sled: "hare", at: 0 } })).find(
       (stat) => stat.key === "record",
     )!;
     expect(record.value).toBe(STRINGS.resultTime(95));

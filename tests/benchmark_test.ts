@@ -432,14 +432,14 @@ describe("the campaign set by hand (campaign-unlocks.ts)", () => {
     const level = SHELVES[0].levels[0];
     const ridden = recordRun(EMPTY_PROGRESS, level, {
       time: 321,
-      sled: "trail",
+      sled: "hare",
       order: [null, 0, 1, 2],
     });
     const open = unlockShelves(ridden, null);
     expect(open.results[level.id].best).toBe(321);
     const granted = unlockShelves(EMPTY_PROGRESS, null);
-    const after = recordRun(granted, level, { time: 400, sled: "cross", order: [0, null, 1, 2] });
-    expect(after.results[level.id]).toMatchObject({ best: 400, sled: "cross", place: 1 });
+    const after = recordRun(granted, level, { time: 400, sled: "stoat", order: [0, null, 1, 2] });
+    expect(after.results[level.id]).toMatchObject({ best: 400, sled: "stoat", place: 1 });
     expect(levelCleared(after, level)).toBe(true);
   });
 });

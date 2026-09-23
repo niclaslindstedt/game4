@@ -24,6 +24,8 @@
 
 import { clamp } from "../lib/math.ts";
 import { TUNING } from "./defs/tuning.ts";
+import { SLED, inertiaOf } from "./defs/sled.ts";
+import { footprintOf } from "./footprint.ts";
 import type { SledState } from "./state.ts";
 
 const A = TUNING.air;
@@ -32,13 +34,35 @@ const A = TUNING.air;
  * `level` is how much of the roll-levelling the run's assist grants (0..1,
  * `Assist.air`); the damping is the air's and is always there. */
 export function airTorque(c: SledState, out: { x: number; y: number; z: number }, level = 1): void {
-  out.x += -A.leanTorque * c.lean - A.throttleTorque * c.throttle + A.brakeTorque * c.brake;
+  // The gyro is the belt's: more rubber spun up is more to swing a flight
+  // with (`Footprint.belt`).
+  const belt = footprintOf(c.spec).belt;
+  out.x +=
+    -A.leanTorque * c.lean + belt * (-A.throttleTorque * c.throttle + A.brakeTorque * c.brake);
   out.y += A.steerTorque * c.steer;
   // Roll right-side-down is a negative rotation about the forward axis, so
   // a positive torque takes it back. Past a steep roll the rider has lost
   // it: a sled thrown onto its side comes down on its side.
   const reach = clamp((A.rollGiveUp - Math.abs(c.roll)) / 0.3, 0, 1);
   out.z += (A.rollLevel * level * c.roll - A.rollDamp * c.wz) * reach;
+  // ...AND THE PITCH, which is the arcade's: with the lean left alone his
+  // body eases the nose toward half the line the sled is flying along — up
+  // off a lip, down onto a landing — so a long flight with the throttle
+  // held lands on its skis rather than wherever the belt's gyro wound it
+  // to. It gives way to the lean (a rider leaning is flying the sled
+  // himself — a flip is a lean carried round) and gives up past
+  // `pitchGiveUp`, and it is never more than `pitchLevelMax`.
+  const path = Math.atan2(c.vy, Math.hypot(c.vx, c.vz));
+  const aim = clamp(path * 0.5, -A.pitchAim, A.pitchAim);
+  // Stated on the reference machine and scaled by this one's pitch inertia:
+  // a hand is an acceleration, and the touring sled's is a heavier body.
+  const heft = inertiaOf(c.spec).x / inertiaOf(SLED).x;
+  const hand =
+    level *
+    heft *
+    (1 - Math.min(1, Math.abs(c.lean))) *
+    clamp((A.pitchGiveUp - Math.abs(c.pitch - aim)) / 0.3, 0, 1);
+  out.x += clamp(A.pitchLevel * (c.pitch - aim), -A.pitchLevelMax, A.pitchLevelMax) * hand;
   out.x -= A.damping * c.wx;
   out.y -= A.damping * c.wy;
   out.z -= A.damping * c.wz;

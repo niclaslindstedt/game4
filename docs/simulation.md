@@ -29,7 +29,7 @@ npm run sim                        # seeds 1..8, solo, the map's laps
 npm run sim -- --count 20          # seeds 1..20
 npm run sim -- --seeds 3,7,38      # these seeds
 npm run sim -- --rivals 3          # a whole race
-npm run sim -- --sled mountain     # one machine of the catalog (the crossover when left out)
+npm run sim -- --sled ibex         # one machine of the catalog (the Fox when left out)
 npm run sim -- --sled all          # the roster: every machine's table, then who was quickest on each seed
 npm run sim -- --tricks            # each seed's map with its trick field laid (R20)
 npm run sim -- --laps 1 --json out.json
@@ -53,7 +53,7 @@ It exits non-zero when the bot finishes NO seed at all — a sled that cannot ge
 
 ## Reading the table
 
-- **`pow`** is how much of the loop lies under a drift (R17) — the column the roster is read against. `--sled all` ends with one row a seed, every machine's race time and a `*` on the quickest: no machine should win them all, the trail sled should take the groomed maps and the mountain sled the drifted ones.
+- **`pow`** is how much of the loop lies under a drift (R17) — the column the roster is read against. `--sled all` ends with one row a seed, every machine's race time and a `*` on the quickest: no machine should win them all, the trail sled (the Hare) should take the groomed maps and the mountain sled (the Ibex) the drifted ones.
 
 - **`fin` NO** on any seed is a regression until it is explained: the bot is a competent rider, and a map it cannot finish is a map a player will not finish either — or a sled that cannot climb what the generator builds.
 - **`laps`** should be three near-equal numbers. The first is a few seconds longer (the standing start from the grid); a first lap tens of seconds longer than the others is the bot circling at the start line.

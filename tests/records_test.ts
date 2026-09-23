@@ -23,10 +23,10 @@ import { takeSnapshot } from "../pwa/src/game/snapshot.ts";
 import { readParams } from "../pwa/src/game/url-params.ts";
 import { syntheticLevel } from "./support/synthetic.ts";
 
-const KEY: RecordKey = { seed: 38, sled: "crossover", mode: "timeTrial", laps: 3 };
+const KEY: RecordKey = { seed: 38, sled: "fox", mode: "timeTrial", laps: 3 };
 const row = (value: number, extra: Partial<RunRecord> = {}): RunRecord => ({
   value,
-  sled: "crossover",
+  sled: "fox",
   at: 1_700_000_000_000,
   splits: [],
   ...extra,
@@ -62,7 +62,7 @@ describe("what names a row", () => {
   it("is the seed, the sled, the mode and the length", () => {
     const id = recordId(KEY);
     expect(recordId({ ...KEY, seed: 39 })).not.toBe(id);
-    expect(recordId({ ...KEY, sled: "trail" })).not.toBe(id);
+    expect(recordId({ ...KEY, sled: "hare" })).not.toBe(id);
     expect(recordId({ ...KEY, mode: "race" })).not.toBe(id);
     expect(recordId({ ...KEY, laps: 1 })).not.toBe(id);
     expect(recordId({ ...KEY })).toBe(id);
@@ -100,7 +100,7 @@ describe("noting a run", () => {
     expect(empty).toEqual({});
     const stood = bestFor(first.book, KEY)!;
     expect(stood.value).toBe(80);
-    expect(stood.sled).toBe("crossover");
+    expect(stood.sled).toBe("fox");
     expect(stood.at).toBe(1_700_000_000_000);
     expect(stood.splits).toEqual([0, 20, 40]);
 
@@ -135,7 +135,7 @@ describe("the HUD's reading of it", () => {
     expect(snap.split).toBe(at);
     expect(snap.gap).toBeCloseTo(1.25);
     expect(snap.mode).toBe("timeTrial");
-    expect(snap.best).toEqual({ time: 90, sled: "crossover", at: standing.at });
+    expect(snap.best).toEqual({ time: 90, sled: "fox", at: standing.at });
     const bare = takeSnapshot(run);
     expect(bare.gap).toBeNull();
     expect(bare.best).toBeNull();
@@ -152,11 +152,11 @@ describe("the HUD's reading of it", () => {
 describe("a stored book", () => {
   it("keeps every row a run could have set and drops the rest", () => {
     const book = mergeRecords({
-      good: { value: 70, sled: "trail", at: 5, splits: [0, 10] },
-      noDate: { value: 71, sled: "mountain" },
-      badSplits: { value: 72, sled: "cross", at: 1, splits: [1, "x", 3] },
-      zero: { value: 0, sled: "trail", at: 5 },
-      nan: { value: "fast", sled: "trail", at: 5 },
+      good: { value: 70, sled: "hare", at: 5, splits: [0, 10] },
+      noDate: { value: 71, sled: "ibex" },
+      badSplits: { value: 72, sled: "stoat", at: 1, splits: [1, "x", 3] },
+      zero: { value: 0, sled: "hare", at: 5 },
+      nan: { value: "fast", sled: "hare", at: 5 },
       ghostSled: { value: 70, sled: "hovercraft", at: 5 },
       junk: 12,
     });

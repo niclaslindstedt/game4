@@ -3,7 +3,7 @@
 // may ask of the renderer, and nothing else. The shell owns WHEN a frame is
 // drawn and WHICH state it shows; the renderer owns how it looks, and never
 // writes a `GameState`.
-import type { GameState } from "@engine";
+import type { GameState, SledId } from "@engine";
 
 import type { FrameCost, SceneShare } from "./benchmark-report.ts";
 import type { LensPose } from "./camera-rigs.ts";
@@ -32,6 +32,10 @@ export interface WorldRenderer {
   /** THE GHOST (`ghost-run.ts`): another run on the same map, drawn
    * see-through and leaving no trail — or null for none. */
   setGhost(ghost: GameState | null): void;
+  /** The player's liveries (`Settings.liveries`): the machine in slot 0 is
+   * dressed in the one its id picks, rebuilt when that changes; the field
+   * keeps its grid slots' colours. */
+  dress(liveries: Partial<Record<SledId, number>>): void;
   /** THE BROADCAST (`camera-tv.ts`): the moment a replay is cut to, framed
    * from a lens planted beside it — or null for the camera ladder. Only a
    * replay ever sets one (`replay-run.ts`). */

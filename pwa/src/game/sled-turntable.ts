@@ -3,7 +3,7 @@
 // on it, standing on its own little canvas and turning.
 //
 // It is `createSledModel` — the builder the race draws with — off the
-// machine's own spec, stood at rest on a disc of snow at its own ride
+// machine's own spec, in the livery the rider has picked for it, stood at rest on a disc of snow at its own ride
 // height: the skis and the tread at the sag the springs settle at, so the
 // mountain sled's long tail, the trail sled's stubby one and the cross
 // sled's running gear hung further under its chassis are visible before a
@@ -21,7 +21,8 @@
 import * as THREE from "three";
 import { freshSled, type SledSpec } from "@engine";
 
-import { createSledModel, REST_SAG, SLED_STYLES, type SledModel } from "./sled-body.ts";
+import { createSledModel, REST_SAG, SLED_STYLES, styleIn, type SledModel } from "./sled-body.ts";
+import { liveryOf } from "./sled-liveries.ts";
 
 /** WHERE THE VIEWER STANDS, as a direction: the eye is this high for every
  * metre it is back. How FAR back is worked out from the machine and the
@@ -46,7 +47,7 @@ export type SledTurntable = {
   /** Swap the machine on the stand; the spin carries on from where it was.
    * The model is built on the next frame, not inside this call, so a rider
    * rowing through the arrows builds only the one they stop on. */
-  setSled: (spec: SledSpec) => void;
+  setSled: (spec: SledSpec, livery?: number) => void;
   /** Match the canvas to its box after a layout change. */
   resize: () => void;
   dispose: () => void;
@@ -87,7 +88,7 @@ export function createSledTurntable(canvas: HTMLCanvasElement): SledTurntable {
 
   let model: SledModel | null = null;
   let shown: string | null = null;
-  let pending: SledSpec | null = null;
+  let pending: { spec: SledSpec; livery: number } | null = null;
   /** How far the machine reaches from the spin axis, and how tall it
    * stands — measured off the model that was built. */
   let radius = 2;
@@ -114,10 +115,10 @@ export function createSledTurntable(canvas: HTMLCanvasElement): SledTurntable {
     camera.lookAt(0, aim, 0);
   };
 
-  const build = (spec: SledSpec): void => {
+  const build = (spec: SledSpec, livery: number): void => {
     clear();
-    shown = spec.id;
-    model = createSledModel(spec, SLED_STYLES[0], plain);
+    shown = `${spec.id}:${livery}`;
+    model = createSledModel(spec, styleIn(SLED_STYLES[0], liveryOf(spec.id, livery)), plain);
     const rest = freshSled(spec);
     rest.skiCompression[0] = REST_SAG;
     rest.skiCompression[1] = REST_SAG;
@@ -176,9 +177,9 @@ export function createSledTurntable(canvas: HTMLCanvasElement): SledTurntable {
     // Every frame: a resize EVENT is not the only way a canvas changes size.
     resize();
     if (pending) {
-      const spec = pending;
+      const { spec, livery } = pending;
       pending = null;
-      build(spec);
+      build(spec, livery);
     }
     const dt = Math.min(0.1, (now - last) / 1000);
     last = now;
@@ -190,8 +191,8 @@ export function createSledTurntable(canvas: HTMLCanvasElement): SledTurntable {
   raf = requestAnimationFrame(tick);
 
   return {
-    setSled: (spec) => {
-      pending = shown === spec.id ? null : spec;
+    setSled: (spec, livery = 0) => {
+      pending = shown === `${spec.id}:${livery}` ? null : { spec, livery };
     },
     resize,
     dispose: () => {

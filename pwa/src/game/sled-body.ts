@@ -1,94 +1,145 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE SNOWMOBILE AS DRAWN — built from a handful of extruded profiles and
-// boxes in the engine's own body frame (x right, y up, z forward, the origin
-// at the centre of gravity of machine and rider), so every number here reads
-// against `defs/sled.ts`. EACH MACHINE IS DRAWN OFF ITS OWN SPEC:
+// THE SNOWMOBILE AS DRAWN — every machine built off TWO sources: its spec
+// (`defs/sled.ts`: where the physics' skis and belt are, how tall it stands
+// on its springs) and its class's TRACED LOOK (`sled-looks.ts`: the cowl,
+// the screen, the bars, the seat, the tunnel and what rides on it, taken
+// off a studio photograph of a real machine of the class and mapped onto
+// the spec by `lookFrame`). Everything in the engine's own body frame — x
+// right, y up, z forward, the origin at the centre of gravity of machine and
+// rider — so a drawn ski stands where the ski probe is.
 //
-//   * THE RUNNING GEAR — the skis, the spindles, the tread — stands on the
-//     snow `spec.cogHeight` under the origin, the skis `skiStance` apart at
-//     `skiForward`, the tread's run from `treadFront` to `treadRear`.
-//   * THE CHASSIS — the cowl, the seat, the boards, the bars — stands where
-//     the REFERENCE machine's does (`SLED.cogHeight` over the snow), because
-//     that is where the rider's hands and feet are fixed (`MOUNTS` in
-//     `rider-pose.ts`). A machine carried higher on its springs (the cross
-//     sled's long travel) is drawn with its running gear further under it,
-//     which is exactly what long travel looks like.
-//   * THE TUNNEL runs back to the tread's end, so the mountain sled's long
-//     belt is a long tail and the trail sled's short one a stubby one, and
-//     the cowl is as wide as the machine's envelope (`width`).
-//
-// What each part is:
-//
-//   * TWO SKIS a stance apart at the ski contact, each on a SPINDLE under an
-//     A-arm pair. They turn with the engine's `skiAngle` and ride up and
-//     down with its per-ski compression, so the front end visibly works
-//     over a mogul while the body floats.
-//   * THE TREAD under a TUNNEL, its run on the snow from `treadFront` to
-//     `treadRear` and climbing to the drive sprocket under the cowl, with a
-//     SNOW FLAP hanging off the back — rising and falling with the rear
-//     suspension's compression.
-//   * The COWL (hood) with its headlight, the WINDSHIELD, the handlebars on
-//     their riser, the SEAT on the tunnel, the running boards the rider's
-//     feet stand on — and the rider himself (`rider.ts`).
+//   * THE CHASSIS — the cowl tapering to its nose, the headlamps under their
+//     brow, the screen (tall on a work or touring machine, none on a mountain
+//     or race sled), the bars on their riser (a mountain sled's loop over
+//     them), the seat, what rides behind it (a tail pack, a cargo box on its
+//     rail, a passenger's backrest, a trunk), the tunnel with its painted
+//     flanks, the flap, the running boards, the bumpers, a race sled's plates.
+//   * THE RUNNING GEAR — the skis on their front suspension and the belt on
+//     its rear suspension, drawn in detail and posed off the engine's own
+//     compressions (`sled-gear.ts`).
+//   * THE RIDER (`rider.ts`), his hands on the traced grips: the figure is
+//     set off by the traced grip's distance from `MOUNTS.grip`, so a machine
+//     with its bars further forward or higher carries him there.
 //
 // Four colour schemes (`SLED_STYLES`), one per grid slot, their body paint
 // read off `sled-colours.ts` so the minimap's dot is the same colour.
 
 import * as THREE from "three";
-import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
-import { SLED, type SledSpec, type SledState, type TrickPose } from "@engine";
+import { type SledSpec, type SledState, type TrickPose } from "@engine";
 
 import type { Pose } from "./interp.ts";
 import { mergePosed } from "./posed-merge.ts";
 import { createRider, type RiderFigure, type RiderStyle } from "./rider.ts";
+import { MOUNTS, createRiderSpring, stepRiderSpring, type RiderInput } from "./rider-pose.ts";
 import { SLED_BODY } from "./sled-colours.ts";
+import { buildGear, profile, strip } from "./sled-gear.ts";
+import { LIVERIES, PATTERNS, type Livery, type PatternId } from "./sled-liveries.ts";
+import { SLED_LOOKS, lookFrame } from "./sled-looks.ts";
+
+export { REST_SAG } from "./sled-gear.ts";
 
 export type SledStyle = {
+  /** The paint, and the trim its graphics are cut in. */
   body: number;
   accent: number;
   rider: RiderStyle;
+  /** The rest of a livery (`sled-liveries.ts`), when the style carries one:
+   * the lower panels, the seat, the springs, the pattern. Left out, the
+   * panels and seat are black, the springs the paint, and the pattern the
+   * machine's own livery's. */
+  panel?: number;
+  seat?: number;
+  spring?: number;
+  pattern?: PatternId;
 };
 
+/** A grid slot's style dressed in a livery: the paint, the trim, the panels,
+ * the seat, the springs and the pattern are the livery's; the rider's kit
+ * stays the slot's. */
+export function styleIn(style: SledStyle, livery: Livery): SledStyle {
+  return {
+    ...style,
+    body: livery.body,
+    accent: livery.trim,
+    panel: livery.panel,
+    seat: livery.seat,
+    spring: livery.spring,
+    pattern: livery.pattern,
+  };
+}
+
 export const SLED_STYLES: SledStyle[] = [
+  // The player's: the brand's red, and a racer's kit to match — a red
+  // jacket with a black yoke, black pants, a black helmet under a red peak,
+  // gold-mirrored goggles.
   {
     body: SLED_BODY[0],
     accent: 0xf4f4f4,
-    rider: { jacket: 0x1f2a36, pants: 0x14181e, helmet: 0xe8412c, visor: 0x16222e },
+    rider: {
+      jacket: 0xc92a1c,
+      accent: 0x15171b,
+      pants: 0x15171b,
+      helmet: 0x1b1d21,
+      visor: 0xd9a21a,
+      peak: 0xe8412c,
+    },
   },
   {
     body: SLED_BODY[1],
     accent: 0xf2f5f8,
-    rider: { jacket: 0x2a6fd6, pants: 0x1a1d24, helmet: 0xf2f2f2, visor: 0x18222c },
+    rider: {
+      jacket: 0x2a6fd6,
+      accent: 0xf2f2f2,
+      pants: 0x1a1d24,
+      helmet: 0xf2f2f2,
+      visor: 0x6fb4e8,
+      peak: 0x2a6fd6,
+    },
   },
   {
     body: SLED_BODY[2],
     accent: 0x151515,
-    rider: { jacket: 0x252525, pants: 0x151515, helmet: 0xf2bf22, visor: 0x101418 },
+    rider: {
+      jacket: 0x252525,
+      accent: 0xf2bf22,
+      pants: 0x151515,
+      helmet: 0xf2bf22,
+      visor: 0x2b2f36,
+      peak: 0x151515,
+    },
   },
   {
     body: SLED_BODY[3],
     accent: 0x0e1a14,
-    rider: { jacket: 0x0f6b48, pants: 0x1b1f1d, helmet: 0x0e1a14, visor: 0x2b5a6e },
+    rider: {
+      jacket: 0x0f6b48,
+      accent: 0x0e1a14,
+      pants: 0x1b1f1d,
+      helmet: 0x0e1a14,
+      visor: 0xd96a2b,
+      peak: 0x0f6b48,
+    },
   },
 ];
-
-/** Rest compression of either end, m — the sag the drawn skis and tread sit
- * at when the engine reports it (the spec's "about 8 cm"). */
-export const REST_SAG = 0.08;
 
 export type SledModel = {
   root: THREE.Group;
   /** Pose from the engine's state, drawn at `at` (the interpolated place);
    * `sink` lowers the machine into the snow by the drawn furrow's extra
    * depth, m. */
-  /** `trick` is a tricks run's pose held in the air, if any. */
-  pose(sled: SledState, at: Pose, sink: number, trick?: TrickPose | null): void;
+  /** `trick` is a tricks run's pose held in the air, if any; `dt` is the
+   * frame's, s — the rider's body on its legs moves with it (0 holds it). */
+  pose(sled: SledState, at: Pose, sink: number, trick?: TrickPose | null, dt?: number): void;
   setRiderVisible(visible: boolean): void;
   /** Every mesh that draws the machine and its rider — what casts. */
   casters: THREE.Mesh[];
   /** The draw's bound in the world, at the last pose: grown while the
    * rider lies away from the machine. */
   bound(out: THREE.Sphere): THREE.Sphere;
+  /** Lay the rider in a pose handed in whole rather than read off the
+   * engine — the sled lab's (`tools/sled-harness.ts`), which holds him at an
+   * exact moment. */
+  poseRider(input: RiderInput): void;
   /** The lamps' glow, 0 (off) … 1 (full night) — `SkyLook.lamps` — seen
    * from `facing`: the cosine between the machine's nose and the way to
    * the lens (1 head-on, −1 from dead astern). A lamp is a lens that shines
@@ -97,16 +148,21 @@ export type SledModel = {
   dispose(): void;
 };
 
-/** Where a machine's lamps are in its body frame, m: the headlamp in the
- * cowl's nose and the taillight on the tunnel's end. The headlamp's beam
- * points along the body's forward axis, dipped by `HEADLAMP_DIP`. */
+/** Where a machine's lamps are in its body frame, m: the headlamps where
+ * its traced nose carries them and the taillight on its traced tail. The
+ * headlamp's beam points along the body's forward axis, dipped by
+ * `HEADLAMP_DIP`. */
 export function lampMounts(spec: SledSpec): {
   head: [number, number, number];
   tail: [number, number, number];
 } {
-  const snow = -SLED.cogHeight;
-  const tail = spec.treadRear - SLED.treadRear;
-  return { head: [0, snow + 0.58, 1.5], tail: [0, snow + 0.47, -1.6 + tail] };
+  const look = SLED_LOOKS[spec.id];
+  const F = lookFrame(spec, look);
+  const [t0, t1] = look.taillight;
+  return {
+    head: [0, F.y(look.lamps.y), F.z(look.lamps.z)],
+    tail: [0, F.y((t0[1] + t1[1]) / 2), F.z(Math.min(t0[0], t1[0]))],
+  };
 }
 
 /** How far below the body's forward axis the headlamp is aimed, rad. */
@@ -132,23 +188,57 @@ function glow(): THREE.DataTexture {
   return glowTexture;
 }
 
-/** A side profile in the body's (z, y) plane, extruded `width` across x and
- * centred on x = 0. */
-function profile(points: [number, number][], width: number, bevel: number): THREE.ExtrudeGeometry {
-  const shape = new THREE.Shape(points.map(([z, y]) => new THREE.Vector2(z, y)));
-  const g = new THREE.ExtrudeGeometry(shape, {
-    depth: Math.max(0.001, width - 2 * bevel),
-    bevelEnabled: bevel > 0,
-    bevelSize: bevel,
-    bevelThickness: bevel,
-    bevelSegments: 2,
-    curveSegments: 6,
-  });
-  // Shape x → body z, extrusion → body x.
-  g.rotateY(-Math.PI / 2);
-  g.translate((width - 2 * bevel) / 2, 0, 0);
+/** Narrow a cowl toward its nose and its crown: every vertex's x scaled by
+ * how far forward and how high it is — the photographed cowls are a wedge
+ * in plan and rounded over the top, and one extrusion is neither. */
+function taper(
+  g: THREE.BufferGeometry,
+  from: number,
+  to: number,
+  nose: number,
+  low: number,
+  high: number,
+): void {
+  const pos = g.getAttribute("position");
+  for (let i = 0; i < pos.count; i++) {
+    const z = pos.getZ(i);
+    const y = pos.getY(i);
+    const along = THREE.MathUtils.clamp((z - from) / (to - from), 0, 1);
+    const up = THREE.MathUtils.clamp((y - low) / (high - low), 0, 1);
+    pos.setX(i, pos.getX(i) * (1 - (1 - nose) * along * along) * (1 - 0.28 * up * up));
+  }
   g.computeVertexNormals();
-  return g;
+}
+
+/** The part of a closed outline on the left of the line from `a` to `b`
+ * (seen with z to the right and y up) — Sutherland and Hodgman against one
+ * half-plane. */
+function cutBy(
+  points: [number, number][],
+  a: [number, number],
+  b: [number, number],
+): [number, number][] {
+  const side = (p: [number, number]) =>
+    (b[0] - a[0]) * (p[1] - a[1]) - (b[1] - a[1]) * (p[0] - a[0]);
+  const out: [number, number][] = [];
+  for (let i = 0; i < points.length; i++) {
+    const p = points[i];
+    const q = points[(i + 1) % points.length];
+    const sp = side(p);
+    const sq = side(q);
+    if (sp >= 0) out.push(p);
+    if (sp >= 0 !== sq >= 0) {
+      const t = sp / (sp - sq);
+      out.push([p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t]);
+    }
+  }
+  return out;
+}
+
+/** The part of a closed outline above (`keep` 1) or below (-1) the level
+ * line y = `at`. */
+function clip(points: [number, number][], at: number, keep: 1 | -1): [number, number][] {
+  return keep > 0 ? cutBy(points, [0, at], [1, at]) : cutBy(points, [1, at], [0, at]);
 }
 
 export function createSledModel(
@@ -167,9 +257,14 @@ export function createSledModel(
   const paint = mat({ color: style.body, roughness: 0.32, metalness: 0.05 });
   const accent = mat({ color: style.accent, roughness: 0.4 });
   const black = mat({ color: 0x1c1f23, roughness: 0.75 });
-  const seatMat = mat({ color: 0x2a2d33, roughness: 0.6 });
-  const rubber = mat({ color: 0x0e0f11, roughness: 0.95 });
-  const alloy = mat({ color: 0x8d949c, roughness: 0.35, metalness: 0.8 });
+  const panel = mat({ color: style.panel ?? 0x1c1f23, roughness: 0.6 });
+  const seatMat = mat({ color: style.seat ?? 0x2a2d33, roughness: 0.6 });
+  const rubber = mat({ color: 0x121315, roughness: 0.95 });
+  const alloy = mat({ color: 0x9aa1a9, roughness: 0.3, metalness: 0.8 });
+  // The springs are painted the machine's own colour, as the photographed
+  // coil-overs are — the one bright thing in the running gear.
+  const spring = mat({ color: style.spring ?? style.body, roughness: 0.35, metalness: 0.3 });
+  const pattern = PATTERNS[style.pattern ?? LIVERIES[spec.id][0].pattern];
   const lamp = mat({ color: 0xfff6dc, emissive: 0xfff2cc, emissiveIntensity: 0.6, roughness: 0.2 });
   const glass = wrap(
     new THREE.MeshStandardMaterial({
@@ -193,245 +288,281 @@ export function createSledModel(
     return mesh;
   };
 
-  // The chassis's snow line (the reference's, where the rider is mounted),
-  // and the running gear's (this machine's own).
-  const snow = -SLED.cogHeight;
-  const ground = -spec.cogHeight;
-  /** How much further back this machine's tread ends than the reference's,
-   * m — the tunnel, the tail and the flap all move with it. */
-  const tail = spec.treadRear - SLED.treadRear;
-  /** The cowl's width against the reference's. */
-  const wide = spec.width / SLED.width;
-  // THE COWL.
+  const look = SLED_LOOKS[spec.id];
+  const F = lookFrame(spec, look);
+  const pts = (list: [number, number][]) => list.map((p) => F.point(p));
+  const grip = F.point(look.grip);
+  const post = F.point(look.post);
+  /** Where the rider is carried to: the traced grip against his own. */
+  const seat = new THREE.Vector3(0, grip[1] - MOUNTS.grip.y, grip[0] - MOUNTS.grip.z);
+  const feetY = MOUNTS.foot.y + seat.y;
+
+  // THE COWL: the traced outline, as wide as the class's hood, narrowed to
+  // its nose and rounded over its crown.
+  const hood = pts(look.hood);
+  const hz = hood.map((p) => p[0]);
+  const hy = hood.map((p) => p[1]);
+  const zMin = Math.min(...hz);
+  const zMax = Math.max(...hz);
+  const yMin = Math.min(...hy);
+  const yMax = Math.max(...hy);
+  // Painted above the side panels and black below them, as the
+  // photographed cowls are: the one outline cut in two at a level line.
+  const cut = yMin + 0.4 * (yMax - yMin);
+  const cowlTaper = (g: THREE.BufferGeometry) =>
+    taper(
+      g,
+      zMin + (zMax - zMin) * 0.35,
+      zMax,
+      look.noseWidth / look.hoodWidth,
+      yMin + 0.3 * (yMax - yMin),
+      yMax,
+    );
+  const upper = profile(clip(hood, cut, 1), look.hoodWidth, 0.05);
+  cowlTaper(upper);
+  add(upper, paint);
+  const lower = profile(clip(hood, cut, -1), look.hoodWidth * 0.97, 0.04);
+  cowlTaper(lower);
+  add(lower, panel);
+  // THE LIVERY'S GRAPHICS on the cowl's flanks, in the trim: each decal
+  // stated in the flank's own (u, v) — tail to nose, paint line to crown —
+  // and laid a hair proud of the paint, narrowed with it.
+  const flank = (u: number, v: number): [number, number] => [
+    zMin + (zMax - zMin) * u,
+    cut + (yMax - cut) * v,
+  ];
+  if (pattern.split) {
+    const [p0, p1] = pattern.split;
+    const g = profile(
+      cutBy(clip(hood, cut, 1), flank(p1[0], p1[1]), flank(p0[0], p0[1])),
+      look.hoodWidth + 0.012,
+      0,
+    );
+    cowlTaper(g);
+    add(g, accent);
+  }
+  for (const decal of pattern.cowl) {
+    const g = profile(
+      decal.map(([u, v]) => flank(u, v)),
+      look.hoodWidth + 0.012,
+      0,
+    );
+    cowlTaper(g);
+    add(g, accent);
+  }
+  // The belly pan under the cowl, in black.
   add(
     profile(
       [
-        [1.72, snow + 0.3],
-        [1.6, snow + 0.48],
-        [1.2, snow + 0.66],
-        [0.72, snow + 0.84],
-        [0.5, snow + 0.88],
-        [0.42, snow + 0.66],
-        [0.3, snow + 0.42],
-        [0.34, snow + 0.3],
-        [1.3, snow + 0.24],
+        [zMin + 0.05, yMin + 0.12],
+        [zMax - 0.15, yMin + 0.1],
+        [zMax - 0.3, yMin - 0.01],
+        [zMin + 0.05, yMin - 0.01],
       ],
-      0.86 * wide,
-      0.07,
-    ),
-    paint,
-  );
-  // A contrasting stripe along the cowl's flank.
-  add(
-    profile(
-      [
-        [1.55, snow + 0.42],
-        [1.0, snow + 0.56],
-        [0.55, snow + 0.66],
-        [0.55, snow + 0.6],
-        [1.0, snow + 0.5],
-        [1.55, snow + 0.37],
-      ],
-      0.9 * wide,
-      0.0,
-    ),
-    accent,
-  );
-  // Belly pan under the cowl, and the bumper.
-  add(
-    profile(
-      [
-        [1.75, snow + 0.3],
-        [1.3, snow + 0.18],
-        [0.2, snow + 0.2],
-        [0.2, snow + 0.32],
-        [1.3, snow + 0.3],
-      ],
-      0.8 * wide,
-      0.03,
+      look.hoodWidth * 0.8,
+      0.02,
     ),
     black,
   );
-  const bumper = add(new THREE.TorusGeometry(0.28, 0.018, 5, 12, Math.PI), alloy);
-  bumper.rotation.set(-Math.PI / 2, 0, 0);
-  bumper.position.set(0, snow + 0.36, 1.7);
-  bumper.scale.set(wide, 0.7, 1);
-  // The headlight.
-  const mounts = lampMounts(spec);
-  const light = add(new THREE.BoxGeometry(0.26, 0.06, 0.04), lamp);
-  light.position.set(mounts.head[0], mounts.head[1], mounts.head[2] - 0.02);
-  light.rotation.x = -0.55;
-
-  // THE WINDSHIELD, a curved sheet raked back.
-  const shield = add(new THREE.CylinderGeometry(0.42, 0.42, 0.34, 12, 1, true, -0.62, 1.24), glass);
-  shield.rotation.x = -0.5;
-  shield.scale.set(1, 1, 0.45);
-  shield.position.set(0, snow + 0.98, 0.42);
-
-  // THE TUNNEL and the running boards; the tunnel's flanks carry the paint.
-  // Both run back to the tread's end, and the flanks reach down over the
-  // extra travel a taller machine carries its tread on.
-  const drop = spec.cogHeight - SLED.cogHeight;
-  add(new THREE.BoxGeometry(0.52, 0.14, 1.95 - tail), black).position.set(
-    0,
-    snow + 0.36,
-    -0.62 + tail / 2,
-  );
+  // THE HEADLAMPS under a dark brow, and the bumper at the nose.
+  const lampY = F.y(look.lamps.y);
+  const lampZ = F.z(look.lamps.z);
   for (const side of [-1, 1]) {
-    add(new THREE.BoxGeometry(0.02, 0.2 + drop, 1.7 - tail), paint).position.set(
-      side * 0.27,
-      snow + 0.36 - drop / 2,
-      -0.72 + tail / 2,
-    );
-    add(new THREE.BoxGeometry(0.2, 0.025, 1.2), alloy).position.set(
-      side * 0.34,
-      snow + 0.32,
-      -0.35,
-    );
-    // Side panel between the cowl and the boards.
-    add(new THREE.BoxGeometry(0.03, 0.24, 0.5), paint).position.set(
-      side * 0.43 * wide,
-      snow + 0.42,
-      0.18,
-    );
+    const l = add(new THREE.BoxGeometry(0.12, 0.06, 0.04), lamp);
+    l.position.set((side * look.lamps.width) / 3, lampY, lampZ);
+    l.rotation.set(-0.5, side * 0.3, 0);
   }
-  // THE SEAT.
+  const brow = add(new THREE.BoxGeometry(look.lamps.width + 0.08, 0.03, 0.12), black);
+  brow.position.set(0, lampY + 0.06, lampZ - 0.02);
+  brow.rotation.x = -0.35;
+  const bumper = add(new THREE.TorusGeometry(look.bumperWidth / 2, 0.018, 5, 12, Math.PI), alloy);
+  bumper.rotation.set(-Math.PI / 2, 0, 0);
+  bumper.position.set(0, F.y(look.hood[0][1]) - 0.04, zMax - 0.06);
+  bumper.scale.set(1, 0.6, 1);
+  if (look.plates || pattern.plates) {
+    // THE RACE PLATES: a flat plate on each flank of the cowl and one on
+    // the nose — white, or the trim on a machine painted white.
+    const light = new THREE.Color(style.body).getHSL({ h: 0, s: 0, l: 0 }).l > 0.8;
+    const plateMat = light ? accent : mat({ color: 0xf3f4f6, roughness: 0.5 });
+    const [pz, py] = flank(0.55, 0.62);
+    for (const side of [-1, 1]) {
+      const plate = add(new THREE.BoxGeometry(0.014, 0.2, 0.3), plateMat);
+      plate.position.set((side * look.hoodWidth) / 2 + side * 0.006, py, pz);
+      plate.rotation.y = side * 0.12;
+    }
+    const nose = add(new THREE.BoxGeometry(0.26, 0.16, 0.012), plateMat);
+    nose.position.set(0, lampY + 0.14, lampZ - 0.14);
+    nose.rotation.x = -0.9;
+  }
+
+  // THE SCREEN, its four traced corners, raked as traced — and the mirrors
+  // at its corners where the class carries them.
+  let screen: THREE.Mesh | null = null;
+  if (look.screen) {
+    const S = look.screen;
+    const sheet = profile(pts([S.foot, S.base, S.top, S.back]), S.width, 0);
+    taper(sheet, F.z(S.foot[0]), F.z(S.top[0]) + 0.3, 1, F.y(S.base[1]), F.y(S.top[1]) + 0.2);
+    screen = add(sheet, glass);
+  }
+  if (look.mirror) {
+    const [m0, m1] = pts(look.mirror);
+    const across = (look.screen?.width ?? 0.6) / 2 + 0.06;
+    for (const side of [-1, 1]) {
+      const m = add(new THREE.BoxGeometry(0.1, Math.abs(m0[1] - m1[1]), 0.03), black);
+      m.position.set(side * across, (m0[1] + m1[1]) / 2, (m0[0] + m1[0]) / 2);
+    }
+  }
+
+  // THE TUNNEL: the traced top edge back from the seat to the tail, and its
+  // underside; the deck black, its flanks in the paint.
+  const top = pts(look.tunnelTop);
+  const under = pts(look.tunnelBottom);
+  const front = under[under.length - 1];
+  const tunnel = [
+    ...top,
+    [front[0], top[top.length - 1][1]] as [number, number],
+    ...[...under].reverse(),
+  ];
+  add(profile(tunnel, look.tunnelWidth, 0.01), black);
+  for (const side of [-1, 1]) {
+    add(profile(tunnel, 0.012, 0, (side * look.tunnelWidth) / 2), paint);
+  }
+  if (pattern.tunnel) {
+    // The livery's band down the tunnel's flank, under its top edge.
+    const band = strip(
+      top.map(([z, y]): [number, number] => [z, y - 0.03]),
+      0.05,
+    );
+    for (const side of [-1, 1]) add(profile(band, 0.014, 0, (side * look.tunnelWidth) / 2), accent);
+  }
+  // THE FLAP off the tail, and the TAILLIGHT.
+  if (look.flap) add(profile(strip(pts(look.flap), 0.015), look.tunnelWidth, 0), black);
+  const [t0, t1] = pts(look.taillight);
+  const tail = add(
+    new THREE.BoxGeometry(
+      look.tunnelWidth * 0.5,
+      Math.abs(t0[1] - t1[1]) + 0.02,
+      Math.abs(t0[0] - t1[0]),
+    ),
+    mat({ color: 0xc81818, emissive: 0x800000, roughness: 0.3 }),
+  );
+  tail.position.set(0, (t0[1] + t1[1]) / 2 + 0.01, (t0[0] + t1[0]) / 2);
+  // The grab loop over the tail's tip.
+  const grab = add(new THREE.TorusGeometry(look.tunnelWidth * 0.42, 0.015, 5, 10, Math.PI), alloy);
+  grab.rotation.set(Math.PI / 2 - 0.25, 0, 0);
+  grab.position.set(0, top[0][1] + 0.03, top[0][0] + 0.04);
+
+  // THE SEAT, its traced top line over its base.
+  const line = pts(look.seat).sort((a, b) => a[0] - b[0]);
+  const seatFloor = F.y(look.seatBase);
   add(
     profile(
-      [
-        [0.18, snow + 0.72],
-        [0.05, snow + 0.8],
-        [-0.9, snow + 0.8],
-        [-1.08, snow + 0.72],
-        [-1.08, snow + 0.44],
-        [0.18, snow + 0.44],
-      ],
-      0.44,
+      [[line[0][0], seatFloor], ...line, [line[line.length - 1][0], seatFloor]],
+      look.cargo || look.luggage ? 0.46 : 0.4,
       0.05,
     ),
     seatMat,
   );
-  // The tail cap behind the seat, in the paint, reaching back to the end of
-  // this machine's tunnel.
-  add(
-    profile(
-      [
-        [-0.95, snow + 0.44],
-        [-0.95, snow + 0.7],
-        [-1.1, snow + 0.72],
-        [Math.min(-1.2, -1.5 + tail), snow + 0.56],
-        [Math.min(-1.25, -1.55 + tail), snow + 0.44],
-      ],
-      0.5,
-      0.03,
-    ),
-    paint,
-  );
-  // Rear bumper, tail light, and the SNOW FLAP (on the rear suspension).
-  const rear = new THREE.Group();
-  rear.position.z = tail;
-  root.add(rear);
-  const grab = add(new THREE.TorusGeometry(0.24, 0.016, 5, 10, Math.PI), alloy, rear);
-  grab.rotation.set(Math.PI / 2, 0, 0);
-  grab.position.set(0, snow + 0.45, -1.6);
-  add(
-    new THREE.BoxGeometry(0.16, 0.04, 0.03),
-    mat({ color: 0xc81818, emissive: 0x800000, roughness: 0.3 }),
-    rear,
-  ).position.set(0, snow + 0.47, -1.6);
-  const flap = add(new THREE.BoxGeometry(0.5, 0.34, 0.012), rubber, rear);
-  flap.position.set(0, snow + 0.2, -1.63);
+  // WHAT RIDES BEHIND IT: a tail pack in the paint; a cargo box on its
+  // rail and a passenger's backrest (a work sled); a trunk, a backrest and
+  // grab handles (a touring machine).
+  const closed = (list: [number, number][]): [number, number][] => [
+    ...list,
+    [list[list.length - 1][0], list[0][1]],
+  ];
+  if (look.tailbox) add(profile(closed(pts(look.tailbox)), 0.38, 0.03), paint);
+  if (look.cargo) add(profile(pts(look.cargo), 0.6, 0.03), black);
+  if (look.luggage) add(profile(pts(look.luggage), 0.55, 0.04), paint);
+  if (look.backrest) add(profile(pts(look.backrest), 0.34, 0.03), seatMat);
+  const rails = (list: [number, number][] | undefined, across: number) => {
+    if (!list) return;
+    const p = pts(list);
+    for (const side of [-1, 1]) {
+      for (let i = 1; i < p.length; i++) {
+        const [z0, y0] = p[i - 1];
+        const [z1, y1] = p[i];
+        const bar = add(
+          new THREE.CylinderGeometry(0.016, 0.016, Math.hypot(z1 - z0, y1 - y0), 6),
+          alloy,
+        );
+        bar.position.set(side * across, (y0 + y1) / 2, (z0 + z1) / 2);
+        bar.rotation.x = Math.atan2(z1 - z0, y1 - y0);
+      }
+    }
+  };
+  rails(look.rack, 0.33);
+  rails(look.grabHandle, 0.25);
 
-  // THE HANDLEBARS on their riser, turning about the steering column.
+  // THE RUNNING BOARDS where the rider's boots are, over the traced stretch:
+  // two rails either side on a mountain or race sled, a deck on the rest.
+  const b0 = F.z(look.boards.from);
+  const b1 = F.z(look.boards.to);
+  for (const side of [-1, 1]) {
+    const x = side * (look.tunnelWidth / 2 + 0.12);
+    if (look.boards.open) {
+      for (const dx of [-0.07, 0.07]) {
+        const r = add(new THREE.BoxGeometry(0.025, 0.025, b1 - b0), alloy);
+        r.position.set(x + dx, feetY - 0.045, (b0 + b1) / 2);
+      }
+    } else {
+      const deck = add(new THREE.BoxGeometry(0.22, 0.025, b1 - b0), alloy);
+      deck.position.set(x, feetY - 0.045, (b0 + b1) / 2);
+    }
+    // The toe hook at the front of the board.
+    const hook = add(new THREE.BoxGeometry(0.16, 0.05, 0.04), black);
+    hook.position.set(x, feetY - 0.01, b1 + 0.02);
+    // The side panel between the cowl and the board.
+    const panel = add(new THREE.BoxGeometry(0.03, 0.24, 0.4), paint);
+    panel.position.set(side * (look.tunnelWidth / 2 + 0.03), feetY + 0.08, b1 - 0.1);
+  }
+
+  // THE BARS on their riser, turning about the steering post. A mountain
+  // sled's loop rises over the middle of them.
   const bars = new THREE.Group();
-  bars.position.set(0, snow + 1.0, 0.32);
+  bars.position.set(0, grip[1], grip[0] + 0.04);
   root.add(bars);
-  add(new THREE.CylinderGeometry(0.025, 0.03, 0.26, 6), alloy, bars).position.set(0, -0.12, 0);
-  const bar = add(new THREE.CylinderGeometry(0.014, 0.014, 0.82, 6), alloy, bars);
-  bar.rotation.z = Math.PI / 2;
-  bar.position.set(0, 0.02, -0.04);
-  for (const side of [-1, 1]) {
-    const grip = add(new THREE.CylinderGeometry(0.022, 0.022, 0.12, 6), black, bars);
-    grip.rotation.z = Math.PI / 2;
-    grip.position.set(side * 0.38, 0.02, -0.04);
-  }
-
-  // THE TREAD, on the rear suspension.
-  const tread = new THREE.Group();
-  root.add(tread);
-  const tf = spec.treadFront;
-  const tr = spec.treadRear;
-  const belt = new THREE.Shape();
-  const r0 = 0.12;
-  // The belt climbs from the front of its run to the drive sprocket under
-  // the cowl, which is the chassis's and so stands on the chassis's line.
-  const rise = snow - ground;
-  belt.moveTo(tr, ground);
-  belt.lineTo(tf, ground);
-  belt.lineTo(0.5, ground + 0.2 + rise * 0.5);
-  belt.absarc(0.44, ground + 0.3 + rise, r0, -0.4, Math.PI * 0.9, false);
-  belt.lineTo(tr, ground + 0.26 + rise);
-  belt.absarc(tr, ground + 0.13 + rise / 2, 0.13 + rise / 2, Math.PI / 2, Math.PI * 1.5, false);
-  const beltGeo = new THREE.ExtrudeGeometry(belt, {
-    depth: spec.treadWidth,
-    bevelEnabled: false,
-    curveSegments: 6,
-  });
-  beltGeo.rotateY(-Math.PI / 2);
-  beltGeo.translate(spec.treadWidth / 2, 0, 0);
-  add(beltGeo, rubber, tread);
-  // The lugs, a row of paddles along the run at their own height, so the
-  // belt reads as a track and the mountain sled's reads as a paddle wheel.
-  const lugs: THREE.BufferGeometry[] = [];
-  for (let z = tr; z <= tf; z += 0.1) {
-    lugs.push(
-      new THREE.BoxGeometry(spec.treadWidth * 0.96, spec.lugHeight, 0.035).translate(
-        0,
-        ground + 0.02 - spec.lugHeight / 2,
-        z,
-      ),
-    );
-  }
-  add(mergeGeometries(lugs), rubber, tread);
-  for (const g of lugs) g.dispose();
-
-  // THE SKIS, each on its spindle.
-  type Ski = { group: THREE.Group; spindle: THREE.Mesh; upper: THREE.Mesh; lower: THREE.Mesh };
-  const skis: Ski[] = [];
-  const skiGeo = profile(
-    [
-      [-0.55, 0],
-      [0.42, 0],
-      [0.6, 0.07],
-      [0.72, 0.2],
-      [0.68, 0.23],
-      [0.55, 0.1],
-      [0.4, 0.05],
-      [-0.55, 0.05],
-    ],
-    spec.skiWidth,
-    0.012,
+  const riser = grip[1] - post[1];
+  add(new THREE.CylinderGeometry(0.022, 0.028, riser, 6), alloy, bars).position.set(
+    0,
+    -riser / 2,
+    0.02,
   );
-  geos.push(skiGeo);
+  const bar = add(new THREE.CylinderGeometry(0.014, 0.014, look.barWidth + 0.04, 6), alloy, bars);
+  bar.rotation.z = Math.PI / 2;
+  bar.position.set(0, 0, -0.04);
   for (const side of [-1, 1]) {
-    const group = new THREE.Group();
-    group.position.set((side * spec.skiStance) / 2, ground, spec.skiForward);
-    root.add(group);
-    const skiMesh = new THREE.Mesh(skiGeo, black);
-    skiMesh.castShadow = true;
-    group.add(skiMesh);
-    const tip = add(new THREE.BoxGeometry(spec.skiWidth * 0.9, 0.02, 0.18), paint, group);
-    tip.position.set(0, 0.055, 0.1);
-    const spindle = add(new THREE.CylinderGeometry(0.025, 0.03, 0.34, 6), alloy, group);
-    spindle.position.set(0, 0.22, 0);
-    // The A-arms, re-laid each frame between the chassis and the spindle.
-    const upper = add(new THREE.CylinderGeometry(0.014, 0.014, 1, 5), alloy);
-    const lower = add(new THREE.CylinderGeometry(0.014, 0.014, 1, 5), alloy);
-    skis.push({ group, spindle, upper, lower });
+    const g = add(new THREE.CylinderGeometry(0.022, 0.022, 0.12, 6), black, bars);
+    g.rotation.z = Math.PI / 2;
+    g.position.set(side * (look.barWidth / 2 - 0.02), 0, -0.04);
+    // The handguards, in the class's second colour.
+    const guard = add(new THREE.BoxGeometry(0.05, 0.08, 0.16), accent, bars);
+    guard.position.set(side * (look.barWidth / 2 + 0.02), 0.02, 0.02);
   }
+  if (look.handle) {
+    const loop = add(
+      new THREE.TorusGeometry(look.handle.width / 2, 0.013, 5, 10, Math.PI),
+      alloy,
+      bars,
+    );
+    loop.position.set(0, 0.02, -0.04);
+    loop.scale.set(1, (look.handle.height + 0.03) / (look.handle.width / 2), 1);
+  }
+
+  // THE RUNNING GEAR, posed off the engine's compressions.
+  const gear = buildGear(spec, look, root, {
+    add,
+    keep: (g) => geos.push(g),
+    paint,
+    black,
+    rubber,
+    alloy,
+    spring,
+  });
 
   const figure: RiderFigure = createRider(style.rider, wrap);
+  figure.group.position.copy(seat);
   root.add(figure.group);
+  const legs = createRiderSpring();
 
   // THE WHOLE MACHINE AND ITS RIDER AS ONE DRAW (`posed-merge.ts`): every
   // opaque part keeps its place in the tree for the posing and is drawn
@@ -439,7 +570,6 @@ export function createSledModel(
   // frame are laid once; the skis, the struts, the bars, the tread and the
   // rider are re-laid each frame. The windshield stays its own mesh — it is
   // the one transparent thing on the machine.
-  const struts = new Set<THREE.Object3D>(skis.flatMap((k) => [k.upper, k.lower]));
   const parts: THREE.Mesh[] = [];
   root.traverse((o) => {
     if (o instanceof THREE.Mesh && o.material !== glass) parts.push(o);
@@ -447,9 +577,10 @@ export function createSledModel(
   const merged = mergePosed(
     root,
     parts,
-    (mesh) => mesh.parent !== root || struts.has(mesh),
+    (mesh) => mesh.parent !== root || gear.struts.has(mesh),
     mat({ vertexColors: true, roughness: 0.55, metalness: 0.05 }, "sled-merged"),
   );
+  const mounts = lampMounts(spec);
 
   // THE LAMPS' GLOW, drawn over the merged machine: additive sprites that
   // come up as the light goes, so a rival reads as two lights in the dark.
@@ -483,45 +614,20 @@ export function createSledModel(
   // lying away from it.
   const bound = merged.mesh.geometry.boundingSphere!;
   const BOUND = bound.radius;
-  const a = new THREE.Vector3();
-  const b = new THREE.Vector3();
-  const c = new THREE.Vector3();
-  const strut = (mesh: THREE.Mesh, from: THREE.Vector3, to: THREE.Vector3) => {
-    mesh.position.copy(from).add(to).multiplyScalar(0.5);
-    const d = b.copy(to).sub(from);
-    const l = d.length();
-    mesh.quaternion.setFromUnitVectors(Y, d.divideScalar(l || 1));
-    mesh.scale.set(1, l, 1);
-  };
 
   return {
     root,
-    casters: [merged.mesh, shield],
+    casters: screen ? [merged.mesh, screen] : [merged.mesh],
     bound(out) {
       out.center.copy(bound.center);
       root.localToWorld(out.center);
       out.radius = bound.radius;
       return out;
     },
-    pose(sled, at, sink, trick = null) {
+    pose(sled, at, sink, trick = null, dt = 0) {
       root.position.set(at.x, at.y - sink, at.z);
       root.quaternion.set(at.q.x, at.q.y, at.q.z, at.q.w);
-      for (let i = 0; i < 2; i++) {
-        const s = skis[i];
-        const lift = Math.max(-0.12, Math.min(0.2, sled.skiCompression[i] - REST_SAG));
-        s.group.position.y = ground + lift + sink * 0.7;
-        // Clockwise from above is a positive turn about +y in the engine's
-        // frame, which is three's too (`lib/quat.ts`).
-        s.group.rotation.y = sled.skiAngle;
-        const side = i === 0 ? -1 : 1;
-        const top = s.group.position.y + 0.36;
-        const x = (side * spec.skiStance) / 2;
-        const fwd = spec.skiForward;
-        strut(s.upper, a.set(side * 0.2, snow + 0.46, fwd - 0.12), c.set(x, top, fwd));
-        strut(s.lower, a.set(side * 0.2, snow + 0.3, fwd), c.set(x, top - 0.14, fwd));
-      }
-      const rearLift = Math.max(-0.12, Math.min(0.25, sled.treadCompression - REST_SAG));
-      tread.position.y = rearLift + sink * 0.8;
+      gear.pose(sled, sink);
       const off = sled.thrown;
       if (off) {
         // THE RIDER THROWN (`crash.ts`): off the machine on a body of his
@@ -539,11 +645,14 @@ export function createSledModel(
         bound.radius = BOUND + figure.group.position.length();
       } else {
         if (bound.radius !== BOUND) {
-          figure.group.position.set(0, 0, 0);
+          figure.group.position.copy(seat);
           figure.group.quaternion.identity();
           bound.radius = BOUND;
         }
+        stepRiderSpring(legs, sled.vy, sled.speed, sled.airborne, dt);
         figure.pose({
+          stand: legs.stand,
+          bump: legs.bump,
           riderRight: sled.riderRight,
           riderAft: sled.riderAft,
           lean: sled.lean,
@@ -567,6 +676,10 @@ export function createSledModel(
         sprite.visible = o > 0.02;
         (sprite.material as THREE.SpriteMaterial).opacity = o;
       }
+    },
+    poseRider(input) {
+      figure.pose(input);
+      merged.update();
     },
     setRiderVisible(v) {
       if (figure.group.visible === v) return;

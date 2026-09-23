@@ -16,6 +16,8 @@
 //   npm run ride -- accel --seconds 30
 //   npm run ride -- --sled mountain    one machine of the catalog
 //   npm run ride -- --sled all         every scenario on every machine, one table
+//   npm run ride -- --card             THE ROSTER CARD: one row a machine, the
+//                                      figures that tell the classes apart
 //   npm run ride -- backflip           a trick scenario (backflip, frontflip,
 //                                      spin, pose, kicker-flip), ridden in a
 //                                      tricks run and scored
@@ -45,10 +47,14 @@ const args = parseArgs(
     seconds: { kind: "number", help: "how long to ride (the scenario's own when left out)" },
     sled: {
       kind: "string",
-      default: "crossover",
+      default: "fox",
       help: `the machine (${E.SLEDS.map((s) => s.id).join(", ")}), or all`,
     },
     "no-png": { kind: "flag", help: "print the numbers, draw nothing" },
+    card: {
+      kind: "flag",
+      help: "the roster card: one row a machine (every machine unless --sled names one)",
+    },
     out: { kind: "string", default: "previews", help: "where the pictures go" },
   },
   "usage: npm run ride -- [scenario] [--sled id|all] [--seconds s] [--no-png] [--out dir]",
@@ -58,7 +64,10 @@ if (args.sled !== "all" && !E.isSledId(args.sled)) {
   console.error(`unknown sled "${args.sled}" (${E.SLEDS.map((s) => s.id).join(", ")}, all)`);
   process.exit(2);
 }
-const roster = args.sled === "all" ? E.SLEDS : [E.sledById(args.sled)];
+const roster =
+  args.sled === "all" || (args.card && args.sled === "fox" && !process.argv.includes("--sled"))
+    ? E.SLEDS
+    : [E.sledById(args.sled)];
 
 const wanted = args.scenario ?? args._[0];
 if (wanted && !SCENARIO_IDS.includes(wanted)) {
@@ -109,6 +118,14 @@ function record(scenario, spec) {
       slip: c.slip,
       rpm: c.rpm,
       heading: c.heading,
+      wy: c.wy,
+      // The share of the machine's load on its skis — what the lever moves.
+      skiLoad:
+        (c.contacts[0].load + c.contacts[1].load) /
+        Math.max(
+          1,
+          c.contacts.reduce((sum, p) => sum + p.load, 0),
+        ),
       pitch: c.pitch,
       roll: c.roll,
       airborne: c.airborne,
@@ -126,6 +143,43 @@ function record(scenario, spec) {
   return { frames, events, trees: level.trees };
 }
 
+/** THE ROSTER CARD's columns: a scenario, the figure off its table, and the
+ * heading it is printed under. Each is a figure the scenario already
+ * measures, so the card and the full table can never disagree. */
+const CARD = [
+  ["accel", "top km/h", "top"],
+  ["accel", "0-100 km/h s", "0-100"],
+  ["accel-powder", "0-50 km/h s", "pow 0-50"],
+  ["accel-powder", "planed at km/h", "planes"],
+  ["turn-in", "settled g", "g @80"],
+  ["turn-in", "to 90% yaw s", "turn-in"],
+  ["turn-powder", "lateral g", "pow g"],
+  ["brake", "stop m", "stop m"],
+  ["kicker", "harsh", "kicker"],
+  ["climb", "highest m", "climb m"],
+];
+
+if (args.card) {
+  console.log(`ride lab — the roster card, engine ${E.engineVersion}\n`);
+  const head = ["machine", ...CARD.map((c) => c[2])];
+  const rows = [head];
+  for (const spec of roster) {
+    const cache = new Map();
+    const row = [`${spec.id} (${spec.kind.toLowerCase()})`];
+    for (const [id, label] of CARD) {
+      if (!cache.has(id)) {
+        const scenario = SCENARIOS.find((s) => s.id === id);
+        cache.set(id, new Map(scenario.measure(record(scenario, spec))));
+      }
+      row.push(String(cache.get(id).get(label) ?? "—"));
+    }
+    rows.push(row);
+  }
+  const widths = head.map((_, i) => Math.max(...rows.map((r) => r[i].length)));
+  for (const r of rows) console.log("  " + r.map((v, i) => v.padEnd(widths[i])).join("  "));
+  process.exit(0);
+}
+
 console.log(`ride lab — engine ${E.engineVersion} at ${E.TUNING.physicsHz} Hz · sled ${args.sled}`);
 if (!args["no-png"]) mkdirSync(join(root, args.out), { recursive: true });
 for (const scenario of chosen) {
@@ -136,7 +190,7 @@ for (const scenario of chosen) {
     const who = roster.length > 1 ? `${spec.id.padEnd(10)} ` : "";
     console.log("  " + who + lines.map(([k, v]) => `${k} ${v}`).join(" · "));
     if (!args["no-png"]) {
-      const tag = roster.length > 1 || spec.id !== "crossover" ? `-${spec.id}` : "";
+      const tag = roster.length > 1 || spec.id !== "fox" ? `-${spec.id}` : "";
       const file = join(root, args.out, `ride-${scenario.id}${tag}.png`);
       writeFileSync(file, drawRun(run, scenario, lines));
     }
