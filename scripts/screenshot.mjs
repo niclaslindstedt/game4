@@ -182,6 +182,16 @@ async function capture(name, params, viewportName, surface) {
       await page.waitForFunction("window.__SH_READY__ === true", null, {
         timeout: args.timeout * 1000,
       });
+      // The minimap's ground is baked in a worker and can land after the
+      // frame does — the race is frozen at its moment, so waiting for it
+      // costs the picture nothing. A HUD with no plate does not wait.
+      await page
+        .waitForFunction(
+          "!document.querySelector('.hud-minimap') || !!document.querySelector('.hud-minimap image')",
+          null,
+          { timeout: 15_000 },
+        )
+        .catch(() => problems.push("the minimap's ground had not landed"));
       // One more beat for the HUD's first snapshot to be drawn.
       await page.waitForTimeout(250);
     }

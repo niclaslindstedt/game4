@@ -7,7 +7,9 @@
 //                 count on one row — the facts about how the race is going,
 //                 read down one left-aligned column — and under them the
 //                 SPLIT at the last checkpoint while it is fresh
-//   top right     the three presses: PAUSE, RESET and CAMERA
+//   top right     the three presses: PAUSE, RESET and CAMERA, and under
+//                 them the MINIMAP — the loop, the field and the checkpoint
+//                 owed, turned heading-up about the rider (minimap.tsx)
 //   top centre    the AIR CLOCK while the sled is off the snow — the one
 //                 number a rider is trying to make go up, where he is
 //                 already looking to aim the landing
@@ -29,6 +31,7 @@ import { RevBar } from "./hud-dial.tsx";
 import { BarZone, LeverZone, type ZoneSide } from "./hud-touch.tsx";
 import type { TouchFeel } from "./input-model.ts";
 import type { InputManager } from "./input.ts";
+import { Minimap } from "./minimap.tsx";
 import type { HudFlash } from "./run-news.ts";
 import type { HudSnapshot } from "./snapshot.ts";
 import { STRINGS } from "./strings.ts";
@@ -139,6 +142,7 @@ export function Hud({
           onCamera={onCamera}
           missed={snap.missed !== null}
         />
+        <Minimap map={snap.minimap} />
       </div>
 
       {/* THE MISSED CHECKPOINT, centred in the upper quarter where the eye

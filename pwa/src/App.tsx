@@ -58,6 +58,7 @@ import { createLoader } from "./game/app-load.ts";
 import { runRumble } from "./game/haptics.ts";
 import { Hud, hasTouch, type HudFlash } from "./game/hud.tsx";
 import { ResultPlate } from "./game/hud-result.tsx";
+import { prepareMinimap } from "./game/minimap.tsx";
 import { createInputManager, type InputManager } from "./game/input.ts";
 import { LoadingScreen } from "./game/loading-screen.tsx";
 import { KeysPage } from "./game/menu-keys.tsx";
@@ -265,6 +266,7 @@ export function App() {
       if (standing === level) return Promise.resolve();
       wanted = level;
       standing = null;
+      prepareMinimap(level);
       return renderer.load(s).then(() => {
         if (wanted === level) standing = level;
       });
@@ -327,8 +329,11 @@ export function App() {
         ? botInput(state)
         : manager.sample(TUNING.dt);
 
+    // The minimap's payload is left off: it carries the level itself, which
+    // a lab would be handed across the page boundary whole.
     window.__SH_PROBE__ = () => ({
       ...takeSnapshot(state),
+      minimap: undefined,
       phase: state.phase,
       t: state.t,
       x: state.sled.x,
