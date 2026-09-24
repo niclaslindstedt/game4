@@ -15,18 +15,21 @@
 // tool is running it twice with one row moved — which is what obliges the
 // map, the sky and the stretch below to be ones where every row can show.
 
-import type { GameMode, SkyOverride } from "@engine";
+import { CURRENT_GENERATOR_VERSION, type GameMode, type SkyOverride } from "@engine";
 
 import type { CameraRung } from "./renderer-api.ts";
 
 export type BenchmarkPlan = {
-  /** THE MAP. Seed 39 (the map under the foothills' FRESH FALL) because of what
-   * its first thirty seconds ride through: the loop runs out of the grid
-   * into the WOODS — twelve trunks within 40 m of the leader on the mean
-   * reading, the most of the ten seeds swept — and the bot takes a KICKER twelve
-   * seconds in, so the stretch carries the forest's draw, a flight, a
-   * landing's puff and the furrows of four sleds. `tests/benchmark_test.ts`
-   * rides it headlessly and holds both. */
+  /** THE MAP. Seed 37 on the current generator because of what its first
+   * thirty seconds ride through: the loop runs out of the grid into the
+   * WOODS — seventeen trunks within 40 m of the leader on the mean reading,
+   * among the most of the twenty seeds (30–49) swept on generator v2 — and
+   * the bot takes two KICKERS inside the stretch, so it carries the
+   * forest's draw, flights, the landings' puffs and the furrows of four
+   * sleds. `tests/benchmark_test.ts` rides it headlessly and holds both. A
+   * generator version that moves the map owes the sweep again, and the
+   * report names the version (`plannedRows`) so two runs either side of one
+   * are never read as the same race. */
   seed: number;
   /** THE RACE, because it is the heaviest thing the game does: four sleds
    * drawn, and — the part no screenshot shows — four whole runs stepped at
@@ -56,7 +59,7 @@ export type BenchmarkPlan = {
 };
 
 export const BENCHMARK: BenchmarkPlan = {
-  seed: 39,
+  seed: 37,
   mode: "race",
   camera: "chase",
   sky: { weather: "fair", hour: 11 },
@@ -75,6 +78,7 @@ export function benchmarkSeconds(plan: BenchmarkPlan = BENCHMARK): number {
 export function plannedRows(plan: BenchmarkPlan = BENCHMARK): { label: string; value: string }[] {
   return [
     { label: "seed", value: String(plan.seed) },
+    { label: "generator", value: `v${CURRENT_GENERATOR_VERSION}` },
     { label: "mode", value: plan.mode },
     { label: "camera", value: plan.camera },
     { label: "sky", value: `${plan.sky.weather} ${plan.sky.hour}h` },

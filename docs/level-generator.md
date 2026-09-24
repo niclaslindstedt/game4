@@ -20,7 +20,7 @@ holds the two copies together, word for word.
 | Field                      | What it is                                                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `size`, `cell`             | The map is `[0, size] × [0, size]` metres (1600), heights on a grid of `cell` (2 m) cells                                                                                      |
-| `ground`                   | The baked heightfield, the track's grading and every kicker included                                                                                                           |
+| `ground`                   | The baked heightfield, the track's grading, every kicker and every cliff included                                                                                              |
 | `groundAt`, `normalAt`     | Bilinear height and unit normal off `ground`                                                                                                                                   |
 | `packedAt`                 | 0 = virgin powder … 1 = packed track, off the baked `packed` field                                                                                                             |
 | `track`                    | The closed loop: points every ~2 m with `x, z, y, s, heading, width`; `length`; `closed`                                                                                       |
@@ -28,6 +28,7 @@ holds the two copies together, word for word.
 | `spawn`, `grid`            | The grid's anchor on the centreline behind the start line, and four slots in rows of two (player first)                                                                        |
 | `trees`                    | Every trunk: position, ground height, height, trunk radius, crown radius                                                                                                       |
 | `kickers`                  | Every crest shaped to throw a sled: `K1…` on the track (with their arc length), `X1…` off it, and on a map built for a tricks run the trick field's `T1…` (`trick: true`, R20) |
+| `cliffs`                   | Every cliff cut into the country (R22), `C1…`: the middle of its edge, the heading it is jumped off in, the drop, the face, the shelf behind it, its width — none on v1        |
 | `sun`                      | Solar hour, day of the year and latitude of a clear winter day                                                                                                                 |
 | `laps`                     | 3                                                                                                                                                                              |
 | `basin`, `attempt`, `seed` | The basin's middle and rim radius; which sub-seed attempt was accepted; the seed                                                                                               |
@@ -52,8 +53,9 @@ the analysis (`engine/analysis/`) — the same rule book re-checked on the FINIS
 is clean. A rejected attempt is followed by the next sub-seed; the order is fixed, so the result
 is the same everywhere. Inside an attempt the order is the dependency order:
 
-1. **The country** (`terrain.ts`, R2–R3) — the basin and its rim, the hills, the ridges, the tilt
-   and the bowls — baked ONCE onto the grid.
+1. **The country** (`terrain.ts`, R2–R3) — the basin and its rim, the hills, the ridges, the tilt,
+   the bowls and the rollers over all of it (a ridged noise, sharp at the crest, round in the
+   trough, which draws nothing from the stream) — baked ONCE onto the grid.
 2. **The loop** (`track.ts`, R5–R7) — a polar curve, `r(θ) = 1 + Σ aₖ sin(kθ + φₖ)`, stretched,
    turned and warped by slow noise, scaled to the length it aims at and resampled every 2 m.
    Drawn again until one fits: no turn too tight, no crossing, no two stretches too close, nothing
@@ -69,6 +71,11 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    that bench, a bank back into the country, and the packed field beside it.
 6. **The kickers off the track** (`kickers.ts`, R4) — the same profile stamped on hilltops the
    search climbs to, well clear of the corridor.
+   Then **the cliffs** (`cliffs.ts`, R22), off a stream of their own: on the basin floor's slopes,
+   facing down them — a smoothstepped shelf out of the country behind the edge, a face falling the
+   drop over a couple of metres, a landing apron below it falling away the way the sled is going,
+   the ends sinking back into the country — with all of it and a run-out past the landing clear of
+   the track, the kickers, the rim and the ice.
 7. **The start** (`spawn.ts`, R11–R13) — a station on the loop searched for the start line, the
    loop re-indexed to begin there, the checkpoints from it, and the grid behind it on the track.
    Then, only on a map asked for one (`GenerateOptions.tricks` — what a TRICKS run is ridden on),
@@ -77,7 +84,8 @@ is the same everywhere. Inside an attempt the order is the dependency order:
    nothing, so the loop, the start and the checkpoints are the race map's own; the analysis holds
    the field it finds (`Kicker.trick`, `T1…`) to R20, and R9 no longer counts it.
 8. **The forest** (`forest.ts`, R14) — a jittered candidate per cell, kept by a forest noise, and
-   refused near the track, on steep ground, up the rim, on a kicker, or within `forest.gap` of a
+   refused near the track, on steep ground, up the rim, on a kicker or a cliff and the landing
+   below it, or within `forest.gap` of a
    tree already standing, so there is always room to ride between two trunks.
 9. **The drifts** (`drift.ts`, R17) — stretches of the finished loop dealt to lie under fresh
    snow, off a stream of their own (the attempt's sub-seed, salted), so they thin the packed
@@ -91,7 +99,7 @@ is the same everywhere. Inside an attempt the order is the dependency order:
     `withSky` / `GenerateOptions.sky` / `CreateGameOptions.sky` put a map under a sky and an hour
     chosen by hand — applied after the search accepts the map, so the map is the seed's either way.
 
-A map builds in about half a second on Node.
+A map builds in about three quarters of a second on Node.
 
 ## Regions (R21)
 
@@ -126,13 +134,21 @@ the old behaviour kept on the old row as an optional trait read at the one place
 (`generatorTraits(opts.version)`); a campaign map moves onto the new version only deliberately,
 re-rated and re-timed; and a version no campaign map names any more is deleted, row and trait
 branches together. A red digest is never fixed by writing the new one down unless the map was
-meant to move. Today there is one version, and it has no traits.
+meant to move.
+
+Today there are two. **v1** is the generator the campaign was curated on, kept alive by its one
+trait, `fewerJumps` (`JumpTraits`, read through `jumpsOf`): no rollers, no cliffs, one to three
+kickers on the loop at least 450 m apart and five to ten off it. **v2** is the rules as written —
+R3's rollers, R22's cliffs, three to eight kickers on the loop 220 m apart, eight to sixteen off
+it — and is what every free ride, race off a link and lab builds. The analysis reads the same
+trait, so a v1 map is held to what v1 laid.
 
 ## Labs
 
 - `npm run level -- --seed 38` — the map drawn from above (`previews/level-38.png`): hillshaded
   snow with contours every 5 and 25 m, the packed track and its orange centreline, every
-  checkpoint numbered, every tree, every kicker (`K1…` on the track, `X1…` off it), the spawn and
+  checkpoint numbered, every tree, every kicker (`K1…` on the track, `X1…` off it), every cliff
+  (`C1…`, its edge drawn with a tick down the face), the spawn and
   its grid — and a table of the same (`previews/level-38.txt`).
 - `npm run rate` — how HARD a map is and what kind of hard (`engine/rating/`: the lap, the
   corners, the climb, the kickers, the woods walling the loop, the drifts, the dark, the sky) over
@@ -147,7 +163,7 @@ meant to move. Today there is one version, and it has no traits.
 
 - **R2** A BASIN RINGED BY MOUNTAINS. The playable country is a basin round the map's middle. Past `basin.rim.inner` (600 m) from the centre — measured on a rounded square, warped by `basin.rim.warp` of noise so the foot of the range wanders — the ground rises to mountain flanks `basin.mountain` (140–220 m) high by `basin.rim.outer` (780 m), with ridged crests on them. Nothing grows above `forest.treeLine` of the way up the rim (R14): the high flanks are bare snow.
 
-- **R3** ROLLING COUNTRY INSIDE. The basin floor is hills of `hills.amplitude` metres over wavelengths of `hills.scale`, ridges of `ridges.amplitude` metres, the whole floor tilted by up to `tilt.grade` in a seeded direction so a lap climbs one side and runs down the other, and `bowls.count` bowls — round hollows of `bowls.radius` metres radius and `bowls.depth` metres deep.
+- **R3** ROLLING COUNTRY INSIDE. The basin floor is hills of `hills.amplitude` metres over wavelengths of `hills.scale`, ridges of `ridges.amplitude` metres, the whole floor tilted by up to `tilt.grade` in a seeded direction so a lap climbs one side and runs down the other, and `bowls.count` bowls — round hollows of `bowls.radius` metres radius and `bowls.depth` metres deep. Over all of it run ROLLERS: sharp-crested swells `rollers.amplitude` metres high every `rollers.scale` metres or so, crests a sled at speed leaves the ground over — in the country and, graded down but not out by R8, under the track.
 
 - **R4** KICKERS OFF THE TRACK. The country carries `kickers.off.count` crests shaped to throw a sled: each stands on a hilltop, rises `kickers.off.height` metres over a ramp of `kickers.off.ramp` metres that is steepest at its lip, and falls away over a landing of `kickers.off.landing` metres. None stands within `kickers.off.clearance` metres of the track's edge, so a kicker is something a rider leaves the loop to find.
 
@@ -159,7 +175,7 @@ meant to move. Today there is one version, and it has no traits.
 
 - **R8** THE TRACK IS GRADED INTO THE GROUND. Across its width, and `track.shoulder.flat` metres beyond each edge, the ground is level with the centreline; past that it blends back into the untouched country over a bank at most `track.bank.slope` steep, between `track.bank.min` and `track.bank.max` metres wide. Along the loop the line is smoothed until no `track.gradeWindow` metres of it climb or fall more steeply than `track.maxGrade` (0.22), and no point of it is cut or filled more than `track.maxCut` metres — the kickers of R9 are the only stretches allowed steeper.
 
-- **R9** KICKERS ON THE TRACK. The loop carries `kickers.on.count` (1–3) crests that make jumps: a ramp `kickers.on.ramp` times the lip's height long rising `kickers.on.height` metres to a lip, steepest at the lip, and a landing `kickers.on.landing` times the lip's height long falling away past it. Each stands on a stretch that turns no more than `kickers.on.straight` radians from the foot of its ramp to the end of its landing, where the line comes up to the lip no steeper downhill than `kickers.on.approachGrade` and runs level or downhill past it — a brow before a descent; two stand at least `kickers.on.spacing` metres apart along the loop.
+- **R9** KICKERS ON THE TRACK. The loop carries `kickers.on.count` (3–8) crests that make jumps: a ramp `kickers.on.ramp` times the lip's height long rising `kickers.on.height` metres to a lip, steepest at the lip, and a landing `kickers.on.landing` times the lip's height long falling away past it. Each stands on a stretch that turns no more than `kickers.on.straight` radians from the foot of its ramp to the end of its landing, where the line comes up to the lip no steeper downhill than `kickers.on.approachGrade` and runs level or downhill past it — a brow before a descent; two stand at least `kickers.on.spacing` metres apart along the loop.
 
 - **R10** PACKED SNOW ON THE TRACK ONLY. `packedAt` is 1 across the track's width and fades to 0 over `track.shoulder.packed` metres beyond each edge — except where R17 drifts it over; everywhere else the snow is virgin powder.
 
@@ -182,3 +198,4 @@ meant to move. Today there is one version, and it has no traits.
 - **R19** THE WEATHER. Every map is dealt one sky off a stream of its own — the attempt's sub-seed, salted — so its weather moves nothing else the map draws: `clear`, `fair` (fair-weather cumulus), `high` (a sheet of high cloud), `overcast` (a lid of stratus and its flat light), `snow` (a fall, from light to a blizzard) or `fog` (a valley fog lying in the basin), at the odds in `weather.odds`. A fall is dealt an intensity in `weather.snowfall` and a fog a density in `weather.fog`; the wind is dealt a mean speed in that sky's band of `weather.wind` — a heavier fall a harder wind — and a bearing it blows from. The same stream sends `weather.evening` of the maps out in the EVENING of R15. `Level.weather` publishes all of it.
 - **R20** THE TRICK FIELD. A map built for a TRICKS run — and only one: a map built for any other ride carries no field — has groomed kickers laid on its loop in the direction of travel, from `trick.lead` metres past the start line to `trick.lead` metres short of it again: as many as fit, up to `trick.count.max` and never fewer than `trick.count.min`. They are GRADED: their lips stand `trick.heights` metres high in turn — small, medium, large and round again — each with a ramp `trick.ramp` times its lip's height long and a landing `trick.landing` times it, the profile of R9, steepest at the lip, at full height across the track, its flat shoulders and its berms (R8, R18), so the berms ride up and over with it. Each stands on a stretch that turns no more than `trick.straight` radians over its footprint and whose line past the lip climbs no steeper than `trick.landingGrade`, with `trick.gap` metres of track between one kicker's landing and the next one's ramp, and as much between any of them and one of R9's. The field draws nothing from any stream: the country, the loop, the start and the checkpoints are the seed's own.
 - **R21** THE REGION. Every map is built in one REGION — a kind of snow country, never a place — asked for by `GenerateOptions.region` and published as `Level.region`: the `boreal` forest, the `alpine` high country, the `tundra` plateau or the `birch` valley. A region's row (`mapgen/regions.ts`) scales R3's hills, ridges, tilt and bowls and R2's flanks and crests; R4's count of kickers off the track; and R14's density, meadow share, tallest trees and tree line — and may keep its woods below `forest.lowland` metres over the loop's mean height, so a high basin's trees stand only in its hollows. It names what grows (spruce, birch), off a hash of where each trunk stands, and deals R15's latitude and day from bands of its own. It may lay WIND CRUST — a packed share of `crust.packed` pressed into the powder over about `crust.cover` of the country and over every crest standing proud of the ground round it — and a FROZEN RIVER from one foot of the range to the other, its channel `river.width` metres wide on a bed cut `river.depth` metres under a smoothed profile of the country it crosses: flat ice (`Level.ice`), as hard as the groomer and with a fraction of its grip, where no tree grows and no kicker is shaped. Neither comes within `CLEAR` metres of the track's centreline, so R10 holds. The crust and the river are each dealt off a stream of their own, and the boreal's row is all ones and lays neither, so a map built without a region is exactly the map its seed built before there were regions.
+- **R22** CLIFFS. The country carries `cliff.count` cliffs — scaled by the region's count of kickers (R21) — to be jumped off into the lower ground below: each stands on a slope at least `cliff.fall` steep and faces down it. A shelf climbs out of the country over `cliff.shelf` metres behind the edge, level at the top; a face falls `cliff.drop` metres from the edge over `cliff.face` of a metre per metre of drop; and below it a landing apron, standing `cliff.apron` of the drop over the country at the face's foot, falls away over `cliff.landing` times its own height, steepest at the top. The edge runs `cliff.width` metres across at full height and sinks back into the country over `cliff.edge` metres at either end. Nothing stands on a cliff or within `cliff.runout` metres past its landing — no tree, no kicker — and no part of it comes within `cliff.clearance` metres of the track's edge, off the rim or on a frozen river. The cliffs are dealt off a stream of their own; `Level.cliffs` publishes every one.

@@ -30,6 +30,10 @@
 //       `tilt.grade` in a seeded direction so a lap climbs one side and
 //       runs down the other, and `bowls.count` bowls — round hollows of
 //       `bowls.radius` metres radius and `bowls.depth` metres deep.
+//       Over all of it run ROLLERS: sharp-crested swells `rollers.amplitude`
+//       metres high every `rollers.scale` metres or so, crests a sled at
+//       speed leaves the ground over — in the country and, graded down but
+//       not out by R8, under the track.
 //   R4  KICKERS OFF THE TRACK. The country carries `kickers.off.count`
 //       crests shaped to throw a sled: each stands on a hilltop, rises
 //       `kickers.off.height` metres over a ramp of `kickers.off.ramp` metres
@@ -60,7 +64,7 @@
 //       or fall more steeply than `track.maxGrade` (0.22), and no point of
 //       it is cut or filled more than `track.maxCut` metres — the
 //       kickers of R9 are the only stretches allowed steeper.
-//   R9  KICKERS ON THE TRACK. The loop carries `kickers.on.count` (1–3)
+//   R9  KICKERS ON THE TRACK. The loop carries `kickers.on.count` (3–8)
 //       crests that make jumps: a ramp `kickers.on.ramp` times the lip's
 //       height long rising `kickers.on.height` metres to a lip, steepest at
 //       the lip, and a landing `kickers.on.landing` times the lip's height
@@ -188,6 +192,22 @@
 //       a stream of their own, and the boreal's row is all ones and lays
 //       neither, so a map built without a region is exactly the map its seed
 //       built before there were regions.
+//   R22 CLIFFS. The country carries `cliff.count` cliffs — scaled by the
+//       region's count of kickers (R21) — to be jumped off into the lower
+//       ground below: each stands on a slope at least `cliff.fall` steep
+//       and faces down it. A shelf climbs out of the country over
+//       `cliff.shelf` metres behind the edge, level at the top; a face
+//       falls `cliff.drop` metres from the edge over `cliff.face` of a
+//       metre per metre of drop; and below it a landing apron, standing
+//       `cliff.apron` of the drop over the country at the face's foot,
+//       falls away over `cliff.landing` times its own height, steepest at
+//       the top. The edge runs `cliff.width` metres across at full height
+//       and sinks back into the country over `cliff.edge` metres at either
+//       end. Nothing stands on a cliff or within `cliff.runout` metres past
+//       its landing — no tree, no kicker — and no part of it comes within
+//       `cliff.clearance` metres of the track's edge, off the rim or on a
+//       frozen river. The cliffs are dealt off a stream of their own;
+//       `Level.cliffs` publishes every one.
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };
@@ -240,10 +260,20 @@ export const LEVEL_RULES = {
     /** Depth at the middle, m. */
     depth: { min: 5, max: 12 } as Band,
   },
+  /** R3 — the rollers: the swells a sled takes air over. A ridged noise,
+   * so the crests are sharp — the kink a suspension cannot follow — and
+   * the troughs round. At 5 m over 70 m a crest throws a sled from about
+   * 60 km/h and the steepest face is under R8's grade. */
+  rollers: {
+    /** Crest over trough, m. */
+    amplitude: 5,
+    /** Wavelength, m. */
+    scale: 70,
+  },
   /** R4, R9 — the kickers. */
   kickers: {
     off: {
-      count: { min: 5, max: 10 } as Band,
+      count: { min: 8, max: 16 } as Band,
       /** Lip over the surrounding ground, m. */
       height: { min: 2.2, max: 4.5 } as Band,
       /** Ramp length, foot to lip, m. */
@@ -256,7 +286,7 @@ export const LEVEL_RULES = {
       clearance: 30,
     },
     on: {
-      count: { min: 1, max: 3 } as Band,
+      count: { min: 3, max: 8 } as Band,
       /** Lip over the graded line, m. */
       height: { min: 1.4, max: 2.6 } as Band,
       /** Ramp length as a multiple of the lip's height: 2/ratio is the
@@ -267,8 +297,9 @@ export const LEVEL_RULES = {
       landing: { min: 14, max: 20 } as Band,
       /** Most the line may turn from ramp foot to landing foot, rad. */
       straight: 0.3,
-      /** Least arc length between two lips, m. */
-      spacing: 450,
+      /** Least arc length between two lips, m: a landing's run-out and
+       * the next one's run-up, with a corner between. */
+      spacing: 220,
       /** The line past the lip must run no steeper UP than this … */
       landingGrade: 0.02,
       /** … and the line up to it no steeper DOWN than this. */
@@ -444,6 +475,34 @@ export const LEVEL_RULES = {
     } as Record<string, Band>,
     /** The share of maps ridden in the evening (R15). */
     evening: 0.25,
+  },
+  /** R22 — the cliffs. */
+  cliff: {
+    count: { min: 3, max: 6 } as Band,
+    /** The face's height, m: from a hop to a drop a rider thinks about. */
+    drop: { min: 5, max: 10 } as Band,
+    /** The face's run per metre of drop: 0.4 is a 68° wall. */
+    face: 0.4,
+    /** The landing below the face: an apron standing this share of the
+     * drop over the country at the foot of the face, falling away over
+     * `landing` times its own height — steepest at the top, R9's landing
+     * — so a sled comes down onto a slope going its way, not onto the
+     * flat. */
+    apron: 0.5,
+    landing: 6,
+    /** The shelf behind the edge, climbing from the country to the lip, m. */
+    shelf: { min: 70, max: 110 } as Band,
+    /** The edge's full-height length across, m. */
+    width: { min: 36, max: 70 } as Band,
+    /** The blend back into the country at either end of the edge, m. */
+    edge: 14,
+    /** Clear ground past the foot of the landing — no tree, no kicker — m. */
+    runout: 25,
+    /** Least clear ground between any part of a cliff and the track's
+     * edge, m. */
+    clearance: 25,
+    /** The least grade of the country a cliff faces down. */
+    fall: 0.05,
   },
   /** R20 — the trick field. */
   trick: {

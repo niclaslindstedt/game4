@@ -74,7 +74,7 @@ out.push(
     `on the track behind the start line, ${level.grid.length} slots`,
 );
 out.push(
-  `region: ${level.region}; forest: ${level.trees.length} trees; kickers: ${st.trackKickers} on the track, ${st.offKickers} off it`,
+  `region: ${level.region}; forest: ${level.trees.length} trees; kickers: ${st.trackKickers} on the track, ${st.offKickers} off it; cliffs: ${st.cliffs}`,
 );
 out.push(
   `sun: ${f(level.sun.hour, 2)} h solar on day ${level.sun.dayOfYear} at ${f(level.sun.latitude)}°N — ${f(st.sunElevation)}° up`,
@@ -104,6 +104,16 @@ for (const k of level.kickers) {
       `${f(k.height).padStart(8)} ${f(k.ramp, 0).padStart(5)} ${f(k.landing, 0).padStart(8)} ${f(k.width, 0).padStart(6)} ${f(deg(k.heading), 0).padStart(7)}°`,
   );
 }
+if (level.cliffs.length > 0) {
+  out.push("");
+  out.push("  cliff       x      z  top(m)  drop  face  shelf  width  heading");
+  for (const c of level.cliffs) {
+    out.push(
+      `  ${c.id.padEnd(6)} ${f(c.x, 0).padStart(6)} ${f(c.z, 0).padStart(6)} ${f(c.y).padStart(7)} ` +
+        `${f(c.drop).padStart(5)} ${f(c.face).padStart(5)} ${f(c.shelf, 0).padStart(6)} ${f(c.width, 0).padStart(6)} ${f(deg(c.heading), 0).padStart(7)}°`,
+    );
+  }
+}
 out.push("");
 if (analysis.findings.length === 0) out.push("analysis: clean");
 for (const fd of analysis.findings) out.push(`analysis: ${fd.severity} ${fd.rule} ${fd.message}`);
@@ -117,6 +127,7 @@ if (args.json) {
         stats: st,
         checkpoints: level.checkpoints,
         kickers: level.kickers,
+        cliffs: level.cliffs,
         spawn: level.spawn,
         grid: level.grid,
         sun: level.sun,
@@ -131,7 +142,7 @@ if (args.json) {
 const canvas = renderLevelMap({
   level,
   scale: args.scale,
-  title: `LEVEL ${level.seed}${args.region !== "boreal" ? ` ${args.region.toUpperCase()}` : ""}  ${f(st.length / 1000, 2)} KM LOOP  ${level.checkpoints.length} CHECKPOINTS  ${st.trackKickers}+${st.offKickers} KICKERS`,
+  title: `LEVEL ${level.seed}${args.region !== "boreal" ? ` ${args.region.toUpperCase()}` : ""}  ${f(st.length / 1000, 2)} KM LOOP  ${level.checkpoints.length} CHECKPOINTS  ${st.trackKickers}+${st.offKickers} KICKERS  ${st.cliffs} CLIFFS`,
   lines: [
     `WIDTH ${f(st.widthMin)}-${f(st.widthMax)} M`,
     `TIGHTEST TURN ${f(st.minRadius, 0)} M`,

@@ -30,6 +30,7 @@ import { scaleCount } from "./regions.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import { trackOf, type Loop } from "./track.ts";
 import type { Kicker } from "./types.ts";
+import { jumpsOf, type JumpTraits } from "./versions.ts";
 
 /** The lift a kicker's profile adds `u` metres past its lip (negative on
  * the ramp), m. */
@@ -48,14 +49,18 @@ export type TrackKicker = { index: number; height: number; ramp: number; landing
 
 /** R9 — choose the track's kickers and add them to the graded profile.
  * Returns them by the index of their lip, in loop order. */
-export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
+export function layTrackKickers(
+  rng: Rng,
+  loop: Loop,
+  jumps: JumpTraits = jumpsOf(undefined),
+): TrackKicker[] {
   const pts = loop.points;
   const n = pts.length;
   const step = loop.length / n;
   const K = R.kickers.on;
   // As many as the loop has room for, up to the rule's most: a map short of
   // good brows carries fewer, never a bad one.
-  const want = K.count.max;
+  const want = jumps.onCount.max;
   // Every station a kicker could stand at, scored; then the best that keep
   // their spacing, with a little noise in the score so a seed with two
   // equally good crests does not always pick the same one.
@@ -96,7 +101,7 @@ export function layTrackKickers(rng: Rng, loop: Loop): TrackKicker[] {
     if (chosen.length >= want) break;
     const clear = chosen.every((k) => {
       const ds = Math.abs(pts[k.index].s - pts[c.index].s);
-      return Math.min(ds, loop.length - ds) >= K.spacing;
+      return Math.min(ds, loop.length - ds) >= jumps.onSpacing;
     });
     if (!clear) continue;
     chosen.push({ index: c.index, height, ramp: c.ramp, landing: c.landing });
@@ -146,7 +151,7 @@ export function publishTrackKickers(
 
 /** Whether any ice lies within `reach` of a plan point: its middle and a
  * ring of sixteen at the reach and half of it. */
-function onIce(ice: Heightfield, x: number, z: number, reach: number): boolean {
+export function nearIce(ice: Heightfield, x: number, z: number, reach: number): boolean {
   if (sampleField(ice, x, z) > 0) return true;
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * Math.PI * 2;
@@ -164,10 +169,11 @@ export function layOffKickers(
   ground: Heightfield,
   loop: Loop,
   ice: Heightfield | null = null,
+  jumps: JumpTraits = jumpsOf(undefined),
 ): Kicker[] {
   const K = R.kickers.off;
   // R21 — the region's multiple of the rule's count; the same band at one.
-  const count = scaleCount(K.count, plan.region.kickers);
+  const count = scaleCount(jumps.offCount, plan.region.kickers);
   const want = rng.int(count.min, count.max);
   const out: Kicker[] = [];
   const size = R.world.size;
@@ -190,7 +196,7 @@ export function layOffKickers(
     const reach = Math.max(ramp, landing) + width / 2 + R.kickers.edge;
     if (rimAt(plan, x, z) > 0.02 || rimAt(plan, x, z + reach) > 0.05) continue;
     // Never on a frozen river (R21): a crest of snow is not shaped on ice.
-    if (ice && onIce(ice, x, z, reach)) continue;
+    if (ice && nearIce(ice, x, z, reach)) continue;
     const hit = nearestTrackPoint(trackOf(loop), x, z);
     if (hit.distance - reach < R.track.width.max / 2 + K.clearance) continue;
     if (out.some((k) => Math.hypot(k.x - x, k.z - z) < reach + Math.max(k.ramp, k.landing) + 20)) {

@@ -44,6 +44,9 @@ export type TerrainPlan = {
   readonly bowls: readonly Bowl[];
   /** The flanks' ridged crests at full height, m (R2, scaled by R21). */
   readonly crests: number;
+  /** The rollers' crest over trough, m (R3) — 0 on a generator version
+   * without them (`JumpTraits.rollers`). */
+  readonly rollers: number;
   /** The region the country is built in (R21), which everything downstream
    * of the plan reads its own multipliers off. */
   readonly region: Region;
@@ -54,13 +57,20 @@ export type TerrainPlan = {
     readonly hills: number;
     readonly ridges: number;
     readonly crests: number;
+    readonly rollers: number;
   };
 };
 
 /** Deal the country's plan off the attempt's stream, in `region` (R21).
  * Every band is the rule's scaled by the region's row — the same band, and
- * so the same draws, in the boreal. */
-export function planTerrain(rng: Rng, region: Region = REGIONS.boreal): TerrainPlan {
+ * so the same draws, in the boreal. The rollers (R3) draw nothing: their
+ * height is the rule's scaled by the region's hills, their seed hashed off
+ * the hills', so a version without them deals the stream it always dealt. */
+export function planTerrain(
+  rng: Rng,
+  region: Region = REGIONS.boreal,
+  rollers = true,
+): TerrainPlan {
   const size = R.world.size;
   const K = region.relief;
   const seed = (): number => rng.int(1, 0x7ffffff0);
@@ -81,18 +91,24 @@ export function planTerrain(rng: Rng, region: Region = REGIONS.boreal): TerrainP
       depth: inBand(rng, scaleBand(R.bowls.depth, K.bowls.depth)),
     });
   }
+  // In this order: the stream a map was always dealt.
+  const mountain = inBand(rng, scaleBand(R.basin.mountain, K.mountain));
+  const hills = inBand(rng, scaleBand(R.hills.amplitude, K.hills));
+  const ridges = inBand(rng, scaleBand(R.ridges.amplitude, K.ridges));
+  const s = { warp: seed(), rim: seed(), hills: seed(), ridges: seed(), crests: seed() };
   return {
     cx,
     cz,
-    mountain: inBand(rng, scaleBand(R.basin.mountain, K.mountain)),
-    hills: inBand(rng, scaleBand(R.hills.amplitude, K.hills)),
-    ridges: inBand(rng, scaleBand(R.ridges.amplitude, K.ridges)),
+    mountain,
+    hills,
+    ridges,
     tiltX: Math.sin(tiltHeading) * tilt,
     tiltZ: Math.cos(tiltHeading) * tilt,
     bowls,
     crests: R.basin.crests * K.crests,
+    rollers: rollers ? R.rollers.amplitude * K.hills : 0,
     region,
-    seeds: { warp: seed(), rim: seed(), hills: seed(), ridges: seed(), crests: seed() },
+    seeds: { ...s, rollers: (s.hills ^ 0x5bd1e995) & 0x7ffffff0 },
   };
 }
 
@@ -153,6 +169,13 @@ export function countryAt(plan: TerrainPlan, x: number, z: number): number {
   const floor = 1 - rim * 0.6;
   let h = fbm(wx, wz, R.hills.scale, 4, s.hills) * plan.hills * floor;
   h += ridged(wx, wz, R.ridges.scale, s.ridges) * plan.ridges * floor;
+  if (plan.rollers > 0) {
+    // R3's rollers, on a lattice turned the other way from the crests', so
+    // their creases do not run parallel to anything else in the country.
+    const rx = wx * 0.8 + wz * 0.6;
+    const rz = wz * 0.8 - wx * 0.6;
+    h += (ridged(rx, rz, R.rollers.scale, s.rollers) - 0.5) * plan.rollers * floor;
+  }
   h += (x - plan.cx) * plan.tiltX + (z - plan.cz) * plan.tiltZ;
   for (const b of plan.bowls) {
     const d2 = ((x - b.x) ** 2 + (z - b.z) ** 2) / (b.r * b.r);

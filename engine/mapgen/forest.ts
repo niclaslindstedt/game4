@@ -30,11 +30,12 @@ import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield
 import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
+import { onCliff } from "./cliffs.ts";
 import { onKicker } from "./kickers.ts";
 import { treeKindAt } from "./regions.ts";
 import { nearestWithin, type HasTrack } from "./query.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
-import type { Kicker, TrackHit, TreeDef } from "./types.ts";
+import type { Cliff, Kicker, TrackHit, TreeDef } from "./types.ts";
 
 /** R14 — grow the forest. */
 export function growForest(
@@ -44,6 +45,7 @@ export function growForest(
   loop: HasTrack,
   kickers: readonly Kicker[],
   ice: Heightfield | null = null,
+  cliffs: readonly Cliff[] = [],
 ): TreeDef[] {
   const F = R.forest;
   const W = plan.region.forest;
@@ -120,6 +122,7 @@ export function growForest(
       nearestWithin(loop, x, z, reach, hit);
       if (hit.distance < loop.track.points[hit.index].width / 2 + F.corridor) continue;
       if (onKicker(kickers, x, z, 4)) continue;
+      if (onCliff(cliffs, x, z, 4)) continue;
       if (crowded(x, z)) continue;
       // Tall in the thick of a wood and low down, short at its edge and up
       // the flanks.

@@ -20,6 +20,8 @@
 //   3. the track's kickers (R9), added to the graded line
 //   4. the corridor pressed into the ground, and the packed field (R8, R10)
 //   5. the kickers off the track (R4), stamped where the corridor is not
+//   5a the cliffs (R22), cut clear of the track and the kickers — off a
+//      stream of their own, and only on a version that has them
 //   6. the start line (R12), the loop re-indexed to begin there, the
 //      checkpoints from it (R11) and the grid behind it on the track (R13)
 //   6a the trick field (R20), stamped onto the finished loop — only on a
@@ -48,6 +50,7 @@ import { analyzeLevel } from "../analysis/index.ts";
 import { debug } from "../output.ts";
 import { compileLevel } from "./compile.ts";
 import { dealDrifts, stampDrifts } from "./drift.ts";
+import { layCliffs } from "./cliffs.ts";
 import { growForest } from "./forest.ts";
 import { layOffKickers, layTrackKickers, publishTrackKickers } from "./kickers.ts";
 import { LEVEL_RULES as R } from "./rules.ts";
@@ -68,7 +71,7 @@ import {
   type Loop,
 } from "./track.ts";
 import type { GenerateOptions, GeneratedLevel } from "./types.ts";
-import { generatorTraits, type GeneratorVersion } from "./versions.ts";
+import { generatorTraits, jumpsOf, type GeneratorVersion } from "./versions.ts";
 
 /** How many loops an attempt draws before it gives up on its country. */
 const DRAWS = 40;
@@ -90,7 +93,9 @@ function attemptLevel(
 ): GeneratedLevel | string {
   const sub = subSeed(seed, attempt);
   const rng = createRng(sub);
-  const plan = planTerrain(rng, region);
+  // What this version throws a sled with (R3's rollers, R4, R9, R22).
+  const jumps = jumpsOf(version);
+  const plan = planTerrain(rng, region, jumps.rollers);
   const ground = bakeCountry(plan);
   const river = planRiver(sub, plan, ground);
   const ice = river ? carveRiver(ground, river) : null;
@@ -112,9 +117,10 @@ function attemptLevel(
   }
   if (!loop) return `no loop fits this country (last: ${why})`;
 
-  const trackKickers = layTrackKickers(rng, loop);
+  const trackKickers = layTrackKickers(rng, loop, jumps);
   const { packed, near, along, dist } = stampCorridor(loop, ground);
-  const offKickers = layOffKickers(rng, plan, ground, loop, ice);
+  const offKickers = layOffKickers(rng, plan, ground, loop, ice, jumps);
+  const cliffs = jumps.cliffs ? layCliffs(sub, plan, ground, trackOf(loop), offKickers, ice) : [];
 
   const start = chooseStart(rng, loop, trackKickers);
   if (typeof start === "string") return start;
@@ -139,7 +145,7 @@ function attemptLevel(
   const crust = layCrust(sub, region, ground);
   if (crust || ice) foldSurface(packed, dist, region, crust, ice);
 
-  const trees = growForest(rng, plan, ground, trackOf(loop), kickers, ice);
+  const trees = growForest(rng, plan, ground, trackOf(loop), kickers, ice, cliffs);
   const day = dealSun(rng, region.sun);
   const { weather, hour } = dealWeather(sub, day);
   const sun = { ...day, hour };
@@ -156,6 +162,7 @@ function attemptLevel(
     grid,
     trees,
     kickers,
+    cliffs,
     sun,
     laps,
     basin: { x: plan.cx, z: plan.cz, rim: R.basin.rim.inner },

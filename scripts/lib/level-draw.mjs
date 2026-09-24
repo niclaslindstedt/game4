@@ -36,6 +36,7 @@ export const MARK = {
   start: [30, 168, 72],
   kicker: [210, 40, 170],
   offKicker: [120, 50, 210],
+  cliff: [150, 60, 20],
   contour: [60, 90, 130],
 };
 
@@ -191,6 +192,21 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
     label(canvas, px(k.x) + 7, py(k.z) - 16, k.id, ink, 1);
   }
 
+  // ── The cliffs (R22): the edge, and a tick down the face ───────────────
+  for (const c of level.cliffs ?? []) {
+    const fx = Math.sin(c.heading);
+    const fz = Math.cos(c.heading);
+    const wx = Math.cos(c.heading) * (c.width / 2);
+    const wz = -Math.sin(c.heading) * (c.width / 2);
+    canvas.line(px(c.x + wx), py(c.z + wz), px(c.x - wx), py(c.z - wz), MARK.cliff, 3);
+    for (const t of [-0.5, 0, 0.5]) {
+      const ex = c.x + wx * t;
+      const ez = c.z + wz * t;
+      canvas.line(px(ex), py(ez), px(ex + fx * 8), py(ez + fz * 8), MARK.cliff, 2);
+    }
+    label(canvas, px(c.x) + 7, py(c.z) - 16, c.id, MARK.cliff, 1);
+  }
+
   // ── The checkpoints, numbered in the order they are ridden ────────────
   level.checkpoints.forEach((c, i) => {
     const rx = Math.cos(c.heading);
@@ -239,6 +255,7 @@ export function renderLevelMap({ level, scale = 0.6, title, lines = [] }) {
   key(INK, "START/FINISH");
   key(MARK.kicker, "KICKER ON TRACK");
   key(MARK.offKicker, "KICKER OFF TRACK");
+  if (level.cliffs?.length) key(MARK.cliff, "CLIFF (EDGE, FACE)");
   key(MARK.tree, "TREE (CROWN)");
   if (level.trees.some((t) => t.kind === "birch")) key(MARK.birch, "BIRCH (CROWN)");
   if (level.crust) key(MARK.crust, "WIND CRUST");

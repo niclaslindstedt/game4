@@ -14,6 +14,7 @@ export {
   type HasTrack,
 } from "./query.ts";
 export { kickerProfile } from "./kickers.ts";
+export { cliffFootprint, cliffProfile } from "./cliffs.ts";
 export { dealDrifts, driftAt } from "./drift.ts";
 export { dayOfYearOf, declinationOf, freeHours, sunWindow, withDay } from "./sun.ts";
 export {
@@ -55,7 +56,9 @@ export {
   GENERATOR_VERSION_IDS,
   generatorTraits,
   isGeneratorVersion,
+  jumpsOf,
   type GeneratorTraits,
+  type JumpTraits,
   type GeneratorVersion,
 } from "./versions.ts";
 export { levelDigest } from "./digest.ts";

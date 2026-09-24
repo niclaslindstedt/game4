@@ -84,6 +84,16 @@ export function levelDigest(level: Level): string {
     mix(k.width);
     mix(sampleField(level.ground, k.x, k.z));
   }
+  // R22 — the cliffs, where a version cuts any: none adds nothing, which
+  // keeps every map pinned before there were cliffs on its own digest.
+  for (const c of level.cliffs ?? []) {
+    word(c.id);
+    mix(c.x);
+    mix(c.z);
+    mix(c.heading);
+    mix(c.drop);
+    mix(sampleField(level.ground, c.x, c.z));
+  }
   for (const d of level.drifts ?? []) {
     mix(d.from);
     mix(d.to);

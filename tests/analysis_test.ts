@@ -76,6 +76,13 @@ describe("analyzeLevel", () => {
     expect(errorRules({ ...base, checkpoints: cps })).toContain("R11");
   });
 
+  it("finds a cliff cut across the track (R22)", () => {
+    const c = base.cliffs[0];
+    const p = base.track.points[200];
+    const moved = { ...c, x: p.x, z: p.z };
+    expect(errorRules({ ...base, cliffs: [moved, ...base.cliffs.slice(1)] })).toContain("R22");
+  });
+
   it("finds a track with no kicker on it (R9)", () => {
     expect(errorRules({ ...base, kickers: base.kickers.filter((k) => !k.onTrack) })).toContain(
       "R9",

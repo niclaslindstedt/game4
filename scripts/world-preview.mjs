@@ -18,7 +18,8 @@
 //   node scripts/world-preview.mjs --skip-build --frames=30   # time 30 frames
 //
 // The views, in the order the run reaches them: spawn, powder, powder-high,
-// lookback, furrow, track, hood, bars, far, jump, landing, vista, forest,
+// lookback, furrow, track, hood, bars, far, jump, landing, vista, cliff,
+// cliff-edge, forest,
 // approach-140, approach-90, approach-60, approach-40 (the forest view's line
 // walked in toward the wood — a shadow that appears between two of them was
 // switched on by the lens coming nearer), orbit, and last, staged rather
@@ -55,6 +56,8 @@ const VIEWS = [
   "jump",
   "landing",
   "vista",
+  "cliff",
+  "cliff-edge",
   "forest",
   "approach-140",
   "approach-90",
