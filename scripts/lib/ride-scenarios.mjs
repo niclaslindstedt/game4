@@ -509,7 +509,7 @@ export const SCENARIOS = [
     title: "a trunk met at 50 km/h",
     level: (S) => S.syntheticLevel(),
     place: (S) => ({ x: S.LONE_TREE.x + 0.4, z: S.LONE_TREE.z - 40, heading: 0, speed: 50 / 3.6 }),
-    seconds: 5,
+    seconds: 7,
     view: "plan",
     input: () => FULL,
     measure: (run) => {

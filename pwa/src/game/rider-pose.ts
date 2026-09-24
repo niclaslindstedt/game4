@@ -34,7 +34,7 @@
 // that has to reach the far grip in a turn straightens the arm rather than
 // stretching it.
 
-import type { TrickPose } from "@engine";
+import { RAGDOLL as R, type TrickPose } from "@engine";
 
 export type V3 = { x: number; y: number; z: number };
 
@@ -173,56 +173,51 @@ export function gripAt(side: number, bars: number): V3 {
   return { x: pv.x + x * c + z * s, y: g.y, z: pv.z - x * s + z * c };
 }
 
+/** A body's own frame in the world: the origin between the hips, `x`
+ * across to his right, `y` up the spine, `z` out of his chest. */
+export type BodyFrame = { origin: V3; x: V3; y: V3; z: V3 };
+
 /**
- * THE RIDER THROWN — a sprawl, in the frame of his own body rather than the
- * sled's: the origin at his centre (`Thrown`'s point, `crash.ts`), y along
- * his spine from the hips to the head, z out of his chest. The renderer
- * turns this frame by the tumble and the bearing he was thrown along, so
- * what is decided here is only what his limbs are doing: flung wide and
- * windmilling while he is going over and over (`flail` 1), and settling
- * spread-eagle as he comes to rest (`flail` 0). `phase` is his own clock,
- * s, so the windmill is a pure function of how long he has been off.
+ * THE RIDER THROWN — the engine's RAGDOLL (`Thrown.points`, in `RAGDOLL`'s
+ * order, world frame) read as a pose: the frame of his trunk found off the
+ * hips and the shoulders into `frame`, and every joint put in it, so the
+ * figure is turned by the frame and hung on the joints exactly as it is on
+ * the sled. Nothing is decided here — where every limb is, is the
+ * physics'; the lengths are the engine's, which are `BODY`'s.
  */
-export function sprawlPose(phase: number, flail: number): RiderPose {
-  const f = Math.max(0, Math.min(1, flail));
-  const hips: V3 = { x: 0, y: -0.25, z: 0 };
-  const neck = add(hips, { x: 0, y: BODY.spine, z: 0 });
-  const head = add(neck, { x: 0, y: BODY.neck, z: 0.02 });
-  const across: V3 = { x: 1, y: 0, z: 0 };
-  const w = phase * 9;
-  const shoulders = [-1, 1].map((side) => add(neck, scale(across, side * BODY.shoulder))) as [
-    V3,
-    V3,
-  ];
-  // The arms flung out past the shoulders and windmilling fore and aft, a
-  // little short of straight so the elbow still has somewhere to bend.
-  const reach = 0.9 * (BODY.upperArm + BODY.forearm);
-  const hands = [-1, 1].map((side, i) => {
-    const swing = f * Math.sin(w + i * 2.1);
-    const out = norm({
-      x: side * (0.42 + 0.1 * f),
-      y: 0.18 + 0.25 * swing,
-      z: 0.1 + 0.3 * f * Math.cos(w + i * 2.1),
-    });
-    return add(shoulders[i], scale(out, reach));
-  }) as [V3, V3];
-  const elbows = [-1, 1].map((side, i) =>
-    solveLimb(shoulders[i], hands[i], BODY.upperArm, BODY.forearm, { x: side, y: -0.3, z: -0.4 }),
-  ) as [V3, V3];
-  // The legs apart, kicking against each other.
-  const feet = [-1, 1].map((side, i) => ({
-    x: side * (0.24 + 0.08 * f),
-    y: hips.y - 0.82,
-    z: 0.08 + 0.3 * f * Math.sin(w * 0.8 + i * Math.PI),
-  })) as [V3, V3];
-  const knees = [-1, 1].map((side, i) =>
-    solveLimb(add(hips, scale(across, side * BODY.hip)), feet[i], BODY.thigh, BODY.shin, {
-      x: side * 0.3,
-      y: 0,
-      z: 1,
-    }),
-  ) as [V3, V3];
-  return { hips, neck, head, pitch: 0, roll: 0, knees, feet, shoulders, elbows, hands, bars: 0 };
+export function ragdollPose(points: readonly number[], frame: BodyFrame): RiderPose {
+  const at = (i: number): V3 => ({ x: points[3 * i], y: points[3 * i + 1], z: points[3 * i + 2] });
+  const hipL = at(R.hipL);
+  const hipR = at(R.hipR);
+  const shL = at(R.shoulderL);
+  const shR = at(R.shoulderR);
+  const origin = scale(add(hipL, hipR), 0.5);
+  const neckW = scale(add(shL, shR), 0.5);
+  const y = norm(sub(neckW, origin));
+  const side = sub(shR, shL);
+  const x = norm(sub(side, scale(y, dot(side, y))));
+  const z = { x: x.y * y.z - x.z * y.y, y: x.z * y.x - x.x * y.z, z: x.x * y.y - x.y * y.x };
+  frame.origin = origin;
+  frame.x = x;
+  frame.y = y;
+  frame.z = z;
+  const local = (p: V3): V3 => {
+    const d = sub(p, origin);
+    return { x: dot(d, x), y: dot(d, y), z: dot(d, z) };
+  };
+  return {
+    hips: { x: 0, y: 0, z: 0 },
+    neck: local(neckW),
+    head: local(at(R.head)),
+    pitch: 0,
+    roll: 0,
+    knees: [local(at(R.kneeL)), local(at(R.kneeR))],
+    feet: [local(at(R.footL)), local(at(R.footR))],
+    shoulders: [local(shL), local(shR)],
+    elbows: [local(at(R.elbowL)), local(at(R.elbowR))],
+    hands: [local(at(R.handL)), local(at(R.handR))],
+    bars: 0,
+  };
 }
 
 /** THE WHOLE POSE for one frame. */

@@ -7,7 +7,7 @@
 // (`make world`); what can be said in numbers is said here.
 
 import { describe, expect, it } from "vitest";
-import { createGame, step, NEUTRAL_INPUT, type SnowContact } from "@engine";
+import { createGame, placeRun, step, NEUTRAL_INPUT, TUNING, type SnowContact } from "@engine";
 import { LONE_TREE, syntheticLevel } from "./support/synthetic.ts";
 
 import {
@@ -21,7 +21,14 @@ import {
 } from "../pwa/src/game/camera-rigs.ts";
 import { createLineClear } from "../pwa/src/game/camera-clear.ts";
 import { createTrack, nlerp, observe, sample } from "../pwa/src/game/interp.ts";
-import { BODY, gripAt, riderPose, solveLimb, sprawlPose } from "../pwa/src/game/rider-pose.ts";
+import {
+  BODY,
+  gripAt,
+  ragdollPose,
+  riderPose,
+  solveLimb,
+  type BodyFrame,
+} from "../pwa/src/game/rider-pose.ts";
 import { airMass, skyLookAt, skyLookFor, sunDirection, sunTint } from "../pwa/src/game/sky.ts";
 import {
   bodyStampOf,
@@ -139,6 +146,16 @@ describe("the trail a sled leaves", () => {
     bodyStampOf({ x: 0, z: 1.5, touching: true }, pen, flat, out);
     expect(out).toHaveLength(2);
     expect(out[1]).toMatchObject({ ax: 0, az: 0, bx: 0, bz: 1.5, half: TRAIL.body / 2 });
+    // Given the body, every bone of it is pressed in too — a body lying in
+    // powder lies in its own hole, limbs and all.
+    out.length = 0;
+    const points = new Array(39).fill(0);
+    points[3 * 4 + 2] = 3.2;
+    points[3 * 7 + 2] = 1.6;
+    bodyStampOf({ x: 0, z: 2.4, touching: true, points }, pen, flat, out);
+    expect(out).toHaveLength(11);
+    expect(out[1]).toMatchObject({ ax: 0, az: 3.2, bx: 0, bz: 0 });
+    expect(out.some((o) => o.bz === 1.6)).toBe(true);
     // A body is a wider mark than any probe.
     expect(TRAIL.body).toBeGreaterThan(2 * 0.3);
   });
@@ -294,20 +311,41 @@ describe("the rider's pose", () => {
     expect(joint.z).toBeGreaterThan(0.15);
   });
 
-  it("thrown, sprawls with every limb its own length, flailing and then still", () => {
+  it("thrown, hangs on the engine's ragdoll with every limb its own length", () => {
+    // The engine's body is measured with the figure's own bones.
+    const T = TUNING.crash.body;
+    for (const k of ["thigh", "shin", "upperArm", "forearm", "spine", "shoulder", "hip", "neck"]) {
+      expect(T[k as keyof typeof T], k).toBe(BODY[k as keyof typeof BODY]);
+    }
     const d = (a: { x: number; y: number; z: number }, b: typeof a) =>
       Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
-    const at = (phase: number, flail: number) => sprawlPose(phase, flail);
-    for (const p of [at(0.2, 1), at(1.3, 0.6), at(3, 0)]) {
-      for (let i = 0; i < 2; i++) {
-        expect(d(p.shoulders[i], p.elbows[i])).toBeCloseTo(BODY.upperArm, 3);
-        expect(d(p.elbows[i], p.hands[i])).toBeCloseTo(BODY.forearm, 2);
+    const state = createGame({ level: syntheticLevel(), rivals: 0, countdown: 0, quiet: true });
+    placeRun(state, { x: LONE_TREE.x + 0.4, z: LONE_TREE.z - 30, heading: 0, speed: 50 / 3.6 });
+    const frame: BodyFrame = {
+      origin: { x: 0, y: 0, z: 0 },
+      x: { x: 1, y: 0, z: 0 },
+      y: { x: 0, y: 1, z: 0 },
+      z: { x: 0, y: 0, z: 1 },
+    };
+    let seen = 0;
+    for (let i = 0; i < 6 * 120 && seen < 40; i++) {
+      step(state, { ...NEUTRAL_INPUT, throttle: 1 });
+      const off = state.sled.thrown;
+      if (!off || i % 7) continue;
+      seen++;
+      const p = ragdollPose(off.points, frame);
+      for (let s = 0; s < 2; s++) {
+        expect(d(p.shoulders[s], p.elbows[s])).toBeCloseTo(BODY.upperArm, 2);
+        expect(d(p.elbows[s], p.hands[s])).toBeCloseTo(BODY.forearm, 2);
+        expect(d(p.knees[s], p.feet[s])).toBeCloseTo(BODY.shin, 2);
       }
-      expect(d(p.hips, p.neck)).toBeCloseTo(BODY.spine, 6);
+      expect(d(p.hips, p.neck)).toBeCloseTo(BODY.spine, 2);
+      // The frame is his trunk's: the neck straight up it, the hips across.
+      expect(p.neck.x).toBeCloseTo(0, 6);
+      expect(p.neck.z).toBeCloseTo(0, 6);
+      expect(Math.hypot(frame.x.x, frame.x.y, frame.x.z)).toBeCloseTo(1, 6);
     }
-    // Windmilling while flailing; the same whenever he is still.
-    expect(at(0.2, 1).hands[0]).not.toEqual(at(0.4, 1).hands[0]);
-    expect(at(2, 0).hands[0]).toEqual(at(3, 0).hands[0]);
+    expect(seen).toBeGreaterThan(10);
   });
 
   it("keeps his hands on the grips as the bars turn", () => {

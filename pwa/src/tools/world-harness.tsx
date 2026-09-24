@@ -445,16 +445,13 @@ const shots: Record<string, () => string> = {
     }
     const off = state.sled.thrown;
     if (!off) return "already stood back up";
+    // Close enough to read the body: every limb where the ragdoll left it.
     const across = off.heading + Math.PI / 2;
-    const ex = off.x + Math.sin(across) * 4;
-    const ez = off.z + Math.cos(across) * 4;
+    const ex = off.x + Math.sin(across) * 2.6;
+    const ez = off.z + Math.cos(across) * 2.6;
     renderer.setOverride({
-      eye: { x: ex, y: level.groundAt(ex, ez) + 2.2, z: ez },
-      target: {
-        x: off.x - Math.sin(off.heading) * 3,
-        y: off.y,
-        z: off.z - Math.cos(off.heading) * 3,
-      },
+      eye: { x: ex, y: level.groundAt(ex, ez) + 1.6, z: ez },
+      target: { x: off.x, y: off.y, z: off.z },
       fov: 55,
       roll: 0,
     });

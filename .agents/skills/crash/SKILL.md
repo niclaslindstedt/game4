@@ -14,9 +14,12 @@ Three modules answer it, and the split matters:
   just taken (the `hit` and `land` events, the sled's attitude against the
   snow) and names a cause or none; `throwRider` puts the rider off onto a
   body of his own (`SledState.thrown`, a `Thrown`); `stepThrown` moves that
-  body — gravity, the trunks, the snow's floor and friction, the tumble —
-  and `crashOver` says when the reset may stand them back up. Knobs in
-  `TUNING.crash`.
+  body — a RAGDOLL (`engine/game/ragdoll.ts`): thirteen jointed points,
+  each meeting the snow (the floor, friction, the powder's plough) and the
+  trunks on its own — and `crashOver` says when the reset may stand them
+  back up. Knobs in `TUNING.crash` (`.body` is the rider's measures, the
+  same bones `rider-pose.ts`'s `BODY` draws — `world_render_test` holds
+  them together).
 - **`engine/game/trench.ts`** — STUCK IN DEEP POWDER. `stepTrench` digs the
   hole under a bogged tread (`SledState.trench`, m) and fills it back as the
   rider rocks it or drives out; `sled.ts` adds the trench to the tread's
@@ -45,7 +48,7 @@ in — and the trench, which is snow's own way of stopping a sled.
 | --- | --- |
 | `sled-physics` | the rollover itself, the landing's cost, the sink the trench deepens |
 | `collision` | the trunk and the rival that start a crash, the reset that ends one |
-| `rider` | the figure thrown: `sprawlPose` and how `sled-body.ts` lays him |
+| `rider` | the figure thrown: `ragdollPose` off `Thrown.points` and how `sled-body.ts` lays him |
 | `visual-effects` | the burst, the puffs and the gouge a body leaves, the pulse |
 | `test-scenario` | staging a crash on the synthetic maps with `placeRun` |
 

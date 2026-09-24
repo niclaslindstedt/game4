@@ -30,7 +30,14 @@ import { type SledSpec, type SledState, type Thrown, type TrickPose } from "@eng
 import type { Pose } from "./interp.ts";
 import { mergePosed } from "./posed-merge.ts";
 import { createRider, type RiderFigure, type RiderStyle } from "./rider.ts";
-import { MOUNTS, createRiderSpring, stepRiderSpring, type RiderInput } from "./rider-pose.ts";
+import {
+  MOUNTS,
+  createRiderSpring,
+  ragdollPose,
+  stepRiderSpring,
+  type BodyFrame,
+  type RiderInput,
+} from "./rider-pose.ts";
 import { SLED_BODY } from "./sled-colours.ts";
 import { buildGear, profile, strip } from "./sled-gear.ts";
 import { LIVERIES, PATTERNS, type Livery, type PatternId } from "./sled-liveries.ts";
@@ -618,11 +625,16 @@ export function createSledModel(
   const headGlow = glowOf(0xfff0d0, 1.1, [mounts.head[0], mounts.head[1], mounts.head[2] + 0.05]);
   const tailGlow = glowOf(0xff2a1a, 0.5, mounts.tail);
 
-  const Y = new THREE.Vector3(0, 1, 0);
-  const X = new THREE.Vector3(1, 0, 0);
   const toRoot = new THREE.Quaternion();
   const thrown = new THREE.Quaternion();
-  const tumble = new THREE.Quaternion();
+  const trunk = new THREE.Matrix4();
+  const axis = { x: new THREE.Vector3(), y: new THREE.Vector3(), z: new THREE.Vector3() };
+  const frame: BodyFrame = {
+    origin: { x: 0, y: 0, z: 0 },
+    x: { x: 1, y: 0, z: 0 },
+    y: { x: 0, y: 1, z: 0 },
+    z: { x: 0, y: 0, z: 1 },
+  };
   // The merged draw's bound: the machine's own, grown while the rider is
   // lying away from it.
   const bound = merged.mesh.geometry.boundingSphere!;
@@ -643,18 +655,23 @@ export function createSledModel(
       gear.pose(sled, sink);
       const off = body === undefined ? sled.thrown : body;
       if (off) {
-        // THE RIDER THROWN (`crash.ts`): off the machine on a body of his
-        // own, tumbling head over heels along the way he was thrown — laid
-        // in the root's frame, so the one merged draw still carries him,
-        // and the draw's bound grown to reach him.
+        // THE RIDER THROWN (`crash.ts`): off the machine, his figure hung
+        // on the engine's ragdoll — laid in the root's frame at his trunk's
+        // own place and turn, so the one merged draw still carries him, and
+        // the draw's bound grown to reach him.
+        const p = ragdollPose(off.points, frame);
         toRoot.set(at.q.x, at.q.y, at.q.z, at.q.w).invert();
         figure.group.position
-          .set(off.x - at.x, off.y - (at.y - sink), off.z - at.z)
+          .set(frame.origin.x - at.x, frame.origin.y - (at.y - sink), frame.origin.z - at.z)
           .applyQuaternion(toRoot);
-        thrown.setFromAxisAngle(Y, off.heading).multiply(tumble.setFromAxisAngle(X, off.tumble));
+        trunk.makeBasis(
+          axis.x.set(frame.x.x, frame.x.y, frame.x.z),
+          axis.y.set(frame.y.x, frame.y.y, frame.y.z),
+          axis.z.set(frame.z.x, frame.z.y, frame.z.z),
+        );
+        thrown.setFromRotationMatrix(trunk);
         figure.group.quaternion.copy(toRoot).multiply(thrown);
-        const flail = Math.min(1, Math.hypot(off.vx, off.vz) / 6 + (off.touching ? 0 : 0.5));
-        figure.sprawl(off.t, flail);
+        figure.sprawl(p);
         bound.radius = BOUND + figure.group.position.length();
       } else {
         if (bound.radius !== BOUND) {

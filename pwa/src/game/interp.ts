@@ -102,19 +102,25 @@ export function sample(track: PoseTrack, alpha: number, out: Pose): Pose {
   return out;
 }
 
-/** THE RIDER THROWN, drawn between two steps the same way: his centre and
- * his tumble. Under the death cam's slow motion a step lands every few
- * frames, and a body posed off the step alone would visibly hop. */
+/** THE RIDER THROWN, drawn between two steps the same way: his centre, his
+ * tumble and every point of his body. Under the death cam's slow motion a
+ * step lands every few frames, and a body posed off the step alone would
+ * visibly hop. */
 export type BodyTrack = {
   tick: number;
   curr: Thrown | null;
-  prev: { x: number; y: number; z: number; tumble: number };
+  prev: { x: number; y: number; z: number; tumble: number; points: number[] };
   /** The body as last drawn, rewritten by `sampleBody`. */
   drawn: Thrown | null;
 };
 
 export function createBodyTrack(): BodyTrack {
-  return { tick: -1, curr: null, prev: { x: 0, y: 0, z: 0, tumble: 0 }, drawn: null };
+  return {
+    tick: -1,
+    curr: null,
+    prev: { x: 0, y: 0, z: 0, tumble: 0, points: [] },
+    drawn: null,
+  };
 }
 
 /** Take in the thrown body as the state has it at `tick` (null: on the sled). */
@@ -129,6 +135,7 @@ export function observeBody(track: BodyTrack, body: Thrown | null, tick: number)
       p.y = body.y;
       p.z = body.z;
       p.tumble = body.tumble;
+      p.points = body.points.slice();
     }
   } else {
     const f = 1 - 1 / k;
@@ -136,8 +143,12 @@ export function observeBody(track: BodyTrack, body: Thrown | null, tick: number)
     p.y = c.y + (body.y - c.y) * f;
     p.z = c.z + (body.z - c.z) * f;
     p.tumble = c.tumble + (body.tumble - c.tumble) * f;
+    for (let i = 0; i < body.points.length; i++) {
+      p.points[i] = c.points[i] + (body.points[i] - c.points[i]) * f;
+    }
   }
-  track.curr = body ? { ...body } : null;
+  // The state's arrays are stepped in place: keep copies.
+  track.curr = body ? { ...body, points: body.points.slice(), last: [] } : null;
   track.tick = tick;
 }
 
@@ -148,11 +159,16 @@ export function sampleBody(track: BodyTrack, alpha: number): Thrown | null {
   if (!c) return null;
   const a = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
   const p = track.prev;
-  const out = (track.drawn ??= { ...c });
+  const out = (track.drawn ??= { ...c, points: c.points.slice() });
+  const points = out.points;
   Object.assign(out, c);
+  out.points = points;
   out.x = p.x + (c.x - p.x) * a;
   out.y = p.y + (c.y - p.y) * a;
   out.z = p.z + (c.z - p.z) * a;
   out.tumble = p.tumble + (c.tumble - p.tumble) * a;
+  for (let i = 0; i < c.points.length; i++) {
+    points[i] = p.points[i] + (c.points[i] - p.points[i]) * a;
+  }
   return out;
 }

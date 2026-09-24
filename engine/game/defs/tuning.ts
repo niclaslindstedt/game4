@@ -377,23 +377,56 @@ export const TUNING = {
      * and coming back onto its skis, has not rolled. */
     rollHold: 0.2,
     /** What he leaves with: this share of the sled's velocity before the
-     * blow, and a climb, m/s — the pitch of a body off a seat. */
+     * blow, and a climb, m/s — the pitch of a body off a seat — and a turn
+     * head over heels at his speed over `tumbleRadius` m, no faster than
+     * `maxSpin` rad/s (a body pitched over the bars goes over about once a
+     * second), with `carry` of the sled's own turning on top. */
     keep: 0.85,
     throwUp: 2.4,
-    /** THE BODY: its radius, m; how far into powder it settles, m; the
-     * share of the speed into the snow it gets back; its friction on the
-     * groomer and in powder (a sprawled body ploughs fresh snow). */
-    radius: 0.3,
-    sink: 0.12,
-    restitution: 0.25,
-    frictionPacked: 0.5,
+    tumbleRadius: 2,
+    maxSpin: 6,
+    carry: 0.5,
+    /** THE BODY (`ragdoll.ts`): thirteen points — the hips, the shoulders,
+     * the head, the knees, the feet, the elbows, the hands — held at the
+     * rider's own measures (`rider-pose.ts`'s `BODY` states the same ones
+     * for the figure, and `tests/crash_test.ts` holds the two together), a
+     * mass on each, kg (80 in all), and a radius, m, the snow and the
+     * trunks keep it out by. `radius` is the torso's. */
+    body: {
+      thigh: 0.44,
+      shin: 0.46,
+      upperArm: 0.31,
+      forearm: 0.34,
+      spine: 0.5,
+      shoulder: 0.2,
+      hip: 0.12,
+      neck: 0.18,
+      mass: { hip: 14, shoulder: 11, head: 5, knee: 5, foot: 4, elbow: 2, hand: 1.5 },
+      head: 0.13,
+      limb: 0.06,
+    },
+    radius: 0.11,
+    /** Passes over the body's joints a step: enough that no limb is seen to
+     * stretch. */
+    iterations: 8,
+    /** THE JOINTS a body cannot pass: the thigh no further BACK than this
+     * share of its length behind the hip, nor further UP than this share
+     * above it (a hip flexed past a right angle), the knee bending only
+     * forward, and the hand no nearer its shoulder than `foldArm` m. */
+    hipBack: 0.35,
+    hipUp: 0.3,
+    foldArm: 0.2,
+    /** THE SNOW under every point: it settles `sink` m into powder at the
+     * ordinary dial (twice that at the deepest), the speed into it taken
+     * away; Coulomb friction along it on the weight and on the arrival —
+     * `frictionPacked` on the groomer, `frictionPowder` in fresh snow —
+     * and the PLOUGH, 1/s per unit of powder depth, the share of its way a
+     * point buried in fresh snow loses a second shoving it: the deep snow
+     * that stops a body turning over and over. */
+    sink: 0.15,
+    frictionPacked: 0.45,
     frictionPowder: 0.8,
-    /** THE TUMBLE: head over heels at the speed over this rolling radius,
-     * m, no faster than `maxSpin` rad/s; on the snow the spin chases the
-     * roll at `spinGrip` 1/s, and at rest he settles flat. */
-    tumbleRadius: 0.5,
-    maxSpin: 12,
-    spinGrip: 4,
+    plough: 1.2,
     /** THE SLED, riderless: the nose-over a nose-in landing puts into it,
      * rad/s per m/s of impact, capped. */
     sledKick: 0.35,

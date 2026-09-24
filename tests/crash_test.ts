@@ -12,6 +12,7 @@ import {
   createGame,
   NEUTRAL_INPUT,
   placeRun,
+  RAGDOLL,
   skiPull,
   SLEDS,
   step,
@@ -21,6 +22,7 @@ import {
   type GameState,
   type RunMoment,
   type SledInput,
+  type Thrown,
 } from "@engine";
 import { flatLevel, LONE_TREE, STADIUM, syntheticLevel } from "./support/synthetic.ts";
 
@@ -55,6 +57,17 @@ const atTree = (offset: number, kmh: number, damage = false): GameState =>
 
 const wipeouts = (events: GameEvent[]) => events.filter((e) => e.kind === "wipeout");
 
+/** How far up the sky his spine points: 1 stood, 0 lying flat. */
+function spineUp(b: Thrown): number {
+  const P = b.points;
+  const at = (i: number, k: number) => P[3 * i + k];
+  const R = RAGDOLL;
+  const d = [0, 1, 2].map(
+    (k) => at(R.shoulderL, k) + at(R.shoulderR, k) - at(R.hipL, k) - at(R.hipR, k),
+  );
+  return d[1] / Math.hypot(d[0], d[1], d[2]);
+}
+
 describe("the wipeout", () => {
   it("a trunk met hard throws the rider on, and the reset stands them up", () => {
     const state = atTree(0.4, 50);
@@ -69,7 +82,13 @@ describe("the wipeout", () => {
       if (state.sled.thrown) {
         off = { ...state.sled.thrown };
         first ??= off;
-        closest = Math.min(closest, Math.hypot(off.x - tree.x, off.z - tree.z));
+        for (let k = 0; k < RAGDOLL.count; k++) {
+          const px = off.points[3 * k];
+          const pz = off.points[3 * k + 2];
+          if (off.points[3 * k + 1] < tree.y + tree.height) {
+            closest = Math.min(closest, Math.hypot(px - tree.x, pz - tree.z));
+          }
+        }
       }
       if (events.some((e) => e.kind === "reset")) break;
     }
@@ -77,17 +96,75 @@ describe("the wipeout", () => {
     expect(w).toHaveLength(1);
     expect(w[0].kind === "wipeout" && w[0].cause).toBe("tree");
     // He left the saddle at the way the sled had before the trunk took it —
-    // met the trunk himself, and was stopped by it rather than passing
-    // through — and tumbled.
+    // met the trunk himself, no part of him passing through it — went over,
+    // and came to rest lying on the snow.
     expect(off).not.toBeNull();
     expect(first!.vz).toBeGreaterThan(0.8 * TUNING.crash.keep * (50 / 3.6));
-    expect(closest).toBeGreaterThanOrEqual(tree.radius + TUNING.crash.radius - 1e-6);
-    expect(Math.abs(off!.tumble)).toBeGreaterThan(Math.PI);
+    expect(closest).toBeGreaterThanOrEqual(tree.radius + TUNING.crash.body.limb - 1e-6);
+    expect(off!.tumble).toBeGreaterThan(Math.PI / 2);
+    expect(Math.abs(spineUp(off!))).toBeLessThan(0.35);
     const reset = events.find((e) => e.kind === "reset");
     expect(reset && reset.kind === "reset" && reset.auto).toBe(true);
     expect(reset!.t - w[0].t).toBeGreaterThanOrEqual(TUNING.crash.lieMin - 1e-9);
     expect(reset!.t - w[0].t).toBeLessThanOrEqual(TUNING.crash.lieMax + TUNING.dt);
     expect(state.sled.thrown).toBeNull();
+  });
+
+  it("lies down in the snow as a body does — and deep powder stops him soonest", () => {
+    // Over the bars at 60 km/h onto the groomer, onto ordinary powder and
+    // onto the deepest: he lands, goes over, slides and lies still, flat —
+    // not rolling on like a wheel — and the deeper the snow the sooner.
+    const lie = (packed: number, snowDepth: number) => {
+      const state = createGame({
+        level: flatLevel({ packed }),
+        rivals: 0,
+        countdown: 0,
+        quiet: true,
+        snowDepth,
+      });
+      placeRun(state, {
+        x: 1500,
+        z: 200,
+        heading: 0,
+        speed: 60 / 3.6,
+        height: 2.5,
+        vy: -3,
+        pitch: -0.7,
+      });
+      let body: Thrown | null = null;
+      let down = -1;
+      for (let i = 0; i < 8 * TUNING.physicsHz; i++) {
+        step(state, NEUTRAL_INPUT);
+        const b = state.sled.thrown;
+        if (!b) {
+          if (body) break;
+          continue;
+        }
+        body = { ...b, points: b.points.slice() };
+        if (down < 0 && b.touching) down = b.tumble;
+      }
+      expect(body).not.toBeNull();
+      const b = body!;
+      const from = { x: 1500, z: 200 };
+      return {
+        slid: Math.hypot(b.x - from.x, b.z - from.z),
+        rolled: b.tumble - down,
+        flat: Math.abs(spineUp(b)),
+        still: b.still,
+      };
+    };
+    const groomer = lie(1, 1);
+    const powder = lie(0, 1);
+    const deep = lie(0, 2);
+    for (const r of [groomer, powder, deep]) {
+      expect(r.still).toBeGreaterThan(0);
+      expect(r.flat).toBeLessThan(0.35);
+      // On the snow he goes over a turn at the most, never over and over.
+      expect(r.rolled).toBeLessThan(2 * Math.PI);
+    }
+    expect(powder.slid).toBeLessThan(groomer.slid - 5);
+    expect(deep.slid).toBeLessThanOrEqual(powder.slid);
+    expect(deep.rolled).toBeLessThanOrEqual(groomer.rolled + 1e-9);
   });
 
   it("a trunk clipped slowly is a hit he holds on through", () => {
