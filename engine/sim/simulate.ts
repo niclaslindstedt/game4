@@ -14,6 +14,7 @@ import type { GameEvent } from "../game/state.ts";
 import type { RegionId } from "../mapgen/regions.ts";
 import type { Level } from "../mapgen/types.ts";
 import { botInput, RIDER_BOT, type BotProfile } from "./bot.ts";
+import { hypot } from "../lib/math.ts";
 
 export type SimOptions = {
   /** A map to ride instead of the seed's own. */
@@ -144,7 +145,7 @@ export function simulateRun(seed: number, options: SimOptions = {}): RunReport {
     }
     const c = state.sled;
     if (c.speed > topSpeed) topSpeed = c.speed;
-    distance += Math.hypot(c.vx, c.vz) * TUNING.dt;
+    distance += hypot(c.vx, c.vz) * TUNING.dt;
     steps += 1;
     if (steps % 30 === 0) {
       mix(c.x);

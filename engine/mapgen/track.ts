@@ -34,7 +34,7 @@
 // bench past it, the plough's berm along each edge on that bench (R18), a
 // bank back into the country behind it, and the packed field of R10.
 
-import { TAU, smoothstep } from "../lib/math.ts";
+import { hypot, smoothstep, TAU } from "../lib/math.ts";
 import { sampleField, createHeightfield, type Heightfield } from "../lib/heightfield.ts";
 import { valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
@@ -107,7 +107,7 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   const wx = new Float64Array(SAMPLES + 1);
   const wz = new Float64Array(SAMPLES + 1);
   let perimeter = 0;
-  for (let j = 1; j <= SAMPLES; j++) perimeter += Math.hypot(ux[j] - ux[j - 1], uz[j] - uz[j - 1]);
+  for (let j = 1; j <= SAMPLES; j++) perimeter += hypot(ux[j] - ux[j - 1], uz[j] - uz[j - 1]);
   let scale = aim / perimeter;
   let length = 0;
   for (let pass = 0; pass < 3; pass++) {
@@ -117,7 +117,7 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
       const z = cz + uz[j] * scale;
       wx[j] = x + (valueNoise(x, z, warp.scale, warp.seed) * 2 - 1) * warp.amount;
       wz[j] = z + (valueNoise(x, z, warp.scale, warp.seed + 77) * 2 - 1) * warp.amount;
-      if (j > 0) length += Math.hypot(wx[j] - wx[j - 1], wz[j] - wz[j - 1]);
+      if (j > 0) length += hypot(wx[j] - wx[j - 1], wz[j] - wz[j - 1]);
     }
     scale *= aim / length;
   }
@@ -131,13 +131,13 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   const points: TrackPoint[] = [];
   let j = 1;
   let acc = 0;
-  let seg = Math.hypot(wx[1] - wx[0], wz[1] - wz[0]);
+  let seg = hypot(wx[1] - wx[0], wz[1] - wz[0]);
   for (let i = 0; i < n; i++) {
     const want = i * step;
     while (acc + seg < want && j < SAMPLES) {
       acc += seg;
       j++;
-      seg = Math.hypot(wx[j] - wx[j - 1], wz[j] - wz[j - 1]);
+      seg = hypot(wx[j] - wx[j - 1], wz[j] - wz[j - 1]);
     }
     const t = seg > 0 ? (want - acc) / seg : 0;
     const x = wx[j - 1] + (wx[j] - wx[j - 1]) * t;
@@ -169,7 +169,7 @@ export function drawLoop(rng: Rng, plan: TerrainPlan): Loop | string {
   for (const p of points) {
     const dx = p.x - cx;
     const dz = p.z - cz;
-    const d = Math.hypot(dx, dz) || 1;
+    const d = hypot(dx, dz) || 1;
     if (rimAt(plan, p.x + (dx / d) * reach, p.z + (dz / d) * reach) > 0) {
       return "the loop runs up the mountain rim";
     }
@@ -198,9 +198,9 @@ export function minRadius(loop: { points: readonly TrackPoint[] }): number {
     const a = pts[(i - k + n) % n];
     const b = pts[i];
     const c = pts[(i + k) % n];
-    const ab = Math.hypot(b.x - a.x, b.z - a.z);
-    const bc = Math.hypot(c.x - b.x, c.z - b.z);
-    const ca = Math.hypot(a.x - c.x, a.z - c.z);
+    const ab = hypot(b.x - a.x, b.z - a.z);
+    const bc = hypot(c.x - b.x, c.z - b.z);
+    const ca = hypot(a.x - c.x, a.z - c.z);
     const area2 = Math.abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x));
     if (area2 < 1e-9) continue;
     const r = (ab * bc * ca) / (2 * area2);
@@ -237,7 +237,7 @@ export function minSeparation(loop: { points: readonly TrackPoint[]; length: num
           if (j <= i) continue;
           const ds = Math.abs(pts[j].s - p.s);
           if (Math.min(ds, loop.length - ds) <= along) continue;
-          const d = Math.hypot(pts[j].x - p.x, pts[j].z - p.z);
+          const d = hypot(pts[j].x - p.x, pts[j].z - p.z);
           if (d < best) best = d;
         }
       }
@@ -380,9 +380,17 @@ export function stampCorridor(loop: Loop, ground: Heightfield): Corridor {
         const x = c * cell;
         let t = ((x - a.x) * dx + (z - a.z) * dz) / len2;
         t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const d = Math.hypot(x - (a.x + dx * t), z - (a.z + dz * t));
+        const ex = x - (a.x + dx * t);
+        const ez = z - (a.z + dz * t);
         const o = r * cols + c;
-        if (d < dist[o]) {
+        // Most cells already hold a nearer segment: the square, with a
+        // margin far wider than `hypot`'s rounding and the float32 store's,
+        // turns those away before the dear `hypot` is paid for, and every
+        // cell it lets through is decided by `hypot` exactly as before.
+        const held = dist[o];
+        if (ex * ex + ez * ez > held * held * (1 + 1e-5)) continue;
+        const d = hypot(ex, ez);
+        if (d < held) {
           dist[o] = d;
           near[o] = i;
           along[o] = t;

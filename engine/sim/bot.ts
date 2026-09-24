@@ -15,7 +15,7 @@
 // rider — human capability, never a superhuman one: it sees the track ahead
 // the way a rider does and brakes with the grip a rider has.
 
-import { angleDiff, clamp } from "../lib/math.ts";
+import { angleDiff, clamp, hypot } from "../lib/math.ts";
 import { rotate } from "../lib/quat.ts";
 import { arcAhead, nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Kicker, Level, TrackHit, TrackPoint } from "../mapgen/types.ts";
@@ -123,7 +123,7 @@ function locate(state: GameState): TrackHit {
   let best = Infinity;
   for (let d = 0; d <= span; d += 2) {
     const at = trackPointAt(level, from + d, pa);
-    const dd = Math.hypot(at.x - c.x, at.z - c.z);
+    const dd = hypot(at.x - c.x, at.z - c.z);
     if (dd < best) {
       best = dd;
       hit.s = at.s;
@@ -225,10 +225,15 @@ function speedAllowed(state: GameState, s: number, speed: number, profile: BotPr
   const reach = (speed * speed) / (2 * decel) + 30;
   let allowed = Infinity;
   for (let d = 0; d <= reach; d += 4) {
+    // The braking room alone already allows what is allowed: no bend this
+    // far on, however tight, can lower it — nor any further on, the room
+    // only growing. The square root is monotone, so the test is exact.
+    const room = 2 * decel * Math.max(0, d - 6);
+    if (Math.sqrt(room) >= allowed) break;
     const k = bendAt(level, s + d, profile.bendSpan);
     if (k < 1e-4) continue;
     const corner = Math.sqrt(aLat / k);
-    const now = Math.sqrt(corner * corner + 2 * decel * Math.max(0, d - 6));
+    const now = Math.sqrt(corner * corner + room);
     if (now < allowed) allowed = now;
   }
   for (const k of level.kickers ?? []) {
@@ -255,7 +260,7 @@ function dodgeTrees(
   const c = state.sled;
   const dx = tx - c.x;
   const dz = tz - c.z;
-  const len = Math.hypot(dx, dz) || 1;
+  const len = hypot(dx, dz) || 1;
   const ux = dx / len;
   const uz = dz / len;
   const look = Math.min(len, profile.treeLook);
@@ -318,7 +323,7 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
   if (c.airborne) {
     // LEVEL TO THE LANDING: pitch toward the slope under where the sled is
     // going, the fall line of the snow a half second on.
-    const hs = Math.hypot(c.vx, c.vz);
+    const hs = hypot(c.vx, c.vz);
     const ux = hs > 0.5 ? c.vx / hs : Math.sin(c.heading);
     const uz = hs > 0.5 ? c.vz / hs : Math.cos(c.heading);
     const ax = c.x + c.vx * 0.5;
@@ -364,7 +369,7 @@ export function botInput(state: GameState, profile: BotProfile = RIDER_BOT): Sle
       Math.sqrt(turn * turn + 2 * brakeDecel(c.spec, c.packed) * profile.brakeShare * left),
     );
   }
-  const reach = Math.hypot(tx - c.x, tz - c.z);
+  const reach = hypot(tx - c.x, tz - c.z);
   const bend = (2 * Math.abs(Math.sin(angleDiff(c.heading, bearing)))) / Math.max(reach, 1);
   if (bend > 1e-3) {
     const grip = cornerGrip(c.spec, c.packed) * profile.cornerShare;

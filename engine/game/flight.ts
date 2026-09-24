@@ -22,7 +22,7 @@
 // the downslope of a kicker is fast and landing flat after overshooting it
 // is not.
 
-import { clamp } from "../lib/math.ts";
+import { clamp, hypot } from "../lib/math.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { SLED, inertiaOf } from "./defs/sled.ts";
 import { footprintOf } from "./footprint.ts";
@@ -61,7 +61,7 @@ export function airTorque(
   // and bottomed them. It gives way to the lean (a rider leaning is flying
   // the sled himself — a flip is a lean carried round) and gives up past
   // `pitchGiveUp`, and it is never more than `pitchLevelMax`.
-  const path = Math.atan2(c.vy, Math.hypot(c.vx, c.vz));
+  const path = Math.atan2(c.vy, hypot(c.vx, c.vz));
   const look = landing ? clamp(1 - landing.t / A.landLook, 0, 1) : 0;
   const aim = clamp(
     path * 0.5 * (1 - look) + (landing ? landing.slope : 0) * look,

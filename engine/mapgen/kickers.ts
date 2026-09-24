@@ -21,7 +21,7 @@
 // a hilltop the search climbs to, across a width that blends into the snow
 // at its sides — something a rider leaves the loop to find.
 
-import { angleDiff, smoothstep } from "../lib/math.ts";
+import { angleDiff, hypot, smoothstep } from "../lib/math.ts";
 import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
 import type { Rng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
@@ -184,7 +184,7 @@ export function layOffKickers(
     let z = rng.range(size * 0.12, size * 0.88);
     for (let s = 0; s < 12; s++) {
       const g = fieldGradient(ground, x, z);
-      const m = Math.hypot(g.gx, g.gz);
+      const m = hypot(g.gx, g.gz);
       if (m < 0.01) break;
       x += (g.gx / m) * 6;
       z += (g.gz / m) * 6;
@@ -199,14 +199,13 @@ export function layOffKickers(
     if (ice && nearIce(ice, x, z, reach)) continue;
     const hit = nearestTrackPoint(trackOf(loop), x, z);
     if (hit.distance - reach < R.track.width.max / 2 + K.clearance) continue;
-    if (out.some((k) => Math.hypot(k.x - x, k.z - z) < reach + Math.max(k.ramp, k.landing) + 20)) {
+    if (out.some((k) => hypot(k.x - x, k.z - z) < reach + Math.max(k.ramp, k.landing) + 20)) {
       continue;
     }
     // Ridden down the hill's fall line on its far side: the landing runs
     // the way the ground falls, the ramp comes up the way it rises.
     const g = fieldGradient(ground, x, z);
-    const heading =
-      Math.hypot(g.gx, g.gz) > 0.02 ? Math.atan2(-g.gx, -g.gz) : rng.range(0, Math.PI * 2);
+    const heading = hypot(g.gx, g.gz) > 0.02 ? Math.atan2(-g.gx, -g.gz) : rng.range(0, Math.PI * 2);
     const y0 = sampleField(ground, x, z);
     stampKicker(ground, x, z, heading, height, ramp, landing, width);
     out.push({

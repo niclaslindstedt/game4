@@ -67,6 +67,7 @@
 
 import { TUNING } from "./defs/tuning.ts";
 import type { BailCause, GameEvent, GameState, TrickKind, TrickState } from "./state.ts";
+import { hypot } from "../lib/math.ts";
 
 const T = TUNING.tricks;
 const TAU = Math.PI * 2;
@@ -270,7 +271,7 @@ export function stepTricks(state: GameState, events: GameEvent[]): void {
       win(state, events, k.pose, 1, T.posePoints);
     }
     if (c.airTime > T.airElement) k.aired = true;
-    const length = Math.hypot(c.x - k.fromX, c.z - k.fromZ);
+    const length = hypot(c.x - k.fromX, c.z - k.fromZ);
     if (c.airTime > TUNING.air.counts) {
       k.base += airPointsPerSecond(c.airTime) * dt;
       k.base += lengthPointsPerMetre(length) * Math.max(0, length - k.paidLength);

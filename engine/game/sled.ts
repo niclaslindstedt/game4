@@ -28,7 +28,7 @@
 //   - GRAVITY.
 // The trees and the map's edge are `collision.ts`'s and are applied after.
 
-import { angleDiff, approach, clamp } from "../lib/math.ts";
+import { angleDiff, approach, clamp, hypot, hypot3 } from "../lib/math.ts";
 import { fromEuler, integrate, rotate, toEuler, unrotate, type Vec3 } from "../lib/quat.ts";
 import { SLED, inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
@@ -181,7 +181,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.brake = approach(c.brake, clamp(input.brake, 0, 1), TUNING.tread.throttleRate * dt);
   c.steer = clamp(input.steer, -1, 1);
   c.lean = approach(c.lean, clamp(input.lean, -1, 1), dt / R.lag);
-  const speed0 = Math.hypot(c.vx, c.vy, c.vz);
+  const speed0 = hypot3(c.vx, c.vy, c.vz);
   const lock = skiLockAt(spec, speed0);
   // A bent ski (`damage.ts`) pulls the line the bars ask for toward its side.
   c.skiAngle = approach(c.skiAngle, c.steer * lock + skiPull(c), TUNING.steer.rate * dt);
@@ -367,7 +367,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     let tx = dir.x - dn * normal.x;
     let ty = dir.y - dn * normal.y;
     let tz = dir.z - dn * normal.z;
-    const tl = Math.hypot(tx, ty, tz) || 1;
+    const tl = hypot3(tx, ty, tz) || 1;
     tx /= tl;
     ty /= tl;
     tz /= tl;
@@ -391,7 +391,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
       const slip = c.treadSpeed - vf;
       const sx = slip / G.slipRef;
       const sy = vl / G.sideRef;
-      const sheared = Math.hypot(sx, sy);
+      const sheared = hypot(sx, sy);
       const share = sheared > 1e-6 ? Math.tanh(sheared) / sheared : 1;
       const drive = grip.tread * bite * load * sx * share;
       beltReaction += drive;
@@ -462,7 +462,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   torque.z += -shift.x * riderW;
 
   // ── The air ───────────────────────────────────────────────────────────
-  const v = Math.hypot(c.vx, c.vy, c.vz);
+  const v = hypot3(c.vx, c.vy, c.vz);
   const drag = 0.5 * TUNING.airDensity * spec.cdA * v;
   fx -= drag * c.vx;
   fy -= drag * c.vy;
@@ -495,7 +495,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     // the sled is actually going.
     const S = TUNING.steer;
     const way = c.way;
-    const flat = Math.hypot(c.vx, c.vz);
+    const flat = hypot(c.vx, c.vz);
     const reach = Math.abs(way) > 1 ? (cornerGrip(spec, packed) * S.pathShare) / Math.abs(way) : 0;
     const asked = clamp((way * Math.tan(c.skiAngle)) / S.base, -reach, reach);
     const slip = flat > S.slipFrom && way > 0 ? angleDiff(Math.atan2(c.vx, c.vz), c.heading) : 0;
@@ -530,7 +530,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.wx += ((tb.x - gx) / I.x) * dt;
   c.wy += ((tb.y - gy) / I.y) * dt;
   c.wz += ((tb.z - gz) / I.z) * dt;
-  const spin = Math.hypot(c.wx, c.wy, c.wz);
+  const spin = hypot3(c.wx, c.wy, c.wz);
   if (spin > MAX_SPIN) {
     c.wx *= MAX_SPIN / spin;
     c.wy *= MAX_SPIN / spin;
@@ -561,7 +561,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     c.airTime += dt;
     if (!c.airReported && c.airTime >= TUNING.air.counts) {
       c.airReported = true;
-      events.push({ kind: "air", t: state.t, vy: c.launchVy, speed: Math.hypot(vx0, vy0, vz0) });
+      events.push({ kind: "air", t: state.t, vy: c.launchVy, speed: hypot3(vx0, vy0, vz0) });
     }
   } else if (c.airborne) {
     const flew = c.airTime;
@@ -583,7 +583,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
         t: state.t,
         airTime: flew,
         impact,
-        speed: Math.hypot(c.vx, c.vy, c.vz),
+        speed: hypot3(c.vx, c.vy, c.vz),
         harsh: lost > 0,
         lost,
       });
@@ -607,8 +607,8 @@ export function derive(c: SledState): void {
   c.heading = e.heading;
   c.pitch = e.pitch;
   c.roll = e.roll;
-  c.speed = Math.hypot(c.vx, c.vy, c.vz);
+  c.speed = hypot3(c.vx, c.vy, c.vz);
   const f = rotate(c.q, { x: 0, y: 0, z: 1 });
-  const fl = Math.hypot(f.x, f.z) || 1;
+  const fl = hypot(f.x, f.z) || 1;
   c.way = (c.vx * f.x + c.vz * f.z) / fl;
 }

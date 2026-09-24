@@ -21,7 +21,7 @@
 // line before it has taken one. It is the rider's (the key) and the
 // engine's (`run.ts`: on its back, or held at full throttle going nowhere).
 
-import { angleDiff } from "../lib/math.ts";
+import { angleDiff, hypot } from "../lib/math.ts";
 import { fromEuler } from "../lib/quat.ts";
 import { nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Checkpoint, Level, Spawn } from "../mapgen/types.ts";
@@ -255,7 +255,7 @@ export function freeSpawn(level: Level, x: number, z: number): Spawn {
   const near = nearestTrackPoint(level, px, pz);
   const along = trackPointAt(level, near.s);
   for (const t of level.trees) {
-    if (Math.hypot(t.x - px, t.z - pz) < t.radius + TREE_CLEAR) {
+    if (hypot(t.x - px, t.z - pz) < t.radius + TREE_CLEAR) {
       return { x: along.x, z: along.z, heading: along.heading };
     }
   }
@@ -283,7 +283,7 @@ export function bearingToNext(
   return {
     bearing,
     error: angleDiff(c.heading, bearing),
-    distance: Math.hypot(cp.x - c.x, cp.z - c.z),
+    distance: hypot(cp.x - c.x, cp.z - c.z),
     index: p.nextCheckpoint,
   };
 }

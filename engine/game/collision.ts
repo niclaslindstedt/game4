@@ -19,7 +19,7 @@
 // THE EDGE is a soft push back toward the middle over the last `bounds.soft`
 // metres and a hard wall `bounds.margin` inside the map's own edge.
 
-import { cellKey } from "../lib/math.ts";
+import { cellKey, hypot } from "../lib/math.ts";
 import type { Level, TreeDef } from "../mapgen/types.ts";
 import { inertiaOf, totalMass } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
@@ -67,7 +67,7 @@ export function treesNear(level: Level, x: number, z: number, r: number, out: nu
       if (!list) continue;
       for (const i of list) {
         const t = trees[i];
-        const d = Math.hypot(t.x - x, t.z - z) - t.radius;
+        const d = hypot(t.x - x, t.z - z) - t.radius;
         if (d <= r) out.push(i);
       }
     }
@@ -91,7 +91,7 @@ export function collideTrees(state: GameState, events: GameEvent[]): void {
   if (near.length === 0) return;
   const m = totalMass(c.spec);
   const Iy = inertiaOf(c.spec).y;
-  const fl = Math.hypot(Math.sin(c.heading), Math.cos(c.heading));
+  const fl = hypot(Math.sin(c.heading), Math.cos(c.heading));
   const fx = Math.sin(c.heading) / fl;
   const fz = Math.cos(c.heading) / fl;
   let worst = 0;
@@ -105,7 +105,7 @@ export function collideTrees(state: GameState, events: GameEvent[]): void {
       const oz = fz * share * half;
       const dx = c.x + ox - t.x;
       const dz = c.z + oz - t.z;
-      const d = Math.hypot(dx, dz);
+      const d = hypot(dx, dz);
       const reach = K.bodyRadius + t.radius;
       if (d >= reach) continue;
       const nx = d > 1e-6 ? dx / d : -fx;

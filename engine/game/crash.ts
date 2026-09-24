@@ -39,7 +39,7 @@
 // reset, reported `auto`. The still beat is the one the app's death cam
 // (`camera-death.ts`) rises into the sky over him on.
 
-import { clamp } from "../lib/math.ts";
+import { clamp, hypot, hypot3 } from "../lib/math.ts";
 import { rotate, type Vec3 } from "../lib/quat.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { treesNear } from "./collision.ts";
@@ -110,8 +110,8 @@ export function throwRider(
   const c = state.sled;
   const up = rotate(c.q, { x: 0, y: 1, z: 0 });
   const h = c.spec.riderHeight + K.radius;
-  const flat = Math.hypot(v0.x, v0.z);
-  const speed = Math.hypot(v0.x, v0.y, v0.z);
+  const flat = hypot(v0.x, v0.z);
+  const speed = hypot3(v0.x, v0.y, v0.z);
   const thrown: Thrown = {
     cause,
     t: 0,
@@ -165,7 +165,7 @@ export function stepThrown(state: GameState, b: Thrown): void {
     if (b.y > t.y + t.height) continue;
     const dx = b.x - t.x;
     const dz = b.z - t.z;
-    const d = Math.hypot(dx, dz) || 1e-6;
+    const d = hypot(dx, dz) || 1e-6;
     const reach = K.radius + t.radius;
     if (d >= reach) continue;
     const nx = dx / d;
@@ -197,7 +197,7 @@ export function stepThrown(state: GameState, b: Thrown): void {
     const tx = b.vx - un * n.x;
     const ty = b.vy - un * n.y;
     const tz = b.vz - un * n.z;
-    const slide = Math.hypot(tx, ty, tz);
+    const slide = hypot3(tx, ty, tz);
     if (slide > 1e-6) {
       const mu = K.frictionPacked * packed + K.frictionPowder * (1 - packed);
       const take = Math.min(slide, mu * (g * n.y * dt + into));
@@ -210,13 +210,13 @@ export function stepThrown(state: GameState, b: Thrown): void {
     const along = b.vx * Math.sin(b.heading) + b.vz * Math.cos(b.heading);
     const roll = clamp(along / K.tumbleRadius, -K.maxSpin, K.maxSpin);
     b.spin += (roll - b.spin) * Math.min(1, K.spinGrip * dt);
-    if (Math.hypot(b.vx, b.vz) < K.restSpeed) {
+    if (hypot(b.vx, b.vz) < K.restSpeed) {
       b.spin = 0;
       b.tumble += (lying(b.tumble) - b.tumble) * Math.min(1, 3 * dt);
     }
   }
   b.tumble += b.spin * dt;
-  b.still = b.touching && Math.hypot(b.vx, b.vy, b.vz) < K.restSpeed ? b.still + dt : 0;
+  b.still = b.touching && hypot3(b.vx, b.vy, b.vz) < K.restSpeed ? b.still + dt : 0;
 }
 
 /** Whether the rider has lain long enough for the reset to stand them up. */

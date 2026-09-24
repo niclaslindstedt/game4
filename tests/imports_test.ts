@@ -16,7 +16,8 @@
 //      test cannot pin an internal a host could never see.
 //
 // Beside the graph, the §25 hygiene the same walk can check for free: no
-// wall clock, no global random source and no console in the engine's code
+// wall clock, no global random source, no `Math.hypot` (whose last bit is
+// each browser's own) and no console in the engine's code
 // (the analyzer's report timer is the one recorded exception — dev-time,
 // never stepping a run — and it is named here rather than waved through;
 // the engine prints only through `engine/output.ts`'s sink).
@@ -255,6 +256,10 @@ describe("the engine's hygiene (§25)", () => {
         expect(src, "a wall clock").not.toMatch(/Date\.now|new Date\(|performance\.now/);
       }
       expect(src, "console").not.toMatch(/\bconsole\./);
+      // The builtin's algorithm is each browser's own and it is dear on a
+      // hot path; `hypot` in `lib/math.ts` is V8's recipe in plain IEEE
+      // arithmetic, the same bits everywhere (`determinism_test.ts`).
+      expect(src, "Math.hypot").not.toMatch(/Math\.hypot/);
       // Member access on the DOM's globals, not the bare words: `window` is
       // a perfectly good name for a search window in the shore's code.
       expect(src, "a DOM global").not.toMatch(

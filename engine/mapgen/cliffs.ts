@@ -24,7 +24,7 @@
 // drifts: the cliffs move the ground the forest then grows on and nothing
 // else the map draws.
 
-import { smoothstep } from "../lib/math.ts";
+import { hypot, smoothstep } from "../lib/math.ts";
 import { fieldGradient, sampleField, type Heightfield } from "../lib/heightfield.ts";
 import { createRng } from "../lib/prng.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
@@ -132,8 +132,8 @@ export function layCliffs(
     const g = fieldGradient(ground, x, z);
     const gx = (sampleField(ground, x + 20, z) - sampleField(ground, x - 20, z)) / 40;
     const gz = (sampleField(ground, x, z + 20) - sampleField(ground, x, z - 20)) / 40;
-    const fall = Math.hypot(gx, gz);
-    if (fall < C.fall || Math.hypot(g.gx, g.gz) > 0.6) continue;
+    const fall = hypot(gx, gz);
+    if (fall < C.fall || hypot(g.gx, g.gz) > 0.6) continue;
     const heading = Math.atan2(-gx, -gz);
     const cliff: Cliff = {
       id: `C${out.length + 1}`,
@@ -167,7 +167,7 @@ export function stampCliff(ground: Heightfield, c: Cliff): void {
   const ahead = c.face + c.landing;
   const fx = Math.sin(c.heading);
   const fz = Math.cos(c.heading);
-  const reach = Math.hypot(Math.max(back, ahead), side);
+  const reach = hypot(Math.max(back, ahead), side);
   const cell = ground.cell;
   const c0 = Math.max(0, Math.floor((c.x - reach) / cell));
   const c1 = Math.min(ground.cols - 1, Math.ceil((c.x + reach) / cell));

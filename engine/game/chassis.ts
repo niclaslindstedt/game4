@@ -28,6 +28,7 @@ import { footprintOf } from "./footprint.ts";
 import { packedUnder, powderFloor } from "./snow.ts";
 import { hullOf } from "./suspension.ts";
 import type { SledState } from "./state.ts";
+import { hypot3 } from "../lib/math.ts";
 
 const H = TUNING.hull;
 const n: Vec3 = { x: 0, y: 1, z: 0 };
@@ -78,7 +79,7 @@ export function chassisContacts(c: SledState, level: Level, snowDepth = 1, fresh
     let tx = vx - vn * n.x;
     let ty = vy - vn * n.y;
     let tz = vz - vn * n.z;
-    const slide = Math.hypot(tx, ty, tz);
+    const slide = hypot3(tx, ty, tz);
     let jt = 0;
     if (slide > 1e-4) {
       tx /= slide;

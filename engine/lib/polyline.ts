@@ -11,6 +11,8 @@
 // A point here is anything with an `x` and a `z`, which is what every plan
 // coordinate in the engine is.
 
+import { hypot } from "./math.ts";
+
 type Point = { readonly x: number; readonly z: number };
 
 /** Distance from a plan point to a segment. */
@@ -27,7 +29,7 @@ export function segmentDistance(
   const len2 = dx * dx + dz * dz;
   let t = len2 > 0 ? ((x - ax) * dx + (z - az) * dz) / len2 : 0;
   t = t < 0 ? 0 : t > 1 ? 1 : t;
-  return Math.hypot(x - (ax + dx * t), z - (az + dz * t));
+  return hypot(x - (ax + dx * t), z - (az + dz * t));
 }
 
 /** Distance from a plan point to a polyline. */

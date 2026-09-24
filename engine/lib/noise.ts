@@ -32,7 +32,51 @@ export function valueNoise(x: number, z: number, scale: number, seed: number): n
   return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
 }
 
-/** Value noise on a TORUS: the lattice wraps after `cellsX` × `cellsZ` cells,
+/** One `valueNoise` field — a scale and a seed — read point after point.
+ * Neighbouring reads nearly always land in the same lattice square, so the
+ * field keeps that square's four corner hashes and recomputes them only when
+ * a read steps out of it. The arithmetic is `valueNoise`'s, term for term,
+ * so a field returns the very bits `valueNoise` would: a baked grid read
+ * through one is the grid read without one, only several times cheaper. */
+export type NoiseField = {
+  readonly scale: number;
+  readonly seed: number;
+  ix: number;
+  iz: number;
+  a: number;
+  b: number;
+  c: number;
+  d: number;
+};
+
+export function noiseField(scale: number, seed: number): NoiseField {
+  return { scale, seed, ix: Number.NaN, iz: Number.NaN, a: 0, b: 0, c: 0, d: 0 };
+}
+
+/** `valueNoise(x, z, f.scale, f.seed)`, bit for bit. */
+export function sampleNoise(f: NoiseField, x: number, z: number): number {
+  const gx = x / f.scale;
+  const gz = z / f.scale;
+  const ix = Math.floor(gx);
+  const iz = Math.floor(gz);
+  if (ix !== f.ix || iz !== f.iz) {
+    f.ix = ix;
+    f.iz = iz;
+    f.a = hash2(ix, iz, f.seed);
+    f.b = hash2(ix + 1, iz, f.seed);
+    f.c = hash2(ix, iz + 1, f.seed);
+    f.d = hash2(ix + 1, iz + 1, f.seed);
+  }
+  const fx = smooth(gx - ix);
+  const fz = smooth(gz - iz);
+  const a = f.a;
+  const b = f.b;
+  const c = f.c;
+  const d = f.d;
+  return (a + (b - a) * fx) * (1 - fz) + (c + (d - c) * fx) * fz;
+}
+
+/** Value noise on a TORUS:the lattice wraps after `cellsX` × `cellsZ` cells,
  * so the field repeats EXACTLY over that many cells in each axis and a tile
  * drawn from it meets itself at its own edges.
  *
