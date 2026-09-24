@@ -54,11 +54,13 @@ import {
 } from "./settings.ts";
 import { KEY_ACTIONS } from "./settings-input.ts";
 import {
+  DISTANCE_LEVELS,
   SHADOW_LEVELS,
   TIERS,
   TRAIL_LEVELS,
   presetOf,
   withPreset,
+  type DistanceLevel,
   type ShadowLevel,
   type Tier,
   type TrailLevel,
@@ -68,17 +70,19 @@ import { STRINGS } from "./strings.ts";
 
 /** The word for a stop on any of the picture's ladders — one vocabulary for
  * every row, so LOW means the same thing wherever it is read. */
-const STEP_WORD: Record<Tier | "off", string> = {
+const STEP_WORD: Record<Tier | "off" | "max", string> = {
   off: STRINGS.optOff,
   low: STRINGS.optLow,
   medium: STRINGS.optMedium,
   high: STRINGS.optHigh,
+  max: STRINGS.optMax,
 };
 
-const stopsOf = <T extends Tier | "off">(ladder: readonly T[]): Stop<T>[] =>
+const stopsOf = <T extends Tier | "off" | "max">(ladder: readonly T[]): Stop<T>[] =>
   ladder.map((id) => ({ id, label: STEP_WORD[id] }));
 
 const TIER_STOPS = stopsOf(TIERS);
+const DISTANCE_STOPS = stopsOf<DistanceLevel>(DISTANCE_LEVELS);
 const TRAIL_STOPS = stopsOf<TrailLevel>(TRAIL_LEVELS);
 const SHADOW_WORD: Record<ShadowLevel, string> = {
   off: STRINGS.optOff,
@@ -320,7 +324,7 @@ export function OptionsPage({
             <StepRow
               label={STRINGS.optDistance}
               hint={STRINGS.optDistanceHint}
-              stops={TIER_STOPS}
+              stops={DISTANCE_STOPS}
               value={video.distance}
               onPick={(distance) => setVideo({ distance })}
               onHint={setHint}

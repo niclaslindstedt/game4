@@ -38,6 +38,9 @@ export type HazeUniforms = {
   uGlow: { value: THREE.Color };
   uSunCol: { value: THREE.Color };
   uHaze: { value: number };
+  /** THE MIST the DISTANCE row closes on (`mistFor`): its wall, m, past
+   * which nothing is seen and nothing is drawn; 0 is no mist. */
+  uMist: { value: number };
   /** Where the sun's shadow stands (`shadow-box.ts`): the circle's centre
    * in plan, and the plan distances the fade runs between. Written by
    * `environment.ts`; not the sky's, but it rides the same shared object
@@ -81,6 +84,7 @@ export function createHazeUniforms(): HazeUniforms {
     uGlow: { value: new THREE.Color() },
     uSunCol: { value: new THREE.Color() },
     uHaze: { value: 1 / 1500 },
+    uMist: { value: 0 },
     uShadowFade: { value: new THREE.Vector4(0, 0, 1e9, 2e9) },
     uHeroMap: { value: null },
     uHeroMatrix: { value: Array.from({ length: HERO_SLOTS }, () => new THREE.Matrix4()) },
@@ -127,6 +131,7 @@ uniform vec3 uHorizon;
 uniform vec3 uGlow;
 uniform vec3 uSunCol;
 uniform float uHaze;
+uniform float uMist;
 uniform float uHazeLift;
 uniform float uHazeFloor;
 
@@ -151,9 +156,24 @@ vec3 hazeColour(vec3 dir) {
 // How much of that colour stands between the lens and a point \`dist\` m
 // away whose height over the lens is \`rise\` m: exponential, thinning with
 // altitude so the peaks keep their shape a little longer than the valleys.
+// Over it, the DISTANCE row's MIST: clear round the sled, thickening with
+// the square of the distance and closed whole at its wall, at any height —
+// the ground and the woods stop there, and nothing past it may show.
 float hazeAmount(float dist, float rise) {
   float thin = exp(-max(rise, 0.0) / uHazeLift);
-  return 1.0 - exp(-dist * uHaze * mix(uHazeFloor, 1.0, thin));
+  float air = 1.0 - exp(-dist * uHaze * mix(uHazeFloor, 1.0, thin));
+  if (uMist <= 0.0) return air;
+  float m = dist / uMist;
+  float mist = max(1.0 - exp(-3.0 * m * m), smoothstep(0.7, 1.0, m));
+  return max(air, mist);
+}
+
+// The mist on the dome: a band over the horizon as deep as a mist some
+// forty metres thick stands at its wall, so a hill past the ground's edge
+// is sky the colour it would have faded into.
+float mistBand(vec3 dir) {
+  if (uMist <= 0.0) return 0.0;
+  return 1.0 - smoothstep(0.0, 40.0 / uMist, max(dir.y, 0.0));
 }
 `;
 

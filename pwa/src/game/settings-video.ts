@@ -10,13 +10,15 @@
 // cannot:
 //
 //   RESOLUTION  how many pixels: a share of the device's own pixel ratio.
-//   DISTANCE    how far out the woods are still drawn as trees, and the haze
-//               pulled in to close before them — the one row that changes
-//               the WEATHER, which is how the cut-off stays out of sight.
+//   DISTANCE    how far anything is drawn at all: the woods, and the ground's
+//               clipmap cut to the view — with a MIST closing over the last
+//               of it, the one row that changes the WEATHER, which is how the
+//               cut-off stays out of sight. LOW is only what a rider needs
+//               to ride; MAX alone draws the basin to the rim, unmisted.
 //   TERRAIN     the ground's clipmap (`terrain.ts`): the near grid's pitch
-//               and how many cells a level carries. Every stop still reaches
-//               past the rim (`TERRAIN_REACH`), so a cheaper ground is a
-//               coarser one and never a shorter one.
+//               and how many cells a level carries. Every stop reaches the
+//               DISTANCE row's view, so a cheaper ground is a coarser one
+//               and never a shorter one.
 //   TRAILS      the trail maps (`trail-map.ts`): the fine window's texels and
 //               span, the coarse map's texels — or OFF, which stamps nothing
 //               and leaves the snow untouched.
@@ -50,12 +52,16 @@ export const TIERS: readonly Tier[] = ["low", "medium", "high"];
 export type ShadowLevel = "off" | "sleds" | "medium" | "high";
 export const SHADOW_LEVELS: readonly ShadowLevel[] = ["off", "sleds", "medium", "high"];
 
+/** DISTANCE: the three tiers, and MAX — the whole basin, no mist. */
+export type DistanceLevel = Tier | "max";
+export const DISTANCE_LEVELS: readonly DistanceLevel[] = [...TIERS, "max"];
+
 export type TrailLevel = "off" | Tier;
 export const TRAIL_LEVELS: readonly TrailLevel[] = ["off", ...TIERS];
 
 export type VideoSettings = {
   resolution: Tier;
-  distance: Tier;
+  distance: DistanceLevel;
   terrain: Tier;
   trails: TrailLevel;
   forest: Tier;
@@ -72,9 +78,9 @@ export type VideoSettings = {
  * as out of focus rather than as cheaper. */
 export const RESOLUTION_SHARE: Record<Tier, number> = { low: 0.6, medium: 0.8, high: 1 };
 
-/** How far out every ground reaches, m, whatever its pitch: past the basin's
+/** How far out the ground reaches under DISTANCE MAX, m: past the basin's
  * rim from any corner of it, so the mountains are always ground and never a
- * hole with the sky in it. */
+ * hole with the sky in it. Every shorter stop closes its mist first. */
 export const TERRAIN_REACH = 2800;
 
 export type TerrainLook = {
@@ -82,8 +88,8 @@ export type TerrainLook = {
   n: number;
   /** Level 0's vertex spacing, m. */
   spacing: number;
-  /** Levels, each double the last — derived, so every stop reaches
-   * `TERRAIN_REACH`. */
+  /** Levels, each double the last — derived, so every stop reaches the
+   * view it is built for. */
   levels: number;
 };
 
@@ -95,11 +101,12 @@ const TERRAIN_GRID: Record<Tier, { n: number; spacing: number }> = {
   high: { n: 192, spacing: 0.25 },
 };
 
-/** The clipmap a TERRAIN stop builds. */
-export function terrainLook(tier: Tier): TerrainLook {
+/** The clipmap a TERRAIN stop builds out to `reach` m — the DISTANCE row's
+ * view (`DISTANCE_LOOK`), and no level more than it takes to get there. */
+export function terrainLook(tier: Tier, reach: number = TERRAIN_REACH): TerrainLook {
   const { n, spacing } = TERRAIN_GRID[tier];
   let levels = 1;
-  while ((n / 2) * spacing * 2 ** (levels - 1) < TERRAIN_REACH) levels++;
+  while ((n / 2) * spacing * 2 ** (levels - 1) < reach) levels++;
   return { n, spacing, levels };
 }
 
@@ -166,17 +173,32 @@ export const FOREST_LOOK: Record<Tier, ForestLook> = {
 export type DistanceLook = {
   /** How far out a tree is drawn at all, m. Past it the ground's own forest
    * tint (`snow-glsl.ts`) carries the woods to the rim. */
-  far: number;
-  /** The least the haze may be, 1/m — the sky's own is used where it is
-   * thicker. 0 leaves the sky's alone. */
-  hazeFloor: number;
+  trees: number;
+  /** How far out anything is drawn, m: the ground's clipmap reaches this and
+   * no level further (`terrainLook`). */
+  view: number;
+  /** Whether a MIST closes on `view` (`hazeAmount` in `haze.ts`): clear
+   * round the sled, thickening with the square of the distance, and whole
+   * by the view — so the ground's edge and the last trees are never seen. */
+  mist: boolean;
 };
 
-export const DISTANCE_LOOK: Record<Tier, DistanceLook> = {
-  low: { far: 450, hazeFloor: 1 / 520 },
-  medium: { far: 700, hazeFloor: 1 / 900 },
-  high: { far: 1100, hazeFloor: 0 },
+/** DISTANCE. The trees stop a little inside the view, where the mist is
+ * nearly whole, so the woods thin into it rather than stopping at a line.
+ * LOW is the course and what stands beside it — a few seconds ahead at
+ * speed, and no more; MAX is the basin to its rim on the sky's own air. */
+export const DISTANCE_LOOK: Record<DistanceLevel, DistanceLook> = {
+  low: { trees: 250, view: 280, mist: true },
+  medium: { trees: 540, view: 600, mist: true },
+  high: { trees: 1100, view: 1300, mist: true },
+  max: { trees: 1600, view: TERRAIN_REACH, mist: false },
 };
+
+/** The wall the mist closes on for a DISTANCE stop, m; 0 is no mist. */
+export function mistFor(distance: DistanceLevel): number {
+  const look = DISTANCE_LOOK[distance];
+  return look.mist ? look.view : 0;
+}
 
 export type ShadowLook = {
   /** The key light's map, texels a side; 0 is no shadow at all. */
@@ -210,12 +232,6 @@ export const SHADOW_LOOK: Record<ShadowLevel, ShadowLook> = {
 
 /** SPRAY: the share of every emission rate, and of the particle pool. */
 export const SPRAY_SHARE: Record<Tier, number> = { low: 0.35, medium: 0.65, high: 1 };
-
-/** The haze the renderer draws: the sky's own, or the row's floor, whichever
- * is the thicker. */
-export function hazeFor(sky: number, distance: Tier): number {
-  return Math.max(sky, DISTANCE_LOOK[distance].hazeFloor);
-}
 
 /* ── Whole pictures ──────────────────────────────────────────────────── */
 
@@ -281,7 +297,7 @@ export function mergeVideo(parsed: unknown): VideoSettings {
   const pick = <T extends string>(value: unknown, ladder: readonly T[], fallback: T): T =>
     typeof value === "string" && ladder.includes(value as T) ? (value as T) : fallback;
   out.resolution = pick(blob.resolution, TIERS, out.resolution);
-  out.distance = pick(blob.distance, TIERS, out.distance);
+  out.distance = pick(blob.distance, DISTANCE_LEVELS, out.distance);
   out.terrain = pick(blob.terrain, TIERS, out.terrain);
   out.trails = pick(blob.trails, TRAIL_LEVELS, out.trails);
   out.forest = pick(blob.forest, TIERS, out.forest);

@@ -310,14 +310,15 @@ export function createWorldRenderer(
     return map;
   }
   function buildTerrain(lv: Level, map: TrailMap): Terrain {
-    const ground = createTerrain(lv, env.haze, map.uniforms, terrainLook(video.terrain));
+    const look = terrainLook(video.terrain, DISTANCE_LOOK[video.distance].view);
+    const ground = createTerrain(lv, env.haze, map.uniforms, look);
     ground.group.name = "terrain";
     scene.add(ground.group);
     return ground;
   }
   const forestOptions = (): ForestOptions => ({
     ...FOREST_LOOK[video.forest],
-    far: DISTANCE_LOOK[video.distance].far,
+    far: DISTANCE_LOOK[video.distance].trees,
     casters: SHADOW_LOOK[video.shadows].trees ? FOREST_LOOK[video.forest].casters : "none",
   });
 
@@ -720,18 +721,23 @@ export function createWorldRenderer(
       spray?.setBudget(SPRAY_SHARE[video.spray]);
       snowfall.setBudget(SPRAY_SHARE[video.spray]);
       forest?.setOptions(forestOptions());
-      // THE GROUND AND ITS TRAILS ARE REBUILT, not adjusted: a grid's pitch
-      // and a map's size are what their buffers were allocated at. The
-      // trails cut so far go with the old maps — this is pressed over a
-      // card, where the race behind it is scenery.
-      if (level && (was.terrain !== video.terrain || was.trails !== video.trails)) {
+      // THE GROUND AND ITS TRAILS ARE REBUILT, not adjusted: a grid's pitch,
+      // its reach and a map's size are what their buffers were allocated
+      // at. New trail maps lose the trails cut so far — this is pressed over
+      // a card, where the race behind it is scenery — so only a TRAILS move
+      // pays that; a new ground reads the maps standing.
+      const retrail = was.trails !== video.trails;
+      const regrid = retrail || was.terrain !== video.terrain || was.distance !== video.distance;
+      if (level && regrid) {
         if (terrain) {
           scene.remove(terrain.group);
           terrain.dispose();
         }
-        trail?.dispose();
-        trail = buildTrail(level);
-        wildlife?.retrack();
+        if (retrail || !trail) {
+          trail?.dispose();
+          trail = buildTrail(level);
+          wildlife?.retrack();
+        }
         terrain = buildTerrain(level, trail);
         terrain.follow(lens.camera.position.x, lens.camera.position.z);
       }

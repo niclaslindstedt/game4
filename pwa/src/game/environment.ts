@@ -19,7 +19,7 @@ import * as THREE from "three";
 
 import { createHazeUniforms, writeHaze, type HazeUniforms } from "./haze.ts";
 import { createSkyDome, type SkyDome } from "./sky-dome.ts";
-import { hazeFor, type ShadowLook, type Tier } from "./settings-video.ts";
+import { mistFor, type DistanceLevel, type ShadowLook } from "./settings-video.ts";
 import { aimShadow, SHADOW_MARGIN, shadowFade, type ShadowBox } from "./shadow-box.ts";
 import type { SkyLook } from "./sky.ts";
 
@@ -40,8 +40,8 @@ export type Environment = {
   shadow(): ShadowBox | null;
   /** The SHADOWS row: the map's texels and its reach. */
   setShadow(look: ShadowLook): void;
-  /** The DISTANCE row, whose haze is `hazeFor`'s. */
-  setDistance(distance: Tier): void;
+  /** The DISTANCE row, whose mist is `mistFor`'s. */
+  setDistance(distance: DistanceLevel): void;
   dispose(): void;
 };
 
@@ -67,7 +67,6 @@ export function createEnvironment(
 
   /** The box's centre snaps to this, so shadow edges do not crawl. */
   let texel = 1;
-  let distance: Tier = "high";
   const box: ShadowBox = { x: 0, y: 0, z: 0, reach: 0, sx: 0, sy: 1, sz: 0 };
   const setShadow = ({ size, reach }: ShadowLook): void => {
     sun.castShadow = size > 0;
@@ -109,7 +108,6 @@ export function createEnvironment(
     dome,
     update(sky, camera, y, drift) {
       writeHaze(haze, sky);
-      haze.uHaze.value = hazeFor(sky.haze, distance);
       dome.update(sky, drift?.x ?? 0, drift?.z ?? 0);
       // The key is the sun by day and the moon by night (`sky.ts`).
       sun.color.setRGB(...sky.keyColour);
@@ -145,7 +143,7 @@ export function createEnvironment(
     },
     setShadow,
     setDistance(next) {
-      distance = next;
+      haze.uMist.value = mistFor(next);
     },
     dispose() {
       dome.dispose();

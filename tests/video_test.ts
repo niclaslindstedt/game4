@@ -8,6 +8,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_VIDEO,
+  DISTANCE_LEVELS,
   DISTANCE_LOOK,
   FOREST_LOOK,
   RESOLUTION_SHARE,
@@ -19,8 +20,8 @@ import {
   TRAIL_LEVELS,
   TRAIL_LOOK,
   VIDEO_PRESETS,
-  hazeFor,
   mergeVideo,
+  mistFor,
   presetOf,
   terrainLook,
   terrainReach,
@@ -74,7 +75,7 @@ describe("the picture's ladders (settings-video.ts)", () => {
     for (const t of TIERS) expect(TRAIL_LOOK[t].stamp).toBe(true);
   });
 
-  it("builds a ground that is coarser down the ladder and never shorter than the rim", () => {
+  it("builds a ground that is coarser down the ladder and never shorter than the view", () => {
     const tris = TIERS.map((t) => terrainTriangles(terrainLook(t)));
     // Each rung down draws strictly fewer triangles...
     expect(tris[0]).toBeLessThan(tris[1]);
@@ -83,12 +84,18 @@ describe("the picture's ladders (settings-video.ts)", () => {
     // headroom covers it.
     expect(tris[2] / tris[1]).toBeLessThan(PROBE_HEADROOM);
     for (const t of TIERS) {
-      const look = terrainLook(t);
-      expect(look.n % 4, t).toBe(0);
-      expect(terrainReach(look), t).toBeGreaterThanOrEqual(TERRAIN_REACH);
-      // ...and no level more than it needs to get there.
-      expect(terrainReach({ ...look, levels: look.levels - 1 }), t).toBeLessThan(TERRAIN_REACH);
+      for (const d of DISTANCE_LEVELS) {
+        const reach = DISTANCE_LOOK[d].view;
+        const look = terrainLook(t, reach);
+        expect(look.n % 4, t).toBe(0);
+        expect(terrainReach(look), `${t} ${d}`).toBeGreaterThanOrEqual(reach);
+        // ...and no level more than it needs to get there.
+        expect(terrainReach({ ...look, levels: look.levels - 1 }), `${t} ${d}`).toBeLessThan(reach);
+      }
     }
+    // MAX, and only MAX, draws the ground past the rim.
+    expect(DISTANCE_LOOK.max.view).toBe(TERRAIN_REACH);
+    expect(terrainLook("medium")).toEqual(terrainLook("medium", TERRAIN_REACH));
     // The ground as it was tuned is the top rung: a quarter metre, 192 cells.
     expect(terrainLook("high")).toMatchObject({ n: 192, spacing: 0.25 });
   });
@@ -105,25 +112,35 @@ describe("the picture's ladders (settings-video.ts)", () => {
     expect(FOREST_LOOK.high.shapes).toBeGreaterThanOrEqual(60);
     // The full band draws EVERY tree — the thinning is the far band's
     // sketches alone — so a trunk in reach of the sled is always drawn.
-    for (const t of TIERS) expect(FOREST_LOOK[t].full).toBeLessThan(DISTANCE_LOOK.low.far);
+    for (const t of TIERS) expect(FOREST_LOOK[t].full).toBeLessThan(DISTANCE_LOOK.low.trees);
     expect(FOREST_LOOK.high.farShare).toBe(1);
   });
 
-  it("pulls the haze in as the distance comes in, and leaves the sky's alone at the top", () => {
-    const sky = 1 / 1500;
-    expect(hazeFor(sky, "high")).toBe(sky);
-    expect(hazeFor(sky, "medium")).toBeGreaterThan(sky);
-    expect(hazeFor(sky, "low")).toBeGreaterThan(hazeFor(sky, "medium"));
-    // A sky already thicker than the floor keeps its own.
-    expect(hazeFor(1 / 100, "low")).toBe(1 / 100);
-    // The shorter a rung draws the woods, the more of the haze stands in
-    // front of where they stop — the cut-off is hidden, not merely nearer.
-    const at = (t: "low" | "medium" | "high") =>
-      1 - Math.exp(-DISTANCE_LOOK[t].far * hazeFor(sky, t) * 0.55);
-    expect(at("low")).toBeGreaterThanOrEqual(at("medium"));
-    expect(at("medium")).toBeGreaterThanOrEqual(at("high"));
-    const fars = TIERS.map((t) => DISTANCE_LOOK[t].far);
-    expect(fars).toEqual([...fars].sort((a, b) => a - b));
+  it("draws less of the basin down the DISTANCE ladder, and closes a mist before it stops", () => {
+    expect(DISTANCE_LEVELS).toEqual(["low", "medium", "high", "max"]);
+    const views = DISTANCE_LEVELS.map((d) => DISTANCE_LOOK[d].view);
+    const trees = DISTANCE_LEVELS.map((d) => DISTANCE_LOOK[d].trees);
+    expect(views).toEqual([...views].sort((a, b) => a - b));
+    expect(trees).toEqual([...trees].sort((a, b) => a - b));
+    // LOW is only what it takes to ride: a few seconds ahead at speed.
+    expect(DISTANCE_LOOK.low.view).toBeLessThanOrEqual(300);
+    // A shorter view is a cheaper ground on every TERRAIN stop.
+    for (const t of TIERS) {
+      const cost = DISTANCE_LEVELS.map((d) =>
+        terrainTriangles(terrainLook(t, DISTANCE_LOOK[d].view)),
+      );
+      expect(cost[0], t).toBeLessThan(cost[3]);
+      expect(cost).toEqual([...cost].sort((a, b) => a - b));
+    }
+    for (const d of DISTANCE_LEVELS) {
+      const look = DISTANCE_LOOK[d];
+      // The woods stop inside the view — under a mist, where it is nearly
+      // whole, so they thin into it rather than ending at a line.
+      expect(look.trees, d).toBeLessThan(look.view);
+      if (look.mist) expect(look.trees / look.view, d).toBeGreaterThanOrEqual(0.8);
+      // Every stop short of MAX closes a mist on its view; MAX has none.
+      expect(mistFor(d), d).toBe(d === "max" ? 0 : look.view);
+    }
   });
 
   it("reads a picture back as the preset it is, and CUSTOM once a row moves", () => {
