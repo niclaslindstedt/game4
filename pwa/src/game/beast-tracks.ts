@@ -23,10 +23,17 @@
 // left and right; a hare's bound, the two long hind prints side by side
 // AHEAD of the two small fore ones — the track that reads backwards to
 // everyone who has not been told.
+//
+// THE SNOW DECIDES HOW DEEP (`snowpack.ts`), when the caller says what snow
+// it is: new snow takes a print deep and wide with its edges fallen in; a
+// wind crust carries a hare or a fox on top (a scratch) while a moose or a
+// reindeer punches through it (`printGive`); wet snow keeps a crisp print
+// with a rim; the groomer a dent.
 
 import { beastById, type BeastSpec } from "./beast-defs.ts";
 import { memberSlot, roundAt, type BeastGroup } from "./beast-plan.ts";
-import { TRAIL, type Stamp } from "./trail-stamp.ts";
+import { printGive, type SnowProps } from "./snowpack.ts";
+import { TRAIL, type SnowSampler, type Stamp } from "./trail-stamp.ts";
 
 /** How many of a herd's members leave a track worth laying: the leader and
  * a couple behind — the rest walk in their prints, as a herd does. */
@@ -48,23 +55,36 @@ function print(
   size: number,
   depth: number,
   out: Stamp[],
+  snow?: SnowProps,
 ): void {
-  const reach = size * 0.3;
+  // New snow falls in round a print's edge: a wider, softer hole.
+  const wide = snow ? size * (1 + 0.3 * (1 - snow.wall)) : size;
+  const reach = wide * 0.3;
   out.push({
     ax: x - hx * reach,
     az: z - hz * reach,
     bx: x + hx * reach,
     bz: z + hz * reach,
-    half: size / 2,
+    half: wide / 2,
     depth,
-    berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare * 0.6),
+    berm: Math.min(TRAIL.maxBerm, depth * (snow ? snow.berm : TRAIL.bermShare) * 0.6),
+    wall: snow ? snow.wall : TRAIL.wall,
   });
+}
+
+/** How deep a print of `spec` goes on snow `packed` (0 powder … 1
+ * groomed), or into `snow` when the caller knows what snow it is. */
+export function printDepth(spec: BeastSpec, packed: number, snow?: SnowProps): number {
+  if (snow)
+    return Math.max(TRAIL.packedDepth * 0.5, spec.prints.depth * printGive(snow, spec.sink));
+  const p = Math.min(1, Math.max(0, packed));
+  return spec.prints.depth * (1 - p) + TRAIL.packedDepth * p;
 }
 
 /**
  * The prints of footfall number `n` of an animal of `spec` at (`x`, `z`)
- * going along `heading`, on snow `packed` (0 powder … 1 groomed), pushed
- * onto `out`.
+ * going along `heading`, on snow `packed` (0 powder … 1 groomed) — or into
+ * `snow`, when the caller knows what snow it is — pushed onto `out`.
  */
 export function footfall(
   spec: BeastSpec,
@@ -74,9 +94,9 @@ export function footfall(
   n: number,
   packed: number,
   out: Stamp[],
+  snow?: SnowProps,
 ): void {
-  const p = Math.min(1, Math.max(0, packed));
-  const depth = spec.prints.depth * (1 - p) + TRAIL.packedDepth * p;
+  const depth = printDepth(spec, packed, snow);
   const hx = Math.sin(heading);
   const hz = Math.cos(heading);
   // The right, in plan: heading 0 is +z and grows clockwise from above.
@@ -94,6 +114,7 @@ export function footfall(
         size * 1.3,
         depth,
         out,
+        snow,
       );
       print(
         x + rx * g * 0.4 * side - hx * 0.22,
@@ -103,24 +124,30 @@ export function footfall(
         size * 0.7,
         depth * 0.8,
         out,
+        snow,
       );
     }
     return;
   }
   const side = n % 2 === 0 ? 1 : -1;
-  print(x + rx * g * side, z + rz * g * side, hx, hz, size, depth, out);
+  print(x + rx * g * side, z + rz * g * side, hx, hz, size, depth, out, snow);
 }
 
 const at = { x: 0, z: 0, fx: 0, fz: 1 };
 
 /**
  * LAST NIGHT'S PRINTS: one whole lap of `group`'s round, for each of its
- * tracked members, pushed onto `out`. `packedAt` is the map's own.
+ * tracked members, pushed onto `out`. `packedAt` is the map's own; `snowAt`,
+ * when given, says what snow each print went into, and `soften` (0..1) how
+ * much snow has fallen into them since — a snowing sky's prints are half
+ * filled by the time the race comes by.
  */
 export function priorPrints(
   group: BeastGroup,
   packedAt: (x: number, z: number) => number,
   out: Stamp[],
+  snowAt?: SnowSampler,
+  soften = 0,
 ): void {
   const spec = beastById(group.species);
   const step = footfallSpacing(spec);
@@ -134,7 +161,15 @@ export function priorPrints(
       const x = at.x + at.fz * side;
       const z = at.z - at.fx * side;
       const heading = Math.atan2(at.fx * round.sense, at.fz * round.sense);
-      footfall(spec, x, z, heading, n++, packedAt(x, z), out);
+      const before = out.length;
+      footfall(spec, x, z, heading, n++, packedAt(x, z), out, snowAt?.(x, z));
+      if (soften > 0) {
+        for (let k = before; k < out.length; k++) {
+          out[k].depth *= 1 - soften;
+          out[k].berm *= 1 - soften;
+          out[k].wall = (out[k].wall ?? TRAIL.wall) * (1 - soften);
+        }
+      }
     }
   }
 }

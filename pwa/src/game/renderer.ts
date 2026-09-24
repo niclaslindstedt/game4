@@ -8,7 +8,9 @@
 //   forest.ts       the snow-loaded conifers, two bands and their casters
 //   gates.ts        the checkpoints' poles and flags, the start/finish arch
 //   sled-body.ts    the four machines and their riders
-//   spray.ts        the roost, the ski spray and the landing puff
+//   spray.ts        the roost, the ski spray and the landing puff (heavy)
+//   snow-cloud.ts   the fine powder they raise: the tail, the hanging cloud
+//   snowpack.ts     what kind of snow lies where (both, and the trails)
 //   snowfall.ts     the snow falling round the lens, the spindrift
 //   ghost-model.ts  the time trial's ghost, see-through and trail-less
 //   wildlife.ts     the birds over the woods, the animals and their prints
@@ -27,6 +29,7 @@ import * as THREE from "three";
 import {
   SLED,
   TUNING,
+  sunAtRun,
   totalMass,
   weatherOf,
   windAt,
@@ -79,6 +82,16 @@ import { skyLookAt } from "./sky.ts";
 import { createSnowfall } from "./snowfall.ts";
 import { LOOSE } from "./snow-glsl.ts";
 import { createSpray, type Spray } from "./spray.ts";
+import { createSnowCloud, TAIL_SLOTS, type SnowCloud } from "./snow-cloud.ts";
+import {
+  NEW_COVER,
+  SNOW,
+  snowAt,
+  snowpackOf,
+  type SnowKind,
+  type Snowpack,
+  type SnowProps,
+} from "./snowpack.ts";
 import {
   DEFAULT_VIDEO,
   DISTANCE_LOOK,
@@ -132,6 +145,10 @@ export type WorldRendererExt = WorldRenderer &
     /** Ride the map under another sky, or from another hour, without loading
      * it again (`withSky`) — a lab's sheet; null hands it back to the map's. */
     setSky(sky: SkyOverride | null): void;
+    /** Lay ONE kind of snow over the whole map for the picture — the
+     * cloud, the spray, the furrows and the prints (`snowpack.ts`) — or
+     * null for the map's own: a lab's sheet. */
+    setSnow(kind: SnowKind | null): void;
     /** The three.js renderer, for a lab that needs to read pixels. */
     readonly gl: THREE.WebGLRenderer;
   };
@@ -141,6 +158,9 @@ const FAR = 6000;
 /** The cloud layer's height over the lens, m: the wind carries the dome's
  * cloud this many metres for one unit of its plane. */
 const CLOUD_HEIGHT = 1400;
+/** How much of the player's own snow cloud the chase lens sees between
+ * itself and him (`snow-cloud.ts`'s veil). */
+const CLOUD_VEIL = 0.12;
 
 type Rider = {
   model: SledModel;
@@ -231,6 +251,15 @@ export function createWorldRenderer(
   let gates: Gates | null = null;
   let trail: TrailMap | null = null;
   let spray: Spray | null = null;
+  let cloud: SnowCloud | null = null;
+  /** WHAT SNOW LIES WHERE for this run (`snowpack.ts`), a lab's forced
+   * kind, and the samples every reader takes of it — each read at once. */
+  let pack: Snowpack | null = null;
+  let snowForce: SnowKind | null = null;
+  const sampled: SnowProps = { ...SNOW.soft };
+  const sledSnow: SnowProps = { ...SNOW.soft };
+  const sampleSnow = (x: number, z: number): SnowProps =>
+    pack ? snowAt(pack, x, z, sampled) : SNOW.soft;
   let wildlife: Wildlife | null = null;
   let clear: LineClear | undefined;
   /** The ridden booms' clear: the course's marks, never the trees. */
@@ -281,15 +310,25 @@ export function createWorldRenderer(
     gates?.dispose();
     trail?.dispose();
     spray?.dispose();
+    cloud?.dispose();
     wildlife?.dispose();
     for (const r of riders) r.model.dispose();
-    for (const o of [terrain?.group, forest?.group, gates?.group, spray?.points, wildlife?.group]) {
+    for (const o of [
+      terrain?.group,
+      forest?.group,
+      gates?.group,
+      spray?.points,
+      cloud?.mesh,
+      wildlife?.group,
+    ]) {
       if (o) scene.remove(o);
     }
     for (const r of riders) scene.remove(r.model.root);
     ghost?.dispose();
     ghost = null;
     terrain = forest = gates = trail = spray = null;
+    cloud = null;
+    pack = null;
     wildlife = null;
     clear = undefined;
     boomClear = undefined;
@@ -364,7 +403,8 @@ export function createWorldRenderer(
       // The drawn surface under the probe is the loose cover's height over
       // the ground less the furrow; the physics has it at the ground less
       // its own sink.
-      sum += drawnDepth(c, packed, 1, depth) - c.sink - LOOSE * (1 - packed);
+      const snow = pack ? sampleSnow(c.x, c.z) : undefined;
+      sum += drawnDepth(c, packed, 1, depth, snow) - c.sink - LOOSE * (1 - packed);
       n++;
     }
     return n > 0 ? Math.max(-0.1, Math.min(0.2, (sum / n) * 0.85)) : 0;
@@ -381,19 +421,24 @@ export function createWorldRenderer(
       r.bodyPen.down[0] = 0;
       return;
     }
-    if (!r.wasThrown) spray.burst(off.x, off.y - 0.4, off.z, off.vx, off.vz, 1);
+    const snow = snowAt(pack ?? snowpackOf(level), off.x, off.z, sledSnow);
+    const puff = (y: number, size: number) => {
+      spray?.burst(off.x, off.y - y, off.z, off.vx, off.vz, size, snow);
+      cloud?.burst(off.x, off.y - y, off.z, off.vx, off.vz, size, snow);
+    };
+    if (!r.wasThrown) puff(0.4, 1);
     const sliding = Math.hypot(off.vx, off.vz);
-    if (off.touching && !r.bodyDown && sliding > 2) {
-      spray.burst(off.x, off.y - 0.3, off.z, off.vx, off.vz, Math.min(0.6, sliding / 20));
-    }
+    if (off.touching && !r.bodyDown && sliding > 2) puff(0.3, Math.min(0.6, sliding / 20));
     r.plume = off.touching && sliding > 3 ? r.plume + simDt : 0;
     if (r.plume > 0.15) {
       r.plume = 0;
-      spray.burst(off.x, off.y - 0.3, off.z, off.vx, off.vz, 0.02);
+      puff(0.3, 0.02);
     }
     r.bodyDown = off.touching;
     r.wasThrown = true;
-    if (TRAIL_LOOK[video.trails].stamp) bodyStampOf(off, r.bodyPen, level.packedAt, stamps);
+    if (TRAIL_LOOK[video.trails].stamp) {
+      bodyStampOf(off, r.bodyPen, level.packedAt, stamps, sampleSnow);
+    }
   }
 
   /** Every sled's lamps at `level` (0 off … 1): its glow toward the lens,
@@ -402,10 +447,16 @@ export function createWorldRenderer(
     const u = env.haze;
     const cam = lens.camera.position;
     for (let i = 0; i < LAMP_SLOTS; i++) u.uLampOn.value[i] = 0;
+    for (let i = 0; i < TAIL_SLOTS; i++) cloud?.setTail(i, 0, 0, 0, 0);
     for (let i = 0; i < riders.length; i++) {
       const r = riders[i];
       const at = r.drawn;
       lampQ.set(at.q.x, at.q.y, at.q.z, at.q.w);
+      if (cloud && i < TAIL_SLOTS && level > 0) {
+        const tail = lampMounts(r.spec).tail;
+        lampV.set(tail[0], tail[1], tail[2]).applyQuaternion(lampQ);
+        cloud.setTail(i, at.x + lampV.x, at.y - r.sink + lampV.y, at.z + lampV.z, level);
+      }
       lampF.set(0, -Math.sin(HEADLAMP_DIP), Math.cos(HEADLAMP_DIP)).applyQuaternion(lampQ);
       lampV.set(cam.x - at.x, cam.y - at.y, cam.z - at.z).normalize();
       r.model.setLamps(level, lampF.dot(lampV));
@@ -416,6 +467,18 @@ export function createWorldRenderer(
       u.uLampDir.value[i].copy(lampF);
       u.uLampOn.value[i] = level;
     }
+  }
+
+  /** THE RUN'S SNOWPACK: the map's snow under the sky it is ridden under
+   * (a lab's `setSky` too), the run's dial and its new snow. */
+  function packFor(state: GameState): Snowpack {
+    const sky = skyLevel ?? state.level;
+    return snowpackOf(sky, {
+      elevation: sunAtRun(sky).elevation,
+      fresh: state.fresh,
+      depth: state.snowDepth,
+      force: snowForce,
+    });
   }
 
   const api: WorldRendererExt = {
@@ -437,12 +500,21 @@ export function createWorldRenderer(
       clear = createLineClear(lv);
       boomClear = createLineClear(lv, { trees: false });
       scene.add(gates.group);
-      wildlife = createWildlife(lv, env.haze);
+      pack = packFor(state);
+      wildlife = createWildlife(lv, env.haze, {
+        at: sampleSnow,
+        // A snowing sky has been filling last night's prints for hours.
+        soften: () => (pack ? Math.min(0.75, (pack.laid / NEW_COVER) * 0.6) : 0),
+      });
       scene.add(wildlife.group);
       spray = createSpray(env.haze);
       spray.points.name = "spray";
       spray.setBudget(SPRAY_SHARE[video.spray]);
       scene.add(spray.points);
+      cloud = createSnowCloud(env.haze);
+      cloud.mesh.name = "snow-cloud";
+      cloud.setBudget(SPRAY_SHARE[video.spray]);
+      scene.add(cloud.mesh);
       riders = runsOf(state).map((run, i) => riderFor(i, run.sled.spec));
       ghost = createGhostModel(scene, wrap);
       lastTick = -1;
@@ -468,7 +540,7 @@ export function createWorldRenderer(
     },
 
     draw(state: GameState, alpha: number, dt: number, present = true) {
-      if (!level || state.level !== level || !terrain || !trail || !spray) return;
+      if (!level || state.level !== level || !terrain || !trail || !spray || !cloud) return;
       const opened = performance.now();
       const runs = runsOf(state);
       while (riders.length < runs.length) {
@@ -490,6 +562,7 @@ export function createWorldRenderer(
         if (lastState !== null) {
           trail.clear(gl);
           spray.clear();
+          cloud.clear();
           wildlife?.reset();
         }
         for (const r of riders) {
@@ -501,7 +574,9 @@ export function createWorldRenderer(
         lens.snap();
         lastTick = -1;
         lastState = state;
+        pack = packFor(state);
       }
+      if (pack) pack.fresh = state.fresh;
       const stepped = lastTick < 0 ? 0 : Math.max(0, state.tick - lastTick);
       const simDt = Math.min(stepped * TUNING.dt, 0.25);
 
@@ -518,14 +593,25 @@ export function createWorldRenderer(
         observeBody(r.body, sled.thrown, run.tick);
         r.model.pose(sled, r.drawn, r.sink, run.tricks.pose, dt, sampleBody(r.body, alpha));
         if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
-          stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps, run.snowDepth);
+          stampsOf(
+            sled.contacts,
+            r.pen,
+            level.packedAt,
+            nominalLoad,
+            stamps,
+            run.snowDepth,
+            sampleSnow,
+          );
         }
         // The landing puff: grounded now, in the air at the last frame.
         let landed = 0;
         if (r.wasAirborne && !sled.airborne && r.airTime > 0.25) {
           landed = Math.abs(r.vy) + r.airTime * 2;
         }
-        if (simDt > 0 || landed > 0) spray.emit(sled, level, simDt, landed);
+        if (simDt > 0 || landed > 0) {
+          spray.emit(sled, level, simDt, landed, snowAt(pack!, sled.x, sled.z, sledSnow));
+          cloud.emit(sled, simDt, landed, sampleSnow);
+        }
         thrownEffects(r, sled, simDt);
         r.wasAirborne = sled.airborne;
         r.airTime = sled.airborne ? sled.airTime : r.airTime * (sled.airborne ? 1 : 0);
@@ -629,6 +715,10 @@ export function createWorldRenderer(
       const pixels = h / (2 * Math.tan(THREE.MathUtils.degToRad(lens.camera.fov) / 2));
       spray.setScale(pixels);
       spray.update(Math.min(dt, 0.1), look, level);
+      // The ladder's lens looks through the player's own tail at him; a
+      // planted one (a replay's broadcast, a lab) sees the cloud whole.
+      cloud.setFocus(d.x, d.y + 0.6, d.z, planted ? 1 : CLOUD_VEIL);
+      cloud.update(Math.min(dt, 0.1), look, level, wind, lens.camera.position);
       snowfall.setScale(pixels);
       snowfall.update(look, wind, lens.camera, level, dt);
 
@@ -694,6 +784,11 @@ export function createWorldRenderer(
     setSky(sky) {
       skyOverride = sky;
       skyLevel = level && sky ? withSky(level, sky) : level;
+      if (lastState && level) pack = packFor(lastState);
+    },
+    setSnow(kind) {
+      snowForce = kind;
+      if (lastState && level) pack = packFor(lastState);
     },
 
     setCamera(rung: CameraRung, cut: boolean = false) {
@@ -719,6 +814,7 @@ export function createWorldRenderer(
       hero.setSize(shadowLook().hero);
       env.setDistance(video.distance);
       spray?.setBudget(SPRAY_SHARE[video.spray]);
+      cloud?.setBudget(SPRAY_SHARE[video.spray]);
       snowfall.setBudget(SPRAY_SHARE[video.spray]);
       forest?.setOptions(forestOptions());
       // THE GROUND AND ITS TRAILS ARE REBUILT, not adjusted: a grid's pitch,

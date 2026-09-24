@@ -35,6 +35,7 @@
     "world": "node scripts/world-preview.mjs",
     "sled": "node scripts/sled-preview.mjs",
     "sky": "node scripts/sky-preview.mjs",
+    "cloud": "node scripts/cloud-preview.mjs",
     "birds": "node scripts/birds-preview.mjs",
     "trees": "node scripts/trees-preview.mjs",
     "forest": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/forest-lab.mjs",

@@ -11,7 +11,7 @@
 import * as THREE from "three";
 import type { GameState, Level } from "@engine";
 
-import { createBeasts, type Beasts, type TrailWindow } from "./beasts.ts";
+import { createBeasts, type Beasts, type PrintSnow, type TrailWindow } from "./beasts.ts";
 import { createBirds, type Birds } from "./birds.ts";
 import type { HazeUniforms } from "./haze.ts";
 import type { Stamp } from "./trail-stamp.ts";
@@ -37,9 +37,9 @@ export type Wildlife = {
   dispose: () => void;
 };
 
-export function createWildlife(level: Level, haze: HazeUniforms): Wildlife {
+export function createWildlife(level: Level, haze: HazeUniforms, snow?: PrintSnow): Wildlife {
   const birds = createBirds(level, haze);
-  const beasts = createBeasts(level, haze);
+  const beasts = createBeasts(level, haze, snow);
   const group = new THREE.Group();
   group.add(birds.group, beasts.group);
   return {

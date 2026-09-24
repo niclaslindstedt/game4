@@ -48,7 +48,11 @@ cannot photograph a stale build. The browser lab has two shapes:
   CONTACT-SHEET form of it (as `sky-harness.ts` is): one canvas, a scissored
   viewport a cell, orthographic elevations on a metre grid beside the
   game's own cameras, labels as DOM over the canvas — the pattern for any
-  "every X by every Y" sheet. `world-harness.tsx` stands one seed
+  "every X by every Y" sheet. `cloud-harness.ts` is the RIDDEN sheet: a
+  row is a staged ride (`placeRun` on an open meadow the page finds, a
+  held speed, the sun turned to the ride through `setSky` and a heading off
+  its azimuth, a snow kind laid by `setSnow`), a column one angle of its
+  moment or one moment of its angle. `world-harness.tsx` stands one seed
   up, lets the bot ride it and draws named views through the game's own
   renderer. Vite builds only `index.html`, so a harness never ships.
   `audition.mjs` is the third shape — a page WRITTEN by the script, played
