@@ -113,7 +113,7 @@ Three ways off, each a threshold on something the step has already measured, and
 
 THE RIDER THROWN is a body of his own (`SledState.thrown`): a point of `radius` = 0.3 m leaving at the sled's way plus a climb of `throwUp` = 2.4 m/s, under gravity, pushed out of any trunk he meets, settling `sink` = 0.12 m into powder, the speed into the snow taken away with `restitution` = 0.25 back from a real arrival, and Coulomb friction on the slide — `frictionPacked` = 0.5 on the groomer, `frictionPowder` = 0.8 in fresh snow, which a sprawled body ploughs. Over it a TUMBLE, head over heels at his speed over `tumbleRadius` = 0.5 m (no faster than 12 rad/s), chasing the slide on the snow and settling flat once he has stopped. None of it draws from the stream: a crash is a pure function of the moment it started, and a run replays wipeout for wipeout.
 
-While he is off it the sled goes on with the controls let go, takes no checkpoint and runs none of the automatic reset's clocks; the race clock runs. The reset comes once he has lain `lieMin` = 1.8 s and stopped (`restSpeed` = 0.6 m/s), or at `lieMax` = 4.5 s whatever he is doing — reported `auto`. The rider's own reset key stands them up at once.
+While he is off it the sled goes on with the controls let go, takes no checkpoint and runs none of the automatic reset's clocks; the race clock runs. The reset comes once he has been off `lieMin` = 1.8 s and has lain still (under `restSpeed` = 0.6 m/s, on the snow) for `lieStill` = 1 s of it, or at `lieMax` = 6.5 s whatever he is doing — reported `auto`. The still beat is the one the app's death cam (`camera-death.ts`) rises into the sky over him on. The rider's own reset key stands them up at once.
 
 ## Stuck in powder (`trench.ts`)
 

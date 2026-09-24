@@ -106,6 +106,7 @@ data and arithmetic, three-free so `tests/world_render_test.ts` reads it;
 | Never inside a tree or a post | `camera-clear.ts` — the `LineClear` a boom pulls its arm in against: the trees AS DRAWN (a lens meets the crown, not the trunk), the checkpoint stakes and the start banner, walked from the helmet out |
 | A switch that is a move rather than a cut | `HANDOVER` seconds of `blendLens` in `camera.ts` |
 | Which rung each shell surface gets | `cameraFor` in `shell.ts` |
+| The player thrown: the lens off the ladder, after the body, the slow motion into the impact and the rise over him | `camera-death.ts` (`DEATH`, `frameDeath`); the rate reaches the app as `renderer.timeRate()` — slow motion is fewer steps per frame and nothing else |
 
 **A reading that moves where the camera STANDS is taken before the lens is
 placed.** The snow height under the lens, the follow target and the

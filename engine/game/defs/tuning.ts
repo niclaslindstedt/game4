@@ -365,11 +365,13 @@ export const TUNING = {
     sledKick: 0.35,
     sledKickMax: 5,
     /** How long he lies before the reset stands them up, s: at least
-     * `lieMin`, once he has stopped (`restSpeed` m/s), and never past
-     * `lieMax`. */
+     * `lieMin` off the sled and `lieStill` lain still (under `restSpeed`
+     * m/s, on the snow) — the beat the death cam rises over him on — and
+     * never past `lieMax`. */
     lieMin: 1.8,
     restSpeed: 0.6,
-    lieMax: 4.5,
+    lieStill: 1,
+    lieMax: 6.5,
   },
 
   /** STUCK IN DEEP POWDER (`trench.ts`). A tread spinning with the sled
