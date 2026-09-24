@@ -505,6 +505,11 @@ describe("what the developer page remembers (settings.ts)", () => {
     expect(readParams("?bench=1").hide).toEqual([]);
     expect(readParams("?hide=forest,nothing,cloud").hide).toEqual(["forest", "cloud"]);
     expect(readParams("?bench=1&ab=1").ab).toBe(true);
+    expect(readParams("?bench=1&frames=600").frames).toBe(600);
+    expect(readParams("?bench=1&frames=5").frames).toBe(null);
+    expect(readParams("?bench=1&frames=99999").frames).toBe(null);
+    expect(readParams("?bench=1&view=vista").view).toBe("vista");
+    expect(readParams("?bench=1").view).toBe("race");
     expect(readParams("?bench=1").ab).toBe(false);
     for (const name of HIDEABLE) expect(readParams(`?hide=${name}`).hide).toEqual([name]);
   });
