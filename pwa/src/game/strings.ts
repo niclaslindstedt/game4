@@ -234,19 +234,21 @@ export const STRINGS = {
   },
   startTime: "TIME",
   startTimeHint:
-    "The time of day the ride starts at, on that date at that map's latitude — night rides under the moon and the headlamp. The sun moves an hour every ten minutes of riding.",
+    "The time of day the ride starts at, on that date at that map's latitude — night rides under the moon and the headlamp. The sun stays where it is for the whole ride.",
   timeNames: { morning: "MORNING", day: "DAY", evening: "EVENING", night: "NIGHT" },
   startWeather: "WEATHER",
   startWeatherHint:
-    "The sky over the ride: the map's own, or clear, fair, high cloud, overcast (flat light, the bumps hard to read), falling snow or a valley fog.",
-  /** The WEATHER row's stops: the map's own first, then R19's six. */
+    "The sky over the ride: the map's own, or clear, fair, flurries (a few flakes out of a sunny sky), high cloud, overcast (flat light, the bumps hard to read), a steady snowfall, a storm under black cloud (a few tens of metres to see by) or a valley fog. Where it snows, new snow builds up over the ride: a storm lays a hand's depth in an hour.",
+  /** The WEATHER row's stops: the map's own first, then R19's seven. */
   weatherDealt: "AS DEALT",
   weatherNames: {
     clear: "CLEAR",
     fair: "FAIR",
+    flurries: "FLURRIES",
     high: "HIGH CLOUD",
     overcast: "OVERCAST",
     snow: "SNOWING",
+    storm: "STORM",
     fog: "FOG",
   },
   startSnow: "SNOW",

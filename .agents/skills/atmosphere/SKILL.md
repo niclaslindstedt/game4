@@ -1,6 +1,6 @@
 ---
 name: atmosphere
-description: "Use when working on the SKY and the air under it — where the sun stands at the hour the race has reached on the map's day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's one shadow map over a circle ahead of the lens that every shadow fades out at the rim of — and over that the WEATHER R19 deals (clear, fair, high cloud, overcast, falling snow, valley fog), its cloud, its falling snow and spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars, the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, R15 in `mapgen/sun.ts` and R19 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
+description: "Use when working on the SKY and the air under it — where the sun stands at the map's hour (still for the whole run) on its day at its latitude (R15, `sunAtRun`), what colour it makes the dome, the two lights and the blue in the snow's shadows, the haze every far slope dissolves into (one sky function read along each surface's own direction), and the key light's one shadow map over a circle ahead of the lens that every shadow fades out at the rim of — and over that the WEATHER R19 deals (clear, fair, flurries, high cloud, overcast, a steady fall, a storm, valley fog), its cloud, its falling snow in squalls and the new snow it lays (`snowAt`, `GameState.fresh`), its spindrift, its flat light, and the NIGHT an evening map rides into (the moon as the key, the stars and the Milky Way — `starfield.ts` — the sleds' lamps). Owns `pwa/src/game/sky.ts` (the colour model, three-free), `haze.ts`, `sky-dome.ts`, `environment.ts`, `snowfall.ts`, `starfield.ts`, and on the engine side `engine/game/clock.ts` (the sun and the moon), `engine/game/wind.ts`, `engine/game/snowfall.ts`, R15 in `mapgen/sun.ts` and R19 in `mapgen/weather.ts`; and `make sky`, the contact sheet that is the only honest way to judge any of it. Not the snow the light lands on (`snow-look`), not the trees (`nature`), not what the sled throws (`visual-effects`)."
 ---
 
 # The atmosphere: the sun, the sky and the haze
@@ -12,9 +12,10 @@ the haze decides how far the mountains read. A change here moves every
 picture in the game.
 
 **A MAP IS DEALT ONE SKY AT ONE HOUR** (R15, R19): a seeded day at a seeded
-latitude, one of six weathers off a stream of its own, and on a quarter of
-the maps an evening start that rides from the last of the sun into the dark.
-What changes over a race is the sun's (and the moon's) height alone. A
+latitude, one of eight weathers off a stream of its own (the bright ones most
+days), and on a quarter of the maps an evening start at or after sunset. The
+sun does not move over a run; what changes is the fall, in squalls, and the
+new snow it lays. A
 season's cast is NOT BUILT — `game3`'s `SEASON_LOOKS` is where it starts.
 
 **Read this skill's lessons first** — `node scripts/skill-lessons.mjs
@@ -29,10 +30,11 @@ engine has an opinion about colour.
 | Fact | Where |
 | --- | --- |
 | The map's day: a latitude (46–64°N), a day of the year (mid-January to mid-March) and a starting solar hour (9–16 h) at which the sun is at least `sun.minElevation` up (R15) | `engine/mapgen/sun.ts` (`dealSun`, `declinationOf`), `LEVEL_RULES.sun` |
-| The hour the race has REACHED — TEN MINUTES OF RIDING IS ONE HOUR OF SUN, so the shadows visibly swing over a race | `sunHourAt(level, t)`, `sunAtRun(level, t)`, `SUN_SECONDS_PER_HOUR` in `engine/game/clock.ts` |
-| The moon: its place and its phase off the map's day (a nominal year, so R15's two months carry two lunations) | `moonAtRun(level, t)`, `moonAgeOn` in `clock.ts` over `lib/solar.ts`'s `moonAt` |
+| Where the sun stands over a run — at the map's hour, STILL from the green to the flag | `sunAtRun(level)` in `engine/game/clock.ts` |
+| The moon: its place and its phase off the map's day (a nominal year, so R15's two months carry two lunations) | `moonAtRun(level)`, `moonAgeOn` in `clock.ts` over `lib/solar.ts`'s `moonAt` |
 | THE WEATHER (R19): the sky, the fall, the fog, the mean wind and its bearing, the evening — dealt last off its own stream so it moves nothing the map builds | `engine/mapgen/weather.ts` (`dealWeather`, `weatherOf`, `weatherFor`, `withSky`), `LEVEL_RULES.weather` |
 | The wind at a moment: the mean breathing in gusts, veering — a PURE function of (level, t), drawing nothing from `state.rng`, read by nothing in the physics | `windAt` in `engine/game/wind.ts` |
+| The fall at a moment (the squalls, a storm's blown snow) and the view it leaves — pure the same way — and the NEW SNOW it lays at a real fall's rate (`GameState.fresh`), the one thing a sky does to the physics | `snowAt`, `visibilityIn`, `freshRate` in `engine/game/snowfall.ts`; `packedUnder` / `depthUnder` in `snow.ts` |
 | The astronomy: the sun's elevation and bearing at an hour, a latitude and a declination | `engine/lib/solar.ts` (`sunAt`) — the generic pool |
 
 ## The files, one direction of flow
@@ -41,6 +43,7 @@ engine has an opinion about colour.
 | --- | --- |
 | `pwa/src/game/sky.ts` | WHAT COLOUR THE AIR IS: `skyLookAt(level, t)` → a `SkyLook` — the dome's zenith and horizon, the sun's own colour through the air it crossed (per-channel transmittance `exp(−k · airmass)` over the Kasten–Young air mass, `airMass`, `sunTint`), the two halves of the hemisphere light, the haze. Linear RGB throughout. THREE-FREE, so `tests/world_render_test.ts` reads the whole model |
 | `pwa/src/game/haze.ts` | ONE SKY FUNCTION IN GLSL (`SKY_GLSL`, `skyColour(dir)`) and the haze every world material fades into, drawn from it along that surface's own direction (`HAZE_FRAGMENT`, `hazeMaterial`) — replacing three's one-colour fog; the uniforms ONE object shared by reference (`createHazeUniforms`, `writeHaze`) |
+| `pwa/src/game/starfield.ts` | THE NIGHT SKY: the sphere of stars turned to the map's hour, day and latitude (`skyTurnOf`, `turnBasis`), two shells of stars SIZED IN PIXELS off the ray's derivative, the twinkle, the Milky Way at its real tilt with its rift, the moon's glare washing the faint sky out — the sibling jet-ski game's design, retyped |
 | `pwa/src/game/sky-dome.ts` | The dome: `skyColour` painted on a sphere round the lens with the sun's disc on it, through the same tone mapping and output conversion as every lit surface, so the haze meets it with no seam |
 | `pwa/src/game/snowfall.ts` | THE SNOW IN THE AIR: a wrapped box of flakes round the lens moved by one vector a frame (how hard it snows is the draw range; the SPRAY row caps the pool; a flake in the player's beam lights up), and the spindrift lifted off the crests on the CPU when the wind can lift dry snow |
 | `pwa/src/game/environment.ts` | Hangs it in the scene: the key light and the hemisphere light, the dome, the haze, re-read EVERY FRAME off the run's own clock; the key light's shadow box, aimed at a circle `SHADOW_LOOK[row].reach` (SLEDS: tight, the machines alone; MEDIUM and HIGH: every tree's too) round a point ahead of the lens and snapped to whole texels so a tree's shadow edge does not crawl, its normal bias scaled with the texel |
@@ -53,7 +56,8 @@ engine has an opinion about colour.
   that needs to know how bright, how warm or where the light is reads the
   `SkyLook` — the snow's glitter and sheen, the haze, the shadows. Nothing
   restates an elevation or picks its own sun colour, and nothing caches a
-  look across a frame: the sun moves an hour every ten minutes.
+  look across a frame: a card or a lab can change the sky under a live
+  scene, and the fall breathes in squalls.
 - **THE SHADOWS ARE BLUE, AND THAT IS THE SKY'S JOB.** What fills a shadow on
   snow is the sky, so the hemisphere's upper colour is a real blue and the
   bounce under it near-white. Shade that reads grey is a hemisphere light

@@ -59,6 +59,9 @@ export type HazeUniforms = {
   /** The snow's cues: how flat the light is, how much it glitters. */
   uFlat: { value: number };
   uGlitter: { value: number };
+  /** THE NEW SNOW over the run, m (`GameState.fresh`): what buries the
+   * groomer's look. The run's, not the sky's — the renderer writes it. */
+  uFresh: { value: number };
   /** THE LAMPS: each sled's headlamp — where it is, where it points, how
    * far on (0 for a slot with no sled) — and the colour of the beam. */
   uLampPos: { value: THREE.Vector3[] };
@@ -88,6 +91,7 @@ export function createHazeUniforms(): HazeUniforms {
     uHazeFloor: { value: 0.55 },
     uFlat: { value: 0 },
     uGlitter: { value: 1 },
+    uFresh: { value: 0 },
     uLampPos: { value: vectors() },
     uLampDir: { value: vectors() },
     uLampOn: { value: new Array<number>(LAMP_SLOTS).fill(0) },

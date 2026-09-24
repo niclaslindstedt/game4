@@ -37,16 +37,31 @@
 //     phase and its height say. The night is lifted past honest so moonlit
 //     snow reads at racing pace; the sleds' lamps are the rest.
 //   * THE WEATHER (R19). Cloud dims and cools the key; a LID (overcast, a
-//     fall, a fog) takes the key down to a glow, turns the dome to its own
-//     grey and the hemisphere to a flat, shadowless light — which is what
-//     `flat` tells the snow's shader, so it keeps the bumps readable, but
-//     hard. A fall and a fog thicken the haze until the far side of the
-//     basin is gone.
+//     steady fall, a storm, a fog) takes the key down to a glow, turns the
+//     dome to its own deck — darker than the snow under it, slate in a
+//     storm — and the hemisphere to a flat light, which is what `flat`
+//     tells the snow's shader, so it keeps the bumps readable, but hard.
+//     A flurry falls out of a sunny sky and keeps the sun. A fall closes
+//     the haze to the visual range it leaves at this moment (`snowAt`,
+//     `visibilityIn`) — a flurry's kilometres, a blizzard's forty metres —
+//     and a fog thickens it until the far side of the basin is gone.
 //
 // Every colour is LINEAR RGB (what the shaders mix in); `sRGB` hexes are
 // never written here.
 
-import { CLEAR_WEATHER, moonAtRun, sunAtRun, weatherOf, type Level, type Weather } from "@engine";
+import {
+  CLEAR_WEATHER,
+  moonAtRun,
+  snowAt,
+  snows,
+  sunAtRun,
+  visibilityIn,
+  weatherOf,
+  type Level,
+  type Weather,
+} from "@engine";
+
+import { DEFAULT_TURN, skyTurnOf, type SkyTurn } from "./starfield.ts";
 
 export type Rgb = [number, number, number];
 
@@ -99,6 +114,11 @@ export type SkyLook = {
   cloud: CloudLook;
   /** How dark it is, 0 (day) … 1 (full night). */
   night: number;
+  /** How much of the Milky Way shows, 0..1 — only a dark sky's: past
+   * astronomical twilight, the moon down or thin, no cloud in front. */
+  galaxy: number;
+  /** Where the sphere of stars has turned to (`starfield.ts`). */
+  turn: SkyTurn;
   /** How many stars show, 0..1 — the night, less the moon's glare and the
    * cloud. */
   stars: number;
@@ -180,26 +200,51 @@ const LID: Record<
   { genus: CloudLook["genus"]; cover: number; key: number; flat: number; glitter: number }
 > = {
   clear: { genus: 0, cover: 0, key: 1, flat: 0, glitter: 1 },
-  fair: { genus: 1, cover: 0.34, key: 0.94, flat: 0, glitter: 1 },
-  high: { genus: 2, cover: 0.6, key: 0.74, flat: 0.25, glitter: 0.65 },
-  overcast: { genus: 3, cover: 1, key: 0.12, flat: 0.85, glitter: 0.08 },
-  snow: { genus: 3, cover: 1, key: 0.08, flat: 0.92, glitter: 0.04 },
+  fair: { genus: 1, cover: 0.4, key: 0.95, flat: 0, glitter: 1 },
+  // A few heaps and the sun between them: the flakes glint in it.
+  flurries: { genus: 1, cover: 0.26, key: 0.9, flat: 0.04, glitter: 1 },
+  high: { genus: 2, cover: 0.6, key: 0.78, flat: 0.2, glitter: 0.7 },
+  // A lid with the sun a pale disc behind it: soft shadows, not none.
+  overcast: { genus: 3, cover: 1, key: 0.22, flat: 0.68, glitter: 0.12 },
+  snow: { genus: 3, cover: 1, key: 0.1, flat: 0.85, glitter: 0.05 },
+  storm: { genus: 3, cover: 1, key: 0.03, flat: 0.92, glitter: 0 },
   fog: { genus: 3, cover: 1, key: 0.3, flat: 0.7, glitter: 0.25 },
 };
 
-/** A lid's own grey at full day, per kind. */
-const DECK: Record<"overcast" | "snow" | "fog", Rgb> = {
-  overcast: [0.52, 0.56, 0.62],
-  snow: [0.44, 0.47, 0.53],
-  fog: [0.66, 0.68, 0.7],
+/** A lid's own greys at full day, per kind: the deck overhead and the air
+ * at the horizon under it. The deck is DARKER than the snow it hangs over —
+ * what keeps a grey day from reading as one white sheet — and a storm's is
+ * slate, the air under it the grey of the snow driving through it. */
+const DECK: Record<"overcast" | "snow" | "storm" | "fog", { zenith: Rgb; horizon: Rgb }> = {
+  overcast: { zenith: [0.3, 0.33, 0.39], horizon: [0.5, 0.53, 0.58] },
+  snow: { zenith: [0.23, 0.25, 0.3], horizon: [0.44, 0.46, 0.5] },
+  storm: { zenith: [0.06, 0.07, 0.09], horizon: [0.25, 0.27, 0.3] },
+  fog: { zenith: [0.66, 0.68, 0.7], horizon: [0.64, 0.66, 0.68] },
 };
 
-/** THE WHOLE LOOK for a sun at `azimuth`, `elevation`, a moon, a weather. */
+/** How much of the clear day's skylight a lid lets down, per kind: an
+ * overcast's is most of it again, a storm's half. */
+const LID_LIGHT: Record<"overcast" | "snow" | "storm" | "fog", number> = {
+  overcast: 1.15,
+  snow: 1.05,
+  storm: 0.55,
+  fog: 1.35,
+};
+
+/** The haze's density on a clear day, 1/m. */
+const CLEAR_HAZE = 1 / 1500;
+/** Koschmieder: the extinction that closes the view at a visual range V is
+ * 3.912 / V. */
+const KOSCHMIEDER = 3.912;
+
+/** THE WHOLE LOOK for a sun at `azimuth`, `elevation`, a moon, a weather —
+ * and the fall at this moment (`snowAt`), the dealt mean when left out. */
 export function skyLookFor(
   azimuth: number,
   elevation: number,
   moonAt: MoonInput = NO_MOON,
   weather: Weather = CLEAR_WEATHER,
+  now?: number,
 ): SkyLook {
   // How "high" the day is, 0 at the horizon to 1 at 45° and over.
   const high = smooth(0.0, 0.8, elevation);
@@ -214,8 +259,8 @@ export function skyLookFor(
   const through = Math.exp(-0.16 * m);
 
   // THE CLEAR DAY.
-  const zenithDay = mix([0.08, 0.22, 0.62], [0.03, 0.13, 0.5], high);
-  const horizonCool: Rgb = [0.56, 0.72, 0.92];
+  const zenithDay = mix([0.06, 0.19, 0.62], [0.022, 0.1, 0.46], high);
+  const horizonCool: Rgb = [0.46, 0.64, 0.92];
   const horizonDay = mix(mix(horizonCool, [0.8, 0.78, 0.8], (1 - high) * 0.35), horizonCool, high);
   // THE NIGHT, and the twilight between.
   const lightUp = Math.pow(day, 1.6);
@@ -230,7 +275,7 @@ export function skyLookFor(
 
   // THE KEY: whichever of the two lights is the stronger, through the cloud.
   const lid = LID[weather.kind];
-  const fall = weather.kind === "snow" ? weather.snowfall : 0;
+  const fall = snows(weather.kind) ? (now ?? weather.snowfall) : 0;
   const fog = weather.kind === "fog" ? weather.fog : 0;
   const pass = lid.key * (1 - 0.6 * fall) * (1 - 0.6 * fog);
   const sunKey = 3.1 * (0.35 + 0.65 * through) * smooth(-0.04, 0.08, elevation);
@@ -248,34 +293,50 @@ export function skyLookFor(
   // THE WEATHER.
   const lidded = lid.genus === 3;
   if (lidded) {
-    const grey = scale(DECK[weather.kind as keyof typeof DECK], 1 - 0.25 * fall);
+    const kind = weather.kind as keyof typeof DECK;
+    const deck = DECK[kind];
     const light = (0.55 + 0.45 * high) * lightUp + 0.018 * night;
-    zenith = scale(grey, light * 1.05);
-    horizon = scale(grey, light * 0.97);
+    // A fall darkens the deck it comes out of.
+    const heavy = 1 - 0.3 * fall;
+    zenith = scale(deck.zenith, light * heavy);
+    horizon = scale(deck.horizon, light * heavy);
     glow = scale(glow, 0.12 + 0.3 * fog);
-    skyLight = mix(skyLight, [0.84, 0.88, 0.94], day);
+    skyLight = mix(skyLight, [0.8, 0.85, 0.93], day);
     groundLight = mix(groundLight, [0.9, 0.92, 0.95], day);
-    // What the lid takes off the key it gives back as a flat, skylit glow.
-    ambient *= 1 + 0.35 * day;
+    // What the lid takes off the key it gives back as a flat, skylit glow —
+    // all of it under a thin deck, half under a storm's.
+    ambient *= 1 + (LID_LIGHT[kind] - 1) * day;
   } else if (lid.cover > 0) {
-    zenith = mix(zenith, horizon, lid.cover * (lid.genus === 2 ? 0.35 : 0.15));
+    zenith = mix(zenith, horizon, lid.cover * (lid.genus === 2 ? 0.35 : 0.12));
     ambient *= 1 + 0.08 * lid.cover * day;
   }
 
-  let haze = 1 / 1500;
+  // THE HAZE: the clear day's, thickened by the lid, and closed to the
+  // visual range the fall leaves (`visibilityIn`) — a blizzard's forty
+  // metres, a flurry's kilometres.
+  let haze = CLEAR_HAZE;
   if (weather.kind === "high") haze *= 1.2;
-  if (weather.kind === "overcast") haze *= 2;
-  if (weather.kind === "snow") haze *= 2.5 + 40 * fall;
+  if (weather.kind === "overcast") haze *= 1.8;
+  if (weather.kind === "snow" || weather.kind === "storm") haze *= 2.5;
   if (weather.kind === "fog") haze *= 5 + 40 * fog;
+  if (fall > 0) haze = Math.max(haze, KOSCHMIEDER / visibilityIn(fall));
 
   // A heap's sunward top is the sun's colour on white; its base the sky's
-  // own under-light. Under a lid the two are the deck's grey, a touch apart.
+  // own under-light. Under a lid the two are the deck's own greys, far
+  // enough apart that its underside reads as cloud and not as paint — and
+  // furthest in a storm, whose deck boils.
+  const rough = weather.kind === "storm" ? 1.9 : 1.5;
   const cloudLit: Rgb = lidded
-    ? scale(zenith, 1.12)
+    ? scale(zenith, rough)
     : mix(scale(zenith, 1.6), [1.05 * tint[0], 1.02 * tint[1], tint[2]], lightUp * 0.9);
   const cloudShade: Rgb = lidded
-    ? scale(zenith, 0.8)
+    ? scale(zenith, 0.62)
     : mix(scale(zenith, 1.2), mix(horizon, [0.6, 0.66, 0.76], 0.5), lightUp);
+
+  // How much of the night sky the cloud leaves: a lid takes all of it, a
+  // veil of cirrus some, and heaps only where they stand — which the dome
+  // draws over the stars itself.
+  const clearNight = 1 - lid.cover * (lidded ? 1 : lid.genus === 2 ? 0.6 : 0.25);
 
   // The lamps come on as the light goes: nothing under a clear noon, all of
   // it by the time the sun is a few degrees under or a blizzard shuts in.
@@ -300,7 +361,10 @@ export function skyLookFor(
     hazeLift: fog > 0 ? 90 + 120 * (1 - fog) : 700,
     cloud: { genus: lid.genus, cover: lid.cover, lit: cloudLit, shade: cloudShade },
     night,
-    stars: smooth(0.1, 0.26, -elevation) * (1 - 0.6 * moonUp * moonAt.lit) * (1 - lid.cover),
+    stars: smooth(0.1, 0.26, -elevation) * (1 - 0.5 * moonUp * moonAt.lit) * clearNight,
+    galaxy:
+      smooth(0.2, 0.34, -elevation) * (1 - 0.85 * moonUp * moonAt.lit) * clearNight * clearNight,
+    turn: DEFAULT_TURN,
     flat: Math.min(1, lid.flat + 0.08 * fall),
     glitter: lid.glitter,
     lamps,
@@ -309,9 +373,20 @@ export function skyLookFor(
   };
 }
 
-/** The look at run time `t` on `level`. */
-export function skyLookAt(level: Pick<Level, "sun" | "weather">, t: number): SkyLook {
-  const sun = sunAtRun(level, t);
-  const moon = moonAtRun(level, t);
-  return skyLookFor(sun.azimuth, sun.elevation, moon, weatherOf(level));
+const fallNow = { fall: 0, visibility: 0 };
+
+/** The look at run time `t` on `level`: the sun and the moon where the
+ * map's hour puts them, and the fall as the squalls have it at `t`. */
+export function skyLookAt(level: Pick<Level, "seed" | "sun" | "weather">, t = 0): SkyLook {
+  const sun = sunAtRun(level);
+  const moon = moonAtRun(level);
+  const look = skyLookFor(
+    sun.azimuth,
+    sun.elevation,
+    moon,
+    weatherOf(level),
+    snowAt(level, t, fallNow).fall,
+  );
+  look.turn = skyTurnOf(level);
+  return look;
 }

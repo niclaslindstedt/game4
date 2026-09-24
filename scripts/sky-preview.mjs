@@ -44,7 +44,7 @@ const args = parseArgs(
     weathers: {
       kind: "string",
       default: "",
-      help: "only these rows (clear,fair,high,overcast,snow 0.3,blizzard,fog)",
+      help: "only these rows (clear,fair,flurries,high,overcast,snow 0.4,storm,blizzard,fog,fair +8cm)",
     },
     view: { kind: "string", default: "chase", help: "chase (behind the grid) or vista (the rim)" },
     quality: {

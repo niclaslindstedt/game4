@@ -18,7 +18,8 @@ import { createRng } from "../lib/prng.ts";
 import { daylightWindow } from "../lib/solar.ts";
 import { LEVEL_RULES, inBand } from "./rules.ts";
 import { declinationOf } from "./sun.ts";
-import type { Level, SkyOverride, Weather, WeatherKind } from "./types.ts";
+import type { Level, SkyOverride, SnowingKind, Weather, WeatherKind } from "./types.ts";
+import type { GeneratorTraits } from "./versions.ts";
 
 const R = LEVEL_RULES.weather;
 
@@ -26,11 +27,19 @@ const R = LEVEL_RULES.weather;
 export const WEATHER_KINDS: readonly WeatherKind[] = [
   "clear",
   "fair",
+  "flurries",
   "high",
   "overcast",
   "snow",
+  "storm",
   "fog",
 ];
+
+/** Whether snow falls out of this sky — and so which band of
+ * `weather.snowfall` its fall is dealt in. */
+export function snows(kind: WeatherKind): kind is SnowingKind {
+  return kind === "flurries" || kind === "snow" || kind === "storm";
+}
 
 /** What sets the weather's stream apart from the attempt's own. */
 const WEATHER_SALT = 0x3ea7e418;
@@ -54,22 +63,37 @@ export function weatherOf(level: Pick<Level, "weather">): Weather {
 
 /** Whether this sky has a LID over it — the flat light R19 names. */
 export function hasLid(kind: WeatherKind): boolean {
-  return kind === "overcast" || kind === "snow";
+  return kind === "overcast" || kind === "snow" || kind === "storm";
 }
 
 /** The mean wind of a sky at a draw `u` (0..1) of its band, heavier with
  * the fall. */
 function windIn(kind: WeatherKind, u: number, snowfall: number): number {
   const band = R.wind[kind];
-  const at = kind === "snow" ? 0.3 * u + 0.7 * snowfall : u;
-  return band.min + (band.max - band.min) * at;
+  let at = u;
+  if (kind === "snow") at = 0.3 * u + 0.7 * snowfall;
+  else if (kind === "storm") {
+    const heavy = R.snowfall.storm;
+    at = 0.4 * u + (0.6 * (snowfall - heavy.min)) / (heavy.max - heavy.min);
+  }
+  return band.min + (band.max - band.min) * Math.min(1, Math.max(0, at));
+}
+
+/** The band a sky's fall is dealt in: its own, or version 1's one band
+ * for every fall (`versions.ts`). */
+export function snowfallBand(
+  kind: SnowingKind,
+  traits: Pick<GeneratorTraits, "oldWeather"> = {},
+): { min: number; max: number } {
+  return traits.oldWeather ? R.legacy.snowfall : R.snowfall[kind];
 }
 
 /** A sky chosen by kind, at its typical numbers — the middle of each of its
  * bands, calm enough to read. What a hand-picked sky is given where a field
  * is not named. */
 export function weatherFor(kind: WeatherKind, over: Partial<Weather> = {}): Weather {
-  const snowfall = kind === "snow" ? (R.snowfall.min + R.snowfall.max) / 2 : 0;
+  const band = snows(kind) ? R.snowfall[kind] : null;
+  const snowfall = band ? (band.min + band.max) / 2 : 0;
   const fog = kind === "fog" ? (R.fog.min + R.fog.max) / 2 : 0;
   const base: Weather = {
     kind,
@@ -94,22 +118,28 @@ export function sunsetOf(sun: { dayOfYear: number; latitude: number }): number {
 }
 
 /** R19 — deal the weather, and the evening start it may bring. `sub` is the
- * attempt's sub-seed; `sun` is the day R15 dealt. */
+ * attempt's sub-seed; `sun` is the day R15 dealt; `traits` the version's,
+ * whose `oldWeather` deals version 1's odds and its one band of fall. */
 export function dealWeather(
   sub: number,
   sun: { hour: number; dayOfYear: number; latitude: number },
+  traits: Pick<GeneratorTraits, "oldWeather"> = {},
 ): { weather: Weather; hour: number } {
   const rng = createRng((sub ^ WEATHER_SALT) >>> 0);
+  const odds = traits.oldWeather ? R.legacy.odds : R.odds;
   let roll = rng.next();
   let kind: WeatherKind = "clear";
   for (const k of WEATHER_KINDS) {
-    roll -= R.odds[k];
+    // A sky at no odds is skipped outright, so a table that never deals it
+    // rolls exactly as it did before the sky existed.
+    if (odds[k] <= 0) continue;
+    roll -= odds[k];
     if (roll < 0) {
       kind = k;
       break;
     }
   }
-  const snowfall = kind === "snow" ? inBand(rng, R.snowfall) : 0;
+  const snowfall = snows(kind) ? inBand(rng, snowfallBand(kind, traits)) : 0;
   const fog = kind === "fog" ? inBand(rng, R.fog) : 0;
   const wind = windIn(kind, rng.next(), snowfall);
   const windFrom = rng.range(0, Math.PI * 2);

@@ -41,6 +41,13 @@ export const TUNING = {
     powderSink: 0.26,
     /** ...and into a groomed track, m: a few centimetres of cut. */
     packedSink: 0.02,
+    /** THE NEW SNOW a fall lays (`snowfall.ts`): how fast it builds at a
+     * fall of 1, m/s — a blizzard's 8 cm an hour, the far end of what a
+     * real one lays — and how deep a layer buries the groomer's feel
+     * outright, m: a hand's depth of new snow on it and the track is half
+     * powder. */
+    freshRate: 0.08 / 3600,
+    freshBury: 0.2,
     /** THE PLANING SPEED, m/s: sink falls as exp(−(v / planeSpeed)²), so
      * at this speed a sled carries a third of its rest sink and by
      * 40 km/h it rides a few centimetres into the powder. */

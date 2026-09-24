@@ -156,7 +156,7 @@ function attemptLevel(
     generatorTraits(version),
   );
   const day = dealSun(rng, region.sun);
-  const { weather, hour } = dealWeather(sub, day);
+  const { weather, hour } = dealWeather(sub, day, generatorTraits(version));
   const sun = { ...day, hour };
 
   return compileLevel({

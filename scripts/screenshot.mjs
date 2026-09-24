@@ -60,7 +60,7 @@ const dist = join(root, "pwa", "dist");
 const outDir = join(root, "previews");
 
 /** Every sky R19 deals, for `--weather all` (`WEATHER_KINDS`). */
-const WEATHERS = ["clear", "fair", "high", "overcast", "snow", "fog"];
+const WEATHERS = ["clear", "fair", "flurries", "high", "overcast", "snow", "storm", "fog"];
 
 /** THE STAGED MOMENTS of a race, as seconds into it — the whole of what a
  * scene is here, since the race itself is the scenario. */

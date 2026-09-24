@@ -25,7 +25,7 @@ import type { Level } from "../mapgen/types.ts";
 import { inertiaOf, totalMass } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { footprintOf } from "./footprint.ts";
-import { powderFloor } from "./snow.ts";
+import { packedUnder, powderFloor } from "./snow.ts";
 import { hullOf } from "./suspension.ts";
 import type { SledState } from "./state.ts";
 
@@ -37,9 +37,10 @@ function cross(a: Vec3, b: Vec3): Vec3 {
 }
 
 /** Apply the chassis contacts to the sled's velocities, on snow at the
- * run's depth dial (`GameState.snowDepth`). Returns the fastest
+ * run's depth dial (`GameState.snowDepth`, the new snow laid in —
+ * `depthUnder`) with `fresh` m of new snow over the groomer. Returns the fastest
  * speed into the snow met this step, m/s (0 with no point touching). */
-export function chassisContacts(c: SledState, level: Level, snowDepth = 1): number {
+export function chassisContacts(c: SledState, level: Level, snowDepth = 1, fresh = 0): number {
   const m = totalMass(c.spec);
   const I = inertiaOf(c.spec);
   const sink = footprintOf(c.spec).sink;
@@ -50,7 +51,9 @@ export function chassisContacts(c: SledState, level: Level, snowDepth = 1): numb
     const px = c.x + r.x;
     const py = c.y + r.y;
     const pz = c.z + r.z;
-    const floor = level.groundAt(px, pz) - powderFloor(level.packedAt(px, pz), sink, snowDepth);
+    const floor =
+      level.groundAt(px, pz) -
+      powderFloor(packedUnder(level.packedAt(px, pz), fresh), sink, snowDepth);
     const pen = floor - py;
     if (pen <= 0) continue;
     touched = true;

@@ -193,7 +193,7 @@ describe("the day a free ride is ridden on", () => {
     const level = syntheticLevel();
     for (const day of [-16, 20, 56, 91]) {
       const night = withDay(level, { time: "night", dayOfYear: day });
-      expect(sunAtRun(night, 0).elevation).toBeLessThan(-0.1);
+      expect(sunAtRun(night).elevation).toBeLessThan(-0.1);
       // A named time wins over an hour.
       expect(withDay(level, { time: "night", hour: 12, dayOfYear: day }).sun.hour).toBe(
         night.sun.hour,

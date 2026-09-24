@@ -152,15 +152,20 @@
 //       stream.
 //   R19 THE WEATHER. Every map is dealt one sky off a stream of its own —
 //       the attempt's sub-seed, salted — so its weather moves nothing else
-//       the map draws: `clear`, `fair` (fair-weather cumulus), `high` (a
-//       sheet of high cloud), `overcast` (a lid of stratus and its flat
-//       light), `snow` (a fall, from light to a blizzard) or `fog` (a valley
-//       fog lying in the basin), at the odds in `weather.odds`. A fall is
-//       dealt an intensity in `weather.snowfall` and a fog a density in
-//       `weather.fog`; the wind is dealt a mean speed in that sky's band of
-//       `weather.wind` — a heavier fall a harder wind — and a bearing it
+//       the map draws: `clear`, `fair` (fair-weather cumulus), `flurries`
+//       (a few flakes out of a sunny, barely clouded sky), `high` (a sheet
+//       of high cloud), `overcast` (a lid of stratus and its flat light),
+//       `snow` (a steady fall under a grey lid), `storm` (a blizzard under
+//       black cloud, the far side of the loop gone) or `fog` (a valley fog
+//       lying in the basin), at the odds in `weather.odds` — the bright
+//       skies most of the days. Each of the three snowing skies is dealt an
+//       intensity in its own band of `weather.snowfall` and a fog a density
+//       in `weather.fog`; the wind is dealt a mean speed in that sky's band
+//       of `weather.wind` — a heavier fall a harder wind — and a bearing it
 //       blows from. The same stream sends `weather.evening` of the maps out
 //       in the EVENING of R15. `Level.weather` publishes all of it.
+//       (Generator version 1 dealt `weather.legacy`'s odds, and one band
+//       for every fall.)
 //   R20 THE TRICK FIELD. A map built for a TRICKS run — and only one: a
 //       map built for any other ride carries no field — has groomed kickers
 //       laid on its loop in the direction of travel, from `trick.lead`
@@ -218,6 +223,8 @@
 //       `cliff.clearance` metres of the track's edge, off the rim or on a
 //       frozen river. The cliffs are dealt off a stream of their own;
 //       `Level.cliffs` publishes every one.
+
+import type { SnowingKind, WeatherKind } from "./types.ts";
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };
@@ -493,12 +500,42 @@ export const LEVEL_RULES = {
   },
   /** R19 — the weather. */
   weather: {
-    /** How often each sky is dealt; the shares sum to 1. Fair weather is
-     * most of a winter's racing days, a lid or a fall about a third. */
-    odds: { clear: 0.28, fair: 0.2, high: 0.12, overcast: 0.14, snow: 0.16, fog: 0.1 },
-    /** A fall's intensity: 0.15 is a few flakes drifting past the lens, 1 a
-     * blizzard that takes the far side of the basin away. */
-    snowfall: { min: 0.15, max: 1 } as Band,
+    /** How often each sky is dealt; the shares sum to 1. A sun in the sky —
+     * clear, fair, flurries, high cloud — is nearly three days in four; a
+     * lid, a fall or a fog the rest, a storm one in fourteen. */
+    odds: {
+      clear: 0.26,
+      fair: 0.24,
+      flurries: 0.1,
+      high: 0.12,
+      overcast: 0.06,
+      snow: 0.08,
+      storm: 0.07,
+      fog: 0.07,
+    } as Record<WeatherKind, number>,
+    /** Each snowing sky's intensity: 0.05 is a few flakes glinting past the
+     * lens, 1 a blizzard that takes all but the next few tens of metres
+     * away. */
+    snowfall: {
+      flurries: { min: 0.05, max: 0.3 },
+      snow: { min: 0.3, max: 0.75 },
+      storm: { min: 0.75, max: 1 },
+    } as Record<SnowingKind, Band>,
+    /** What version 1 dealt (`versions.ts`): its odds, and one band every
+     * fall was drawn from. */
+    legacy: {
+      odds: {
+        clear: 0.28,
+        fair: 0.2,
+        flurries: 0,
+        high: 0.12,
+        overcast: 0.14,
+        snow: 0.16,
+        storm: 0,
+        fog: 0.1,
+      } as Record<WeatherKind, number>,
+      snowfall: { min: 0.15, max: 1 } as Band,
+    },
     /** A fog's density, 0..1 of the thickest the renderer draws. */
     fog: { min: 0.35, max: 1 } as Band,
     /** Each sky's mean wind at 10 m, m/s. A fog lies in a calm; a blizzard
@@ -506,11 +543,13 @@ export const LEVEL_RULES = {
     wind: {
       clear: { min: 0.5, max: 5 },
       fair: { min: 2, max: 7 },
+      flurries: { min: 1, max: 5 },
       high: { min: 3, max: 9 },
       overcast: { min: 2, max: 8 },
       snow: { min: 2, max: 16 },
+      storm: { min: 11, max: 22 },
       fog: { min: 0, max: 2 },
-    } as Record<string, Band>,
+    } as Record<WeatherKind, Band>,
     /** The share of maps ridden in the evening (R15). */
     evening: 0.25,
   },

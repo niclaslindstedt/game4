@@ -32,6 +32,7 @@ import { TUNING } from "./defs/tuning.ts";
 import { clipRiders, createRivals, gridSlot, stepRivals } from "./rivals.ts";
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
+import { freshStep } from "./snowfall.ts";
 import { freshTricks, stepTricks } from "./tricks.ts";
 import { NEUTRAL_INPUT, type GameState, type SledInput } from "./state.ts";
 
@@ -74,6 +75,9 @@ export type CreateGameOptions = {
   /** THE SNOW DIAL (`SNOW_DIAL`): the powder's sink as a multiple of the
    * ordinary snow's. 1 when left out. */
   snowDepth?: number;
+  /** New snow already lying when the run is stood up, m (`GameState.fresh`)
+   * — a lab's or a test's; 0 when left out. */
+  fresh?: number;
   /** The day to ride the map on instead of the one R15 dealt: an hour of
    * solar time or a named time of day (`hourOfTime`), and a day of the
    * year, any of them (`withDay`). */
@@ -83,8 +87,8 @@ export type CreateGameOptions = {
    * daylight hour a rider picks; `sky.hour` is a lab's or a link's, never
    * held to daylight, and wins over `day.hour` when both are given — so a
    * race can be stood in the dark. The map itself — the ground, the loop,
-   * the trees — is the seed's either way, and nothing the physics reads
-   * moves. */
+   * the trees — is the seed's either way; what the physics feels of a sky
+   * is only the new snow a fall lays over the run (`snowfall.ts`). */
   sky?: SkyOverride;
 };
 
@@ -128,6 +132,7 @@ export function createGame(options: CreateGameOptions = {}): GameState {
     assist: { ...(options.assist ?? FULL_ASSIST) },
     damage: options.damage ?? false,
     snowDepth: clampSnowDepth(options.snowDepth),
+    fresh: Math.max(0, options.fresh ?? 0),
     rivals: [],
     tricks: freshTricks(),
     countdown: rules.countdown,
@@ -161,6 +166,8 @@ export function step(state: GameState, input: SledInput): GameState {
   state.input.brake = input.brake;
   state.input.lean = input.lean;
   state.input.reset = input.reset;
+  // THE NEW SNOW the fall lays this step, grid or no grid.
+  state.fresh += freshStep(state.level, state.t, TUNING.dt);
 
   // THE LIGHTS: each one as it begins, then GO on the step the count runs
   // out — the first step the rider is given the throttle.

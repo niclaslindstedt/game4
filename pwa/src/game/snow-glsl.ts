@@ -35,6 +35,10 @@
 //     blue mirror with no crystals on it; and, where the region says so,
 //     rock showing through on every face too steep to hold snow. The
 //     boreal lays none of it and paints nothing of it.
+//   * THE NEW SNOW (`uFresh`, `GameState.fresh`) a fall lays over a run
+//     buries the groomed track's look — its corduroy, its grey, its gloss —
+//     under a few centimetres, and the trail map fills its furrows as it
+//     lands (`trail-map.ts`'s `fill`).
 //   * THE TRAIL — the depth the trail map holds lowers the snow in the
 //     vertex shader (as far as the mesh can show it) and bends the normal
 //     per pixel (all of it). Pressed snow is barely darker than fresh;
@@ -53,6 +57,10 @@ import { LOOSE } from "./trail-stamp.ts";
 
 /** How much brighter than white snow's albedo is painted. */
 export const GLARE = 1.12;
+
+/** New snow that buries the groomed track's LOOK outright, m: a few
+ * centimetres cover the comb's corduroy and the grey of worked snow. */
+export const FRESH_LOOK = 0.06;
 
 // How far loose powder stands over the groomed track: stated three-free in
 // `trail-stamp.ts`, so what stands ON the snow (the wildlife's feet) reads
@@ -186,6 +194,7 @@ uniform vec2 uHeightCount;
 uniform float uCell;
 uniform vec4 uHole;
 uniform float uFlat;
+uniform float uFresh;
 uniform float uGlitter;
 uniform vec3 uLampPos[${LAMP_SLOTS}];
 uniform vec3 uLampDir[${LAMP_SLOTS}];
@@ -272,7 +281,10 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
   snowDist = length(eye);
   vec2 guv = (p - uHeightOrigin + 0.5 * uCell) / (uHeightCount * uCell);
   vec4 g = texture2D(uGround, guv);
-  snowPacked = g.b;
+  // New snow over the groomer (\`uFresh\`) buries its look — the comb's
+  // corduroy first, the grey of worked snow by a few centimetres — while
+  // the physics still feels the hard base under it (\`packedUnder\`).
+  snowPacked = g.b * (1.0 - smoothstep(0.0, ${FRESH_LOOK.toFixed(3)}, uFresh));
   snowForest = g.a;
   vec2 grad = g.rg;
   vec2 surf = texture2D(uSurface, guv).rg;

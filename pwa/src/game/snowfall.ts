@@ -71,6 +71,9 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
     uTime: { value: 0 },
     uScale: { value: 600 },
     uLit: { value: new THREE.Color(1, 1, 1) },
+    /** How big the flakes are: a flurry's fine crystals to a storm's
+     * wet clumps driving past the lens. */
+    uSize: { value: 1 },
   };
   const fallMat = new THREE.ShaderMaterial({
     uniforms: {
@@ -86,6 +89,7 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
       uniform vec3 uCam;
       uniform float uTime;
       uniform float uScale;
+      uniform float uSize;
       uniform vec3 uLit;
       uniform vec3 uLampPos[${LAMP_SLOTS}];
       uniform vec3 uLampDir[${LAMP_SLOTS}];
@@ -102,7 +106,7 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
         p = mod(p - uCam + ${(BOX / 2).toFixed(1)}, ${BOX.toFixed(1)}) - ${(BOX / 2).toFixed(1)} + uCam;
         vec4 mv = viewMatrix * vec4(p, 1.0);
         float depth = max(-mv.z, 0.05);
-        float size = 0.035 + 0.05 * aSeed.w;
+        float size = (0.035 + 0.05 * aSeed.w) * uSize;
         float px = size * uScale / depth;
         gl_PointSize = clamp(px, 1.0, 24.0);
         float dist = length(p - uCam);
@@ -235,7 +239,8 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
       s.x = (s.x + wind.x * step) % BOX;
       s.y = (s.y - FALL_SPEED * step) % BOX;
       s.z = (s.z + wind.z * step) % BOX;
-      const flakes = Math.round(FLAKES * share * Math.pow(look.snowfall, 0.8));
+      const flakes = Math.round(FLAKES * share * Math.pow(look.snowfall, 0.7));
+      own.uSize.value = 0.8 + 1.3 * look.snowfall;
       fallGeo.setDrawRange(0, flakes);
       fall.visible = flakes > 0;
 

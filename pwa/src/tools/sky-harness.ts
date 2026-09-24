@@ -17,18 +17,24 @@ import type { LensPose } from "../game/camera-rigs.ts";
 import { createWorldRenderer } from "../game/renderer.ts";
 import { DEFAULT_VIDEO, TIERS, withPreset, type Tier } from "../game/settings-video.ts";
 
-/** One row of the sheet: a label and the sky it asks for. */
-type Row = { label: string; sky: SkyOverride["weather"] };
+/** One row of the sheet: a label, the sky it asks for, and the new snow
+ * lying under it, m (`GameState.fresh`; none when left out). */
+type Row = { label: string; sky: SkyOverride["weather"]; fresh?: number };
 
 /** Every weather, lightest first, with a fall at both ends of its band. */
 const ROWS: Row[] = [
   { label: "CLEAR", sky: "clear" },
   { label: "FAIR", sky: "fair" },
+  { label: "FLURRIES", sky: { kind: "flurries", snowfall: 0.25 } },
   { label: "HIGH", sky: "high" },
   { label: "OVERCAST", sky: "overcast" },
-  { label: "SNOW 0.3", sky: { kind: "snow", snowfall: 0.3 } },
-  { label: "BLIZZARD", sky: { kind: "snow", snowfall: 1 } },
+  { label: "SNOW 0.4", sky: { kind: "snow", snowfall: 0.4 } },
+  { label: "STORM", sky: { kind: "storm", snowfall: 0.85 } },
+  { label: "BLIZZARD", sky: { kind: "storm", snowfall: 1 } },
   { label: "FOG", sky: "fog" },
+  // An hour of storm lying on a fair day: the groomer buried, the trails
+  // filled. Last, because a trail filled stays filled.
+  { label: "FAIR +8CM", sky: "fair", fresh: 0.08 },
 ];
 
 declare global {
@@ -130,6 +136,7 @@ window.__sky = {
     for (let r = 0; r < rows.length; r++) {
       ctx.fillStyle = "#e8eef4";
       ctx.fillText(rows[r].label, 8, headH + r * cellH + cellH / 2);
+      state.fresh = rows[r].fresh ?? 0;
       for (let c = 0; c < hours.length; c++) {
         renderer.setSky({ weather: rows[r].sky, hour: hours[c] });
         // A few frames unseen, so the spindrift is up and the lens settled.

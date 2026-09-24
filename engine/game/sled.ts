@@ -34,7 +34,7 @@ import { SLED, inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingAhead, landingLoss } from "./flight.ts";
 import { chassisContacts } from "./chassis.ts";
-import { gripAt, onIce, sinkTarget, snowDrag, type Grip } from "./snow.ts";
+import { depthUnder, gripAt, onIce, packedUnder, sinkTarget, snowDrag, type Grip } from "./snow.ts";
 import { cornerGrip, flightGravity, harshSpeedOf } from "./limits.ts";
 import { footprintOf } from "./footprint.ts";
 import { probesOf } from "./suspension.ts";
@@ -228,6 +228,8 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   // ── The suspension and the grip, probe by probe ───────────────────────
   const probes = probesOf(spec);
   const fit = footprintOf(spec);
+  // The dial with the new snow laid on it (`depthUnder`).
+  const depth = depthUnder(state.snowDepth, state.fresh);
   // What the machine has taken (`damage.ts`) and the hole it has dug
   // (`trench.ts`) — each exactly 1 on a sound sled out of any hole.
   const soft = springShare(c);
@@ -265,11 +267,11 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     }
     const dx = -up.x;
     const dz = -up.z;
-    const packed = level.packedAt(ax, az);
+    const packed = packedUnder(level.packedAt(ax, az), state.fresh);
     const ice = level.iceAt ? level.iceAt(ax, az) : 0;
     // A trenched tread (`trench.ts`) hangs in the hole it has dug.
     const target =
-      sinkTarget(packed, speed0, p.sinkScale, p.planeScale, state.snowDepth) +
+      sinkTarget(packed, speed0, p.sinkScale, p.planeScale, depth) +
       (p.kind === "tread" ? c.trench : 0);
     c.sinks[i] += (target - c.sinks[i]) * Math.min(1, dt / TUNING.snow.sinkLag);
     const sink = c.sinks[i];
@@ -413,7 +415,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
       p.ploughs ? p.width : 0,
       load,
       vf,
-      (p.kind === "tread" ? fit.sink : 1) * state.snowDepth,
+      (p.kind === "tread" ? fit.sink : 1) * depth,
     );
     along -= drag * Math.tanh(vf / DRAG_FADE);
     push(
@@ -432,7 +434,8 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.skiCompression[0] = skiL;
   c.skiCompression[1] = skiR;
   c.treadCompression = treadN > 0 ? treadComp / treadN : 0;
-  c.packed = loadSum > 0 ? packedLoad / loadSum : level.packedAt(c.x, c.z);
+  c.packed =
+    loadSum > 0 ? packedLoad / loadSum : packedUnder(level.packedAt(c.x, c.z), state.fresh);
   const grounded = touching > 0;
   // THE ARCADE'S GRAVITY (`air.gravity`): a sled that was flying at the end
   // of the last step and has found no snow under a probe this one is pulled
@@ -538,7 +541,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.vx += (fx / m) * dt;
   c.vy += (fy / m) * dt;
   c.vz += (fz / m) * dt;
-  const chassis = chassisContacts(c, level, state.snowDepth);
+  const chassis = chassisContacts(c, level, depth, state.fresh);
   const hullTouch = chassis > 0;
   if (chassis > impact) impact = chassis;
   c.x += c.vx * dt;

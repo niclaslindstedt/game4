@@ -43,6 +43,7 @@ import { clamp } from "../lib/math.ts";
 import { rotate, type Vec3 } from "../lib/quat.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { treesNear } from "./collision.ts";
+import { packedUnder } from "./snow.ts";
 import type { CrashCause, GameEvent, GameState, SledState, Thrown } from "./state.ts";
 
 const K = TUNING.crash;
@@ -177,7 +178,7 @@ export function stepThrown(state: GameState, b: Thrown): void {
       b.vz = (b.vz - vn * nz) * 0.5 - K.restitution * vn * nz;
     }
   }
-  const packed = level.packedAt(b.x, b.z);
+  const packed = packedUnder(level.packedAt(b.x, b.z), state.fresh);
   const floor = level.groundAt(b.x, b.z) - K.sink * (1 - packed) + K.radius;
   b.touching = b.y <= floor;
   if (b.touching) {
