@@ -21,6 +21,7 @@
 import * as THREE from "three";
 
 import { cloth, limbRings, shaped, torsoFold } from "./rider-cloth.ts";
+import { buildHelmet } from "./rider-helmet.ts";
 import {
   BODY,
   riderPose,
@@ -38,8 +39,11 @@ export type RiderStyle = {
   /** The jacket's yoke and cuffs — the kit's second colour; the jacket's
    * own when left out. */
   accent?: number;
-  /** The helmet's peak; the helmet's own when left out. */
+  /** The helmet's peak, stripe and goggle frame; the helmet's own when
+   * left out. */
   peak?: number;
+  /** His face in the helmet's port. */
+  skin?: number;
 };
 
 export type RiderFigure = {
@@ -78,6 +82,8 @@ export function createRider(
   const peakMat = mat(style.peak ?? style.helmet, 0.35);
   const lens = mat(style.visor, 0.12, 0.6);
   const strap = mat(0x101114, 0.6);
+  const liner = mat(0x26282c, 0.9);
+  const skin = mat(style.skin ?? 0xd9a07e, 0.7);
 
   const geo = <G extends THREE.BufferGeometry>(g: G): G => {
     geos.push(g);
@@ -352,94 +358,11 @@ export function createRider(
     lobe.rotation.set(0.35, 0, side * 0.12);
   }
 
-  // THE HELMET, in its own frame: z forward, y up. After the helmets
-  // sleds are raced in: a big shell a little long, its back cut down low
-  // to the collar; the EYE PORT filled by the goggles, their thick frame
-  // wrapped round the face and the lens inside it; the CHIN BAR a long,
-  // angular beak jutting forward and down to a point, a vent in its
-  // front; the PEAK flat on the brow, wide, reaching out over the goggles.
+  // THE HEAD IN HIS HELMET, a model of its own (`rider-helmet.ts`) in the
+  // head's frame: z forward, y up.
   const headGroup = new THREE.Group();
   group.add(headGroup);
-  const R = 0.158;
-  const SHELL = new THREE.Vector3(0.96, 1.03, 1.12);
-  const shell = part(geo(new THREE.SphereGeometry(R, 14, 10)), helmet, headGroup);
-  shell.scale.copy(SHELL);
-  // The chin bar, laid along +z from inside the jaw: each ring narrower,
-  // shallower and lower than the last, to the point.
-  const chin = part(
-    geo(
-      shaped(
-        [
-          { y: 0, w: 0.132, d: 0.088 },
-          { y: 0.07, w: 0.126, d: 0.082, z: 0.01 },
-          { y: 0.12, w: 0.106, d: 0.072, z: 0.022 },
-          { y: 0.15, w: 0.082, d: 0.06, z: 0.03 },
-          { y: 0.163, w: 0.052, d: 0.042, z: 0.034 },
-        ],
-        { segments: 12, boxy: 3 },
-      ).rotateX(Math.PI / 2),
-    ),
-    helmet,
-    headGroup,
-  );
-  // Tipped down, so its top runs from under the goggles down to the point.
-  chin.position.set(0, -0.065, 0.035);
-  chin.rotation.x = 0.3;
-  // The vent in the face of the beak.
-  const vent = part(geo(new THREE.BoxGeometry(0.06, 0.03, 0.03)), strap, headGroup);
-  vent.position.set(0, -0.098, 0.182);
-  vent.rotation.x = 0.45;
-  // A stripe over the crown, front to back, in the peak's colour — from
-  // under the peak to the strap, never down over the goggles.
-  const stripe = part(
-    geo(new THREE.CylinderGeometry(R + 0.002, R + 0.002, 0.05, 16, 1, true, 0.5, Math.PI - 0.7)),
-    peakMat,
-    headGroup,
-  );
-  stripe.rotation.z = Math.PI / 2;
-  stripe.scale.set(1.01, SHELL.x, SHELL.z);
-  stripe.position.y = 0.012;
-  // The goggles: the strap round the back of the shell, the thick frame
-  // wrapped round the eye port, and the lens set in it.
-  const band = part(
-    geo(new THREE.CylinderGeometry(R + 0.002, R + 0.002, 0.045, 16, 1, true)),
-    strap,
-    headGroup,
-  );
-  band.scale.set(SHELL.x, 1, SHELL.z);
-  band.position.y = 0.015;
-  const frame = part(
-    geo(new THREE.CylinderGeometry(R * 1.07, R * 1.07, 0.084, 14, 1, true, -0.98, 1.96)),
-    peakMat,
-    headGroup,
-  );
-  frame.scale.set(SHELL.x, 1, SHELL.z);
-  frame.position.y = 0.015;
-  const goggle = part(
-    geo(new THREE.CylinderGeometry(R * 1.09, R * 1.09, 0.052, 14, 1, true, -0.78, 1.56)),
-    lens,
-    headGroup,
-  );
-  goggle.scale.set(SHELL.x, 1, SHELL.z);
-  goggle.position.y = 0.015;
-  // The PEAK, broad on the brow over the goggles, raked up and out past
-  // them — widest at its lip.
-  const peak = part(
-    geo(
-      shaped(
-        [
-          { y: 0, w: 0.1, d: 0.01 },
-          { y: 0.1, w: 0.118, d: 0.01 },
-          { y: 0.16, w: 0.112, d: 0.008 },
-        ],
-        { segments: 8, boxy: 6 },
-      ).rotateX(Math.PI / 2),
-    ),
-    peakMat,
-    headGroup,
-  );
-  peak.position.set(0, 0.092, 0.095);
-  peak.rotation.x = -0.2;
+  buildHelmet(headGroup, { shell: helmet, liner, trim: peakMat, lens, strap, skin }, geo);
 
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();

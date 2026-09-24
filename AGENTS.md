@@ -192,7 +192,7 @@ By area first. Each row's skill owns the file-by-file map inside that area — g
 | The sled as drawn (the chassis; the running gear and its suspension), and one draw per posed figure | `pwa/src/game/sled-body.ts`, `sled-gear.ts`, `posed-merge.ts` | `sled-design` |
 | A class's TRACED LOOK (the side profile off its photographs) and how it maps onto a spec | `pwa/src/game/sled-looks.ts` (three-free, `lookFrame`) | `sled-design` |
 | A machine's LIVERIES: the paint, the trim, the pattern; the pick | `pwa/src/game/sled-liveries.ts` (DOM-free), `Settings.liveries`, the sled card's swatches | `sled-design`, `menu-system` |
-| The rider: the pose, the body on its legs (`stepRiderSpring`), the figure, the cloth he is built of | `pwa/src/game/rider-pose.ts` (three-free), `rider.ts`, `rider-cloth.ts` | `rider` |
+| The rider: the pose, the body on its legs (`stepRiderSpring`), the figure, the cloth he is built of | `pwa/src/game/rider-pose.ts` (three-free), `rider.ts`, `rider-cloth.ts`, `rider-helmet.ts` (the head and his hollow helmet) | `rider` |
 | What the sled throws: the roost, the ski spray, the landing puff | `pwa/src/game/spray.ts` | `visual-effects` |
 | WHAT IS FELT, and the one motor | `pwa/src/game/rumble.ts` (DOM-free), `haptics.ts` | `visual-effects` |
 | The camera: the ladder, the rigs, the hand-over, what the lens may not stand inside | `pwa/src/game/camera-rigs.ts` (three-free), `camera.ts`, `camera-clear.ts` | `game-feel` |

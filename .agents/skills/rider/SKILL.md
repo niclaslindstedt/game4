@@ -30,11 +30,14 @@ little with the bars and the head looking into the turn.
 
 **HE IS A MAN IN CLOTHES, NOT A STACK OF CAPSULES.** Dressed after
 photographs of sleds ridden from behind: a big helmet sat down on a tall
-collar (no neck showing) — the goggles set IN the eye port, a thick frame
-wrapped round the face with the lens inside it, a chunky chin bar tipped down
-to a broad front with a vent in it, a peak flat on the brow raked up a
-little (never so far it shows as horns from behind), a stripe over the crown
-and the goggle strap round the back; a wind jacket that is one boxy
+collar (no neck showing), built as a model of its own (`rider-helmet.ts`):
+a HOLLOW shell — the outer skin with the eye port cut out of it, a dark liner
+seen through the port and a rim joining them — over a HEAD whose face (the
+kit's `skin`) shows in the port, the goggles ON his eyes inside the hollow
+and their strap round the outside of the shell's back; a chunky chin bar
+tipped down to a broad front with a vent in it, a peak on the brow raked up a
+little (never so far it shows as horns from behind), a stripe over the
+crown; a wind jacket that is one boxy
 mass from the hem to the shoulders — the shoulders BUILT INTO it, never a
 ball on a stick — under a contrasting yoke; baggy sleeves bunched into flared
 gauntlets; insulated pants round a real seat (two lobes and a cleft), with
@@ -58,6 +61,7 @@ when the machine he stands on is what moves.
 | --- | --- |
 | `pwa/src/game/rider-pose.ts` | `BODY` (the limb lengths and proportions, m), `MOUNTS` (where the grips, the bars' pivot, the boots and the base hips are fixed to the machine), `solveLimb` (two bones toward a target, bent toward a pole), `gripAt` (a grip at a bar angle), `riderPose(input)` → every joint. Three-free, so the suite reads it |
 | `pwa/src/game/rider.ts` | `createRider(style)`: the figure in the slot's `RiderStyle` — each limb a fixed shape hung from its joint and turned to face its bend (only ever turned, never stretched), the torso in its own frame, the seat, the helmet |
+| `pwa/src/game/rider-helmet.ts` | The head and his helmet, in the head's frame: `helmetShell` (the outer skin laid on an around-and-up grid with the port's cells left open, the liner, the rim along every open edge), `buildHelmet` (the head and nose, the goggles on the face, the strap, the stripe, the chin bar, the peak) |
 | `pwa/src/game/rider-cloth.ts` | What he is built of: `shaped` (rings of a rounded box along a line, smoothed and folded, rings laid only as densely as a fold needs), `cloth` (a limb's creases and pads), `torsoFold` (the jacket gathered, draped, the blades under it). A crease wants three rings a ridge or it breaks into a saw |
 | `pwa/src/game/posed-merge.ts` | The posed tree — machine and rider — drawn as ONE mesh, re-laid each frame through each part's matrix; a part hidden with its ancestors (the rider in the cockpit views) collapses to nothing |
 | `pwa/src/game/sled-body.ts` | Hangs the rider on the machine; the grips, the bars and the boards he is fixed to are drawn there |
