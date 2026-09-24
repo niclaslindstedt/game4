@@ -23,8 +23,10 @@
 // bar reaches 21 cm forward as a long jaw whose bottom runs on in one line
 // with the rim, and the peak rides the crown level out to 18.5 cm. The
 // shell is one surface whose reach from the head's middle is read off
-// three measured profiles (ahead, behind, to the side), the port cut out of
-// it. `make sled ARGS=--sheet=head` is the lab: every kit, every side, and
+// three measured profiles (ahead, behind, to the side); the PORT and the
+// CAP are outlines traced on the same photograph, and the shell is cut
+// exactly along them — every grid triangle that crosses an outline is
+// clipped at it — so their edges are the outlines and not a staircase. `make sled ARGS=--sheet=head` is the lab: every kit, every side, and
 // a profile on a centimetre grid, centred on the head's middle, to lay
 // against a photograph at the same scale (tipped as worn, so allow for
 // `HELMET_TILT` against a helmet resting on its rim).
@@ -40,28 +42,31 @@ import { shaped } from "./rider-cloth.ts";
  * front face with the vent, the top corner at −7.5°) and the brow above. */
 const AHEAD: [number, number][] = [
   [-90, 0.1325],
-  [-67.5, 0.143],
-  [-52, 0.169],
-  [-40, 0.206],
-  [-31, 0.239],
-  [-23, 0.23],
-  [-15, 0.19],
-  [-7.5, 0.166],
-  [0, 0.15],
-  [30, 0.117],
-  [45, 0.125],
-  [60, 0.13],
-  [75, 0.128],
+  [-67.5, 0.137],
+  [-52, 0.16],
+  [-40, 0.196],
+  [-33.5, 0.217],
+  [-29, 0.231],
+  [-23, 0.226],
+  [-15, 0.2],
+  [-7.5, 0.175],
+  [0, 0.16],
+  [32, 0.135],
+  [42, 0.145],
+  [60, 0.138],
+  [75, 0.13],
   [90, 0.125],
 ];
 const BEHIND: [number, number][] = [
   [-90, 0.1325],
   [-67.5, 0.14],
-  [-45, 0.16],
-  [-20, 0.148],
-  [0, 0.139],
-  [30, 0.145],
-  [60, 0.138],
+  [-40, 0.158],
+  [-20, 0.143],
+  [0, 0.136],
+  [20, 0.14],
+  [37, 0.152],
+  [50, 0.148],
+  [70, 0.133],
   [90, 0.125],
 ];
 /** How far the helmet is tipped nose-down when WORN, rad, against the
@@ -82,15 +87,65 @@ const SIDE: [number, number][] = [
 /** The shell's thickness, m. */
 const THICK = 0.014;
 /** The grid the shell is laid on: around (from dead ahead, clockwise from
- * above) and up, 7.5° a row so the port's edges fall on grid lines. */
-const AROUND = 24;
-const UP = 24;
-/** The eye port, deg: within `half` of dead ahead, between the chin bar's
- * top corner and the brow; and the neck, open below `neck`. */
-const PORT = { half: 45, low: -7.5, high: 30 };
+ * above) and up. */
+const AROUND = 28;
+const UP = 20;
+/** The shell is open below this elevation, deg: the neck. */
 const NECK = -67.5;
-/** How far round from dead ahead the liner is laid, rad. */
-const LINER_REACH = 1.75;
+/** How far round from dead ahead the liner is laid, rad: it is only ever
+ * seen through the port. */
+const LINER_REACH = 1.9;
+/** How far the cap stands proud of the shell, m. */
+const CAP_LIFT = 0.004;
+/** THE EYE PORT and THE CAP, as they were outlined on the photograph: the
+ * helmet seen from the side, (cm ahead of the head's middle, cm up). A cell
+ * of the shell whose middle, seen from the side, falls inside the PORT is
+ * open — so the port wraps round to the temples and its sill rises forward
+ * from under the goggles to the chin bar's top corner. One inside the CAP
+ * is the plastic cap over the crown and the front, its flange coming down
+ * the side to the bolt at the temple, the peak its lip (`buildHelmet`). */
+const PORT_OUTLINE: [number, number][] = [
+  [1, 1.8],
+  [4.3, 3.8],
+  [8.2, 5.5],
+  [11.5, 7.1],
+  [30, 7.1],
+  [30, -2.1],
+  [17.4, -2.1],
+  [12.2, -6.1],
+  [4.9, -6.4],
+  [2.6, -5.4],
+  [1.6, -2.1],
+];
+const CAP_OUTLINE: [number, number][] = [
+  [-9.5, 11.1],
+  [-9.5, 30],
+  [30, 30],
+  [30, 9.7],
+  [10.9, 9.7],
+  [8.9, 8.4],
+  [6.3, 6.1],
+  [3, 4.1],
+  [0.3, 2.8],
+  [-1.5, 0.4],
+  [-3.6, 1.5],
+  [-5.6, 3.8],
+  [-7.6, 7.1],
+  [-8.9, 9.4],
+];
+/** The goggle strap round the back, rad up: flat back from the goggles,
+ * as it runs on the photograph (y 0 to −4 cm). */
+const STRAP = { low: -0.3, high: -0.02 };
+
+function inside(poly: [number, number][], x: number, y: number): boolean {
+  let inn = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i];
+    const [xj, yj] = poly[j];
+    if (yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi) inn = !inn;
+  }
+  return inn;
+}
 
 export type HelmetMaterials = {
   shell: THREE.Material;
@@ -164,109 +219,195 @@ function patch(
   return g;
 }
 
-/** A band over the crown, front to back, `half` rad either side of the
- * middle — laid along the arc in the plane of symmetry. */
-function crownBand(from: number, to: number, half: number, lift: number): THREE.BufferGeometry {
-  const pos: number[] = [];
-  const idx: number[] = [];
-  const n = 18;
-  for (let k = 0; k <= n; k++) {
-    // θ along the arc: 0 ahead level, π/2 the crown, π behind level.
-    const t = from + ((to - from) * k) / n;
-    for (const side of [-1, 1]) {
-      const dir = new THREE.Vector3(side * Math.sin(half), Math.sin(t), Math.cos(t)).normalize();
-      const e = Math.asin(dir.y);
-      const a = Math.atan2(dir.x, dir.z);
-      pos.push(...at(a, e, lift));
-    }
-  }
-  for (let k = 0; k < n; k++) {
-    const p = k * 2;
-    idx.push(p, p + 1, p + 2, p + 1, p + 3, p + 2);
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  return g;
+/** Where the shell at `a` round and `e` up is, seen from the side: cm
+ * ahead, cm up. */
+function sideOf(a: number, e: number): [number, number] {
+  const [, y, z] = at(a, e);
+  return [z * 100, y * 100];
 }
 
-/** THE SHELL: the outer skin and the rim round every opening (the port and
- * the neck), and the liner — two geometries, so each takes its colour. */
-export function helmetShell(): { outer: THREE.BufferGeometry; liner: THREE.BufferGeometry } {
+/** A field over the shell, by `a` round and `e` up: the surface is KEPT
+ * where it is negative and cut away where it is positive. */
+type Field = (a: number, e: number) => number;
+
+/** How far a side-view point is from an outline, cm: positive inside it. */
+function signedTo(poly: [number, number][], x: number, y: number): number {
+  let d = Infinity;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j];
+    const [bx, by] = poly[i];
+    const ex = bx - ax;
+    const ey = by - ay;
+    const t = Math.max(0, Math.min(1, ((x - ax) * ex + (y - ay) * ey) / (ex * ex + ey * ey)));
+    d = Math.min(d, Math.hypot(x - ax - t * ex, y - ay - t * ey));
+  }
+  return inside(poly, x, y) ? d : -d;
+}
+
+/** The port: cut away inside its outline, ahead of the ears. */
+const portField: Field = (a, e) => {
+  const [z, y] = sideOf(a, e);
+  return z > 0 ? signedTo(PORT_OUTLINE, z, y) : -1;
+};
+/** The neck: cut away below the rim. */
+const neckField: Field = (_a, e) => NECK * DEG - e;
+/** The cap: kept only inside its outline. */
+const capField: Field = (a, e) => -signedTo(CAP_OUTLINE, ...sideOf(a, e));
+/** The liner: kept only where the port can show it. */
+const linerField: Field = (a) => Math.abs(a) - LINER_REACH;
+
+/** The shell's outward normal at `a`, `e`, off the surface itself. */
+function normalAt(a: number, e: number, lift: number): [number, number, number] {
+  const h = 1e-4;
+  const p = at(a, e, lift);
+  const pa = at(a + h, e, lift);
+  const pe = at(a, Math.min(Math.PI / 2, e + h), lift);
+  const u = [pa[0] - p[0], pa[1] - p[1], pa[2] - p[2]];
+  const v = [pe[0] - p[0], pe[1] - p[1], pe[2] - p[2]];
+  let n = [u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2], u[0] * v[1] - u[1] * v[0]];
+  let l = Math.hypot(n[0], n[1], n[2]);
+  if (l < 1e-12) {
+    n = [p[0], p[1], p[2]];
+    l = Math.hypot(n[0], n[1], n[2]) || 1;
+  }
+  return [n[0] / l, n[1] / l, n[2] / l];
+}
+
+type Param = [number, number];
+
+/** Where along an edge a field crosses zero, by bisection. */
+function crossing(f: Field, p: Param, q: Param): Param {
+  let lo = 0;
+  let hi = 1;
+  const fp = f(p[0], p[1]);
+  for (let k = 0; k < 18; k++) {
+    const m = (lo + hi) / 2;
+    const v = f(p[0] + (q[0] - p[0]) * m, p[1] + (q[1] - p[1]) * m);
+    if (v > 0 === fp > 0) lo = m;
+    else hi = m;
+  }
+  const t = (lo + hi) / 2;
+  return [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+}
+
+/** A polygon (in parameters) cut down to where `f` is negative; the cut's
+ * two ends when it made one. */
+function clip(poly: Param[], f: Field): { kept: Param[]; cut: [Param, Param] | null } {
+  const v = poly.map((p) => f(p[0], p[1]));
+  const kept: Param[] = [];
+  const ends: Param[] = [];
+  for (let i = 0; i < poly.length; i++) {
+    const j = (i + 1) % poly.length;
+    if (v[i] <= 0) kept.push(poly[i]);
+    if (v[i] <= 0 !== v[j] <= 0) {
+      const x = crossing(f, poly[i], poly[j]);
+      kept.push(x);
+      ends.push(x);
+    }
+  }
+  return { kept, cut: ends.length === 2 ? [ends[0], ends[1]] : null };
+}
+
+/**
+ * THE SURFACE `lift` off the shell, laid on the grid and cut EXACTLY along
+ * every field's zero (each grid triangle clipped where it crosses one), so
+ * the port's edge and the cap's edge are the outlines themselves and not a
+ * staircase of cells. Normals come off the surface. `rims` collects the
+ * cuts the fields named in `rimOf` made, for the rim.
+ */
+function surface(
+  lift: number,
+  fields: Field[],
+  inward = false,
+  rims?: { of: Field[]; cuts: [Param, Param][] },
+): THREE.BufferGeometry {
   const da = (Math.PI * 2) / AROUND;
   const de = Math.PI / UP;
-  const ang = (i: number) => -Math.PI + i * da;
-  const elev = (j: number) => -Math.PI / 2 + j * de;
-  const open = (i: number, j: number) => {
-    if (j < 0 || j >= UP) return true;
-    const a = (ang(((i % AROUND) + AROUND) % AROUND) + da / 2) / DEG;
-    const e = (elev(j) + de / 2) / DEG;
-    if (e < NECK) return true;
-    return Math.abs(a) < PORT.half && e > PORT.low && e < PORT.high;
-  };
-  // Every row closed on itself (the seam behind shares its vertices), so
-  // the normals are smooth all the way round.
-  const grid = (lift: number) => {
-    const pos: number[] = [];
-    for (let j = 0; j <= UP; j++) {
-      for (let i = 0; i < AROUND; i++) pos.push(...at(ang(i), elev(j), lift));
-    }
-    return pos;
-  };
-  const cell = (i: number, j: number) => j * AROUND + (i % AROUND);
-  const skin = (lift: number, inward: boolean) => {
-    const idx: number[] = [];
-    for (let j = 0; j < UP; j++) {
-      for (let i = 0; i < AROUND; i++) {
-        if (open(i, j)) continue;
-        // The liner is only ever seen through the port: none behind the ears.
-        if (inward && Math.abs(ang(i) + da / 2) > LINER_REACH) continue;
-        const a = cell(i, j);
-        const b = cell(i + 1, j);
-        const c = cell(i, j + 1);
-        const d = cell(i + 1, j + 1);
-        if (inward) idx.push(a, c, b, b, c, d);
-        else idx.push(a, b, c, b, d, c);
-      }
-    }
-    const g = new THREE.BufferGeometry();
-    g.setAttribute("position", new THREE.Float32BufferAttribute(grid(lift), 3));
-    g.setIndex(idx);
-    g.computeVertexNormals();
-    // The crown is one point met by a whole row of cells: its normal is up.
-    const n = g.getAttribute("normal");
-    for (let i = 0; i < AROUND; i++) n.setXYZ(UP * AROUND + i, 0, inward ? -1 : 1, 0);
-    return g;
-  };
-  // The rim: every edge between a closed cell and an open one, joined from
-  // the outer skin to the liner, facing into the opening.
-  const rim: number[] = [];
-  const quad = (a0: number, e0: number, a1: number, e1: number, flip: boolean) => {
-    const p0 = at(a0, e0);
-    const p1 = at(a1, e1);
-    const q0 = at(a0, e0, -THICK);
-    const q1 = at(a1, e1, -THICK);
-    if (flip) rim.push(...p0, ...p1, ...q0, ...p1, ...q1, ...q0);
-    else rim.push(...p0, ...q0, ...p1, ...p1, ...q0, ...q1);
+  const pos: number[] = [];
+  const nrm: number[] = [];
+  const emit = (p: Param) => {
+    pos.push(...at(p[0], p[1], lift));
+    const n = normalAt(p[0], p[1], lift);
+    nrm.push(...(inward ? n.map((c) => -c) : n));
   };
   for (let j = 0; j < UP; j++) {
     for (let i = 0; i < AROUND; i++) {
-      if (open(i, j)) continue;
-      const a0 = ang(i);
-      const a1 = ang(i + 1);
-      const e0 = elev(j);
-      const e1 = elev(j + 1);
-      if (open(i, j - 1)) quad(a0, e0, a1, e0, false);
-      if (open(i, j + 1)) quad(a0, e1, a1, e1, true);
-      if (open(i - 1, j)) quad(a0, e0, a0, e1, true);
-      if (open(i + 1, j)) quad(a1, e0, a1, e1, false);
+      const a0 = -Math.PI + i * da;
+      const e0 = -Math.PI / 2 + j * de;
+      const A: Param = [a0, e0];
+      const B: Param = [a0 + da, e0];
+      const C: Param = [a0, e0 + de];
+      const D: Param = [a0 + da, e0 + de];
+      for (const tri of [
+        [A, B, C],
+        [B, D, C],
+      ] as Param[][]) {
+        let poly = tri;
+        for (const f of fields) {
+          const { kept, cut } = clip(poly, f);
+          if (cut && rims?.of.includes(f)) rims.cuts.push(cut);
+          poly = kept;
+          if (poly.length < 3) break;
+        }
+        if (poly.length < 3) continue;
+        for (let k = 1; k + 1 < poly.length; k++) {
+          const t = inward ? [poly[0], poly[k + 1], poly[k]] : [poly[0], poly[k], poly[k + 1]];
+          for (const p of t) emit(p);
+        }
+      }
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute("normal", new THREE.Float32BufferAttribute(nrm, 3));
+  return g;
+}
+
+/** THE SHELL: the outer skin with its rim round every opening (the port
+ * and the neck), the liner, and the cap laid over the shell — three
+ * geometries, so each takes its colour. */
+export function helmetShell(): {
+  outer: THREE.BufferGeometry;
+  liner: THREE.BufferGeometry;
+  cap: THREE.BufferGeometry;
+} {
+  const rims = { of: [portField, neckField], cuts: [] as [Param, Param][] };
+  const outer = surface(0, [neckField, portField], false, rims);
+  // The rim: every cut joined from the outer skin to the liner, turned to
+  // face into the opening (away from the kept shell).
+  const pos: number[] = [];
+  for (const [p, q] of rims.cuts) {
+    const p0 = at(p[0], p[1]);
+    const p1 = at(q[0], q[1]);
+    const q0 = at(p[0], p[1], -THICK);
+    const q1 = at(q[0], q[1], -THICK);
+    // Which way is open: a step off the cut's middle toward where a field
+    // is positive.
+    const m: Param = [(p[0] + q[0]) / 2, (p[1] + q[1]) / 2];
+    const f = neckField(m[0], m[1]) > -0.02 ? neckField : portField;
+    const h = 0.01;
+    const ga = f(m[0] + h, m[1]) - f(m[0] - h, m[1]);
+    const ge = f(m[0], m[1] + h) - f(m[0], m[1] - h);
+    const open = at(m[0] + ga * h, m[1] + ge * h);
+    const mid = at(m[0], m[1]);
+    const toOpen = [open[0] - mid[0], open[1] - mid[1], open[2] - mid[2]];
+    const u = [p1[0] - p0[0], p1[1] - p0[1], p1[2] - p0[2]];
+    const w = [q0[0] - p0[0], q0[1] - p0[1], q0[2] - p0[2]];
+    const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+    if (n[0] * toOpen[0] + n[1] * toOpen[1] + n[2] * toOpen[2] > 0) {
+      pos.push(...p0, ...p1, ...q0, ...p1, ...q1, ...q0);
+    } else {
+      pos.push(...p0, ...q0, ...p1, ...p1, ...q0, ...q1);
     }
   }
   const edge = new THREE.BufferGeometry();
-  edge.setAttribute("position", new THREE.Float32BufferAttribute(rim, 3));
+  edge.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
   edge.computeVertexNormals();
-  return { outer: mergeTwo(skin(0, false), edge), liner: skin(-THICK, true) };
+  return {
+    outer: mergeTwo(outer, edge),
+    liner: surface(-THICK, [neckField, portField, linerField], true),
+    cap: surface(CAP_LIFT, [neckField, portField, capField]),
+  };
 }
 
 /** One geometry of two, both laid flat (no index), normals kept. */
@@ -331,27 +472,22 @@ export function buildHelmet(
   const shell = helmetShell();
   part(shell.outer, m.shell);
   part(shell.liner, m.liner);
+  part(shell.cap, m.trim);
 
   // THE GOGGLES on his face, filling the port nearly flush — the lens's
   // front 12.5 cm ahead of the head's middle, as measured: the thick frame
   // wrapped round, the lens in it, both running on inside the shell's
   // cheeks. The strap round the OUTSIDE of the shell's back.
   const frame = part(
-    new THREE.CylinderGeometry(0.113, 0.113, 0.086, 14, 1, true, -1.1, 2.2),
+    new THREE.CylinderGeometry(0.113, 0.113, 0.09, 16, 1, true, -1.3, 2.6),
     m.trim,
   );
   frame.scale.set(0.95, 1, 1);
-  frame.position.set(0, 0.012, 0.004);
-  const lens = part(new THREE.CylinderGeometry(0.12, 0.12, 0.056, 14, 1, true, -0.85, 1.7), m.lens);
+  frame.position.set(0, 0.002, 0.004);
+  const lens = part(new THREE.CylinderGeometry(0.12, 0.12, 0.06, 16, 1, true, -1.05, 2.1), m.lens);
   lens.scale.set(0.95, 1, 1);
-  lens.position.set(0, 0.012, 0.004);
-  part(
-    patch(PORT.half * DEG + 0.02, Math.PI * 2 - PORT.half * DEG - 0.02, -0.3, -0.05, 20, 2, 0.007),
-    m.strap,
-  );
-
-  // A stripe over the crown, from over the brow to the back.
-  part(crownBand(0.62, Math.PI + 0.3, 0.13, 0.003), m.trim);
+  lens.position.set(0, 0.002, 0.004);
+  part(patch(1.3, Math.PI * 2 - 1.3, STRAP.low, STRAP.high, 24, 2, 0.007), m.strap);
 
   // THE VENT in the chin bar's front face, which looks forward and up.
   const vent = part(new THREE.BoxGeometry(0.05, 0.036, 0.02), m.strap);
@@ -365,11 +501,12 @@ export function buildHelmet(
   const peak = part(
     shaped(
       [
-        { y: 0, w: 0.085, d: 0.009 },
-        { y: 0.08, w: 0.1, d: 0.016, z: 0.003 },
-        { y: 0.14, w: 0.105, d: 0.0225, z: 0.0085 },
-        { y: 0.19, w: 0.095, d: 0.0095, z: -0.0025 },
-        { y: 0.22, w: 0.07, d: 0.0035, z: -0.0065 },
+        { y: 0, w: 0.08, d: 0.008 },
+        { y: 0.05, w: 0.09, d: 0.009 },
+        { y: 0.12, w: 0.105, d: 0.0145, z: 0.0065 },
+        { y: 0.16, w: 0.1, d: 0.0095, z: 0.0035 },
+        { y: 0.2, w: 0.07, d: 0.0025, z: -0.0005 },
+        { y: 0.208, w: 0.05, d: 0.002, z: -0.001 },
       ],
       { segments: 10, boxy: 4 },
     ).rotateX(Math.PI / 2),
