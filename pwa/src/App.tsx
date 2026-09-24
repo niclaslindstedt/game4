@@ -887,7 +887,6 @@ export function App() {
           pinned={params.seed !== null}
           laps={laps}
           riders={riders}
-          sound={settings.sound}
           trial={{
             seed: trialSeed,
             laps: settings.trialLaps,
@@ -898,7 +897,7 @@ export function App() {
           onFree={() => campaign.openCard("free", "start")}
           tricks={{ seed: trialSeed, seconds: TRICKS_RUN.limit }}
           onTricks={() => campaign.openCard("tricks", "sled")}
-          onSound={() => setSettings((s) => ({ ...s, sound: !s.sound }))}
+          onOptions={() => setPage("options")}
           onGallery={() => setPage("gallery")}
           developer={settings.developer}
           onDeveloper={() => setPage("dev")}
