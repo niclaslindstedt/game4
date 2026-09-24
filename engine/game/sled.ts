@@ -34,10 +34,22 @@ import { SLED, inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingAhead, landingLoss } from "./flight.ts";
 import { chassisContacts } from "./chassis.ts";
-import { depthUnder, gripAt, onIce, packedUnder, sinkTarget, snowDrag, type Grip } from "./snow.ts";
+import {
+  bellyPlough,
+  bottomlessOf,
+  depthUnder,
+  gripAt,
+  onIce,
+  packedUnder,
+  restSinkOf,
+  settleShare,
+  sinkTarget,
+  snowDrag,
+  type Grip,
+} from "./snow.ts";
 import { cornerGrip, flightGravity, harshSpeedOf } from "./limits.ts";
 import { footprintOf } from "./footprint.ts";
-import { probesOf } from "./suspension.ts";
+import { hullOf, probesOf } from "./suspension.ts";
 import { stepRpm, stepTread } from "./traction.ts";
 import { dampShare, harshShare, skiBite, skiPull, springShare } from "./damage.ts";
 import { stepTrench, trenchGrip } from "./trench.ts";
@@ -85,6 +97,8 @@ const RAY_GRAZE = 0.15;
 /** The least cosine between a strut and the snow's normal the normal force
  * is resolved through — a strut lying along the snow carries it nothing. */
 const TILT_MIN = 0.5;
+/** The belly pan's front corners: the first two of `hullOf`'s points. */
+const BELLY_FRONT = 2;
 
 /** A sled at rest with nothing read yet; `standSled` puts it somewhere. */
 export function freshSled(spec: SledSpec): SledState {
@@ -188,7 +202,16 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   const k = Math.min(1, dt / R.lag);
   const right0 = c.riderRight;
   const aft0 = c.riderAft;
-  c.riderRight += (c.steer * spec.riderReach - c.riderRight) * k;
+  // THE HANG FOLLOWS THE TURN. His weight moved across is a roll moment on
+  // the chassis (below), and on the groomer a rider moves it as far as the
+  // bend needs it — against the cornering load the skis ask for, v² tan δ
+  // over the ski base, full by `rider.hangG` — so at a crawl he sits in the
+  // middle whatever the bars say. In powder his weight is how the sled is
+  // carved and held upright (`snow.ts`'s deep snow), and it goes where the
+  // bars send it at any pace.
+  const bend = (c.way * c.way * Math.tan(Math.abs(c.skiAngle))) / TUNING.steer.base;
+  const across = c.packed * clamp(bend / (R.hangG * g), 0, 1) + (1 - c.packed);
+  c.riderRight += (c.steer * spec.riderReach * across - c.riderRight) * k;
   c.riderAft += (c.lean * R.aftReach - c.riderAft) * k;
   const moved = Math.abs(c.riderRight - right0) + Math.abs(c.riderAft - aft0);
 
@@ -228,8 +251,10 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   // ── The suspension and the grip, probe by probe ───────────────────────
   const probes = probesOf(spec);
   const fit = footprintOf(spec);
-  // The dial with the new snow laid on it (`depthUnder`).
+  // The dial with the new snow laid on it (`depthUnder`), and how
+  // bottomless the dial's own snow is (`bottomlessOf`).
   const depth = depthUnder(state.snowDepth, state.fresh);
+  const bottomless = bottomlessOf(state.snowDepth);
   // What the machine has taken (`damage.ts`) and the hole it has dug
   // (`trench.ts`) — each exactly 1 on a sound sled out of any hole.
   const soft = springShare(c);
@@ -249,6 +274,8 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   for (let i = 0; i < probes.length; i++) {
     const p = probes[i];
     const contact = c.contacts[i];
+    // What it carried last step, which deep snow gives under (`snow.ts`).
+    const carried = contact.load / p.rest;
     contact.touching = false;
     contact.load = 0;
     const a = rotate(q, { x: p.bx, y: p.by, z: p.bz });
@@ -271,9 +298,11 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     const ice = level.iceAt ? level.iceAt(ax, az) : 0;
     // A trenched tread (`trench.ts`) hangs in the hole it has dug.
     const target =
-      sinkTarget(packed, speed0, p.sinkScale, p.planeScale, depth) +
+      sinkTarget(packed, speed0, p.sinkScale, p.planeScale, depth, carried, bottomless) +
       (p.kind === "tread" ? c.trench : 0);
-    c.sinks[i] += (target - c.sinks[i]) * Math.min(1, dt / TUNING.snow.sinkLag);
+    // Deep snow a footprint has pressed stays pressed (`settleShare`).
+    const settle = target < c.sinks[i] ? settleShare(bottomless, speed0) : 1;
+    c.sinks[i] += (target - c.sinks[i]) * Math.min(1, (dt / TUNING.snow.sinkLag) * settle);
     const sink = c.sinks[i];
     // Where the ray meets the support: Newton's method along the ray, off
     // the slope of the snow wherever the last guess landed — a ray at a
@@ -431,6 +460,25 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     contact.y = level.groundAt(cx, cz);
     contact.sink = sink;
   }
+  // THE BELLY PLOUGH (`snow.ts`): the pan's two front corners, each over
+  // half its width, shoving whatever of the untouched powder stands over
+  // them — so a nose kept up out of the snow pays none of it.
+  let treadSink = 0;
+  for (let i = 0; i < probes.length; i++) if (probes[i].kind === "tread") treadSink += c.sinks[i];
+  treadSink /= Math.max(1, probes.length - 2);
+  const restTread = restSinkOf(depth) * fit.sink;
+  if (bottomless > 0 && speed0 > DRAG_FADE) {
+    const hull = hullOf(spec);
+    for (let h = 0; h < BELLY_FRONT; h++) {
+      const b = rotate(q, hull[h]);
+      const px = c.x + b.x;
+      const pz = c.z + b.z;
+      const under = level.groundAt(px, pz) - (c.y + b.y);
+      const packed = packedUnder(level.packedAt(px, pz), state.fresh);
+      const f = bellyPlough(packed, under, spec.width / 2, speed0, bottomless) / speed0;
+      if (f > 0) push(c.x + b.x, c.y + b.y, pz, -f * vx0, -f * vy0, -f * vz0);
+    }
+  }
   c.skiCompression[0] = skiL;
   c.skiCompression[1] = skiR;
   c.treadCompression = treadN > 0 ? treadComp / treadN : 0;
@@ -482,6 +530,26 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     // so the same hold on a heavier, taller one was a rider who let the
     // touring sled over at 113 km/h on a bend the crossover took flat.
     const heave = (m * spec.cogHeight) / (totalMass(SLED) * SLED.cogHeight);
+    // RIDE IT LIKE A BIKE: in deep powder the buried skis hold nothing and
+    // the snow under the tread gives on whichever side is loaded, so the
+    // hold the chassis gave is gone and THE SOFT SIDE GIVES — a sled rolled
+    // off the snow's own plane sinks on its low side and rolls further,
+    // a moment against it of `deepTip` times its own weight at its CoG
+    // height per radian. Most of it down in the snow (the tread's sink over
+    // its rest sink), `deepPlaning` of it planing on top; none on the
+    // groomer. What holds it up is the rider's weight, which the bars move.
+    const loose =
+      bottomless *
+      (1 - packed) *
+      (R.deepPlaning + (1 - R.deepPlaning) * clamp(treadSink / Math.max(1e-6, restTread), 0, 1));
+    const firm = 1 - R.deepHold * loose;
+    // Only snow run onto at a pace gives: a sled stopped or crawling sits
+    // in snow it has already pressed to hold it (`rider.deepTipFrom` to
+    // `deepTipFull`, m/s).
+    const moving = clamp((speed0 - R.deepTipFrom) / (R.deepTipFull - R.deepTipFrom), 0, 1);
+    if (loose > 0 && moving > 0) {
+      tb.z -= R.deepTip * loose * moving * m * g * spec.cogHeight * Math.sin(rollRel) * hold;
+    }
     tb.z +=
       clamp(
         R.rollStiff * (rollRel - target) - R.rollDamp * c.wz,
@@ -489,7 +557,8 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
         R.rollMax * ARC.hangOff,
       ) *
       heave *
-      hold;
+      hold *
+      firm;
     // THE YAW HELD (`steer.yawHold`): toward the rate the skis ask for, no
     // more than the grip can turn the way at, and the nose held to the way
     // the sled is actually going.

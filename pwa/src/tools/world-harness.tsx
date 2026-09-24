@@ -74,7 +74,13 @@ const renderer = createWorldRenderer(canvas, {
   preserveDrawingBuffer: true,
 });
 renderer.resize(width, height, 1);
-const state: GameState = createGame({ seed, region });
+/** The run's snow dial (`SNOW_DIAL`) — the ordinary snow unless named. */
+const snow = Number(params.get("snow"));
+const state: GameState = createGame({
+  seed,
+  region,
+  ...(Number.isFinite(snow) && snow > 0 ? { snowDepth: snow } : {}),
+});
 
 const FRAME = 1 / 60;
 
@@ -302,6 +308,42 @@ function birdView(): { pose: LensPose; note: string } | null {
 
 let trackAt = -1;
 
+/** Ride `seconds` on a fixed input (not the bot's), drawing unseen. */
+function ride(input: typeof NEUTRAL_INPUT, seconds: number) {
+  const end = state.t + seconds;
+  while (state.t < end) {
+    for (let i = 0; i < 2; i++) step(state, input);
+    renderer.draw(state, 0, FRAME, false);
+  }
+}
+
+/** An open, gentle stretch of virgin powder near the sled: forty metres
+ * of it clear of the loop and the trees, and the heading along it. */
+function meadow(): { x: number; z: number; heading: number } | null {
+  const s = state.sled;
+  const open = (x: number, z: number) =>
+    level.packedAt(x, z) < 0.02 &&
+    level.trees.every((t) => Math.hypot(t.x - x, t.z - z) > t.crown + 4);
+  for (let r = 20; r < 600; r += 10) {
+    for (let a = 0; a < Math.PI * 2; a += Math.PI / 16) {
+      const x = s.x + Math.sin(a) * r;
+      const z = s.z + Math.cos(a) * r;
+      for (const heading of [a, a + Math.PI / 2, a - Math.PI / 2]) {
+        let ok = true;
+        for (let d = -6; d <= 40 && ok; d += 4) {
+          const px = x + Math.sin(heading) * d;
+          const pz = z + Math.cos(heading) * d;
+          ok =
+            open(px, pz) &&
+            Math.abs(level.groundAt(px, pz) - level.groundAt(x, z)) < 0.12 * Math.abs(d) + 0.3;
+        }
+        if (ok) return { x, z, heading };
+      }
+    }
+  }
+  return null;
+}
+
 /** How far out the approach views stand from the wood, m. */
 const APPROACH = [140, 90, 60, 40];
 
@@ -500,6 +542,40 @@ const shots: Record<string, () => string> = {
     still();
     renderer.setOverride(null);
     return view.note;
+  },
+  deep() {
+    // THE SLED DOWN IN THE POWDER (`--snow`): stood in the nearest open
+    // meadow off the loop, ridden a few seconds at a crawl and let stop, so
+    // it has sunk as far as the snow lets it, and the cloud its stop threw
+    // has drifted off — from the chase lens.
+    const spot = meadow();
+    if (!spot) return "no open meadow on this map";
+    placeRun(state, { x: spot.x, z: spot.z, heading: spot.heading, speed: 20 / 3.6 });
+    ride({ ...NEUTRAL_INPUT, throttle: 0.5 }, 3);
+    ride({ ...NEUTRAL_INPUT, brake: 1 }, 3);
+    ride(NEUTRAL_INPUT, 8);
+    renderer.setCamera("chase", true);
+    for (let i = 0; i < 30; i++) renderer.draw(state, 0, FRAME, false);
+    still();
+    const s = state.sled;
+    return `stopped in a meadow, the tail ${s.sinks[s.sinks.length - 1].toFixed(2)} m down, dial ${state.snowDepth}`;
+  },
+  "deep-side"() {
+    // ...and from beside it, low: how far down in the snow it sits.
+    const s = state.sled;
+    const across = s.heading + Math.PI / 2;
+    const ex = s.x + Math.sin(across) * 4.5;
+    const ez = s.z + Math.cos(across) * 4.5;
+    const ground = wildGround(level);
+    renderer.setOverride({
+      eye: { x: ex, y: ground.snowY(ex, ez) + 0.9, z: ez },
+      target: { x: s.x, y: s.y - 0.2, z: s.z },
+      fov: 50,
+      roll: 0,
+    });
+    still();
+    renderer.setOverride(null);
+    return `beside it, the CoG ${(s.y - level.groundAt(s.x, s.z)).toFixed(2)} m over the untouched snow`;
   },
   prints() {
     // Last night's prints across a meadow: the player stood fifty metres

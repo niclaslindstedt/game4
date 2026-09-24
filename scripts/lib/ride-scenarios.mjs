@@ -18,6 +18,8 @@
 //                   off the recorded run (see `ride-lab.mjs`'s `record`)
 //   mode            optional: the mode whose rules the run is dealt — the
 //                   trick scenarios ride "tricks", so the strokes are read
+//   snow            optional: the run's snow dial (`SNOW_DIAL`) — the deep
+//                   scenarios ride a metre of fresh snow (2.5)
 
 const FULL = { steer: 0, throttle: 1, brake: 0, lean: 0, reset: false };
 const IDLE = { steer: 0, throttle: 0, brake: 0, lean: 0, reset: false };
@@ -179,6 +181,50 @@ function tricked(run) {
           ? `${combo.base} × ${combo.mult} = ${combo.points}${combo.sketchy ? " sketchy" : ""}`
           : "—",
     ],
+  ];
+}
+
+/** A METRE OF FRESH SNOW: the snow dial at its deepest (`SNOW_DIAL.max`,
+ * `snow.deep.full`), where the powder is bottomless. */
+const DEEP = 2.5;
+
+/** The first time after `from` s that the tread's sink came up under
+ * `under` m — the moment the sled climbed onto the top of the snow — as
+ * [time, speed], or null. */
+function planedAfter(run, from, under = 0.05) {
+  const f = run.frames.find((x) => x.t >= from && x.sink < under);
+  return f ? [f.t, f.speed] : null;
+}
+
+/** A deep run's numbers: the speed at 10 s and at the end, when it came
+ * up onto the top, and the deepest it sank on the way. */
+function deepAccel(run) {
+  const at = (t) => run.frames.reduce((b, f) => (Math.abs(f.t - t) < Math.abs(b.t - t) ? f : b));
+  const planed = planedAfter(run, 0);
+  return [
+    ["at 10 s km/h", fmt(at(10).speed * 3.6, 0)],
+    ["at end km/h", fmt(run.frames[run.frames.length - 1].speed * 3.6, 0)],
+    ["planed at s", planed ? fmt(planed[0], 1) : "—"],
+    ["planed km/h", planed ? fmt(planed[1] * 3.6, 0) : "—"],
+  ];
+}
+
+/** Held at `kmh` on the lever, as a rider would on a traverse. */
+function cruise(st, kmh) {
+  return { ...FULL, ...hold(st, kmh) };
+}
+
+/** The balance's numbers: the worst roll off the snow's plane, whether it
+ * went over and when, and how far it got. */
+function balance(run) {
+  const over = run.frames.find((f) => Math.abs(f.roll) > 1.2);
+  const upright = over ? run.frames.filter((f) => f.t < over.t) : run.frames;
+  const worst = upright.reduce((m, f) => Math.max(m, Math.abs(f.roll)), 0);
+  const last = (over ?? run.frames[run.frames.length - 1]).dist;
+  return [
+    ["worst roll deg", fmt(worst * 57.3, 0)],
+    ["over at s", over ? fmt(over.t, 1) : "no"],
+    ["ridden m", fmt(last, 0)],
   ];
 }
 
@@ -598,6 +644,95 @@ export const SCENARIOS = [
     view: "profile",
     input: () => FULL,
     measure: trench,
+  },
+  {
+    id: "rest-deep",
+    title: "at rest in a metre of fresh snow",
+    level: (S) => S.flatLevel({ packed: 0 }),
+    snow: DEEP,
+    place: () => ({ x: 1500, z: 200, heading: 0 }),
+    seconds: 3,
+    view: "profile",
+    input: () => IDLE,
+    measure: (run) => {
+      const f = run.frames[run.frames.length - 1];
+      return [
+        ["CoG over snow m", fmt(f.y - f.ground, 3)],
+        ["sink m", fmt(f.sink, 3)],
+        ["pitch deg", fmt(f.pitch * 57.3, 2)],
+      ];
+    },
+  },
+  {
+    id: "accel-deep",
+    title: "full throttle from rest in a metre of fresh snow",
+    level: (S) => S.flatLevel({ packed: 0 }),
+    snow: DEEP,
+    place: () => ({ x: 1500, z: 150, heading: 0 }),
+    seconds: 20,
+    view: "profile",
+    input: () => FULL,
+    measure: deepAccel,
+  },
+  {
+    id: "accel-deep-back",
+    title: "full throttle from rest in a metre, leaning back to lift the nose",
+    level: (S) => S.flatLevel({ packed: 0 }),
+    snow: DEEP,
+    place: () => ({ x: 1500, z: 150, heading: 0 }),
+    seconds: 20,
+    view: "profile",
+    input: () => ({ ...FULL, lean: 1 }),
+    measure: deepAccel,
+  },
+  {
+    id: "bog-deep",
+    title: "planing through a metre at 70 km/h, off the throttle 4 s, then pinned",
+    level: (S) => S.flatLevel({ packed: 0 }),
+    snow: DEEP,
+    place: () => ({ x: 1500, z: 150, heading: 0, speed: 70 / 3.6 }),
+    seconds: 16,
+    view: "profile",
+    input: (t) => (t >= 2 && t < 6 ? IDLE : FULL),
+    measure: (run) => {
+      const low = run.frames.filter((f) => f.t >= 6).reduce((b, f) => (f.speed < b.speed ? f : b));
+      const deepest = run.frames.reduce((m, f) => Math.max(m, f.sink), 0);
+      const planed = planedAfter(run, 6);
+      return [
+        ["slowest km/h", fmt(low.speed * 3.6, 0)],
+        ["deepest sink m", fmt(deepest, 2)],
+        ["back on top at s", planed ? fmt(planed[0], 1) : "—"],
+        ["at end km/h", fmt(run.frames[run.frames.length - 1].speed * 3.6, 0)],
+      ];
+    },
+  },
+  {
+    id: "sidehill-deep",
+    title: "across a 10-degree slope in a metre at 20 km/h, hands off",
+    level: (S) => S.flatLevel({ packed: 0, grade: 0.18, slopeFrom: 400 }),
+    snow: DEEP,
+    place: () => ({ x: 1400, z: 440, heading: Math.PI / 2, speed: 20 / 3.6 }),
+    seconds: 8,
+    view: "plan",
+    input: (t, st) => cruise(st, 20),
+    measure: balance,
+  },
+  {
+    id: "sidehill-deep-held",
+    title: "the same traverse, the rider's weight on the uphill board",
+    level: (S) => S.flatLevel({ packed: 0, grade: 0.18, slopeFrom: 400 }),
+    snow: DEEP,
+    place: () => ({ x: 1400, z: 440, heading: Math.PI / 2, speed: 20 / 3.6 }),
+    seconds: 8,
+    view: "plan",
+    // Heading +x the slope rises to the left, and a sled rolled right is
+    // rolled downhill: the rider hangs his weight uphill (the bars toward
+    // it) as far as the sled is leaning over, to keep it level.
+    input: (t, st) => ({
+      ...cruise(st, 20),
+      steer: Math.max(-1, Math.min(1, -3 * st.sled.roll - 0.3 * st.sled.wz)),
+    }),
+    measure: balance,
   },
   trick("backflip", "a backflip off a staged launch over flat snow", (t) => ({
     lean: t < 1.2 ? 1 : 0,

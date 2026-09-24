@@ -82,6 +82,7 @@ function record(scenario, spec) {
   const state = E.createGame({
     level,
     mode: scenario.mode,
+    snowDepth: scenario.snow,
     rivals: 0,
     countdown: 0,
     spec,

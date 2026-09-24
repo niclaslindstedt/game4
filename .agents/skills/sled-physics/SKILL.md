@@ -111,6 +111,9 @@ look at.** The scenarios are `scripts/lib/ride-scenarios.mjs`:
 | `climb` / `wall` | A powder slope and a face too steep: how far up, the stall, the slide back |
 | `sidehill` | Traversing a steep slope: the roll held, the slide down it |
 | `tree` | A trunk met at speed: in, out, turned |
+| `rest-deep` / `accel-deep` / `accel-deep-back` | A metre of fresh snow (the dial's deepest): how far down it sits at rest, whether it planes pinned, and leaning back to lift the nose |
+| `bog-deep` | Planing through a metre, off the throttle four seconds: whether it sinks back in and wallows |
+| `sidehill-deep` / `sidehill-deep-held` | A 10° traverse in a metre at 20 km/h, hands off and with the rider's weight hung uphill: RIDE IT LIKE A BIKE |
 
 **Run it BEFORE the first edit and AFTER the last**, on every scenario the
 change plausibly reaches, and put both tables in the PR. `docs/riding.md`'s
@@ -156,6 +159,13 @@ rewrites that row. No build, no browser, seconds.
   couple of centimetres in, but the eye expects a hand-deep furrow — so the
   drawn trail may be deeper than the physics, never shallower. A sink
   computed anywhere but `snow.ts` is a sled riding inside its own furrow.
+- **DEEP SNOW IS THE ORDINARY SNOW'S MODEL PLUS THE BOTTOMLESS SHARE.**
+  Everything deep snow adds (`snow.ts`'s header: the give under load, the
+  snow staying pressed, the later planing, the belly plough, the roll the
+  rider holds) is multiplied by `bottomlessOf(state.snowDepth)` — zero at
+  the ordinary dial, and off the DIAL, never the dial with a fall's new
+  snow in it — so every race stays bit-identical. A term that leaks past
+  that share shows as a moved `make sim` digest on the snowing seeds first.
 - **POWDER IS A HUMP.** The plough grows with v² while the sink it multiplies
   falls away with speed, so a bogged sled wants MOMENTUM, and a sled that
   planes at walking pace or never planes at all has lost the one thing that

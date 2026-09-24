@@ -253,9 +253,9 @@ export const STRINGS = {
   },
   startSnow: "SNOW",
   startSnowHint:
-    "How deep the powder is — how far a sled sinks in it standing still: thin 10 cm, medium 26 cm (the snow a race is ridden on), thick 38 cm, very thick 50 cm. Deeper is slower going and softer landings.",
+    "How deep the powder lies: thin 20 cm, medium 40 cm (the snow a race is ridden on), thick 70 cm, very deep 100 cm. Past medium it is bottomless — stop and the sled sinks to its belly, so keep it pinned and lean back to lift the nose onto the top; and it rides like a bike, so hang your weight uphill on a slope or it goes over.",
   /** The SNOW row's stops (`SNOW_STOPS`; the hint above reads their depths). */
-  snowNames: { thin: "THIN", medium: "MEDIUM", thick: "THICK", deep: "VERY THICK" },
+  snowNames: { thin: "THIN", medium: "MEDIUM", thick: "THICK", deep: "VERY DEEP" },
   startGrid: "FROM THE GRID",
   startCaption: "Tap the chart to start anywhere on the map · the arrows are kickers",
   seedReading: "SHAPING THE MAP…",

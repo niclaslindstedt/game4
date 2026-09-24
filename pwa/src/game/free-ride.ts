@@ -24,7 +24,7 @@ import {
   DEFAULT_REGION,
   TIMES_OF_DAY,
   isRegionId,
-  restSinkOf,
+  snowCoverOf,
   type RegionId,
   type TimeOfDay,
   type WeatherKind,
@@ -47,22 +47,25 @@ export const SEASONS = [
 
 export type SeasonId = (typeof SEASONS)[number]["id"];
 
-/** THE SNOW ROW'S STOPS, by how far a sled standing in untouched powder
- * sinks, cm. MEDIUM is the snow every race is ridden on. */
+/** THE SNOW ROW'S STOPS, by how deep the loose snow lies, cm (`snowCoverOf`).
+ * MEDIUM is the snow every race is ridden on; DEEP is a metre of fresh snow,
+ * a northern forest's by March, where the powder is bottomless — a sled
+ * that stops sinks to its belly, only speed keeps it on top and the rider's
+ * weight keeps it upright (`snow.ts`). */
 export const SNOW_STOPS = [
-  { id: "thin", cm: 10 },
-  { id: "medium", cm: 26 },
-  { id: "thick", cm: 38 },
-  { id: "deep", cm: 50 },
+  { id: "thin", cm: 20 },
+  { id: "medium", cm: 40 },
+  { id: "thick", cm: 70 },
+  { id: "deep", cm: 100 },
 ] as const;
 
 export type SnowId = (typeof SNOW_STOPS)[number]["id"];
 
-/** The snow dial (`SNOW_DIAL`) a stop asks for: its rest sink over the
+/** The snow dial (`SNOW_DIAL`) a stop asks for: its depth over the
  * ordinary snow's. */
 export function depthOf(snow: SnowId): number {
   const stop = SNOW_STOPS.find((s) => s.id === snow) ?? SNOW_STOPS[1];
-  return stop.cm / 100 / restSinkOf(1);
+  return stop.cm / 100 / snowCoverOf(1);
 }
 
 /** What the start card writes. */
@@ -117,7 +120,7 @@ export function mergeRide(blob: unknown): FreeRide {
   if (TIMES_OF_DAY.includes(b.time as TimeOfDay)) out.time = b.time as TimeOfDay;
   if (isSnow(b.snow)) out.snow = b.snow;
   else if (isNumber(b.depth)) {
-    const cm = restSinkOf(b.depth) * 100;
+    const cm = snowCoverOf(b.depth) * 100;
     out.snow = SNOW_STOPS.reduce((best, s) =>
       Math.abs(s.cm - cm) < Math.abs(best.cm - cm) ? s : best,
     ).id;

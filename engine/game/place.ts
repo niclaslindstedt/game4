@@ -15,7 +15,7 @@ import { clamp } from "../lib/math.ts";
 import { fromEuler } from "../lib/quat.ts";
 import { standSled } from "./course.ts";
 import { derive } from "./sled.ts";
-import { depthUnder, packedUnder, sinkTarget } from "./snow.ts";
+import { bottomlessOf, depthUnder, packedUnder, sinkTarget } from "./snow.ts";
 import { probesOf } from "./suspension.ts";
 import type { GameState } from "./state.ts";
 
@@ -68,6 +68,8 @@ export function placeRun(state: GameState, moment: RunMoment): void {
       probes[i].sinkScale,
       probes[i].planeScale,
       depthUnder(state.snowDepth, state.fresh),
+      1,
+      bottomlessOf(state.snowDepth),
     );
   if (moment.height !== undefined && moment.height > 0) {
     c.y = level.groundAt(moment.x, moment.z) + moment.height;

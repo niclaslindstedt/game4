@@ -72,6 +72,44 @@ export const TUNING = {
      * is planing (the mountain and snocross sleds more, the trail and
      * touring sleds less — their lugs are the answer to other snow). */
     powderDrag: 0.003,
+    /** How deep the loose snow lies at the ordinary snow (dial 1), m: 40 cm
+     * of powder over a settled base, which the reference tread's
+     * `powderSink` presses two thirds of the way down — fresh snow near
+     * 100 kg/m³ compacted to 300 under a track. The start card's figures
+     * are this times the dial. */
+    cover: 0.4,
+    /** DEEP SNOW (`snow.ts`'s header): what grows past the ordinary depth,
+     * by the BOTTOMLESS share (`bottomlessOf`). */
+    deep: {
+      /** The dial at which the powder is bottomless: a metre of fresh snow
+       * (`cover` × 2.5), the usual depth in a northern forest by March. */
+      full: 2.5,
+      /** THE SNOW GIVES: the exponent on the load a footprint carries over
+       * its rest load, (L / L₀)^give, at full depth — and the most load it
+       * is read at, as a multiple of the rest. Under one: snow compacting
+       * toward ice stiffens as it goes. */
+      give: 0.8,
+      loadMax: 2.5,
+      /** ...and the deepest it gives to, as a share of the loose layer
+       * (`cover` × the dial): the whole of it pressed to the density a
+       * track's few kPa leave it at — fresh snow near 80 kg/m³ packed to
+       * 300 or so, z = h(1 − ρ₀/ρ_f) (the Army's cold-regions sinkage
+       * law). */
+      compact: 0.72,
+      /** IT STAYS PRESSED: the speed along the snow, m/s, at which a
+       * footprint rides wholly on snow nobody has pressed — below it, a
+       * sink only comes back up that share as fast. */
+      settle: 2,
+      /** IT PLANES LATER: the planing speed goes as the dial to this power
+       * past the ordinary snow — at a metre, √2.5 ≈ 1.6 times, so a sled
+       * planes near 45 km/h rather than 29 and settles into it under 40. */
+      plane: 0.1,
+      /** THE BELLY PLOUGH: the belly pan's share of the plough's own law
+       * (a raked pan shoves less than a blunt footprint's front), and the
+       * deepest it is read at, m. */
+      belly: 0.6,
+      bellyMax: 0.5,
+    },
   },
 
   /** THE FOOTPRINT — how much each machine's own tread is worth against the
@@ -222,6 +260,10 @@ export const TUNING = {
     lag: 0.18,
     /** How far fore and aft the lean moves him, m. */
     aftReach: 0.35,
+    /** THE HANG FOLLOWS THE TURN: on packed snow he hangs off as far as
+     * the bars send him only once the bend they ask for pulls this many g
+     * (v² tan δ over the ski base); under it, that share of the way. */
+    hangG: 0.4,
     /** THE LEAN INTO A TURN: the roll the chassis settles at with the bars
      * full over, rad — on packed snow, and in powder, where it is the
      * whole of how a sled turns. */
@@ -238,6 +280,21 @@ export const TUNING = {
      * roll. It needs way on, reached by `carveSpeed` m/s. */
     carve: 1.4,
     carveSpeed: 6,
+    /** RIDE IT LIKE A BIKE (`snow.ts`'s header, `sled.ts`): in bottomless
+     * powder, the share of the roll held (`rollStiff`, `rollMax`) that the
+     * buried skis gave and deep snow takes away; the moment THE SOFT SIDE
+     * GIVES, as a share of the machine's weight at its CoG height per
+     * radian of roll off the snow's plane; and the share of both left once
+     * the sled planes on top rather than sits down in it. What is left to
+     * hold it up is the rider's weight, moved by the bars. */
+    deepHold: 0.8,
+    deepTip: 2.5,
+    deepPlaning: 0.5,
+    /** ...and the pace the soft side's give comes in over, m/s: none at a
+     * crawl, where the sled sits in snow it has already pressed (a stop
+     * does not tip a sled over), all of it by a jog. */
+    deepTipFrom: 1.5,
+    deepTipFull: 4,
   },
 
   /** THE AIR — what the rider can still do with the machine once the snow

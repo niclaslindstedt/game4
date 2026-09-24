@@ -44,8 +44,10 @@ export type SnowSampler = (x: number, z: number) => SnowProps;
 export const LOOSE = 0.1;
 
 export const TRAIL = {
-  /** The deepest trough the map can hold, m — the encoding's full scale. */
-  maxDepth: 0.5,
+  /** The deepest trough the map can hold, m — the encoding's full scale:
+   * a sled standing in a metre of fresh snow sits some 70 cm down in it
+   * (`snow.deep`), and its hole is drawn that deep, at 4 mm a byte. */
+  maxDepth: 1,
   /** The tallest berm, m — the second channel's full scale. */
   maxBerm: 0.12,
   /** The furrow a probe cuts in virgin powder, m, whatever the physics'
