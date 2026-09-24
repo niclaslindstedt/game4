@@ -18,9 +18,12 @@
 import type { BenchSample } from "./benchmark-index.ts";
 import {
   GPU_NAME_CAP,
+  noGpu,
   noMachine,
   noTotals,
+  GPU_SLICES,
   type BenchmarkRun,
+  type GpuTotals,
   type FramePhases,
   type Machine,
   type ReportRow,
@@ -62,6 +65,24 @@ function totals(value: unknown): RunTotals {
   if (count(t.frames) <= 0) return out;
   for (const key of Object.keys(out) as (keyof RunTotals)[]) out[key] = num(t[key], 0);
   out.frames = count(t.frames);
+  return out;
+}
+
+function gpu(value: unknown): GpuTotals {
+  const g = obj(value);
+  const out = noGpu();
+  if (count(g.frames) <= 0) return out;
+  out.frames = count(g.frames);
+  out.dropped = count(g.dropped);
+  const ms = obj(g.ms);
+  for (const { slice } of GPU_SLICES) {
+    if (typeof ms[slice] === "number") out.ms[slice] = num(ms[slice], 0);
+  }
+  for (const [tag, t] of Object.entries(obj(g.tags))) {
+    const row = obj(t);
+    if (count(row.frames) > 0)
+      out.tags[text(tag, 60)] = { frames: count(row.frames), ms: num(row.ms, 0) };
+  }
   return out;
 }
 
@@ -131,6 +152,10 @@ export function recordOf(value: unknown): BenchmarkRecord | null {
       .map(share)
       .filter((s): s is SceneShare => s !== null),
     totals: totals(r.totals),
+    gpu: gpu(r.gpu),
+    hidden: list(r.hidden)
+      .map((h) => text(h, 20))
+      .filter((h) => h !== ""),
     machine: machine(r.machine),
     step: num(r.step, 0),
     frames: count(r.frames),

@@ -12,6 +12,13 @@
 // (SwiftShader) unless `--gpu` asks for the host's own, so a score from here
 // is a statement about this build's CPU cost and a regression's shape, and
 // never a figure to hold a phone to.
+//
+// ON THE HOST'S GPU the report carries the card's own timer, pass by pass
+// (`gpu-timer.ts`); `--split` cuts the scene's pass by subsystem as well, and
+// `--hide` draws the race WITHOUT some subsystems. `--ab` hides each
+// subsystem a frame in turn inside the one run and bills what each one cost
+// the card as the difference — the reading a tiled GPU's split cannot give,
+// and immune to the machine drifting between two runs.
 
 import process from "node:process";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
@@ -30,13 +37,21 @@ const args = parseArgs(
     height: { kind: "number", default: 720, help: "viewport height, CSS px" },
     video: { kind: "string", help: "picture preset for the visit (low, medium, high)" },
     gpu: { kind: "flag", help: "draw on the host's GPU rather than SwiftShader" },
+    split: { kind: "flag", help: "cut the GPU timer's scene pass by subsystem too" },
+    hide: { kind: "string", help: "draw without these subsystems, comma-separated (HIDEABLE)" },
+    ab: { kind: "flag", help: "hide each subsystem a frame in turn and time each on the GPU" },
     timeout: { kind: "number", default: 3600, help: "seconds to wait for the run to finish" },
     out: { kind: "string", default: "previews/benchmark.txt", help: "where the report is written" },
+    dist: {
+      kind: "string",
+      default: "pwa/dist",
+      help: "the built site to run (a second build, for A-against-B)",
+    },
   },
   "make bench [ARGS=...] — run DEVELOPER ▸ BENCHMARK on the built site and print its report",
 );
 
-const dist = join(root, "pwa", "dist");
+const dist = join(root, args.dist);
 if (!existsSync(join(dist, "index.html"))) {
   console.error(`no built site at ${dist} — run \`make build\` first`);
   process.exit(2);
@@ -51,30 +66,40 @@ const browser = await found.chromium.launch({
     ? ["--enable-gpu", "--ignore-gpu-blocklist"]
     : ["--use-gl=angle", "--use-angle=swiftshader", "--enable-unsafe-swiftshader"],
 });
-const page = await browser.newPage({ viewport: { width: args.width, height: args.height } });
-page.on("pageerror", (err) => console.error(`pageerror: ${err.message}`));
-const query = new URLSearchParams({ bench: "1", splash: "0", probe: "0" });
-if (args.video) query.set("video", args.video);
-const url = `${site.url}?${query}`;
-console.log(`benchmark — ${url} at ${args.width}×${args.height}${args.gpu ? " (gpu)" : ""}`);
 
-let report = null;
-try {
-  await page.goto(url);
-  await page.waitForFunction(() => typeof globalThis.__SH_BENCH__ === "string", null, {
-    timeout: args.timeout * 1000,
-    polling: 1000,
-  });
-  report = await page.evaluate(() => globalThis.__SH_BENCH__);
-} catch (e) {
-  console.error(`the benchmark did not finish: ${e instanceof Error ? e.message : String(e)}`);
+/** One whole benchmark in a fresh page, drawn without `hide`; its report. */
+async function run(hide) {
+  const page = await browser.newPage({ viewport: { width: args.width, height: args.height } });
+  page.on("pageerror", (err) => console.error(`pageerror: ${err.message}`));
+  const query = new URLSearchParams({ bench: "1", splash: "0", probe: "0" });
+  if (args.video) query.set("video", args.video);
+  if (args.split) query.set("gpu", "split");
+  if (args.ab) query.set("ab", "1");
+  if (hide) query.set("hide", hide);
+  const url = `${site.url}?${query}`;
+  console.log(`benchmark — ${url} at ${args.width}×${args.height}${args.gpu ? " (gpu)" : ""}`);
+  try {
+    await page.goto(url);
+    await page.waitForFunction(() => typeof globalThis.__SH_BENCH__ === "string", null, {
+      timeout: args.timeout * 1000,
+      polling: 1000,
+    });
+    return await page.evaluate(() => globalThis.__SH_BENCH__);
+  } catch (e) {
+    console.error(`the benchmark did not finish: ${e instanceof Error ? e.message : String(e)}`);
+    return null;
+  } finally {
+    await page.close();
+  }
 }
+
+const text = await run(args.hide ?? "");
 await browser.close();
 site.close();
-if (report === null) process.exit(1);
+if (text === null) process.exit(1);
 
-console.log(report);
+console.log(text);
 const out = join(root, args.out);
 mkdirSync(dirname(out), { recursive: true });
-writeFileSync(out, `${report}\n`);
+writeFileSync(out, `${text}\n`);
 console.log(`\nwrote ${args.out}`);

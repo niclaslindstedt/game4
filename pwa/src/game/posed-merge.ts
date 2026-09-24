@@ -9,31 +9,37 @@
 // So the tree is kept for the posing and taken out of the picture: every
 // part is switched off every layer (it still updates its matrices, it is
 // just never drawn), and what IS drawn is one vertex-coloured mesh per
-// machine whose vertices are the parts' own, re-laid each frame through the
-// part's matrix relative to the root. The colour of each part is its old
-// material's colour, carried as a vertex attribute, so one material draws
-// them all. A part whose ancestors are hidden (the rider in the cockpit
-// views) is written as a collapsed point, which draws nothing.
+// machine holding every part's vertices in the part's OWN frame. The colour
+// of each part is its old material's colour, carried as a vertex attribute,
+// so one material draws them all.
 //
-// Parts that never move against the root are written once (`fixed`); only
-// the moving ones are re-laid per frame. A figure of a few thousand vertices
-// is a few hundred microseconds of arithmetic — a fraction of what forty
-// draws cost.
+// THE GPU LAYS THE PARTS, as RIGID SKINNING: every part is a bone whose
+// matrix is the part's world matrix, and every vertex is bound to its own
+// part's bone alone, so a frame's posing is one matrix a part copied into
+// the skeleton — a few hundred — rather than every vertex of four machines
+// and their riders re-laid on the processor and re-sent to the card (a
+// hundred and fifty thousand vertices a figure, which was half of the
+// benchmark's frame on a desktop). Three skins in every pass it draws the
+// mesh in — the picture, the sun's map, the riders' own — so the shadows
+// follow the pose with nothing more said. A part whose ancestors are hidden
+// (the rider in the cockpit views) gets a zero matrix: its vertices collapse
+// onto a point, which draws nothing.
+//
+// Three skins a normal through the bone's matrix itself, which bends it on a
+// part scaled unevenly (a stretched strut, a helmet's shell); the material
+// is grafted to take it through the inverse transpose instead, as the part's
+// own normal matrix would.
 
 import * as THREE from "three";
 
 type Part = {
   mesh: THREE.Mesh;
-  pos: Float32Array;
-  nrm: Float32Array;
-  /** Where its vertices start in the merged buffers, in vertices. */
-  at: number;
-  count: number;
+  bone: THREE.Bone;
 };
 
 export type PosedMerge = {
-  mesh: THREE.Mesh;
-  /** Re-lay every moving part under `root` from its current matrices. */
+  mesh: THREE.SkinnedMesh;
+  /** Lay every part under `root` from its current matrices. */
   update(): void;
   dispose(): void;
 };
@@ -51,59 +57,135 @@ function colourOf(mesh: THREE.Mesh): THREE.Color {
   return c;
 }
 
+/** Every vertex has one bone: fetch its matrix once, not four times. */
+const RIGID_BONE = /* glsl */ `
+#ifdef USE_SKINNING
+  mat4 boneMatX = getBoneMatrix( skinIndex.x );
+  mat4 boneMatY = boneMatX;
+  mat4 boneMatZ = boneMatX;
+  mat4 boneMatW = boneMatX;
+#endif
+`;
+
+/** The normal through the part's normal matrix — the inverse transpose of
+ * its matrix — not through the matrix itself. */
+const RIGID_NORMAL = /* glsl */ `
+#ifdef USE_SKINNING
+  mat4 skinMatrix = bindMatrixInverse * boneMatX * bindMatrix;
+  objectNormal = transpose( inverse( mat3( skinMatrix ) ) ) * objectNormal;
+#endif
+`;
+
 /** Merge `parts` (meshes somewhere under `root`) into one mesh drawn with
- * `material`, parented to `root`. `moving` says which parts must be re-laid
- * every frame; the rest are laid once, at the pose they stand in now. */
+ * `material`, parented to `root`. */
 export function mergePosed(
   root: THREE.Object3D,
   parts: THREE.Mesh[],
-  moving: (mesh: THREE.Mesh) => boolean,
   material: THREE.Material,
 ): PosedMerge {
   const list: Part[] = [];
+  const sources: {
+    pos: ArrayLike<number>;
+    nrm: ArrayLike<number>;
+    count: number;
+    index: ArrayLike<number> | null;
+  }[] = [];
   let total = 0;
+  let indices = 0;
   for (const mesh of parts) {
-    const src = mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
-    if (!src.getAttribute("normal")) src.computeVertexNormals();
-    const p = src.getAttribute("position").array as Float32Array;
-    const n = src.getAttribute("normal").array as Float32Array;
-    const count = p.length / 3;
-    list.push({ mesh, pos: new Float32Array(p), nrm: new Float32Array(n), at: total, count });
+    // A part keeps its own index, so a vertex its triangles share is skinned
+    // once. One with no normals of its own is taken apart first, so that
+    // `computeVertexNormals` gives it the faceted look it was drawn with.
+    const bare = !mesh.geometry.getAttribute("normal");
+    const src = bare && mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry;
+    if (bare) src.computeVertexNormals();
+    const p = src.getAttribute("position");
+    const n = src.getAttribute("normal");
+    const count = p.count;
+    const own = src.index;
+    const index = own ? Array.from(own.array) : null;
+    const pos = new Float32Array(count * 3);
+    const nrm = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      for (let j = 0; j < 3; j++) {
+        pos[i * 3 + j] = p.getComponent(i, j);
+        nrm[i * 3 + j] = n.getComponent(i, j);
+      }
+    }
+    sources.push({ pos, nrm, count, index });
     if (src !== mesh.geometry) src.dispose();
     total += count;
+    indices += index ? index.length : count;
     // Out of every pass, but still posed.
     mesh.layers.disableAll();
+    const bone = new THREE.Bone();
+    bone.matrixAutoUpdate = false;
+    bone.matrixWorldAutoUpdate = false;
+    list.push({ mesh, bone });
   }
   const pos = new Float32Array(total * 3);
   const nrm = new Float32Array(total * 3);
   const col = new Float32Array(total * 3);
-  for (const part of list) {
-    const c = colourOf(part.mesh);
-    for (let i = 0; i < part.count; i++) {
-      const o = (part.at + i) * 3;
-      col[o] = c.r;
-      col[o + 1] = c.g;
-      col[o + 2] = c.b;
+  const index = new Uint16Array(total * 4);
+  const weight = new Float32Array(total * 4);
+  const tris = total > 65535 ? new Uint32Array(indices) : new Uint16Array(indices);
+  let at = 0;
+  let t = 0;
+  for (let k = 0; k < list.length; k++) {
+    const c = colourOf(list[k].mesh);
+    const { pos: sp, nrm: sn, count, index: own } = sources[k];
+    const drawn = own ? own.length : count;
+    for (let i = 0; i < drawn; i++) tris[t++] = at + (own ? own[i] : i);
+    for (let i = 0; i < count; i++, at++) {
+      for (let j = 0; j < 3; j++) {
+        pos[at * 3 + j] = sp[i * 3 + j];
+        nrm[at * 3 + j] = sn[i * 3 + j];
+      }
+      col[at * 3] = c.r;
+      col[at * 3 + 1] = c.g;
+      col[at * 3 + 2] = c.b;
+      index[at * 4] = k;
+      weight[at * 4] = 1;
     }
   }
   const geo = new THREE.BufferGeometry();
-  const posAttr = new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage);
-  const nrmAttr = new THREE.BufferAttribute(nrm, 3).setUsage(THREE.DynamicDrawUsage);
-  geo.setAttribute("position", posAttr);
-  geo.setAttribute("normal", nrmAttr);
+  geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute("normal", new THREE.BufferAttribute(nrm, 3));
   geo.setAttribute("color", new THREE.BufferAttribute(col, 3));
+  geo.setAttribute("skinIndex", new THREE.Uint16BufferAttribute(index, 4));
+  geo.setAttribute("skinWeight", new THREE.BufferAttribute(weight, 4));
+  geo.setIndex(new THREE.BufferAttribute(tris, 1));
   // The machine and its rider stand inside a few metres of the root, at any
   // pose the rig can put them in; a fixed sphere spares a recompute a frame.
+  // The mesh culls by its own sphere, which is this one object.
   geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(0, 0.3, 0), 3.2);
-  const mesh = new THREE.Mesh(geo, material);
+
+  const key = material.customProgramCacheKey.bind(material);
+  const before = material.onBeforeCompile.bind(material);
+  material.customProgramCacheKey = (): string => `${key()}:rigid`;
+  material.onBeforeCompile = (shader, renderer) => {
+    before(shader, renderer);
+    shader.vertexShader = shader.vertexShader
+      .replace("#include <skinbase_vertex>", RIGID_BONE)
+      .replace("#include <skinnormal_vertex>", RIGID_NORMAL);
+  };
+
+  const mesh = new THREE.SkinnedMesh(geo, material);
+  const bones = list.map((p) => p.bone);
+  mesh.bind(
+    new THREE.Skeleton(
+      bones,
+      bones.map(() => new THREE.Matrix4()),
+    ),
+    new THREE.Matrix4(),
+  );
+  mesh.boundingSphere = geo.boundingSphere;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
   mesh.frustumCulled = true;
   root.add(mesh);
 
-  const inv = new THREE.Matrix4();
-  const rel = new THREE.Matrix4();
-  const nm = new THREE.Matrix3();
+  const collapsed = new THREE.Matrix4().makeScale(0, 0, 0);
 
   /** Whether the part and every ancestor below the root is shown. */
   const shown = (o: THREE.Object3D): boolean => {
@@ -113,61 +195,20 @@ export function mergePosed(
     return true;
   };
 
-  const lay = (part: Part) => {
-    const o0 = part.at * 3;
-    const n = part.count * 3;
-    if (!shown(part.mesh)) {
-      pos.fill(0, o0, o0 + n);
-      return;
-    }
-    rel.multiplyMatrices(inv, part.mesh.matrixWorld);
-    nm.getNormalMatrix(rel);
-    const e = rel.elements;
-    const m = nm.elements;
-    const sp = part.pos;
-    const sn = part.nrm;
-    for (let i = 0; i < n; i += 3) {
-      const x = sp[i];
-      const y = sp[i + 1];
-      const z = sp[i + 2];
-      pos[o0 + i] = e[0] * x + e[4] * y + e[8] * z + e[12];
-      pos[o0 + i + 1] = e[1] * x + e[5] * y + e[9] * z + e[13];
-      pos[o0 + i + 2] = e[2] * x + e[6] * y + e[10] * z + e[14];
-      const a = sn[i];
-      const b = sn[i + 1];
-      const c = sn[i + 2];
-      const nx = m[0] * a + m[3] * b + m[6] * c;
-      const ny = m[1] * a + m[4] * b + m[7] * c;
-      const nz = m[2] * a + m[5] * b + m[8] * c;
-      const l = Math.hypot(nx, ny, nz) || 1;
-      nrm[o0 + i] = nx / l;
-      nrm[o0 + i + 1] = ny / l;
-      nrm[o0 + i + 2] = nz / l;
-    }
-  };
-
-  const fixed = list.filter((p) => !moving(p.mesh));
-  const live = list.filter((p) => moving(p.mesh));
-  const refresh = (which: Part[]) => {
+  const update = (): void => {
     root.updateMatrixWorld(true);
-    inv.copy(root.matrixWorld).invert();
-    for (const p of which) lay(p);
-    posAttr.needsUpdate = true;
-    nrmAttr.needsUpdate = true;
+    for (const part of list) {
+      part.bone.matrixWorld.copy(shown(part.mesh) ? part.mesh.matrixWorld : collapsed);
+    }
   };
-  refresh(list);
+  update();
 
-  let wasShown = new Map(fixed.map((p) => [p, shown(p.mesh)]));
   return {
     mesh,
-    update() {
-      // A fixed part is re-laid only when it is shown or hidden.
-      const again = fixed.filter((p) => shown(p.mesh) !== wasShown.get(p));
-      if (again.length > 0) wasShown = new Map(fixed.map((p) => [p, shown(p.mesh)]));
-      refresh(again.length > 0 ? [...again, ...live] : live);
-    },
+    update,
     dispose() {
       geo.dispose();
+      mesh.skeleton.dispose();
     },
   };
 }

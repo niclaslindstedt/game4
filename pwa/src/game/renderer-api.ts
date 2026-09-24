@@ -5,7 +5,7 @@
 // writes a `GameState`.
 import type { GameState, SledId } from "@engine";
 
-import type { FrameCost, SceneShare } from "./benchmark-report.ts";
+import type { FrameCost, GpuMode, GpuTotals, Hideable, SceneShare } from "./benchmark-report.ts";
 import type { LensPose } from "./camera-rigs.ts";
 import type { ReplayShot } from "./replay-shots.ts";
 import type { VideoSettings } from "./settings-video.ts";
@@ -65,6 +65,15 @@ export interface DevRenderer {
   sceneTally(): SceneShare[];
   /** The drawing buffer, device pixels. */
   bufferSize(): { w: number; h: number };
+  /** THE GPU'S TIMER (`gpu-timer.ts`): cut every frame from here on at
+   * `mode`, OFF to stop; it starts from nothing each time it is set. */
+  setGpuTimer(mode: GpuMode): void;
+  /** Every whole frame timed since the timer was set or `resetGpu`. */
+  gpuTotals(): GpuTotals;
+  resetGpu(): void;
+  /** Draw WITHOUT these subsystems — an A/B reading — or [] for all; the
+   * GPU timer files the frames under `tag` ("" the picture as reported). */
+  setHidden(names: readonly Hideable[], tag?: string): void;
   /** Draw the trail maps over the corner of the picture, or stop. */
   setTrailOverlay(on: boolean): void;
   /** Stand the lens at a fixed place instead of the ladder — the FREE

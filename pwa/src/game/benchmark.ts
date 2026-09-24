@@ -48,6 +48,8 @@ import {
   noTotals,
   type FramePhases,
   type FrameTiming,
+  type GpuTotals,
+  type Hideable,
   type Machine,
   type RunTotals,
   type SceneShare,
@@ -79,6 +81,10 @@ export type BenchmarkStatus = {
   scene: SceneShare[];
   /** Every frame's phases summed — the breakdown the report prints. */
   totals: RunTotals;
+  /** The GPU's own timer over the run (`gpu-timer.ts`), where it has one. */
+  gpu: GpuTotals;
+  /** What the run is drawn without (`?hide=`), for the report's line. */
+  hidden: readonly string[];
   machine: Machine;
   /** Sleds on the snow, the player's included. */
   sleds: number;
@@ -194,9 +200,18 @@ function readMachine(): Machine {
 /** Drive the measured run — the race is already at green. Returns the way
  * to stop it early: the pump outlives any one frame. */
 export function runBenchmark(
-  race: BenchmarkRace & { onStatus: (status: BenchmarkStatus) => void },
+  race: BenchmarkRace & {
+    onStatus: (status: BenchmarkStatus) => void;
+    /** What the whole run is drawn without (`?hide=`). */
+    hidden?: readonly Hideable[];
+    /** THE INTERLEAVED A/B (`?ab=1`): frame by frame, the picture drawn
+     * without each of these in turn and once whole. */
+    cycle?: readonly Hideable[];
+  },
 ): () => void {
   const { state, renderer, onStatus } = race;
+  const hidden = [...(race.hidden ?? [])];
+  const cycle: readonly (Hideable | "")[] = race.cycle ? ["", ...race.cycle] : [];
   const channel = new MessageChannel();
   let stopped = false;
   let frames = 0;
@@ -223,6 +238,8 @@ export function runBenchmark(
       costs: costs.slice(),
       scene,
       totals: { ...totals },
+      gpu: renderer.gpuTotals(),
+      hidden,
       machine,
       sleds: state.rivals.length + 1,
       width: size.w,
@@ -232,7 +249,15 @@ export function runBenchmark(
 
   const tick = (): void => {
     if (stopped) return;
-    if (green === 0) green = framed = performance.now();
+    if (green === 0) {
+      // The warm-up's frames were timed too; the run starts from nothing.
+      renderer.resetGpu();
+      green = framed = performance.now();
+    }
+    if (cycle.length > 0) {
+      const without = cycle[frames % cycle.length];
+      renderer.setHidden(without === "" ? hidden : [...hidden, without], without);
+    }
     const now = benchFrame(race, totals, framed);
     frames += 1;
     elapsed = now - green;
