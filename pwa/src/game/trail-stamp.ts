@@ -30,7 +30,7 @@
 // scuff. Left unsaid, a probe is in settled powder over the packed field —
 // the picture the game had before it knew one snow from another.
 
-import type { SnowContact } from "@engine";
+import { RAGDOLL, type SnowContact } from "@engine";
 
 import type { SnowProps } from "./snowpack.ts";
 
@@ -173,10 +173,12 @@ export function stampsOf(
  * too, and the sprawl it leaves is the one mark on the map that says a
  * crash happened here. One capsule from where he last touched to where he
  * touches now, drawn as a furrow of `TRAIL.body` width at the powder's own
- * depth (a scuff on the groomer); `pen` is a one-probe pen of its own, and
- * `snowAt`, when given, shapes it by the snow it slides through. */
+ * depth (a scuff on the groomer), and — given the body's `points`
+ * (`RAGDOLL`) — every bone of him pressed in (`BONES`), so a body lying in
+ * powder lies in the body-shaped hole it made rather than under the snow. `pen` is a one-probe pen of its own, and `snowAt`, when given,
+ * shapes it by the snow it slides through. */
 export function bodyStampOf(
-  body: { x: number; z: number; touching: boolean },
+  body: { x: number; z: number; touching: boolean; points?: readonly number[] },
   pen: TrailPen,
   packedAt: (x: number, z: number) => number,
   out: Stamp[],
@@ -198,17 +200,42 @@ export function bodyStampOf(
   const depth = snow
     ? Math.max(TRAIL.packedDepth * 2, TRAIL.bodyDepth * snow.give)
     : TRAIL.bodyDepth * (1 - p) + TRAIL.packedDepth * 2 * p;
-  out.push({
-    ax,
-    az,
-    bx: body.x,
-    bz: body.z,
-    half: TRAIL.body / 2,
-    depth,
-    berm: Math.min(TRAIL.maxBerm, depth * (snow ? snow.berm : TRAIL.bermShare)),
-    wall: snow ? snow.wall : TRAIL.wall,
-  });
+  const berm = Math.min(TRAIL.maxBerm, depth * (snow ? snow.berm : TRAIL.bermShare));
+  const wall = snow ? snow.wall : TRAIL.wall;
+  const half = TRAIL.body / 2;
+  out.push({ ax, az, bx: body.x, bz: body.z, half, depth, berm, wall });
+  const q = body.points;
+  if (!q) return;
+  for (const [i, j, half] of BONES) {
+    out.push({
+      ax: q[3 * i],
+      az: q[3 * i + 2],
+      bx: q[3 * j],
+      bz: q[3 * j + 2],
+      half,
+      depth,
+      berm,
+      wall,
+    });
+  }
 }
+
+/** THE BODY PRESSED IN: every bone of a thrown rider's body (`RAGDOLL`)
+ * and the half-width, m, of the hollow it leaves — the trunk, the thighs
+ * and shins, the arms. */
+const R = RAGDOLL;
+const BONES: readonly (readonly [number, number, number])[] = [
+  [R.head, R.hipL, 0.22],
+  [R.head, R.hipR, 0.22],
+  [R.hipL, R.kneeL, 0.1],
+  [R.hipR, R.kneeR, 0.1],
+  [R.kneeL, R.footL, 0.1],
+  [R.kneeR, R.footR, 0.1],
+  [R.shoulderL, R.elbowL, 0.08],
+  [R.shoulderR, R.elbowR, 0.08],
+  [R.elbowL, R.handL, 0.08],
+  [R.elbowR, R.handR, 0.08],
+];
 
 /** The power a furrow's cross-section falls away with for walls `wall`
  * (0 sloughed … 1 square). */

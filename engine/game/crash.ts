@@ -18,16 +18,17 @@
 //     landing decides — and a slow roll he hangs on through, the reset's
 //     own clock (`reset.overFor`) standing it up as before.
 //
-// THE RIDER THROWN is a body of his own (`Thrown`): a point with a radius
-// leaving at `keep` of the sled's velocity before the blow plus a climb,
-// under gravity, stopped by a trunk as the sled is (`collision.ts`'s own
-// hash), meeting the snow as the chassis does — the speed into it
-// taken away with a little back, Coulomb friction on the slide, harder in
-// powder, which a sprawled body ploughs. Over it a TUMBLE: head over heels
-// at the speed over a rolling radius, chasing the slide on the snow, and
-// settling flat once he has stopped. None of it is drawn from the stream:
-// a crash is a pure function of the moment it started, so a run replays
-// wipeout for wipeout.
+// THE RIDER THROWN is a body of his own (`Thrown`): a RAGDOLL
+// (`ragdoll.ts`) — the hips, the shoulders, the head and the four limbs as
+// thirteen points held at the joints — laid where he sat and sent off at
+// `keep` of the sled's velocity before the blow plus a climb, turning head
+// over heels at his speed over `tumbleRadius` (with `carry` of the sled's
+// own turning on top). Every point meets the snow and the trunks on its
+// own, so he goes over once or twice with his arms and legs flung, is
+// dragged down by the snow on every turn — at once in deep powder — and
+// slides to rest lying on it, the way a body does. None of it is drawn from
+// the stream: a crash is a pure function of the moment it started, so a run
+// replays wipeout for wipeout.
 //
 // THE SLED goes on without him — the controls let go (`run.ts`), whatever
 // the chassis makes of the ground — and a nose-in landing is given the
@@ -42,14 +43,12 @@
 import { clamp, hypot, hypot3 } from "../lib/math.ts";
 import { rotate, type Vec3 } from "../lib/quat.ts";
 import { TUNING } from "./defs/tuning.ts";
-import { treesNear } from "./collision.ts";
-import { packedUnder } from "./snow.ts";
+import { centreOf, stepRagdoll, throwBody } from "./ragdoll.ts";
 import type { CrashCause, GameEvent, GameState, SledState, Thrown } from "./state.ts";
 
 const K = TUNING.crash;
 const dt = TUNING.dt;
 const n: Vec3 = { x: 0, y: 1, z: 0 };
-const near: number[] = [];
 
 /** How far the sled's nose points DOWN against the snow under it, rad —
  * negative for a nose up off the slope. */
@@ -108,22 +107,35 @@ export function throwRider(
   events: GameEvent[],
 ): Thrown {
   const c = state.sled;
-  const up = rotate(c.q, { x: 0, y: 1, z: 0 });
-  const h = c.spec.riderHeight + K.radius;
   const flat = hypot(v0.x, v0.z);
   const speed = hypot3(v0.x, v0.y, v0.z);
+  const heading = flat > 1 ? Math.atan2(v0.x, v0.z) : c.heading;
+  // Head over heels about the axis across the way he goes, forward
+  // positive (a right-handed turn about his right), and a share of the
+  // machine's own turning — a sled rolling over rolls him with it.
+  const over = Math.min(K.maxSpin, (flat * K.keep) / K.tumbleRadius);
+  const own = rotate(c.q, { x: c.wx, y: c.wy, z: c.wz });
+  const w = {
+    x: Math.cos(heading) * over + own.x * K.carry,
+    y: own.y * K.carry,
+    z: -Math.sin(heading) * over + own.z * K.carry,
+  };
+  const v = { x: v0.x * K.keep, y: Math.max(0, v0.y) * K.keep + K.throwUp, z: v0.z * K.keep };
+  const body = throwBody(c.q, c.x, c.y, c.z, v, w);
+  const com = centreOf(body.points);
   const thrown: Thrown = {
     cause,
     t: 0,
-    x: c.x + up.x * h,
-    y: c.y + up.y * h,
-    z: c.z + up.z * h,
-    vx: v0.x * K.keep,
-    vy: Math.max(0, v0.y) * K.keep + K.throwUp,
-    vz: v0.z * K.keep,
-    heading: flat > 1 ? Math.atan2(v0.x, v0.z) : c.heading,
+    x: com.x,
+    y: com.y,
+    z: com.z,
+    vx: v.x,
+    vy: v.y,
+    vz: v.z,
+    heading,
     tumble: 0,
-    spin: Math.min(K.maxSpin, (flat * K.keep) / K.tumbleRadius),
+    points: body.points,
+    last: body.last,
     touching: false,
     still: 0,
   };
@@ -139,84 +151,10 @@ export function throwRider(
   return thrown;
 }
 
-/** The nearest angle a body lying flat on its back or front is turned to. */
-function lying(tumble: number): number {
-  return Math.round((tumble - Math.PI / 2) / Math.PI) * Math.PI + Math.PI / 2;
-}
-
 /** One step of the rider's own body on the snow. */
 export function stepThrown(state: GameState, b: Thrown): void {
-  const level = state.level;
-  const g = TUNING.g;
   b.t += dt;
-  b.vy -= g * dt;
-  b.x += b.vx * dt;
-  b.y += b.vy * dt;
-  b.z += b.vz * dt;
-  const lo = TUNING.bounds.margin;
-  const hi = level.size - TUNING.bounds.margin;
-  b.x = clamp(b.x, lo, hi);
-  b.z = clamp(b.z, lo, hi);
-  // A trunk stops him as it stops the sled — pushed out along the line of
-  // centres, the speed into it gone but for a little, the rest scrubbed.
-  treesNear(level, b.x, b.z, K.radius, near);
-  for (const i of near) {
-    const t = level.trees[i];
-    if (b.y > t.y + t.height) continue;
-    const dx = b.x - t.x;
-    const dz = b.z - t.z;
-    const d = hypot(dx, dz) || 1e-6;
-    const reach = K.radius + t.radius;
-    if (d >= reach) continue;
-    const nx = dx / d;
-    const nz = dz / d;
-    b.x = t.x + nx * reach;
-    b.z = t.z + nz * reach;
-    const vn = b.vx * nx + b.vz * nz;
-    if (vn < 0) {
-      b.vx = (b.vx - vn * nx) * 0.5 - K.restitution * vn * nx;
-      b.vz = (b.vz - vn * nz) * 0.5 - K.restitution * vn * nz;
-    }
-  }
-  const packed = packedUnder(level.packedAt(b.x, b.z), state.fresh);
-  const floor = level.groundAt(b.x, b.z) - K.sink * (1 - packed) + K.radius;
-  b.touching = b.y <= floor;
-  if (b.touching) {
-    level.normalAt(b.x, b.z, n);
-    b.y = floor;
-    const vn = b.vx * n.x + b.vy * n.y + b.vz * n.z;
-    // Into the snow: taken away, with a little back from a real arrival
-    // and none from a body merely lying on it.
-    const into = Math.max(0, -vn);
-    const back = into > 1 ? K.restitution : 0;
-    b.vx += (1 + back) * into * n.x;
-    b.vy += (1 + back) * into * n.y;
-    b.vz += (1 + back) * into * n.z;
-    // Along it: Coulomb, on the weight and on the arrival.
-    const un = b.vx * n.x + b.vy * n.y + b.vz * n.z;
-    const tx = b.vx - un * n.x;
-    const ty = b.vy - un * n.y;
-    const tz = b.vz - un * n.z;
-    const slide = hypot3(tx, ty, tz);
-    if (slide > 1e-6) {
-      const mu = K.frictionPacked * packed + K.frictionPowder * (1 - packed);
-      const take = Math.min(slide, mu * (g * n.y * dt + into));
-      const s = take / slide;
-      b.vx -= tx * s;
-      b.vy -= ty * s;
-      b.vz -= tz * s;
-    }
-    // The tumble chases the slide; once he has stopped, he lies flat.
-    const along = b.vx * Math.sin(b.heading) + b.vz * Math.cos(b.heading);
-    const roll = clamp(along / K.tumbleRadius, -K.maxSpin, K.maxSpin);
-    b.spin += (roll - b.spin) * Math.min(1, K.spinGrip * dt);
-    if (hypot(b.vx, b.vz) < K.restSpeed) {
-      b.spin = 0;
-      b.tumble += (lying(b.tumble) - b.tumble) * Math.min(1, 3 * dt);
-    }
-  }
-  b.tumble += b.spin * dt;
-  b.still = b.touching && hypot3(b.vx, b.vy, b.vz) < K.restSpeed ? b.still + dt : 0;
+  stepRagdoll(state, b);
 }
 
 /** Whether the rider has lain long enough for the reset to stand them up. */

@@ -162,32 +162,36 @@ export type SledState = {
 export type CrashCause = "tree" | "nose" | "roll";
 
 /** THE RIDER THROWN — a body of his own from the moment he leaves the sled
- * until the reset stands them both back on the track (`crash.ts`). A point
- * with a radius, sliding and bouncing on the snow, and a TUMBLE: the angle
- * he has turned head over heels about the axis across the way he was
- * thrown. Written by `stepThrown` only; the renderer poses the figure off
- * it and stamps the snow where it is `touching`. */
+ * until the reset stands them both back on the track (`crash.ts`): a
+ * RAGDOLL (`ragdoll.ts`), thirteen points held together at the joints and
+ * each meeting the snow and the trunks on its own, so he flops, slides and
+ * comes to rest the way a body does. Written by `stepThrown` only; the
+ * renderer hangs the figure on `points` and stamps the snow where he is
+ * `touching`. */
 export type Thrown = {
   cause: CrashCause;
   /** Seconds since he left the sled. */
   t: number;
-  /** His centre, world frame, m, and his velocity, m/s. */
+  /** His centre of mass, world frame, m, and its velocity, m/s — what the
+   * camera follows and the reset waits on. */
   x: number;
   y: number;
   z: number;
   vx: number;
   vy: number;
   vz: number;
-  /** The bearing he was thrown along, rad (0 = +z, clockwise), the angle
-   * turned head over heels about the axis across it, rad (forward
-   * positive), and its rate, rad/s. */
+  /** The bearing he was thrown along, rad (0 = +z, clockwise), and how far
+   * his spine has turned in all since, rad — the tumble, counted. */
   heading: number;
   tumble: number;
-  spin: number;
-  /** On the snow this step. */
+  /** The body's points (`RAGDOLL` order), x y z each, world frame, m, and
+   * where they were a step ago — the velocity is the difference. */
+  points: number[];
+  last: number[];
+  /** Some part of him on the snow this step. */
   touching: boolean;
-  /** Seconds he has lain STILL on the snow — under `crash.restSpeed`,
-   * touching — without a break: what the reset waits on. */
+  /** Seconds he has lain STILL on the snow — every point under
+   * `crash.restSpeed`, touching — without a break: what the reset waits on. */
   still: number;
 };
 

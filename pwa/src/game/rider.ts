@@ -22,14 +22,7 @@ import * as THREE from "three";
 
 import { cloth, limbRings, shaped, torsoFold } from "./rider-cloth.ts";
 import { buildHelmet } from "./rider-helmet.ts";
-import {
-  BODY,
-  riderPose,
-  sprawlPose,
-  type RiderInput,
-  type RiderPose,
-  type V3,
-} from "./rider-pose.ts";
+import { BODY, riderPose, type RiderInput, type RiderPose, type V3 } from "./rider-pose.ts";
 
 export type RiderStyle = {
   jacket: number;
@@ -49,9 +42,10 @@ export type RiderStyle = {
 export type RiderFigure = {
   group: THREE.Group;
   pose(input: RiderInput): void;
-  /** Pose him THROWN (`sprawlPose`): his own clock, s, and how hard he is
-   * still flailing, 0..1. The caller places the group. */
-  sprawl(phase: number, flail: number): void;
+  /** Pose him THROWN, off the engine's ragdoll (`ragdollPose`): the boots
+   * turned along the shins rather than stood on a board. The caller places
+   * and turns the group. */
+  sprawl(pose: RiderPose): void;
   dispose(): void;
 };
 
@@ -403,14 +397,17 @@ export function createRider(
   const across = new THREE.Vector3();
   const basis = new THREE.Matrix4();
   const flat = new THREE.Vector3();
+  const shin = new THREE.Vector3();
+  const toe = new THREE.Vector3();
+  const bootSide = new THREE.Vector3();
 
   return {
     group,
     pose(input) {
       lay(riderPose(input));
     },
-    sprawl(phase, flail) {
-      lay(sprawlPose(phase, flail));
+    sprawl(pose) {
+      lay(pose, true);
     },
     dispose() {
       for (const g of geos) g.dispose();
@@ -418,8 +415,9 @@ export function createRider(
     },
   };
 
-  /** Hang the figure on a pose's points. */
-  function lay(p: RiderPose): void {
+  /** Hang the figure on a pose's points — `free`, off the sled, with every
+   * boot stood along its shin. */
+  function lay(p: RiderPose, free = false): void {
     for (let i = 0; i < 2; i++) {
       const hip = {
         x: p.hips.x + (i === 0 ? -1 : 1) * BODY.hip * Math.cos(p.roll),
@@ -440,6 +438,25 @@ export function createRider(
       hands[i].position.set(p.hands[i].x, p.hands[i].y, p.hands[i].z);
       // The boot flat on its board, pointed where the knee is.
       flat.set(p.knees[i].x - p.feet[i].x, 0, p.knees[i].z - p.feet[i].z);
+      if (free) {
+        // Off the sled: the sole square to the shin, the toe out the way
+        // his chest faces.
+        shin.set(
+          p.knees[i].x - p.feet[i].x,
+          p.knees[i].y - p.feet[i].y,
+          p.knees[i].z - p.feet[i].z,
+        );
+        shin.normalize();
+        toe.set(0, 0, 1).addScaledVector(shin, -shin.z);
+        if (toe.lengthSq() < 1e-6) toe.set(0, -1, 0).addScaledVector(shin, -shin.y);
+        toe.normalize();
+        bootSide.crossVectors(shin, toe);
+        basis.makeBasis(bootSide, shin, toe);
+        boots[i].quaternion.setFromRotationMatrix(basis);
+        boots[i].position.set(p.feet[i].x, p.feet[i].y, p.feet[i].z);
+        boots[i].position.addScaledVector(shin, -0.06).addScaledVector(toe, -0.02);
+        continue;
+      }
       boots[i].position.set(p.feet[i].x, p.feet[i].y - 0.06, p.feet[i].z - 0.02);
       boots[i].rotation.set(0, flat.lengthSq() > 1e-6 ? Math.atan2(flat.x, flat.z) * 0.4 : 0, 0);
     }
