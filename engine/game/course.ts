@@ -27,7 +27,7 @@ import { nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Checkpoint, Level, Spawn } from "../mapgen/types.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { derive } from "./sled.ts";
-import { depthUnder, packedUnder, sinkTarget } from "./snow.ts";
+import { bottomlessOf, depthUnder, packedUnder, sinkTarget } from "./snow.ts";
 import { probesOf } from "./suspension.ts";
 import type { GameEvent, GameState, Progress } from "./state.ts";
 
@@ -193,9 +193,10 @@ export function standSled(state: GameState, x: number, z: number, heading: numbe
   );
   const packed = packedUnder(level.packedAt(x, z), state.fresh);
   const depth = depthUnder(state.snowDepth, state.fresh);
+  const deep = bottomlessOf(state.snowDepth);
   const probes = probesOf(c.spec);
   for (let i = 0; i < probes.length; i++) {
-    c.sinks[i] = sinkTarget(packed, 0, probes[i].sinkScale, 1, depth);
+    c.sinks[i] = sinkTarget(packed, 0, probes[i].sinkScale, 1, depth, 1, deep);
   }
   c.x = x;
   c.z = z;

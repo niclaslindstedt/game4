@@ -117,13 +117,15 @@ export function freeRules(laps: number): RunRules {
   };
 }
 
-/** THE SNOW'S DEPTH, a RUN DIAL: how deep untouched powder lets a sled
- * sink, as a multiple of `TUNING.snow.powderSink` (`snow.ts`). One is the
+/** THE SNOW'S DEPTH, a RUN DIAL: how deep the loose snow lies, as a
+ * multiple of the ordinary snow's — `TUNING.snow.cover` of it, which a
+ * resting sled sinks `TUNING.snow.powderSink` into (`snow.ts`). One is the
  * snow every race is ridden on; a free ride may ask for a dusting over a
- * crust or a bottomless dump. It is read, never written, during a run and
- * draws nothing from the stream, so a run replays the same at any depth and
- * a run that names none moves no digest. */
-export const SNOW_DIAL = { min: 0.25, max: 2, step: 0.25 } as const;
+ * crust or a metre of bottomless fresh snow (2.5, `snow.deep.full`). It is
+ * read, never written, during a run and draws nothing from the stream, so a
+ * run replays the same at any depth and a run that names none moves no
+ * digest. */
+export const SNOW_DIAL = { min: 0.25, max: 2.5, step: 0.25 } as const;
 
 /** A depth held inside {@link SNOW_DIAL}; anything that is not a number is
  * the ordinary snow. */

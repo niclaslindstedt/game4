@@ -22,8 +22,8 @@
 //           ENGINE's answer on that date at that map's latitude
 //           (`hourOfTime`), never hours written down here. The sun
 //           stands there for the whole ride.
-//   SNOW    thin, medium, thick or very thick (`SNOW_STOPS`), read as the
-//           sink a sled standing in it takes.
+//   SNOW    thin, medium, thick or very deep (`SNOW_STOPS`), read as how
+//           deep the loose snow lies — up to a metre of fresh snow.
 //
 //   COUNTRY the kind of snow country the map is built in (R21): the same seed
 //           raised as boreal forest, high alpine, tundra or a birch valley.

@@ -71,6 +71,8 @@ const VIEWS = [
   "herd",
   "birds",
   "prints",
+  "deep",
+  "deep-side",
 ];
 
 const args = parseArgs(
@@ -81,6 +83,11 @@ const args = parseArgs(
       kind: "string",
       default: "boreal",
       help: "the kind of snow country (R21): boreal, alpine, tundra, birch",
+    },
+    snow: {
+      kind: "number",
+      default: 0,
+      help: "the run's snow dial (SNOW_DIAL: 1 the ordinary 40 cm, 2.5 a metre); the map's race snow when left out",
     },
     views: {
       kind: "string",
@@ -185,6 +192,7 @@ const query = new URLSearchParams({
   region: args.region,
   quality: args.quality,
   ...(args.shadows ? { shadows: args.shadows } : {}),
+  ...(args.snow > 0 ? { snow: String(args.snow) } : {}),
   w: String(args.width),
   h: String(args.height),
 }).toString();
@@ -203,7 +211,10 @@ for (const view of VIEWS.filter((v) => wanted.includes(v))) {
   const t0 = Date.now();
   const shot = await page.evaluate((name) => globalThis.__world.shoot(name), view);
   if (crashed) process.exit(1);
-  const out = join(outDir, `world-${args.region === "boreal" ? "" : `${args.region}-`}${view}.png`);
+  const out = join(
+    outDir,
+    `world-${args.region === "boreal" ? "" : `${args.region}-`}${args.snow > 0 ? `snow${args.snow}-` : ""}${view}.png`,
+  );
   await page.locator("body").screenshot({ path: out });
   console.log(
     `${out.replace(`${root}/`, "")}  ${shot.note}  (${((Date.now() - t0) / 1000).toFixed(1)} s)`,

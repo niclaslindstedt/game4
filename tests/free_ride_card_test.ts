@@ -14,7 +14,7 @@ import {
   generateLevel,
   NEUTRAL_INPUT,
   SNOW_DIAL,
-  restSinkOf,
+  snowCoverOf,
   step,
 } from "@engine";
 
@@ -77,8 +77,10 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
   });
 
   it("reads the faders' blob onto the nearest snow and hands the day back to the map", () => {
+    // A dial of 2 is 80 cm of loose snow: nearest THICK's 70.
     const old = mergeRide({ seed: 5, day: 40, hour: 11, depth: 2 });
-    expect(old.snow).toBe("deep");
+    expect(old.snow).toBe("thick");
+    expect(mergeRide({ depth: 2.5 }).snow).toBe("deep");
     expect(old.season).toBeNull();
     expect(old.time).toBeNull();
     expect(mergeRide({ depth: 0.25 }).snow).toBe("thin");
@@ -122,13 +124,15 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
 });
 
 describe("what the rows ask for", () => {
-  it("sinks a standing sled as deep as each snow stop says, MEDIUM the race's own", () => {
+  it("lays the loose snow as deep as each snow stop says, MEDIUM the race's own", () => {
     for (const stop of SNOW_STOPS) {
-      expect(restSinkOf(depthOf(stop.id)) * 100).toBeCloseTo(stop.cm, 6);
+      expect(snowCoverOf(depthOf(stop.id)) * 100).toBeCloseTo(stop.cm, 6);
       expect(depthOf(stop.id)).toBeGreaterThanOrEqual(SNOW_DIAL.min);
       expect(depthOf(stop.id)).toBeLessThanOrEqual(SNOW_DIAL.max);
     }
-    expect(SNOW_STOPS.map((s) => s.cm)).toEqual([10, 26, 38, 50]);
+    expect(SNOW_STOPS.map((s) => s.cm)).toEqual([20, 40, 70, 100]);
+    // The deepest stop is the dial's deepest, and a metre of snow.
+    expect(depthOf("deep")).toBeCloseTo(SNOW_DIAL.max, 9);
     expect(depthOf("medium")).toBeCloseTo(1, 9);
     // The row's hint states every stop's depth.
     for (const stop of SNOW_STOPS) expect(STRINGS.startSnowHint).toContain(`${stop.cm} cm`);
