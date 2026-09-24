@@ -12,7 +12,7 @@
 // the points array it was built from (a WeakMap, so a dropped level takes
 // its index with it). Everything here is read-only over the loop.
 
-import { angleDiff, cellKey } from "../lib/math.ts";
+import { angleDiff, cellKey, hypot } from "../lib/math.ts";
 import type { TrackHit, TrackPoint } from "./types.ts";
 
 /** Anything carrying a closed loop: a finished `Level`, or the generator's
@@ -78,15 +78,22 @@ function trySegment(
   t = t < 0 ? 0 : t > 1 ? 1 : t;
   const px = a.x + dx * t;
   const pz = a.z + dz * t;
-  const d = Math.hypot(x - px, z - pz);
-  if (d >= hit.distance) return;
+  const ex = x - px;
+  const ez = z - pz;
+  // A segment plainly further than the nearest found so far is turned away
+  // on the square, before the dear `hypot`; the margin is far wider than
+  // `hypot`'s rounding, so whatever passes is decided exactly as before.
+  const held = hit.distance;
+  if (ex * ex + ez * ez > held * held * (1 + 1e-9)) return;
+  const d = hypot(ex, ez);
+  if (d >= held) return;
   const sb = i + 1 === n ? length : b.s;
   const len = Math.sqrt(len2) || 1;
   // Right of travel is (cos h, −sin h) = (dz, −dx) / len.
   hit.index = i;
   hit.s = a.s + (sb - a.s) * t;
   hit.distance = d;
-  hit.lateral = ((x - px) * dz - (z - pz) * dx) / len;
+  hit.lateral = (ex * dz - ez * dx) / len;
   hit.x = px;
   hit.z = pz;
 }

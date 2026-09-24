@@ -40,7 +40,7 @@
 // axis pinned at 1 or 0 for most of a sweep is measuring nothing.
 
 import { treesNear } from "../game/collision.ts";
-import { angleDiff, clamp } from "../lib/math.ts";
+import { angleDiff, clamp, hypot } from "../lib/math.ts";
 import { sunAt } from "../lib/solar.ts";
 import { LEVEL_RULES } from "../mapgen/rules.ts";
 import { declinationOf } from "../mapgen/sun.ts";
@@ -211,9 +211,9 @@ export function skyWeight(weather: Weather): number {
 }
 
 function circumradius(a: TrackPoint, b: TrackPoint, c: TrackPoint): number {
-  const ab = Math.hypot(b.x - a.x, b.z - a.z);
-  const bc = Math.hypot(c.x - b.x, c.z - b.z);
-  const ca = Math.hypot(a.x - c.x, a.z - c.z);
+  const ab = hypot(b.x - a.x, b.z - a.z);
+  const bc = hypot(c.x - b.x, c.z - b.z);
+  const ca = hypot(a.x - c.x, a.z - c.z);
   const area2 = Math.abs((b.x - a.x) * (c.z - a.z) - (b.z - a.z) * (c.x - a.x));
   return area2 < 1e-9 ? Infinity : (ab * bc * ca) / (2 * area2);
 }

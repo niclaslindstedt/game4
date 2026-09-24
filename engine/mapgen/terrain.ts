@@ -17,7 +17,7 @@
 
 import { smoothstep } from "../lib/math.ts";
 import { createHeightfield, type Heightfield } from "../lib/heightfield.ts";
-import { valueNoise } from "../lib/noise.ts";
+import { noiseField, sampleNoise, valueNoise, type NoiseField } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
 import { REGIONS, scaleBand, scaleCount, type Region } from "./regions.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
@@ -112,28 +112,71 @@ export function planTerrain(
   };
 }
 
-/** Fractal value noise centred on zero, roughly −1..1. */
-function fbm(x: number, z: number, scale: number, octaves: number, seed: number): number {
+/** Fractal value noise centred on zero, roughly −1..1: the octaves are
+ * `fbmFields`' fields, halving in scale and in weight. */
+function fbm(fields: readonly NoiseField[], x: number, z: number): number {
   let sum = 0;
   let amp = 1;
   let norm = 0;
-  let s = scale;
-  for (let o = 0; o < octaves; o++) {
-    sum += (valueNoise(x, z, s, seed + o * 7919) * 2 - 1) * amp;
+  for (const f of fields) {
+    sum += (sampleNoise(f, x, z) * 2 - 1) * amp;
     norm += amp;
     amp *= 0.5;
-    s *= 0.5;
   }
   return sum / norm;
 }
 
-/** Ridged noise, 0..1 with sharp crests at 1. */
-function ridged(x: number, z: number, scale: number, seed: number): number {
-  const a = 1 - Math.abs(valueNoise(x, z, scale, seed) * 2 - 1);
-  const b = 1 - Math.abs(valueNoise(x, z, scale * 0.5, seed + 31) * 2 - 1);
+function fbmFields(scale: number, octaves: number, seed: number): NoiseField[] {
+  const fields: NoiseField[] = [];
+  let s = scale;
+  for (let o = 0; o < octaves; o++) {
+    fields.push(noiseField(s, seed + o * 7919));
+    s *= 0.5;
+  }
+  return fields;
+}
+
+/** Ridged noise, 0..1 with sharp crests at 1, off a `ridgedFields` pair. */
+function ridged(f: RidgedFields, x: number, z: number): number {
+  const a = 1 - Math.abs(sampleNoise(f.coarse, x, z) * 2 - 1);
+  const b = 1 - Math.abs(sampleNoise(f.fine, x, z) * 2 - 1);
   const v = a * a * 0.7 + b * b * 0.3;
   // v^1.25, sharpening the crests, without a pow.
   return v * Math.sqrt(Math.sqrt(v));
+}
+
+type RidgedFields = { readonly coarse: NoiseField; readonly fine: NoiseField };
+
+function ridgedFields(scale: number, seed: number): RidgedFields {
+  return { coarse: noiseField(scale, seed), fine: noiseField(scale * 0.5, seed + 31) };
+}
+
+/** Every noise field the country is read off, for one plan. Each keeps the
+ * lattice square it last read (`NoiseField`), and a bake reads its grid in
+ * order, so nearly every read reuses its field's four corner hashes. */
+type CountryFields = {
+  readonly warpX: NoiseField;
+  readonly warpZ: NoiseField;
+  readonly rim: NoiseField;
+  readonly hills: readonly NoiseField[];
+  readonly ridges: RidgedFields;
+  readonly rollers: RidgedFields;
+  readonly crests: RidgedFields;
+  readonly crestsFine: RidgedFields;
+};
+
+function countryFields(plan: TerrainPlan): CountryFields {
+  const s = plan.seeds;
+  return {
+    warpX: noiseField(420, s.warp),
+    warpZ: noiseField(420, s.warp + 17),
+    rim: noiseField(260, s.rim),
+    hills: fbmFields(R.hills.scale, 4, s.hills),
+    ridges: ridgedFields(R.ridges.scale, s.ridges),
+    rollers: ridgedFields(R.rollers.scale, s.rollers),
+    crests: ridgedFields(170, s.crests),
+    crestsFine: ridgedFields(60, s.crests + 5),
+  };
 }
 
 /** Distance from the basin's middle on the rounded square the rim is
@@ -154,27 +197,32 @@ function squareRadius(plan: TerrainPlan, x: number, z: number): number {
 /** R2 — how far up the rim a point stands: 0 on the basin floor, 1 at the
  * full height of the flanks. */
 export function rimAt(plan: TerrainPlan, x: number, z: number): number {
-  const warp = (valueNoise(x, z, 260, plan.seeds.rim) * 2 - 1) * R.basin.rim.warp;
+  return rimOf(plan, valueNoise(x, z, 260, plan.seeds.rim), x, z);
+}
+
+/** `rimAt` off the warp's noise already read at (x, z). */
+function rimOf(plan: TerrainPlan, noise: number, x: number, z: number): number {
+  const warp = (noise * 2 - 1) * R.basin.rim.warp;
   return smoothstep(R.basin.rim.inner, R.basin.rim.outer, squareRadius(plan, x, z) + warp);
 }
 
-/** R2, R3 — the untouched country's height at a plan point, m. */
-export function countryAt(plan: TerrainPlan, x: number, z: number): number {
-  const s = plan.seeds;
+/** R2, R3 — the untouched country's height at a plan point, m, read off
+ * the plan's `countryFields`. */
+function countryAt(plan: TerrainPlan, f: CountryFields, x: number, z: number): number {
   // A slow domain warp, so the hills are not laid out on the noise's own
   // lattice.
-  const wx = x + (valueNoise(x, z, 420, s.warp) * 2 - 1) * 70;
-  const wz = z + (valueNoise(x, z, 420, s.warp + 17) * 2 - 1) * 70;
-  const rim = rimAt(plan, x, z);
+  const wx = x + (sampleNoise(f.warpX, x, z) * 2 - 1) * 70;
+  const wz = z + (sampleNoise(f.warpZ, x, z) * 2 - 1) * 70;
+  const rim = rimOf(plan, sampleNoise(f.rim, x, z), x, z);
   const floor = 1 - rim * 0.6;
-  let h = fbm(wx, wz, R.hills.scale, 4, s.hills) * plan.hills * floor;
-  h += ridged(wx, wz, R.ridges.scale, s.ridges) * plan.ridges * floor;
+  let h = fbm(f.hills, wx, wz) * plan.hills * floor;
+  h += ridged(f.ridges, wx, wz) * plan.ridges * floor;
   if (plan.rollers > 0) {
     // R3's rollers, on a lattice turned the other way from the crests', so
     // their creases do not run parallel to anything else in the country.
     const rx = wx * 0.8 + wz * 0.6;
     const rz = wz * 0.8 - wx * 0.6;
-    h += (ridged(rx, rz, R.rollers.scale, s.rollers) - 0.5) * plan.rollers * floor;
+    h += (ridged(f.rollers, rx, rz) - 0.5) * plan.rollers * floor;
   }
   h += (x - plan.cx) * plan.tiltX + (z - plan.cz) * plan.tiltZ;
   for (const b of plan.bowls) {
@@ -188,22 +236,22 @@ export function countryAt(plan: TerrainPlan, x: number, z: number): number {
     const rx = wx * 0.866 - wz * 0.5;
     const rz = wx * 0.5 + wz * 0.866;
     h +=
-      plan.crests *
-      rim *
-      (ridged(rx, rz, 170, s.crests) * 0.75 + ridged(rz, rx, 60, s.crests + 5) * 0.25);
+      plan.crests * rim * (ridged(f.crests, rx, rz) * 0.75 + ridged(f.crestsFine, rz, rx) * 0.25);
   }
   return h;
 }
 
-/** Bake the untouched country onto the map's grid (R1). */
+/** Bake the untouched country onto the map's grid (R1), row by row — the
+ * order the noise fields' kept squares pay off in. */
 export function bakeCountry(plan: TerrainPlan): Heightfield {
   const cell = R.world.cell;
   const n = Math.round(R.world.size / cell) + 1;
   const field = createHeightfield(0, 0, cell, n, n);
   const d = field.data;
+  const fields = countryFields(plan);
   for (let r = 0; r < n; r++) {
     const z = r * cell;
-    for (let c = 0; c < n; c++) d[r * n + c] = countryAt(plan, c * cell, z);
+    for (let c = 0; c < n; c++) d[r * n + c] = countryAt(plan, fields, c * cell, z);
   }
   return field;
 }

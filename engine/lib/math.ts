@@ -39,6 +39,77 @@ export function approach(v: number, target: number, maxDelta: number): number {
   return v + Math.sign(d) * maxDelta;
 }
 
+/** `Math.hypot(a, b)`, bit for bit, several times cheaper.
+ *
+ * `Math.hypot` is a builtin call that boxes its arguments into an array and
+ * Kahan-sums them after scaling by the largest — tens of nanoseconds, against
+ * two for a bare square root, and the engine asks it on every probe, trunk
+ * and track segment of every step. This is that same recipe (V8's, the one
+ * the suite's digests were cut under) in plain arithmetic: every operation
+ * in it is correctly rounded by IEEE 754, so it returns the same bits in
+ * every browser, which a builtin whose algorithm each engine chooses for
+ * itself does not promise. A bare `sqrt(a² + b²)` is NOT a substitute: it
+ * differs in the last bit about a third of the time, and the determinism
+ * contract is bits. */
+export function hypot(a: number, b: number): number {
+  const x = Math.abs(a);
+  const y = Math.abs(b);
+  if (x === Infinity || y === Infinity) return Infinity;
+  if (x !== x || y !== y) return Number.NaN;
+  const m = x > y ? x : y;
+  if (m === 0) return 0;
+  const p = x / m;
+  const q = y / m;
+  return Math.sqrt(p * p + q * q) * m;
+}
+
+/** `Math.hypot(a, b, c)`, bit for bit — `hypot`'s recipe over three, the
+ * Kahan compensation carried from the second term into the third. */
+export function hypot3(a: number, b: number, c: number): number {
+  const x = Math.abs(a);
+  const y = Math.abs(b);
+  const z = Math.abs(c);
+  if (x === Infinity || y === Infinity || z === Infinity) return Infinity;
+  if (x !== x || y !== y || z !== z) return Number.NaN;
+  const m = x > y ? (x > z ? x : z) : y > z ? y : z;
+  if (m === 0) return 0;
+  const p = x / m;
+  const q = y / m;
+  const r = z / m;
+  const pp = p * p;
+  const qq = q * q;
+  const two = pp + qq;
+  const carried = two - pp - qq;
+  return Math.sqrt(two + (r * r - carried)) * m;
+}
+
+/** `Math.hypot(a, b, c, d)`, bit for bit — the compensation carried on
+ * through the fourth term. A quaternion's length. */
+export function hypot4(a: number, b: number, c: number, d: number): number {
+  const x = Math.abs(a);
+  const y = Math.abs(b);
+  const z = Math.abs(c);
+  const w = Math.abs(d);
+  if (x === Infinity || y === Infinity || z === Infinity || w === Infinity) return Infinity;
+  if (x !== x || y !== y || z !== z || w !== w) return Number.NaN;
+  let m = x > y ? x : y;
+  if (z > m) m = z;
+  if (w > m) m = w;
+  if (m === 0) return 0;
+  const p = x / m;
+  const q = y / m;
+  const r = z / m;
+  const t = w / m;
+  const pp = p * p;
+  const qq = q * q;
+  const two = pp + qq;
+  let carried = two - pp - qq;
+  const third = r * r - carried;
+  const three = two + third;
+  carried = three - two - third;
+  return Math.sqrt(three + (t * t - carried)) * m;
+}
+
 export function dist2(ax: number, az: number, bx: number, bz: number): number {
   const dx = bx - ax;
   const dz = bz - az;

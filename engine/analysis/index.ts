@@ -15,7 +15,7 @@
 // one paragraph of `mapgen/rules.ts`. `ok` is "no errors": a warn is a
 // smell the loop reads and nobody has to fix.
 
-import { angleDiff } from "../lib/math.ts";
+import { angleDiff, hypot } from "../lib/math.ts";
 import { sunAt } from "../lib/solar.ts";
 import { nearestTrackPoint, nearestWithin, trackPointAt } from "../mapgen/query.ts";
 import { LEVEL_RULES as R, withinBand, type Band } from "../mapgen/rules.ts";
@@ -116,7 +116,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   if (!withinBand(L, R.track.length)) {
     add("R5", "error", `loop is ${fmt(L, 0)} m (band ${bandText(R.track.length, " m")})`);
   }
-  const join = Math.hypot(pts[0].x - pts[n - 1].x, pts[0].z - pts[n - 1].z);
+  const join = hypot(pts[0].x - pts[n - 1].x, pts[0].z - pts[n - 1].z);
   if (join > step * 1.5) add("R5", "error", `the loop does not close (a ${fmt(join)} m gap)`);
   if (Math.abs(step - R.track.step) > 0.2) add("R5", "error", `points every ${fmt(step, 2)} m`);
   const crossings = selfCrossings(pts);
@@ -339,7 +339,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   const least = Math.min(R.grid.spacing, R.grid.row);
   for (let a = 0; a < level.grid.length; a++) {
     for (let b = a + 1; b < level.grid.length; b++) {
-      const d = Math.hypot(level.grid[a].x - level.grid[b].x, level.grid[a].z - level.grid[b].z);
+      const d = hypot(level.grid[a].x - level.grid[b].x, level.grid[a].z - level.grid[b].z);
       if (d < least - 0.05) add("R13", "error", `grid slots ${a} and ${b} stand ${fmt(d)} m apart`);
     }
   }
@@ -371,7 +371,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     for (let dz = -1; dz <= 1; dz++) {
       for (let dx = -1; dx <= 1; dx++) {
         for (const u of buckets.get((bx + dx) * 8192 + bz + dz) ?? []) {
-          const d = Math.hypot(u.x - t.x, u.z - t.z);
+          const d = hypot(u.x - t.x, u.z - t.z);
           if (t.clump !== undefined && u.clump === t.clump) {
             clumpGap = Math.min(clumpGap, d);
             clumpSpread = Math.max(clumpSpread, d);

@@ -31,6 +31,7 @@ import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledState } from ".
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
 import { freshTricks } from "./tricks.ts";
+import { hypot } from "../lib/math.ts";
 
 /** How far behind the level's grid an extra row stands, m. */
 const ROW_BACK = 8;
@@ -119,7 +120,7 @@ function clipPair(a: SledState, b: SledState): number {
       const bz = b.z + bf.z * B.offset * sb;
       const dx = bx - ax;
       const dz = bz - az;
-      const d = Math.hypot(dx, dz);
+      const d = hypot(dx, dz);
       if (d >= 2 * B.radius || Math.abs(a.y - b.y) > 1.5) continue;
       const nx = d > 1e-6 ? dx / d : 1;
       const nz = d > 1e-6 ? dz / d : 0;
@@ -167,8 +168,8 @@ export function raceProgress(run: GameState): number {
   const cps = run.level.checkpoints;
   const next = cps[p.nextCheckpoint];
   const from = p.lastCheckpoint >= 0 ? cps[p.lastCheckpoint] : run.level.spawn;
-  const leg = Math.hypot(next.x - from.x, next.z - from.z) || 1;
-  const left = Math.hypot(next.x - run.sled.x, next.z - run.sled.z);
+  const leg = hypot(next.x - from.x, next.z - from.z) || 1;
+  const left = hypot(next.x - run.sled.x, next.z - run.sled.z);
   return p.passed + Math.min(0.999, 1 - left / leg);
 }
 

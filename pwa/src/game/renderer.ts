@@ -530,11 +530,14 @@ export function createWorldRenderer(
       // a blocking compile anyway where it cannot, so ask first. Against the
       // target the frame will be drawn into: a graded region's programs are
       // compiled for linear output, not the canvas's.
+      // The trail maps' passes are compiled beside the scene: they are drawn
+      // on the first frame too, and are not in it.
       gl.setRenderTarget(picture.load(lv));
       if (gl.extensions.has("KHR_parallel_shader_compile")) {
-        await gl.compileAsync(scene, lens.camera);
+        await Promise.all([gl.compileAsync(scene, lens.camera), trail.compile(gl)]);
       } else {
         gl.compile(scene, lens.camera);
+        await trail.compile(gl);
       }
       gl.setRenderTarget(null);
     },

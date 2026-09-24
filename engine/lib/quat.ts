@@ -17,6 +17,8 @@
 // else has to remember it; body-frame angular velocities stay right-handed
 // (a nose-up pitch rate is a negative `wx`).
 
+import { hypot3, hypot4 } from "./math.ts";
+
 export type Quat = { x: number; y: number; z: number; w: number };
 export type Vec3 = { x: number; y: number; z: number };
 
@@ -37,7 +39,7 @@ export function multiply(a: Quat, b: Quat): Quat {
 /** Renormalise in place. Integration drifts the length by a part in a
  * million per step, which after a minute at 120 Hz is a visible skew. */
 export function normalize(q: Quat): Quat {
-  const n = Math.hypot(q.x, q.y, q.z, q.w) || 1;
+  const n = hypot4(q.x, q.y, q.z, q.w) || 1;
   q.x /= n;
   q.y /= n;
   q.z /= n;
@@ -81,7 +83,7 @@ export function unrotate(q: Quat, v: Vec3): Vec3 {
  * the step. Post-multiplied because the rate is expressed in the body's own
  * axes; a world-frame rate would pre-multiply. */
 export function integrate(q: Quat, wx: number, wy: number, wz: number, dt: number): Quat {
-  const mag = Math.hypot(wx, wy, wz);
+  const mag = hypot3(wx, wy, wz);
   if (mag < 1e-9) return q;
   const angle = mag * dt;
   const d = fromAxisAngle(wx / mag, wy / mag, wz / mag, angle);

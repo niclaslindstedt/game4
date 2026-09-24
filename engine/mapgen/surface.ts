@@ -25,7 +25,7 @@
 // shoulders are the groomer's alone, and a drift across it (R17) is fresh
 // snow over the groomer, never over a crust.
 
-import { smoothstep } from "../lib/math.ts";
+import { hypot, smoothstep } from "../lib/math.ts";
 import { createHeightfield, sampleField, type Heightfield } from "../lib/heightfield.ts";
 import { valueNoise } from "../lib/noise.ts";
 import { createRng } from "../lib/prng.ts";
@@ -79,7 +79,7 @@ export function planRiver(sub: number, plan: TerrainPlan, ground: Heightfield): 
   const phase2 = rng.range(0, Math.PI * 2);
   const width = inBand(rng, spec.width);
   const widthPhase = rng.range(0, Math.PI * 2);
-  const len = Math.hypot(x1 - x0, z1 - z0);
+  const len = hypot(x1 - x0, z1 - z0);
   const n = Math.ceil(len / STATION) + 1;
   const ux = (x1 - x0) / len;
   const uz = (z1 - z0) / len;
@@ -148,7 +148,7 @@ export function carveRiver(ground: Heightfield, river: River): Heightfield {
         const px = ground.originX + c * cell;
         let t = ((px - ax) * dx + (pz - az) * dz) / len2;
         t = t < 0 ? 0 : t > 1 ? 1 : t;
-        const d = Math.hypot(px - (ax + dx * t), pz - (az + dz * t));
+        const d = hypot(px - (ax + dx * t), pz - (az + dz * t));
         const o = r * cols + c;
         if (d < dist[o]) {
           dist[o] = d;

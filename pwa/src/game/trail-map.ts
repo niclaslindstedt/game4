@@ -106,6 +106,11 @@ export type TrailMap = {
   fill(renderer: THREE.WebGLRenderer, metres: number): void;
   /** Wipe every trail (a new run). */
   clear(renderer: THREE.WebGLRenderer): void;
+  /** Compile the maps' own passes ahead of their first use — they are not
+   * in the scene, so the scene's compile never meets them, and a program
+   * first linked on the run's first frame stalls that frame. Resolves when
+   * the driver has them. */
+  compile(renderer: THREE.WebGLRenderer): Promise<unknown>;
   dispose(): void;
 };
 
@@ -408,6 +413,16 @@ export function createTrailMap(mapSize: number, options: TrailOptions): TrailMap
       centreX = Number.NaN;
       centreZ = Number.NaN;
       uniforms.uFineOrigin.value.set(-1e6, -1e6);
+    },
+    compile(renderer) {
+      // Against a map, as the passes are drawn: a program is keyed on the
+      // target's colour space, and one compiled for the canvas is not the
+      // one a map's pass asks for.
+      const was = renderer.getRenderTarget();
+      renderer.setRenderTarget(coarse);
+      const ready = [stampScene, copyScene, fillScene].map((s) => renderer.compileAsync(s, lens));
+      renderer.setRenderTarget(was);
+      return Promise.all(ready);
     },
     dispose() {
       coarse.dispose();

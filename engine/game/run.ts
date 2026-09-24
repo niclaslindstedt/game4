@@ -22,6 +22,7 @@ import { crashOver, quietClocks, stepThrown, throwRider, wipeoutCause } from "./
 import { takeDamage } from "./damage.ts";
 import { poseInput, stepStrokes } from "./strokes.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledInput } from "./state.ts";
+import { hypot } from "../lib/math.ts";
 
 /** What the rider holds under the lights: the brake, and nothing else. */
 const HOLD: SledInput = { ...NEUTRAL_INPUT, brake: 1 };
@@ -66,7 +67,7 @@ export function stepRun(run: GameState, input: SledInput, events: GameEvent[]): 
   const p = run.progress;
   if (p.finished) return;
   p.time += TUNING.dt;
-  p.distance += Math.hypot(c.x - x0, c.z - z0);
+  p.distance += hypot(c.x - x0, c.z - z0);
   // THE BUZZER (`RunRules.limit`): the run is over wherever it stands.
   if (run.rules.limit > 0 && p.time >= run.rules.limit) {
     p.finished = true;

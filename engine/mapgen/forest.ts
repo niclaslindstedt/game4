@@ -37,7 +37,7 @@
 // river's ice. The boreal's row is all ones, so its wood is the one the
 // rules grew before there were regions.
 
-import { cellKey, smoothstep } from "../lib/math.ts";
+import { cellKey, hypot, smoothstep } from "../lib/math.ts";
 import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
 import { hash2, valueNoise } from "../lib/noise.ts";
 import type { Rng } from "../lib/prng.ts";
@@ -90,7 +90,7 @@ export function growForest(
       valueNoise(x, z, F.scale, seed) * 0.7 + valueNoise(x, z, F.scale * 0.35, seed + 101) * 0.3;
     let clear = 1;
     for (const cl of clearings) {
-      const d = Math.hypot(x - cl.x, z - cl.z);
+      const d = hypot(x - cl.x, z - cl.z);
       if (d < cl.r + 12) clear = Math.min(clear, smoothstep(cl.r * 0.8, cl.r + 12, d));
     }
     return { woods: smoothstep(0.42, 0.58, n), clear };
@@ -119,7 +119,7 @@ export function growForest(
       if (d > L.width) continue;
       const gx = lane.cos + (bend(x + 1, z, lane.noise) - w);
       const gz = lane.sin + (bend(x, z + 1, lane.noise) - w);
-      if (d / Math.max(0.2, Math.hypot(gx, gz)) < L.width / 2) return true;
+      if (d / Math.max(0.2, hypot(gx, gz)) < L.width / 2) return true;
     }
     return false;
   };
@@ -137,7 +137,7 @@ export function growForest(
     }
     if (ice && sampleField(ice, x, z) > 0) return true;
     const g = fieldGradient(ground, x, z);
-    if (Math.hypot(g.gx, g.gz) > F.maxSlope) return true;
+    if (hypot(g.gx, g.gz) > F.maxSlope) return true;
     nearestWithin(loop, x, z, reach, hit);
     if (hit.distance < loop.track.points[hit.index].width / 2 + F.corridor) return true;
     if (onKicker(kickers, x, z, 4)) return true;
@@ -215,7 +215,7 @@ export function growForest(
           const x = cx + Math.cos(a) * d;
           const z = cz + Math.sin(a) * d;
           const rim = rimAt(plan, x, z);
-          if (refused(x, z, rim) || crowded(x, z, id)) continue;
+          if (crowded(x, z, id) || refused(x, z, rim)) continue;
           const own = size * 0.8 + hash2(k, id, seed + 18) * 0.2;
           stand(x, z, heightOf(woods, own, rim), id, cx, cz);
           grown++;
@@ -240,9 +240,11 @@ export function growForest(
       const { woods, clear } = woodsAt(x, z);
       const share = density * (meadow + (1 - meadow) * woods * clear);
       if (keep >= share) continue;
+      // Both refusals are pure, so the cheap one asks first: in a wood
+      // most candidates stand inside a kept trunk's gap.
+      if (crowded(x, z, -1)) continue;
       const rim = rimAt(plan, x, z);
       if (refused(x, z, rim)) continue;
-      if (crowded(x, z, -1)) continue;
       stand(x, z, heightOf(woods, size, rim), -1, x, z);
     }
   }
