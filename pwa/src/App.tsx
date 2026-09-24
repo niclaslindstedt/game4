@@ -660,8 +660,10 @@ export function App() {
 
       const held = !simulates(shellRef.current);
       const shown = drawable();
-      // SLOW MOTION is fewer steps per frame and nothing else (`replay-shots.ts`).
-      const rate = replays.frame();
+      // SLOW MOTION is fewer steps per frame and nothing else: the replay's
+      // director (`replay-shots.ts`) and the death cam (`camera-death.ts`).
+      renderer.setDeathCam(playerRides(shellRef.current));
+      const rate = replays.frame() * renderer.timeRate();
       const dtRun = dtFrame * rate;
       const simAt = performance.now();
       if (!frozen && !held && shown) {

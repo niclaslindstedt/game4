@@ -186,6 +186,9 @@ export type Thrown = {
   spin: number;
   /** On the snow this step. */
   touching: boolean;
+  /** Seconds he has lain STILL on the snow — under `crash.restSpeed`,
+   * touching — without a break: what the reset waits on. */
+  still: number;
 };
 
 /** A part `damage.ts` keeps a figure for. */

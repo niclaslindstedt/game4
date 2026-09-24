@@ -25,7 +25,7 @@
 // read off `sled-colours.ts` so the minimap's dot is the same colour.
 
 import * as THREE from "three";
-import { type SledSpec, type SledState, type TrickPose } from "@engine";
+import { type SledSpec, type SledState, type Thrown, type TrickPose } from "@engine";
 
 import type { Pose } from "./interp.ts";
 import { mergePosed } from "./posed-merge.ts";
@@ -128,8 +128,17 @@ export type SledModel = {
    * `sink` lowers the machine into the snow by the drawn furrow's extra
    * depth, m. */
   /** `trick` is a tricks run's pose held in the air, if any; `dt` is the
-   * frame's, s — the rider's body on its legs moves with it (0 holds it). */
-  pose(sled: SledState, at: Pose, sink: number, trick?: TrickPose | null, dt?: number): void;
+   * frame's, s — the rider's body on its legs moves with it (0 holds it);
+   * `body` the rider thrown as drawn between two steps (`sampleBody`),
+   * `sled.thrown` as stepped when not given. */
+  pose(
+    sled: SledState,
+    at: Pose,
+    sink: number,
+    trick?: TrickPose | null,
+    dt?: number,
+    body?: Thrown | null,
+  ): void;
   setRiderVisible(visible: boolean): void;
   /** Every mesh that draws the machine and its rider — what casts. */
   casters: THREE.Mesh[];
@@ -624,11 +633,11 @@ export function createSledModel(
       out.radius = bound.radius;
       return out;
     },
-    pose(sled, at, sink, trick = null, dt = 0) {
+    pose(sled, at, sink, trick = null, dt = 0, body) {
       root.position.set(at.x, at.y - sink, at.z);
       root.quaternion.set(at.q.x, at.q.y, at.q.z, at.q.w);
       gear.pose(sled, sink);
-      const off = sled.thrown;
+      const off = body === undefined ? sled.thrown : body;
       if (off) {
         // THE RIDER THROWN (`crash.ts`): off the machine on a body of his
         // own, tumbling head over heels along the way he was thrown — laid

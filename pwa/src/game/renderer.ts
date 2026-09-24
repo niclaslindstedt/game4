@@ -47,11 +47,22 @@ import { createTvCamera } from "./camera-tv.ts";
 import type { LensPose, LineClear, RigPose } from "./camera-rigs.ts";
 import { createEnvironment, type Environment } from "./environment.ts";
 import { createForest, type Forest, type ForestOptions } from "./forest.ts";
+import { createDeathCam, dropDeathCam, frameDeath } from "./camera-death.ts";
 import { createGates, type Gates } from "./gates.ts";
 import { createGhostModel, type GhostModel } from "./ghost-model.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
 import { createHeroShadow } from "./hero-shadow.ts";
-import { createTrack, observe, sample, type Pose, type PoseTrack } from "./interp.ts";
+import {
+  createBodyTrack,
+  createTrack,
+  observe,
+  observeBody,
+  sample,
+  sampleBody,
+  type BodyTrack,
+  type Pose,
+  type PoseTrack,
+} from "./interp.ts";
 import { createRegionPicture } from "./region-picture.ts";
 import type { CameraRung, DevRenderer, WorldRenderer } from "./renderer-api.ts";
 import type { ReplayShot } from "./replay-shots.ts";
@@ -154,6 +165,8 @@ type Rider = {
   bodyDown: boolean;
   plume: number;
   bodyPen: TrailPen;
+  /** The thrown body between two steps (`interp.ts`). */
+  body: BodyTrack;
 };
 
 /** The runs a frame draws: the player's first, then the field's. */
@@ -227,6 +240,11 @@ export function createWorldRenderer(
   let lastTick = -1;
   let lastState: GameState | null = null;
   let override: LensPose | null = null;
+  /** THE DEATH CAM: its state, whether the app lets it take the lens, and
+   * the time rate it last handed the app (`timeRate`). */
+  const death = createDeathCam();
+  let deathOn = false;
+  let handed = 1;
   /** The box the canvas was last given, so a RESOLUTION press can re-apply
    * it at the new share. */
   let box = { width: 1, height: 1, pixelRatio: 1 };
@@ -323,6 +341,7 @@ export function createWorldRenderer(
       bodyDown: false,
       plume: 0,
       bodyPen: createPen(1),
+      body: createBodyTrack(),
     };
   }
 
@@ -469,6 +488,7 @@ export function createWorldRenderer(
           r.track = createTrack();
           r.pen = createPen(16);
           r.bodyPen = createPen(1);
+          r.body = createBodyTrack();
         }
         lens.snap();
         lastTick = -1;
@@ -487,7 +507,8 @@ export function createWorldRenderer(
         // With the trails off there is no furrow to sit in.
         const want = TRAIL_LOOK[video.trails].stamp ? extraSink(sled, run.snowDepth) : 0;
         r.sink += (want - r.sink) * (1 - Math.exp(-dt * 10));
-        r.model.pose(sled, r.drawn, r.sink, run.tricks.pose, dt);
+        observeBody(r.body, sled.thrown, run.tick);
+        r.model.pose(sled, r.drawn, r.sink, run.tricks.pose, dt, sampleBody(r.body, alpha));
         if ((stepped > 0 || lastTick < 0) && TRAIL_LOOK[video.trails].stamp) {
           stampsOf(sled.contacts, r.pen, level.packedAt, nominalLoad, stamps, run.snowDepth);
         }
@@ -523,17 +544,37 @@ export function createWorldRenderer(
       rigPose.airborne = sled.airborne;
       const inside = lens.rung() === "hood" || lens.rung() === "bars";
       player.model.setRiderVisible(!inside);
-      lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, clear);
+      const ladder = lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, clear);
+      // THE DEATH CAM (`camera-death.ts`) takes the lens off the ladder while
+      // the player is off the sled, on WALL time: `dt` is the run's, slowed
+      // by the rate it handed out.
+      let dead: LensPose | null = null;
+      if (deathOn && !override && !shot && lens.rung() !== "orbit") {
+        const real = Math.min(handed > 0 ? dt / handed : dt, 0.1);
+        dead = frameDeath(
+          death,
+          sampleBody(player.body, alpha),
+          ladder,
+          real,
+          level.groundAt,
+          clear,
+        );
+        if (death.ended) lens.snap();
+      } else if (death.active || death.rate !== 1) {
+        dropDeathCam(death);
+      }
       // The ladder is framed underneath either way, so a lens planted for a
       // moment hands back to a boom that is already where it should be.
       const planted =
         override ??
-        (shot && clear ? tv.update(shot, rigPose, level, clear, Math.min(dt, 0.1)) : null);
+        (shot && clear ? tv.update(shot, rigPose, level, clear, Math.min(dt, 0.1)) : null) ??
+        dead;
       if (planted) {
         const cam = lens.camera;
         cam.position.set(planted.eye.x, planted.eye.y, planted.eye.z);
         cam.up.set(0, 1, 0);
         cam.lookAt(planted.target.x, planted.target.y, planted.target.z);
+        if (planted.roll !== 0) cam.rotateZ(-planted.roll);
         cam.fov = planted.fov;
         cam.updateProjectionMatrix();
         cam.updateMatrixWorld();
@@ -621,6 +662,14 @@ export function createWorldRenderer(
 
     setOverride(view) {
       override = view;
+    },
+
+    setDeathCam(on) {
+      deathOn = on;
+    },
+    timeRate() {
+      handed = deathOn ? death.rate : 1;
+      return handed;
     },
 
     setShot(next) {

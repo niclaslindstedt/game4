@@ -34,8 +34,10 @@
 // nose-over its skis digging in would put into it. He takes no checkpoint
 // while he is off it; the race clock runs.
 //
-// THE RESET comes once he has lain `lieMin` s and stopped, or at `lieMax`
-// whatever he is doing — the engine's reset, reported `auto`.
+// THE RESET comes once he has been off `lieMin` s and has lain still for
+// `lieStill` of them, or at `lieMax` whatever he is doing — the engine's
+// reset, reported `auto`. The still beat is the one the app's death cam
+// (`camera-death.ts`) rises into the sky over him on.
 
 import { clamp } from "../lib/math.ts";
 import { rotate, type Vec3 } from "../lib/quat.ts";
@@ -122,6 +124,7 @@ export function throwRider(
     tumble: 0,
     spin: Math.min(K.maxSpin, (flat * K.keep) / K.tumbleRadius),
     touching: false,
+    still: 0,
   };
   if (cause === "nose") {
     // The skis dig and the machine goes over its nose: a nose-down pitch
@@ -212,12 +215,13 @@ export function stepThrown(state: GameState, b: Thrown): void {
     }
   }
   b.tumble += b.spin * dt;
+  b.still = b.touching && Math.hypot(b.vx, b.vy, b.vz) < K.restSpeed ? b.still + dt : 0;
 }
 
 /** Whether the rider has lain long enough for the reset to stand them up. */
 export function crashOver(b: Thrown): boolean {
   if (b.t >= K.lieMax) return true;
-  return b.t >= K.lieMin && b.touching && Math.hypot(b.vx, b.vy, b.vz) < K.restSpeed;
+  return b.t >= K.lieMin && b.still >= K.lieStill;
 }
 
 /** The sled's riderless share of the step's bookkeeping: nothing is asked

@@ -11,7 +11,7 @@
 //
 // Three-free, so the suite reads it (`tests/world_render_test.ts`).
 
-import type { Quat, SledState } from "@engine";
+import type { Quat, SledState, Thrown } from "@engine";
 
 export type Pose = {
   x: number;
@@ -99,5 +99,60 @@ export function sample(track: PoseTrack, alpha: number, out: Pose): Pose {
   out.y = p.y + (c.y - p.y) * a;
   out.z = p.z + (c.z - p.z) * a;
   nlerp(p.q, c.q, a, out.q);
+  return out;
+}
+
+/** THE RIDER THROWN, drawn between two steps the same way: his centre and
+ * his tumble. Under the death cam's slow motion a step lands every few
+ * frames, and a body posed off the step alone would visibly hop. */
+export type BodyTrack = {
+  tick: number;
+  curr: Thrown | null;
+  prev: { x: number; y: number; z: number; tumble: number };
+  /** The body as last drawn, rewritten by `sampleBody`. */
+  drawn: Thrown | null;
+};
+
+export function createBodyTrack(): BodyTrack {
+  return { tick: -1, curr: null, prev: { x: 0, y: 0, z: 0, tumble: 0 }, drawn: null };
+}
+
+/** Take in the thrown body as the state has it at `tick` (null: on the sled). */
+export function observeBody(track: BodyTrack, body: Thrown | null, tick: number): void {
+  if (tick === track.tick) return;
+  const k = tick - track.tick;
+  const c = track.curr;
+  const p = track.prev;
+  if (!body || !c || k <= 0) {
+    if (body) {
+      p.x = body.x;
+      p.y = body.y;
+      p.z = body.z;
+      p.tumble = body.tumble;
+    }
+  } else {
+    const f = 1 - 1 / k;
+    p.x = c.x + (body.x - c.x) * f;
+    p.y = c.y + (body.y - c.y) * f;
+    p.z = c.z + (body.z - c.z) * f;
+    p.tumble = c.tumble + (body.tumble - c.tumble) * f;
+  }
+  track.curr = body ? { ...body } : null;
+  track.tick = tick;
+}
+
+/** The body to draw, `alpha` of a step on (the track's `drawn`, rewritten),
+ * or null when the rider is on his sled. */
+export function sampleBody(track: BodyTrack, alpha: number): Thrown | null {
+  const c = track.curr;
+  if (!c) return null;
+  const a = alpha < 0 ? 0 : alpha > 1 ? 1 : alpha;
+  const p = track.prev;
+  const out = (track.drawn ??= { ...c });
+  Object.assign(out, c);
+  out.x = p.x + (c.x - p.x) * a;
+  out.y = p.y + (c.y - p.y) * a;
+  out.z = p.z + (c.z - p.z) * a;
+  out.tumble = p.tumble + (c.tumble - p.tumble) * a;
   return out;
 }

@@ -115,7 +115,10 @@ shoulders riders into the woods and a wipeout there is honest.
   picture is the renderer's, off its own seed.
 - **WITH THE RIDER OFF, THE SLED IS LET GO AND TAKES NOTHING.** The neutral
   input, no checkpoint, the automatic reset's clocks quiet; the reset is
-  `crashOver`'s. A rider who presses reset gets it at once.
+  `crashOver`'s — `lieMin` off and `lieStill` lain still (`Thrown.still`),
+  the beat the app's death cam (`camera-death.ts`) rises over him on; cut it
+  and the camera has nothing to rise into. A rider who presses reset gets it
+  at once.
 - **THE TRENCH DIGS ONLY WHEN BOGGED, AND IS PACKED BY MOVING WEIGHT.** It
   grows while the sled is on the gas at a crawl in powder with the belt
   slipping, for `trench.after` s first — so no launch out of a powder grid
