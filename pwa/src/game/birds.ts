@@ -100,7 +100,7 @@ export function createBirds(level: Level, haze: HazeUniforms): Birds {
   const update = (state: GameState, eyeX: number, eyeZ: number): void => {
     for (const roster of rosters.values()) roster.n = 0;
     const t = state.t;
-    const activity = activityAt(level, t);
+    const activity = activityAt(level);
     plan.flocks.forEach((flock, f) => {
       flushed[f] = flushAt(flock, state, flushed[f]);
       const roster = rosters.get(flock.species);

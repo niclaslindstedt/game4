@@ -14,6 +14,7 @@ import {
   generateLevel,
   moonAt,
   sunAtRun,
+  snows,
   sunsetOf,
   weatherFor,
   weatherOf,
@@ -43,24 +44,53 @@ describe("R19 — the weather is dealt", () => {
     expect(sum).toBeCloseTo(1, 9);
   });
 
-  it("keeps every number in its band, and a fall from light to a blizzard", () => {
+  it("keeps every number in its band, and a fall from a flurry to a blizzard", () => {
     const falls: number[] = [];
     for (const { weather: w } of dealt) {
       const band = R.wind[w.kind];
       expect(w.wind).toBeGreaterThanOrEqual(band.min);
       expect(w.wind).toBeLessThanOrEqual(band.max);
-      if (w.kind === "snow") falls.push(w.snowfall);
-      else expect(w.snowfall).toBe(0);
+      if (snows(w.kind)) {
+        expect(w.snowfall).toBeGreaterThanOrEqual(R.snowfall[w.kind].min);
+        expect(w.snowfall).toBeLessThanOrEqual(R.snowfall[w.kind].max);
+        falls.push(w.snowfall);
+      } else expect(w.snowfall).toBe(0);
       if (w.kind !== "fog") expect(w.fog).toBe(0);
     }
-    expect(Math.min(...falls)).toBeLessThan(0.25);
-    expect(Math.max(...falls)).toBeGreaterThan(0.9);
-    // A harder fall is a harder wind.
+    expect(Math.min(...falls)).toBeLessThan(0.1);
+    expect(Math.max(...falls)).toBeGreaterThan(0.95);
+    // A harder fall is a harder wind, and a storm a gale.
     const snow = dealt.filter((d) => d.weather.kind === "snow").map((d) => d.weather);
-    const hard = snow.filter((w) => w.snowfall > 0.8);
-    const soft = snow.filter((w) => w.snowfall < 0.35);
+    const hard = snow.filter((w) => w.snowfall > 0.65);
+    const soft = snow.filter((w) => w.snowfall < 0.4);
     const mean = (ws: typeof snow) => ws.reduce((a, w) => a + w.wind, 0) / ws.length;
-    expect(mean(hard)).toBeGreaterThan(mean(soft) + 4);
+    expect(mean(hard)).toBeGreaterThan(mean(soft) + 3);
+    const storms = dealt.filter((d) => d.weather.kind === "storm").map((d) => d.weather);
+    expect(mean(storms)).toBeGreaterThan(mean(hard) + 3);
+  });
+
+  it("deals a sun in the sky most days", () => {
+    const sunny = dealt.filter((d) =>
+      ["clear", "fair", "flurries", "high"].includes(d.weather.kind),
+    );
+    expect(sunny.length / N).toBeGreaterThan(0.66);
+  });
+
+  it("deals version 1's sky exactly as it did: its odds, one band of fall, no new skies", () => {
+    const old = Array.from({ length: N }, (_, i) =>
+      dealWeather((i * 2654435761) >>> 0, DAY, { oldWeather: true }),
+    );
+    for (const { weather: w } of old) {
+      expect(["flurries", "storm"]).not.toContain(w.kind);
+      if (w.kind === "snow") {
+        expect(w.snowfall).toBeGreaterThanOrEqual(R.legacy.snowfall.min);
+        expect(w.snowfall).toBeLessThanOrEqual(R.legacy.snowfall.max);
+      }
+    }
+    for (const kind of WEATHER_KINDS) {
+      const share = old.filter((d) => d.weather.kind === kind).length / N;
+      expect(Math.abs(share - R.legacy.odds[kind])).toBeLessThan(0.03);
+    }
   });
 
   it("sends about a quarter of the maps out in the evening, from sunset into the dark", () => {
@@ -84,7 +114,7 @@ describe("R19 — the weather is dealt", () => {
         (f) => f.rule === "R15" || f.rule === "R19",
       );
       expect(findings).toEqual([]);
-      if (sunAtRun(level, 0).elevation < -0.1) dark++;
+      if (sunAtRun(level).elevation < -0.1) dark++;
     }
     // Over a wider sweep some maps are raced in the dark.
     for (let seed = 1; seed <= 12 && dark === 0; seed++) {
@@ -177,7 +207,7 @@ describe("the sky under each weather", () => {
 
   it("turns the light flat and the key down under a lid", () => {
     const clear = noon("clear");
-    for (const kind of ["overcast", "snow", "fog"] as const) {
+    for (const kind of ["overcast", "snow", "storm", "fog"] as const) {
       const lid = noon(kind);
       expect(lid.flat).toBeGreaterThan(0.6);
       expect(lid.glitter).toBeLessThan(0.3);
@@ -188,13 +218,24 @@ describe("the sky under each weather", () => {
     expect(clear.glitter).toBe(1);
     expect(noon("fair").cloud.genus).toBe(1);
     expect(noon("high").cloud.genus).toBe(2);
+    // A flurry keeps the sun; a storm's deck is darker than an overcast's,
+    // and an overcast's darker than the snow under it.
+    expect(noon("flurries").keyIntensity).toBeGreaterThan(clear.keyIntensity * 0.8);
+    expect(noon("flurries").snowfall).toBeGreaterThan(0);
+    const sum = (c: number[]) => c[0] + c[1] + c[2];
+    expect(sum(noon("storm").zenith)).toBeLessThan(sum(noon("overcast").zenith) * 0.5);
+    expect(sum(noon("overcast").zenith)).toBeLessThan(sum(noon("overcast").groundLight));
+    expect(noon("storm").lamps).toBeGreaterThan(0.5);
   });
 
   it("thickens the haze with the fall and the fog", () => {
-    const light = skyLookFor(Math.PI, 0.35, undefined, weatherFor("snow", { snowfall: 0.2 }));
-    const blizzard = skyLookFor(Math.PI, 0.35, undefined, weatherFor("snow", { snowfall: 1 }));
+    const light = skyLookFor(Math.PI, 0.35, undefined, weatherFor("snow", { snowfall: 0.3 }));
+    const blizzard = skyLookFor(Math.PI, 0.35, undefined, weatherFor("storm", { snowfall: 1 }));
     expect(blizzard.haze).toBeGreaterThan(light.haze * 3);
     expect(blizzard.snowfall).toBe(1);
+    // A blizzard leaves a few tens of metres to see by: the haze has taken
+    // nineteen parts in twenty of the light by then.
+    expect(1 - Math.exp(-60 * blizzard.haze)).toBeGreaterThan(0.95);
     expect(noon("fog").haze).toBeGreaterThan(noon("clear").haze * 10);
     expect(noon("fog").hazeLift).toBeLessThan(noon("clear").hazeLift);
   });
@@ -207,6 +248,11 @@ describe("the sky under each weather", () => {
     expect(day.stars).toBe(0);
     expect(night.night).toBeGreaterThan(0.95);
     expect(night.stars).toBeGreaterThan(0.2);
+    // The Milky Way only in a dark sky: gone under a full moon, out when
+    // it is down.
+    expect(skyLookFor(Math.PI, -0.45).galaxy).toBeGreaterThan(0.9);
+    expect(night.galaxy).toBeLessThan(0.2);
+    expect(day.galaxy).toBe(0);
     expect(night.lamps).toBeGreaterThan(0.95);
     expect(night.key.y).toBeCloseTo(Math.sin(0.6), 6);
     expect(night.keyIntensity).toBeGreaterThan(0);
@@ -218,6 +264,6 @@ describe("the sky under each weather", () => {
 
   it("reads the level's own weather", () => {
     const level = withSky(syntheticLevel(), { weather: "fog", hour: 12 });
-    expect(skyLookAt(level, 0).fog).toBeGreaterThan(0);
+    expect(skyLookAt(level).fog).toBeGreaterThan(0);
   });
 });

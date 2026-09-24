@@ -35,12 +35,16 @@
 // states: climb without a wall, no two rungs the same map twice, and every
 // kind of ask led on somewhere.
 //
-// EVERY MAP IS RIDDEN ON THE DAY ITS SEED DEALT (R15, R19), which is the day
-// the rating read: the sky, the hour and the season are the map's own, so
+// EVERY MAP IS RIDDEN ON THE HOUR AND THE SEASON ITS SEED DEALT (R15), so
 // the dark on the summit is the evenings R19 hands out and not a lamp turned
-// off by hand. `sky` is the lever for a rung the dealt day does not suit —
-// a hand-picked weather or start hour laid over the map (`withSky`), which
-// moves nothing the generator builds and so nothing the digest reads.
+// off by hand. THE SKY IS PICKED: the campaign's maps are all version 1's,
+// whose deal was a lid or a fall one day in three, so most rungs lay a
+// `sky` over the dealt one (`withSky`) — the bright days, the flurries out
+// of a sunny sky, a first snow, a storm on the summit — and a grey one is
+// the exception. A sky
+// moves nothing the generator builds and so nothing the digest reads, but
+// the rating reads it (its sky axis), and a sky is picked to keep every
+// shelf climbing on `make rate CAMPAIGN=1`'s index.
 //
 // THE MEDALS on a time trial are set against the bot's own run of it — the
 // crossover ridden by the bot over the rung's laps, which is what the
@@ -125,48 +129,52 @@ const FOOTHILLS: CampaignShelf = {
     },
     {
       id: "foothills-3",
-      name: "Grey Pines",
-      blurb: "Under a lid of cloud, the loop walled by trees",
+      name: "Snow Pines",
+      blurb: "Snow falling on a loop walled by trees",
       seed: 55,
       mode: "race",
       laps: 3,
       version: 1,
       digest: "50b394a6",
-      day: { weather: "overcast", hour: 9.54 },
+      sky: { weather: { kind: "snow", snowfall: 0.3 } },
+      day: { weather: "snow", hour: 9.54 },
     },
     {
       id: "foothills-4",
       name: "Switchbacks",
-      blurb: "Corner after corner, in the flat light",
+      blurb: "Corner after corner, flakes glinting in the sun",
       seed: 34,
       mode: "race",
       laps: 3,
       version: 1,
       digest: "d6a88afb",
-      day: { weather: "overcast", hour: 12.08 },
+      sky: { weather: { kind: "flurries", snowfall: 0.35 } },
+      day: { weather: "flurries", hour: 12.08 },
     },
     {
       id: "foothills-5",
       name: "Fresh Fall",
-      blurb: "One lap through the drifts, against the clock",
+      blurb: "One lap through the drifts, under a veil of high cloud",
       seed: 39,
       mode: "timeTrial",
       laps: 1,
       version: 1,
       digest: "44b3c601",
-      day: { weather: "fair", hour: 15.12 },
+      sky: { weather: "high" },
+      day: { weather: "high", hour: 15.12 },
       medals: { gold: 115, silver: 123, bronze: 132 },
     },
     {
       id: "foothills-6",
       name: "High Kicks",
-      blurb: "The biggest lips on the shelf, under high cloud",
+      blurb: "The biggest lips on the shelf, under fair-weather cloud",
       seed: 93,
       mode: "race",
       laps: 3,
       version: 1,
       digest: "a06ea2b7",
-      day: { weather: "high", hour: 12.68 },
+      sky: { weather: "fair" },
+      day: { weather: "fair", hour: 12.68 },
     },
   ],
 };
@@ -198,7 +206,8 @@ const TIMBERLINE: CampaignShelf = {
       laps: 1,
       version: 1,
       digest: "5b19be42",
-      day: { weather: "clear", hour: 12.54 },
+      sky: { weather: "fair" },
+      day: { weather: "fair", hour: 12.54 },
       medals: { gold: 121, silver: 129, bronze: 138 },
     },
     {
@@ -210,7 +219,8 @@ const TIMBERLINE: CampaignShelf = {
       laps: 3,
       version: 1,
       digest: "2a387833",
-      day: { weather: "clear", hour: 13.99 },
+      sky: { weather: "fair" },
+      day: { weather: "fair", hour: 13.99 },
     },
     {
       id: "timberline-4",
@@ -238,13 +248,14 @@ const TIMBERLINE: CampaignShelf = {
     {
       id: "timberline-6",
       name: "Moonrise",
-      blurb: "The first race in the dark, the lamps on the snow",
+      blurb: "The first race in the dark, snow drifting through the lamps",
       seed: 31,
       mode: "race",
       laps: 3,
       version: 1,
       digest: "86bac2a5",
-      day: { weather: "clear", hour: 20.78 },
+      sky: { weather: { kind: "flurries", snowfall: 0.3 } },
+      day: { weather: "flurries", hour: 20.78 },
     },
   ],
 };
@@ -270,13 +281,14 @@ const SUMMIT: CampaignShelf = {
     {
       id: "summit-2",
       name: "The Climb",
-      blurb: "Three laps of the steepest loop on the ladder, deep in powder",
+      blurb: "Three laps of the steepest loop on the ladder, deep in powder and more falling",
       seed: 47,
       mode: "timeTrial",
       laps: 3,
       version: 1,
       digest: "35374391",
-      day: { weather: "high", hour: 12.08 },
+      sky: { weather: { kind: "flurries", snowfall: 0.3 } },
+      day: { weather: "flurries", hour: 12.08 },
       medals: { gold: 388, silver: 414, bronze: 444 },
     },
     {
@@ -293,18 +305,19 @@ const SUMMIT: CampaignShelf = {
     {
       id: "summit-4",
       name: "Whiteout",
-      blurb: "Snow falling hard, and powder over the loop",
+      blurb: "A storm under black cloud, and forty metres to see by",
       seed: 96,
       mode: "race",
       laps: 3,
       version: 1,
       digest: "19975a4f",
-      day: { weather: "snow", hour: 13.77 },
+      sky: { weather: { kind: "storm", snowfall: 0.9 } },
+      day: { weather: "storm", hour: 13.77 },
     },
     {
       id: "summit-5",
       name: "Night Woods",
-      blurb: "Three laps at night, the trees at the edge of the lamp",
+      blurb: "Three laps under the stars, the trees at the edge of the lamp",
       seed: 42,
       mode: "timeTrial",
       laps: 3,

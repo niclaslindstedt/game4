@@ -44,9 +44,8 @@ export type BenchmarkPlan = {
    * and the haze and a row like FOREST would read as free; fair rather than
    * clear, because the dome's cloud is a per-pixel cost every frame pays;
    * and not falling snow or fog, which close the view before the far woods
-   * and would make DISTANCE read as free. The hour is a start: an hour of
-   * sun is ten minutes of riding (`clock.ts`), so thirty seconds moves it by
-   * five minutes. */
+   * and would make DISTANCE read as free. The sun stands at that hour for
+   * the whole run (`clock.ts`). */
   sky: Required<Pick<SkyOverride, "weather" | "hour">>;
   /** Seconds of game each rendered frame advances. A sixtieth divides the
    * engine's step exactly (`TUNING.physicsHz` is 120), so a frame is a whole

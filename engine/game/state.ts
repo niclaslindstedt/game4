@@ -405,6 +405,12 @@ export type GameState = {
    * ordinary snow's, 1 unless the run asked otherwise. Read, never written,
    * during a run, and shared with the field. */
   snowDepth: number;
+  /** THE NEW SNOW, m: what the fall (`snowfall.ts`) has laid since the run
+   * was stood up — 0 under a sky that does not snow, centimetres an hour
+   * under one that does. Written once a step by `step`, shared with the
+   * field, and read through `packedUnder` / `depthUnder` wherever the
+   * surface is. */
+  fresh: number;
   /** THE FIELD: every other rider, in grid order; empty on a solo run. */
   rivals: Rival[];
   /** THE SCORE (`tricks.ts`): kept on every run — the sim reads it — and

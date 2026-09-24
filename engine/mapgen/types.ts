@@ -118,14 +118,21 @@ export interface Level {
   iceAt?(x: number, z: number): number;
 }
 
-/** The skies R19 deals, lightest first. */
-export type WeatherKind = "clear" | "fair" | "high" | "overcast" | "snow" | "fog";
+/** The skies R19 deals, lightest first. Three of them SNOW — a few flakes
+ * out of a sunny sky (`flurries`), a steady fall under a grey lid (`snow`)
+ * and a blizzard under black cloud (`storm`). */
+export type WeatherKind =
+  "clear" | "fair" | "flurries" | "high" | "overcast" | "snow" | "storm" | "fog";
+
+/** The skies that SNOW, each dealt a fall in its own band (R19). */
+export type SnowingKind = Extract<WeatherKind, "flurries" | "snow" | "storm">;
 
 /** The weather a map is ridden under (R19): the word and its numbers. What a
  * sky LOOKS like is the app's; the engine says only what is in the air. */
 export interface Weather {
   kind: WeatherKind;
-  /** How hard it is snowing, 0 (nothing falling) … 1 (a blizzard). */
+  /** How hard it is snowing on the whole, 0 (nothing falling) … 1 (a
+   * blizzard) — the mean the squalls breathe about (`snowAt`). */
   snowfall: number;
   /** How thick the fog lying in the basin is, 0 (none) … 1. */
   fog: number;

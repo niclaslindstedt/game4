@@ -21,10 +21,10 @@ import { nearestTrackPoint, nearestWithin, trackPointAt } from "../mapgen/query.
 import { LEVEL_RULES as R, withinBand, type Band } from "../mapgen/rules.ts";
 import { regionOf, scaleCount } from "../mapgen/regions.ts";
 import { declinationOf } from "../mapgen/sun.ts";
-import { WEATHER_KINDS, sunsetOf, weatherOf } from "../mapgen/weather.ts";
+import { WEATHER_KINDS, snowfallBand, snows, sunsetOf, weatherOf } from "../mapgen/weather.ts";
 import { maxGradeOf, minRadius, minSeparation } from "../mapgen/track.ts";
 import type { Level } from "../mapgen/types.ts";
-import { jumpsOf } from "../mapgen/versions.ts";
+import { generatorTraits, jumpsOf } from "../mapgen/versions.ts";
 import { checkCliffs } from "./cliffs.ts";
 import { selfCrossings } from "./crossings.ts";
 import { checkTrickField } from "./trick-field.ts";
@@ -427,8 +427,8 @@ export function analyzeLevel(level: Level): LevelAnalysis {
     const bad =
       !WEATHER_KINDS.includes(weather.kind) ||
       !withinBand(weather.wind, wind, 1e-6) ||
-      (weather.kind === "snow"
-        ? !withinBand(weather.snowfall, R.weather.snowfall)
+      (snows(weather.kind)
+        ? !withinBand(weather.snowfall, snowfallBand(weather.kind, generatorTraits(level.version)))
         : weather.snowfall !== 0) ||
       (weather.kind === "fog" ? !withinBand(weather.fog, R.weather.fog) : weather.fog !== 0);
     if (bad) {

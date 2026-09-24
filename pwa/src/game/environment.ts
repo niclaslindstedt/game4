@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE AIR: the two lights, the dome and the haze, answering to one
-// `SkyLook` (`sky.ts`) worked out again every frame off the run's own
-// clock — ten minutes of riding is an hour of sun (`clock.ts`), so the
-// shadows swing over a race. The key light is whichever of the sun and the
+// `SkyLook` (`sky.ts`) read every frame — the sun stands at the run's one
+// hour (`clock.ts`), but a sky picked on a card or a lab's cell can change
+// under a live scene. The key light is whichever of the sun and the
 // moon the look names; under a lid it is a glow with no shadow worth the
 // name, and the hemisphere carries the picture.
 //

@@ -86,6 +86,8 @@ export function stepRivals(state: GameState): void {
     const run = rival.run;
     run.t = state.t;
     run.tick = state.tick;
+    // The same new snow under every sled on the map.
+    run.fresh = state.fresh;
     run.countdown = state.countdown;
     run.phase = run.progress.finished
       ? "finished"

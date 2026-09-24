@@ -105,9 +105,7 @@ describe("what the benchmark runs (benchmark-plan.ts)", () => {
 
   it("is the pinned sky, in daylight from the green to the last frame", () => {
     expect(weatherOf(ride.state.level).kind).toBe(BENCHMARK.sky.weather);
-    const from = sunAtRun(ride.state.level, 0).elevation;
-    const to = sunAtRun(ride.state.level, ride.state.t).elevation;
-    expect(Math.min(from, to)).toBeGreaterThan(0.1);
+    expect(sunAtRun(ride.state.level).elevation).toBeGreaterThan(0.1);
   });
 
   it("advances the game by a WHOLE NUMBER of engine steps per frame", () => {

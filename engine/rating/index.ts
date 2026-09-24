@@ -195,12 +195,16 @@ export function skyWeight(weather: Weather): number {
       return 0;
     case "fair":
       return 0.1;
+    case "flurries":
+      return 0.1 + 0.5 * weather.snowfall;
     case "high":
       return 0.2;
     case "overcast":
       return 0.4;
     case "snow":
       return 0.35 + 0.65 * weather.snowfall;
+    case "storm":
+      return 0.5 + 0.5 * weather.snowfall;
     case "fog":
       return 0.3 + 0.7 * weather.fog;
   }

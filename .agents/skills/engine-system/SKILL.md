@@ -30,7 +30,8 @@ system change.
 | What a run is PLAYING BY | `engine/game/defs/modes.ts` (`RunRules`, `RACE`, `raceRules`, `openRules`) → `GameState.rules`. Nothing branches on anything but the rules; `createGame` with no race asked for rides the open rules, so the sim and the tests never notice a mode landing |
 | The field | `engine/game/rivals.ts` — a rival is a whole `GameState` sharing the level, the rules and the RNG by reference, ridden by `sim/bot.ts`; `racePlace`, `fieldOrder`, `raceProgress` are the standings |
 | Standing the sled at a moment | `engine/game/place.ts` — `placeRun(state, moment)`; the `test-scenario` skill |
-| The sun's hour at run time | `engine/game/clock.ts` — `sunHourAt`, `sunAtRun` |
+| Where the sun stands over a run (still, at the map's hour) | `engine/game/clock.ts` — `sunAtRun`, `moonAtRun` |
+| The fall at a moment and the new snow it lays | `engine/game/snowfall.ts` — `snowAt`, `freshRate`; `GameState.fresh` |
 | What a sled CAN do | `engine/game/limits.ts` — read by the physics AND `sim/bot.ts`; never restate a ceiling |
 | The map | `engine/mapgen/` — the `mapgen-improvement` skill |
 | Bot behaviour | `engine/sim/bot.ts` — the `bot-improvement` skill |

@@ -12,13 +12,14 @@
 // and the layer moves with the WIND (`windAt`) — `drift` is how far it has
 // gone, in units of the layer's height. Under a lid the layer is the whole
 // sky: its grey is the look's zenith, broken only by the texture of the
-// deck's underside. Stars and the moon are drawn behind the cloud and
-// dimmed by it.
+// deck's underside. The stars, the Milky Way (`starfield.ts`) and the moon
+// are drawn behind the cloud and dimmed by it.
 
 import * as THREE from "three";
 
 import { SKY_GLSL, type HazeUniforms } from "./haze.ts";
 import type { SkyLook } from "./sky.ts";
+import { STARFIELD_GLSL, turnBasis } from "./starfield.ts";
 
 /** The sun's apparent radius, rad — a touch over the real 0.27° so the disc
  * is more than a pixel on a phone. */
@@ -44,6 +45,9 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
     uCloudShade: { value: new THREE.Color() },
     uDrift: { value: new THREE.Vector2() },
     uStars: { value: 0 },
+    uGalaxy: { value: 0 },
+    uTurn: { value: new THREE.Matrix3() },
+    uStarTime: { value: 0 },
     uMoonDir: { value: new THREE.Vector3(0, -1, 0) },
     uMoonLit: { value: 0 },
     uNight: { value: 0 },
@@ -67,6 +71,9 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
       uniform vec3 uCloudShade;
       uniform vec2 uDrift;
       uniform float uStars;
+      uniform float uGalaxy;
+      uniform mat3 uTurn;
+      uniform float uStarTime;
       uniform vec3 uMoonDir;
       uniform float uMoonLit;
       uniform float uNight;
@@ -93,11 +100,7 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
         }
         return s;
       }
-      float starHash(vec3 p) {
-        p = fract(p * vec3(0.1031, 0.1030, 0.0973));
-        p += dot(p, p.yzx + 33.33);
-        return fract((p.x + p.y) * p.z);
-      }
+      ${STARFIELD_GLSL}
 
       void main() {
         vec3 d = normalize(vDir);
@@ -136,18 +139,13 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
         }
         float clearSky = 1.0 - hide;
 
-        // THE STARS, behind everything: one in a few hundred cells of the
-        // dome, a few brighter than the rest, gone into the horizon's air.
-        if (uStars > 0.001 && d.y > 0.0) {
-          vec3 q = d * 380.0;
-          vec3 cell = floor(q);
-          float h = starHash(cell);
-          if (h > 0.9965) {
-            vec3 f = fract(q) - 0.5;
-            float mag = pow((h - 0.9965) / 0.0035, 3.0);
-            float spot = smoothstep(0.42, 0.0, length(f));
-            c += vec3(0.85, 0.9, 1.0) * spot * (0.25 + 2.2 * mag) * uStars * smoothstep(0.0, 0.2, up) * clearSky;
-          }
+        // THE NIGHT SKY, behind everything: the stars and the Milky Way on
+        // the sphere the map's hour has turned (starfield.ts), washed out
+        // round the moon and taken by the cloud in front.
+        if (uStars > 0.001 || uGalaxy > 0.001) {
+          float toMoon = acos(clamp(dot(d, uMoonDir), -1.0, 1.0));
+          float glare = exp(-toMoon * toMoon * 7.0) * uMoonLit * step(-0.02, uMoonDir.y);
+          c += nightSky(uTurn * d, d, d.y, glare, uStars, uGalaxy, uStarTime) * clearSky;
         }
 
         // THE SUN'S DISC.
@@ -180,6 +178,7 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
     depthWrite: false,
     depthTest: true,
   });
+  const basis: number[] = [];
   const mesh = new THREE.Mesh(geometry, material);
   mesh.frustumCulled = false;
   mesh.renderOrder = -10;
@@ -195,6 +194,12 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
       own.uCloudShade.value.setRGB(...look.cloud.shade);
       own.uDrift.value.set(driftX, driftZ);
       own.uStars.value = look.stars;
+      own.uGalaxy.value = look.galaxy;
+      const m = turnBasis(look.turn, basis);
+      own.uTurn.value.set(m[0], m[1], m[2], m[3], m[4], m[5], m[6], m[7], m[8]);
+      // The twinkle's clock, wrapped so a float counting all night keeps
+      // the precision a twinkle needs. Presentation only.
+      own.uStarTime.value = (performance.now() / 1000) % 3600;
       own.uMoonDir.value.set(look.moon.x, look.moon.y, look.moon.z);
       own.uMoonLit.value = look.moonLit;
       own.uNight.value = look.night;

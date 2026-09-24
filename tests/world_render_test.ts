@@ -82,7 +82,7 @@ describe("the sky", () => {
 
   it("reads the level's own sun off the run's clock", () => {
     const game = createGame({ seed: 38 });
-    const look = skyLookAt(game.level, 0);
+    const look = skyLookAt(game.level);
     expect(look.elevation).toBeGreaterThan(0);
     expect(Math.hypot(look.sun.x, look.sun.y, look.sun.z)).toBeCloseTo(1, 6);
   });

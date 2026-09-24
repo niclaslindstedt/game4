@@ -117,6 +117,8 @@ export {
   gripAt,
   onIce,
   restSinkOf,
+  packedUnder,
+  depthUnder,
   type Grip,
 } from "./game/snow.ts";
 export { powerShare, driveForce, maxDriveForce, rpmAtTop } from "./game/traction.ts";
@@ -154,8 +156,9 @@ export {
 } from "./game/tricks.ts";
 export { poseInput, poseOf, stepStrokes } from "./game/strokes.ts";
 export { placeRun, type RunMoment } from "./game/place.ts";
-export { SUN_SECONDS_PER_HOUR, moonAgeOn, moonAtRun, sunAtRun, sunHourAt } from "./game/clock.ts";
+export { moonAgeOn, moonAtRun, sunAtRun } from "./game/clock.ts";
 export { windAt, type Wind } from "./game/wind.ts";
+export { freshRate, freshStep, snowAt, visibilityIn, type Fall } from "./game/snowfall.ts";
 export {
   brakeDecel,
   cornerGrip,

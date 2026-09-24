@@ -31,6 +31,8 @@ export {
   WEATHER_KINDS,
   dealWeather,
   hasLid,
+  snowfallBand,
+  snows,
   sunsetOf,
   weatherFor,
   weatherOf,

@@ -241,6 +241,8 @@ export function createWorldRenderer(
   const stamps: Stamp[] = [];
   let lastTick = -1;
   let lastState: GameState | null = null;
+  /** The new snow the trail maps have been filled by, m (`trail.fill`). */
+  let filled = 0;
   let override: LensPose | null = null;
   /** THE DEATH CAM: its state, whether the app lets it take the lens, and
    * the time rate it last handed the app (`timeRate`). */
@@ -483,6 +485,7 @@ export function createWorldRenderer(
       const fresh = state !== lastState || state.tick < lastTick;
       if (fresh) {
         // A new run on the same map: the trails and the spray start clean.
+        filled = state.fresh;
         if (lastState !== null) {
           trail.clear(gl);
           spray.clear();
@@ -595,6 +598,12 @@ export function createWorldRenderer(
         { x: fine.uFineOrigin.value.x, z: fine.uFineOrigin.value.y, span: fine.uFineSpan.value },
       );
       trail.update(gl, stamps, sled.x, sled.z);
+      // THE NEW SNOW: it settles into every trail and buries the groomer.
+      if (state.fresh > filled) {
+        trail.fill(gl, state.fresh - filled);
+        filled = state.fresh;
+      }
+      env.haze.uFresh.value = state.fresh;
       const trailed = performance.now();
       terrain.follow(lens.camera.position.x, lens.camera.position.z);
       const sky = skyLevel ?? level;

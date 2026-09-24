@@ -262,12 +262,12 @@ export function smooth(t: number): number {
 }
 
 /**
- * HOW MUCH OF THE DAY IS LEFT for a bird at time `t` on this map, 0..1:
- * nothing below civil twilight, everything with the sun a few degrees up.
- * Read off the same sun the sky is lit by (`sunAtRun`).
+ * HOW MUCH DAY THERE IS for a bird on this map, 0..1: nothing below civil
+ * twilight, everything with the sun a few degrees up. Read off the same sun
+ * the sky is lit by (`sunAtRun`).
  */
-export function activityAt(level: Pick<Level, "sun">, t: number): number {
-  const sun = sunAtRun(level, t);
+export function activityAt(level: Pick<Level, "sun">): number {
+  const sun = sunAtRun(level);
   return smooth((sun.elevation - NIGHT_BELOW) / (DAY_ABOVE - NIGHT_BELOW));
 }
 

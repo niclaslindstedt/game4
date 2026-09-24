@@ -20,8 +20,8 @@
 //           high the sun climbs and how long the shadows lie.
 //   TIME    morning, day, evening or night — a WORD, whose hour is the
 //           ENGINE's answer on that date at that map's latitude
-//           (`hourOfTime`), never hours written down here. The clock runs
-//           on from there at an hour every ten minutes.
+//           (`hourOfTime`), never hours written down here. The sun
+//           stands there for the whole ride.
 //   SNOW    thin, medium, thick or very thick (`SNOW_STOPS`), read as the
 //           sink a sled standing in it takes.
 //
@@ -52,7 +52,7 @@ import { STRINGS } from "./strings.ts";
  * seed the stream takes, and the row clamps what it is typed. */
 export const SEED_RANGE = { min: 1, max: 999_999 } as const;
 
-/** The WEATHER row's stops: the map's own sky, then R19's six. */
+/** The WEATHER row's stops: the map's own sky, then R19's eight. */
 const WEATHER_STOPS: { id: "dealt" | WeatherKind; label: string }[] = [
   { id: "dealt", label: STRINGS.weatherDealt },
   ...WEATHER_KINDS.map((kind) => ({ id: kind, label: STRINGS.weatherNames[kind] })),

@@ -96,6 +96,10 @@ export type GeneratorTraits = {
    * other, no clumps, no lanes, the woods at their whole density
    * (`engine/mapgen/forest.ts`). */
   scatteredForest?: boolean;
+  /** LEGACY (v1): R19 as it dealt then — `weather.legacy`'s odds (a lid or
+   * a fall a third of the days, no flurries and no storm) and one band for
+   * every fall (`engine/mapgen/weather.ts`). */
+  oldWeather?: boolean;
 };
 
 /** Every version the generator can still build, oldest first.
@@ -108,7 +112,8 @@ export const GENERATOR_VERSIONS: readonly GeneratorTraits[] = [
     note:
       "The generator as the campaign's pinned maps were curated on it (R1–R21). " +
       "v2 filled the country with rollers and cliffs and doubled the kickers; v3 grew " +
-      "the woods in clumps with lanes cut through them (R14).",
+      "the woods in clumps with lanes cut through them (R14); v4 dealt the bright skies " +
+      "most days and added flurries and the storm (R19).",
     fewerJumps: {
       rollers: false,
       cliffs: false,
@@ -117,15 +122,18 @@ export const GENERATOR_VERSIONS: readonly GeneratorTraits[] = [
       offCount: { min: 5, max: 10 },
     },
     scatteredForest: true,
+    oldWeather: true,
   },
-  // Version 2 (air everywhere: the rollers, the cliffs, more kickers) was
-  // current until version 3 and no campaign map named it, so its row went
-  // in the ground with it; everything it built, version 3 builds too.
+  // Versions 2 (air everywhere: the rollers, the cliffs, more kickers) and
+  // 3 (the woods in clumps with lanes) were current in turn and no campaign
+  // map named either, so their rows went in the ground; everything they
+  // built but the sky, version 4 builds too.
   {
-    version: 3,
+    version: 4,
     note:
       "Air everywhere — R3's rollers, R22's cliffs, more kickers on the loop and off it " +
-      "(R4, R9) — and R14's woods in clumps, thinner between, with lanes cut through them.",
+      "(R4, R9) — R14's woods in clumps with lanes cut through them, and R19's skies " +
+      "bright most days, with flurries out of a sunny sky and the storm under black cloud.",
   },
 ];
 

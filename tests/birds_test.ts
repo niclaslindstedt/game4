@@ -240,8 +240,8 @@ describe("the birds", () => {
     const level = levelFor(LEVEL_SEEDS[0]);
     const night = { ...level, sun: { ...level.sun, hour: 0 } };
     const noon = { ...level, sun: { ...level.sun, hour: 12 } };
-    expect(activityAt(night, 0)).toBe(0);
-    expect(activityAt(noon, 0)).toBeGreaterThan(0.9);
+    expect(activityAt(night)).toBe(0);
+    expect(activityAt(noon)).toBeGreaterThan(0.9);
   });
 
   it("flushes a covey when a sled comes close, and not again until it has settled", () => {

@@ -56,6 +56,23 @@ export function powderFloor(packed: number, scale = 1, depth = 1): number {
   return S.powderSink * depth * Math.max(1, scale) * (1 - packed) + S.packedSink * packed;
 }
 
+/** THE NEW SNOW over the groomer (`GameState.fresh`, `snowfall.ts`): the
+ * share of a surface `packed` 0..1 that still rides as packed under `fresh`
+ * m of new fall — the whole of it under none, none of it once
+ * `snow.freshBury` has fallen. Every probe, the chassis, a stood sled and a
+ * thrown body read the surface through this, so the sink, the drag, the
+ * grip and the hiss (`SledState.packed`) all feel the same layer. */
+export function packedUnder(packed: number, fresh: number): number {
+  return fresh > 0 ? packed * Math.max(0, 1 - fresh / S.freshBury) : packed;
+}
+
+/** The run's snow dial with `fresh` m of new snow laid over the powder: a
+ * dial is a multiple of `snow.powderSink`, and the new snow deepens it by
+ * its own depth. */
+export function depthUnder(depth: number, fresh: number): number {
+  return depth + Math.max(0, fresh) / S.powderSink;
+}
+
 /** How deep a sled at rest sinks into untouched powder at a run's snow
  * dial, m — the figure the start card reads the dial back as. */
 export function restSinkOf(depth: number): number {

@@ -24,6 +24,12 @@
 // as deep as the deeper of the two, and a berm never fills a trough. The
 // red channel is the depth over `TRAIL.maxDepth`, the green the berm over
 // `TRAIL.maxBerm`; the terrain decodes both through `trailAt` (below).
+//
+// NEW SNOW FILLS THEM (`fill`): as a fall lays its centimetres over the run
+// (`GameState.fresh`), a pass takes as much off every trough and every berm
+// in both maps — whole steps of the byte encoding at a time, the remainder
+// carried — so an hour's storm leaves the morning's trails as soft dents,
+// and the trail cut a minute ago crisp beside them.
 
 import * as THREE from "three";
 
@@ -95,6 +101,9 @@ export type TrailMap = {
   uniforms: TrailUniforms;
   /** Draw these stamps; follow the player at (px, pz). */
   update(renderer: THREE.WebGLRenderer, stamps: readonly Stamp[], px: number, pz: number): void;
+  /** Let `metres` of new snow settle into every trail: troughs shallower,
+   * berms lower, down to the untouched snow and no further. */
+  fill(renderer: THREE.WebGLRenderer, metres: number): void;
   /** Wipe every trail (a new run). */
   clear(renderer: THREE.WebGLRenderer): void;
   dispose(): void;
@@ -257,6 +266,35 @@ export function createTrailMap(mapSize: number, options: TrailOptions): TrailMap
   const copyScene = new THREE.Scene();
   copyScene.add(copyMesh);
 
+  // THE FILL PASS: the whole target less a flat step, by reverse
+  // subtraction — the byte clamps at zero, so a trail fills to the snow
+  // round it and never past.
+  const fillMaterial = new THREE.ShaderMaterial({
+    uniforms: { uStep: { value: new THREE.Vector2() } },
+    vertexShader: /* glsl */ `
+      void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
+    `,
+    fragmentShader: /* glsl */ `
+      uniform vec2 uStep;
+      void main() { gl_FragColor = vec4(uStep, 0.0, 0.0); }
+    `,
+    blending: THREE.CustomBlending,
+    blendEquation: THREE.ReverseSubtractEquation,
+    blendEquationAlpha: THREE.ReverseSubtractEquation,
+    blendSrc: THREE.OneFactor,
+    blendDst: THREE.OneFactor,
+    depthTest: false,
+    depthWrite: false,
+  });
+  const fillMesh = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fillMaterial);
+  fillMesh.frustumCulled = false;
+  const fillScene = new THREE.Scene();
+  fillScene.add(fillMesh);
+  /** One byte of the depth channel, m: the smallest fill a pass can take. */
+  const depthStep = TRAIL.maxDepth / 255;
+  /** New snow fallen and not yet taken off the maps, m. */
+  let pending = 0;
+
   const clearColour = new THREE.Color();
 
   function withTarget(
@@ -345,7 +383,23 @@ export function createTrailMap(mapSize: number, options: TrailOptions): TrailMap
         drawStamps(renderer, fine, o.x, o.y, span, fineTexel * 0.75, n);
       }
     },
+    fill(renderer, metres) {
+      pending += Math.max(0, metres);
+      const steps = Math.floor(pending / depthStep);
+      if (steps < 1) return;
+      pending -= steps * depthStep;
+      const metresNow = steps * depthStep;
+      // The berm's channel is finer: the same metres are more of its bytes.
+      const berm = Math.min(255, Math.round((metresNow / TRAIL.maxBerm) * 255));
+      (fillMaterial.uniforms.uStep.value as THREE.Vector2).set(
+        Math.min(255, steps) / 255,
+        berm / 255,
+      );
+      withTarget(renderer, coarse, () => renderer.render(fillScene, lens));
+      withTarget(renderer, fine, () => renderer.render(fillScene, lens));
+    },
     clear(renderer) {
+      pending = 0;
       wipe(renderer, coarse);
       wipe(renderer, fine);
       wipe(renderer, spare);
@@ -361,6 +415,8 @@ export function createTrailMap(mapSize: number, options: TrailOptions): TrailMap
       stampMaterial.dispose();
       copyMaterial.dispose();
       copyMesh.geometry.dispose();
+      fillMaterial.dispose();
+      fillMesh.geometry.dispose();
     },
   };
 }
