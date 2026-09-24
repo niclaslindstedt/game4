@@ -70,6 +70,8 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 | `make sled`             | Every machine and its rider, built by the game's own builder, on labelled contact sheets: the catalog by view, the liveries, the rider's poses, a landing (`SLED=ibex`, `ARGS=--sheet=poses`) |
 | `make sky`              | Every weather against every three hours, day and night, on one map from one place, as one contact sheet (`SEED=38`, `ARGS=--hours=`)                                                          |
 | `make birds`            | Every bird and every animal of the wildlife side by side, three poses each, as one contact sheet (`ARGS=--rows=raven,reindeer`)                                                               |
+| `make trees`            | Every kind of tree and each of its ten variants side by side, as one contact sheet (`REGION=alpine`, `ARGS=--sketch`)                                                                         |
+| `make forest`           | A map's woods measured and drawn from above: the kinds, the clumps, the gaps, how far a rider sees in (`SEED=38 ARGS=--compare`, `COUNT=12`)                                                  |
 | `make audition`         | The audio review page, every sound and bed on a button; `ARGS=--meter` prints the levels                                                                                                      |
 | `make screenshots`      | Drive the built app headlessly and photograph it at the reference viewports (`make build` first)                                                                                              |
 | `make profile`          | What one frame costs the renderer: draw calls, triangles, binds (`make build` first; `ARGS="--video all"` meters every picture preset)                                                        |
@@ -86,7 +88,7 @@ Open the printed URL. `?seed=38` on the URL opens another map.
 | `make changelog`        | Preview the CHANGELOG section a release would write (`VERSION=X.Y.Z`)                                                                                                                         |
 | `make bump`             | Print the semver bump the release would derive from the changeset fragments                                                                                                                   |
 
-The browser-driven labs (`screenshots`, `profile`, `world`, `sky`, `sled`, `birds`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
+The browser-driven labs (`screenshots`, `profile`, `world`, `sky`, `sled`, `birds`, `trees`, `audition ARGS=--meter`) need `npm i --no-save playwright-core` and a Chromium; `CHROMIUM_PATH` points at one.
 
 ## Controls
 

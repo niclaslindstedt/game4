@@ -145,7 +145,16 @@ function attemptLevel(
   const crust = layCrust(sub, region, ground);
   if (crust || ice) foldSurface(packed, dist, region, crust, ice);
 
-  const trees = growForest(rng, plan, ground, trackOf(loop), kickers, ice, cliffs);
+  const trees = growForest(
+    rng,
+    plan,
+    ground,
+    trackOf(loop),
+    kickers,
+    ice,
+    cliffs,
+    generatorTraits(version),
+  );
   const day = dealSun(rng, region.sun);
   const { weather, hour } = dealWeather(sub, day);
   const sun = { ...day, hour };

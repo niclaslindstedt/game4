@@ -33,6 +33,7 @@ export {
   DEFAULT_REGION,
   REGIONS,
   REGION_IDS,
+  TREE_KINDS,
   isRegionId,
   regionOf,
   regionRow,

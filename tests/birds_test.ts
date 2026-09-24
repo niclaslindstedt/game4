@@ -112,13 +112,15 @@ describe("the wildlife by region (R21)", () => {
     return hit;
   };
 
-  it("names at least one region on every row, and the boreal on every one", () => {
-    // The boreal forest is the roster as it was before there were regions:
-    // every row lives there, so a boreal map's wildlife did not move.
+  it("names at least one region on every row, and the boreal on all but the open country's own", () => {
+    // The boreal forest carries every row but the three that live only
+    // where there is no wood: the arctic fox, the chamois and the musk ox.
+    const open = new Set(["arcticfox", "chamois", "muskox"]);
     for (const row of [...BIRDS, ...BEASTS]) {
       expect(row.regions.length, row.id).toBeGreaterThan(0);
       for (const r of row.regions) expect(REGION_IDS, `${row.id} → ${r}`).toContain(r);
-      expect(row.regions, row.id).toContain("boreal");
+      if (open.has(row.id)) expect(row.regions, row.id).not.toContain("boreal");
+      else expect(row.regions, row.id).toContain("boreal");
     }
     // What lives in the spruce is not dealt where there is no spruce wood.
     for (const id of ["crossbill", "capercaillie"] as const) {

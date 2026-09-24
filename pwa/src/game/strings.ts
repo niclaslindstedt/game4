@@ -332,7 +332,8 @@ export const STRINGS = {
   optTrailsHint:
     "How finely the snow keeps every furrow ridden, and how far round the sled. Off leaves the snow untouched.",
   optForest: "FOREST",
-  optForestHint: "How far out trees are drawn in full, and how thick the far woods stand.",
+  optForestHint:
+    "How far out trees are drawn in full, how thick the far woods stand, and how many shapes of each kind of tree are drawn.",
   optShadows: "SHADOWS",
   optShadowsHint:
     "The sun's shadows: SLEDS casts the machines and their riders alone; MEDIUM adds every tree's; HIGH draws every rider's shadow sharp in a map of his own.",

@@ -36,6 +36,8 @@
     "sled": "node scripts/sled-preview.mjs",
     "sky": "node scripts/sky-preview.mjs",
     "birds": "node scripts/birds-preview.mjs",
+    "trees": "node scripts/trees-preview.mjs",
+    "forest": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/forest-lab.mjs",
     "tauri": "npm --prefix tauri run start --",
     "tauri:bundle": "npm --prefix tauri run bundle",
     "tauri:test": "npm --prefix tauri test",

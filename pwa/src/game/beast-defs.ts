@@ -11,7 +11,7 @@
 // hare has run through nothing, which is why no animal is ever placed on
 // the loop — and nothing here draws from the engine's stream.
 //
-// WHY THESE FIVE, and why in this order: it is the rarity ladder
+// WHY THESE, and why in this order: it is the rarity ladder
 // (`rarity.ts`) read top to bottom. The MOUNTAIN HARE, white for the winter,
 // sat in its form under a wood's edge and loping across a meadow — the one
 // animal every map has. The RED FOX, trotting a meadow in the dead-straight
@@ -22,6 +22,17 @@
 // browsing, that walks off unhurried; winter bulls have shed, so none
 // carries antlers. And the LYNX, which most riders will never see: a grey
 // cat crossing a meadow on big soft feet, gone at the first sound.
+//
+// And the rest of a northern winter, each where it really is: the RED
+// SQUIRREL, down out of the spruce to cross a clearing in bounds, its tail
+// up over its back; ROE DEER, a few together at a wood's edge, grey-brown
+// in their winter coats with the white rump that flashes as they go; a
+// WOLF PACK in single file across a meadow, stepping in each other's
+// prints, the rarest thing on a boreal map; the WOLVERINE, dark and low,
+// loping its heavy lope over the high snow; the ARCTIC FOX, white on white
+// on the tundra and the alpine; MUSK OXEN, a dark shaggy knot on the open
+// plateau that stands its ground longer than anything; and CHAMOIS on the
+// alpine's steep faces, dark in winter, gone up the slope at a bound.
 //
 // EVERY ROW NAMES ITS REGIONS (R21, `regions`), and the placer lays only the
 // rows of the map's own. The hare and the fox are everywhere; the reindeer
@@ -36,7 +47,19 @@ import type { RegionId } from "@engine";
 import type { Band } from "./bird-defs.ts";
 import { rarityOf, type Rarity } from "./rarity.ts";
 
-export type BeastId = "hare" | "fox" | "reindeer" | "moose" | "lynx";
+export type BeastId =
+  | "hare"
+  | "squirrel"
+  | "fox"
+  | "arcticfox"
+  | "roedeer"
+  | "reindeer"
+  | "chamois"
+  | "muskox"
+  | "moose"
+  | "wolverine"
+  | "lynx"
+  | "wolf";
 
 /** How the legs go. A BOUND is the hare's: both hind feet together, both
  * fore feet together. A TROT puts diagonal pairs down together — the fox's.
@@ -124,6 +147,29 @@ export const BEASTS: readonly BeastSpec[] = [
     perKm: 1.3,
   },
   {
+    id: "squirrel",
+    name: "Red squirrel",
+    regions: ["boreal", "birch"],
+    length: 0.22,
+    height: 0.12,
+    gait: "bound",
+    stride: 0.5,
+    speed: 1.6,
+    fleeSpeed: 5,
+    herd: { min: 1, max: 1 },
+    spread: 0,
+    home: "edge",
+    round: { min: 10, max: 25 },
+    cycle: { min: 30, max: 70 },
+    moveShare: 0.45,
+    grazes: true,
+    wary: 18,
+    flee: 20,
+    sink: 0.01,
+    prints: { size: 0.035, depth: 0.03, gauge: 0.04, pattern: "bound" },
+    perKm: 0.9,
+  },
+  {
     id: "fox",
     name: "Red fox",
     regions: ["boreal", "alpine", "tundra", "birch"],
@@ -147,6 +193,52 @@ export const BEASTS: readonly BeastSpec[] = [
     perKm: 0.55,
   },
   {
+    id: "arcticfox",
+    name: "Arctic fox",
+    regions: ["alpine", "tundra"],
+    length: 0.6,
+    height: 0.3,
+    gait: "trot",
+    stride: 0.7,
+    speed: 1.6,
+    fleeSpeed: 8,
+    herd: { min: 1, max: 2 },
+    spread: 4,
+    home: "meadow",
+    round: { min: 40, max: 90 },
+    cycle: { min: 50, max: 110 },
+    moveShare: 0.7,
+    grazes: true,
+    wary: 40,
+    flee: 55,
+    sink: 0.04,
+    prints: { size: 0.05, depth: 0.06, gauge: 0.02, pattern: "line" },
+    perKm: 0.6,
+  },
+  {
+    id: "roedeer",
+    name: "Roe deer",
+    regions: ["boreal", "birch"],
+    length: 1.1,
+    height: 0.72,
+    gait: "walk",
+    stride: 1.1,
+    speed: 0.8,
+    fleeSpeed: 9,
+    herd: { min: 2, max: 5 },
+    spread: 3,
+    home: "edge",
+    round: { min: 12, max: 30 },
+    cycle: { min: 60, max: 120 },
+    moveShare: 0.3,
+    grazes: true,
+    wary: 75,
+    flee: 80,
+    sink: 0.15,
+    prints: { size: 0.05, depth: 0.14, gauge: 0.09, pattern: "pairs" },
+    perKm: 0.35,
+  },
+  {
     id: "reindeer",
     name: "Reindeer",
     regions: ["boreal", "tundra", "birch"],
@@ -168,6 +260,52 @@ export const BEASTS: readonly BeastSpec[] = [
     sink: 0.12,
     prints: { size: 0.11, depth: 0.16, gauge: 0.12, pattern: "pairs" },
     perKm: 0.28,
+  },
+  {
+    id: "chamois",
+    name: "Chamois",
+    regions: ["alpine"],
+    length: 1.1,
+    height: 0.78,
+    gait: "walk",
+    stride: 1,
+    speed: 0.7,
+    fleeSpeed: 8,
+    herd: { min: 3, max: 8 },
+    spread: 3,
+    home: "edge",
+    round: { min: 12, max: 28 },
+    cycle: { min: 60, max: 120 },
+    moveShare: 0.3,
+    grazes: true,
+    wary: 90,
+    flee: 70,
+    sink: 0.1,
+    prints: { size: 0.06, depth: 0.1, gauge: 0.09, pattern: "pairs" },
+    perKm: 0.4,
+  },
+  {
+    id: "muskox",
+    name: "Musk ox",
+    regions: ["tundra"],
+    length: 2.2,
+    height: 1.4,
+    gait: "walk",
+    stride: 1.4,
+    speed: 0.45,
+    fleeSpeed: 5,
+    herd: { min: 5, max: 12 },
+    spread: 3,
+    home: "meadow",
+    round: { min: 8, max: 20 },
+    cycle: { min: 120, max: 240 },
+    moveShare: 0.2,
+    grazes: true,
+    wary: 45,
+    flee: 35,
+    sink: 0.2,
+    prints: { size: 0.13, depth: 0.2, gauge: 0.16, pattern: "pairs" },
+    perKm: 0.2,
   },
   {
     id: "moose",
@@ -214,6 +352,53 @@ export const BEASTS: readonly BeastSpec[] = [
     sink: 0.05,
     prints: { size: 0.09, depth: 0.07, gauge: 0.03, pattern: "line" },
     perKm: 0.05,
+  },
+  {
+    id: "wolverine",
+    name: "Wolverine",
+    regions: ["boreal", "alpine", "tundra"],
+    length: 0.85,
+    height: 0.42,
+    gait: "bound",
+    stride: 1.2,
+    speed: 1.6,
+    fleeSpeed: 7,
+    herd: { min: 1, max: 1 },
+    spread: 0,
+    home: "meadow",
+    round: { min: 60, max: 130 },
+    cycle: { min: 90, max: 200 },
+    moveShare: 0.7,
+    grazes: false,
+    wary: 55,
+    flee: 70,
+    sink: 0.04,
+    prints: { size: 0.1, depth: 0.06, gauge: 0.12, pattern: "bound" },
+    perKm: 0.04,
+  },
+  {
+    id: "wolf",
+    name: "Grey wolf",
+    regions: ["boreal", "tundra"],
+    length: 1.2,
+    height: 0.8,
+    gait: "trot",
+    stride: 1.4,
+    speed: 1.7,
+    fleeSpeed: 10,
+    herd: { min: 3, max: 6 },
+    // Single file: the pack steps in the leader's prints.
+    spread: 2,
+    home: "meadow",
+    round: { min: 60, max: 140 },
+    cycle: { min: 120, max: 240 },
+    moveShare: 0.7,
+    grazes: false,
+    wary: 110,
+    flee: 110,
+    sink: 0.08,
+    prints: { size: 0.11, depth: 0.1, gauge: 0.03, pattern: "line" },
+    perKm: 0.03,
   },
 ];
 

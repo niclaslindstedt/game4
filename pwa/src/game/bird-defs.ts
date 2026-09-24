@@ -31,6 +31,15 @@
 // the start of the thaw — the one thing in this sky that says which way
 // the year is going.
 //
+// Four more make the wood less empty. The BLACK GROUSE, the capercaillie's
+// smaller cousin with the lyre tail, sits in the birch tops at a wood's edge
+// and bursts off the snow in a whirr like the rest of the grouse. The GREAT
+// GREY OWL hunts the edge of a meadow in daylight, low and slow on its
+// huge round wings from one perch to the next. The BLACK WOODPECKER, crow-
+// sized and black with a red cap, bounds between the pines. And SNOW
+// BUNTINGS, a whirl of white and black over the open snow, put up by a
+// sled in a flock that flickers off and settles again further on.
+//
 // EVERY ROW NAMES ITS REGIONS (R21, `regions`), and the placer lays only the
 // rows of the map's own (`regionOf`). The boreal forest carries the whole
 // roster; the treeless high country keeps the raven, the ptarmigan and the
@@ -47,7 +56,17 @@ import { rarityOf } from "./rarity.ts";
 
 /** Every bird in the roster. */
 export type BirdId =
-  "raven" | "ptarmigan" | "capercaillie" | "crossbill" | "eagle" | "swan" | "goose";
+  | "raven"
+  | "ptarmigan"
+  | "blackgrouse"
+  | "capercaillie"
+  | "crossbill"
+  | "bunting"
+  | "woodpecker"
+  | "owl"
+  | "eagle"
+  | "swan"
+  | "goose";
 
 export type Band = { readonly min: number; readonly max: number };
 
@@ -187,6 +206,30 @@ export const BIRDS: readonly BirdSpec[] = [
     perKm: 1.4,
   },
   {
+    id: "blackgrouse",
+    name: "Black grouse",
+    regions: ["boreal", "birch"],
+    span: 0.8,
+    length: 0.55,
+    neck: 0.3,
+    wing: { chord: 0.21, taper: 0.6, sweep: 0.06, wrist: 0.5 },
+    beatHz: 8,
+    stroke: 0.85,
+    glide: 0.4,
+    dihedral: -0.05,
+    speed: 14,
+    flock: { min: 2, max: 6 },
+    formation: "loose",
+    altitude: { min: 3, max: 12 },
+    beat: { min: 50, max: 100 },
+    home: "tree",
+    roost: 4,
+    cycle: { min: 240, max: 480 },
+    airShare: 0.05,
+    flushes: true,
+    perKm: 0.45,
+  },
+  {
     id: "capercaillie",
     name: "Capercaillie",
     regions: ["boreal", "birch"],
@@ -235,6 +278,82 @@ export const BIRDS: readonly BirdSpec[] = [
     airShare: 0.3,
     flushes: false,
     perKm: 1.6,
+  },
+  {
+    id: "bunting",
+    name: "Snow bunting",
+    regions: ["boreal", "alpine", "tundra"],
+    span: 0.33,
+    length: 0.17,
+    neck: 0.3,
+    wing: { chord: 0.17, taper: 0.45, sweep: 0.18, wrist: 0.42 },
+    beatHz: 15,
+    stroke: 1,
+    glide: 0.2,
+    dihedral: 0.02,
+    speed: 10,
+    flock: { min: 12, max: 30 },
+    formation: "loose",
+    // A whirl low over the open snow.
+    altitude: { min: 1.5, max: 6 },
+    beat: { min: 30, max: 70 },
+    home: "snow",
+    roost: 6,
+    cycle: { min: 60, max: 150 },
+    airShare: 0.2,
+    flushes: true,
+    perKm: 0.7,
+  },
+  {
+    id: "woodpecker",
+    name: "Black woodpecker",
+    regions: ["boreal"],
+    span: 0.7,
+    length: 0.46,
+    neck: 0.32,
+    wing: { chord: 0.2, taper: 0.55, sweep: 0.08, wrist: 0.46 },
+    beatHz: 6,
+    stroke: 0.9,
+    // The bounding flight: a burst of beats, wings shut, a burst.
+    glide: 0.45,
+    dihedral: 0,
+    speed: 11,
+    flock: { min: 1, max: 1 },
+    formation: "loose",
+    altitude: { min: 8, max: 20 },
+    beat: { min: 40, max: 110 },
+    home: "tree",
+    roost: 1,
+    cycle: { min: 90, max: 200 },
+    airShare: 0.25,
+    flushes: false,
+    perKm: 0.3,
+  },
+  {
+    id: "owl",
+    name: "Great grey owl",
+    regions: ["boreal", "birch"],
+    span: 1.45,
+    length: 0.68,
+    // A big round head and next to no neck.
+    neck: 0.18,
+    wing: { chord: 0.25, taper: 0.72, sweep: 0.03, wrist: 0.5 },
+    beatHz: 2.4,
+    stroke: 0.6,
+    glide: 0.55,
+    dihedral: 0.03,
+    speed: 7,
+    flock: { min: 1, max: 1 },
+    formation: "loose",
+    // Low over a meadow's edge, perch to perch.
+    altitude: { min: 3, max: 9 },
+    beat: { min: 30, max: 70 },
+    home: "tree",
+    roost: 1,
+    cycle: { min: 200, max: 400 },
+    airShare: 0.2,
+    flushes: false,
+    perKm: 0.08,
   },
   {
     id: "eagle",

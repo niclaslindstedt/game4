@@ -1,6 +1,6 @@
 ---
 name: nature
-description: "Use when working on the NATURE the race runs through — the snow-loaded conifers (where the generator stands them under R14, their height and crown, the meadows and clearings between the woods, the tree line up the rim) and how `pwa/src/game/forest.ts` draws them (two shapes, the white-over-green banding, two bands of distance and a shadow-only caster set, the woods carried to the rim by the terrain's forest tint); the country as a LANDSCAPE (the mountain flanks as the horizon, the bare high snow, the hills and bowls as they read from the saddle); and the ground as a mesh (`terrain.ts`'s clipmap reaching past the rim); and the WILDLIFE — the birds over the woods (ravens, crossbills, the eagle, the ptarmigan and capercaillie a sled flushes, the skeins crossing in March) and the animals in the snow (hares, foxes, reindeer, a moose, a lynx) with their rarity ladder, their rounds, their fright and the prints they leave in the trail map, all presentation, all dealt off the map's seed on generators of their own. There are no biomes and no rocks in this game. Owns the look-first loop for all of it: `make world`'s forest, vista, herd, birds and prints views, `make birds`' roster sheet, `make level`'s plan, `make profile`."
+description: "Use when working on the NATURE the race runs through — the snow-loaded conifers (where the generator stands them under R14, their height and crown, the meadows and clearings between the woods, the tree line up the rim) and the CLUMPS and LANES the woods grow in (so there is always a way through and a rider sees in), the five KINDS (spruce, fir, pine, larch, birch) and each kind's ten VARIANTS (`tree-variants.ts`, built by `tree-shapes.ts`), and how `pwa/src/game/forest.ts` draws them (the white-over-green banding, two bands of distance and a shadow-only caster set, the woods carried to the rim by the terrain's forest tint); the country as a LANDSCAPE (the mountain flanks as the horizon, the bare high snow, the hills and bowls as they read from the saddle); and the ground as a mesh (`terrain.ts`'s clipmap reaching past the rim); and the WILDLIFE — the birds over the woods (ravens, crossbills, the eagle, the ptarmigan and capercaillie a sled flushes, the skeins crossing in March) and the animals in the snow (hares, squirrels, foxes, roe deer, reindeer, a moose, a lynx, a wolverine, a wolf pack; the arctic fox, chamois and musk oxen of the open country) with their rarity ladder, their rounds, their fright and the prints they leave in the trail map, all presentation, all dealt off the map's seed on generators of their own. There are no biomes and no rocks in this game. Owns the look-first loop for all of it: `make forest` (the woods measured — sightlines, gaps, clumps — and drawn from above), `make trees`' variant sheet, `make world`'s forest, vista, herd, birds and prints views, `make birds`' roster sheet, `make level`'s plan, `make profile`."
 ---
 
 # The nature: the woods, the country, the snow on both
@@ -40,12 +40,15 @@ code change.
 
 | File | Owns |
 | --- | --- |
-| `engine/mapgen/forest.ts` | WHERE EVERY TREE STANDS (R14): one candidate per `forest.spacing` cell, jittered; kept with the probability the forest noise gives its spot (woods inside the forest, `forest.meadow` of that density out in the meadows); `forest.clearings` cut out of the woods; refused by rule — near the track (`forest.corridor`), too steep (`maxSlope`), above `treeLine` of the way up the rim, on a kicker, in the spawn's clearing or its lane. Taller in the thick of a wood and down in the valleys, shorter at a wood's edge and up the slopes. Drawn off the attempt's stream in a fixed order |
+| `engine/mapgen/forest.ts` | WHERE EVERY TREE STANDS (R14): first the CLUMPS (a chance a `forest.clumps.spacing` cell, off hashes of the forest's seed — a few trunks close round a centre, one kind to a clump), then one candidate per `forest.spacing` cell, jittered, at `forest.open` of the woods' density; refused on a LANE (`forest.lanes`, winding lines cut through every wood) and within `forest.gap` of any tree but its own clump's; kept with the probability the forest noise gives its spot (woods inside the forest, `forest.meadow` of that density out in the meadows); `forest.clearings` cut out of the woods; refused by rule — near the track (`forest.corridor`), too steep (`maxSlope`), above `treeLine` of the way up the rim, on a kicker, in the spawn's clearing or its lane. Taller in the thick of a wood and down in the valleys, shorter at a wood's edge and up the slopes. Drawn off the attempt's stream in a fixed order |
 | `engine/mapgen/rules.ts` (`forest`) | The numbers: spacing, the noise's scale, the meadow share, the clearings, height (6–19 m), trunk, crown, corridor, slope, tree line |
-| `engine/mapgen/types.ts` (`TreeDef`) | `x, z, y, height, radius` (the TRUNK — what the sled meets), `crown` (drawn only) |
+| `engine/mapgen/types.ts` (`TreeDef`) | `x, z, y, height, radius` (the TRUNK — what the sled meets), `crown`, `kind` (drawn only), `clump` |
+| `engine/mapgen/versions.ts` | `scatteredForest`: version 1's woods (no clumps, no lanes, the whole density), which every pinned campaign map still grows |
+| `pwa/src/game/tree-variants.ts` | THE TEN VARIANTS OF EVERY KIND as data (three-free): the crown's base and top, its width and taper, how solid it is to the eye, the lean, and the form's own numbers; `variantAt` (a hash of the trunk's place) and `crownAt`, the SILHOUETTE the lens-clear and the forest lab both read |
+| `pwa/src/game/tree-shapes.ts` | Every variant BUILT: the conifer's drooping skirts, the pine's pads on a bare trunk, the larch's skeleton, the birch's stems and fans of twigs; a sketch of each for the far band; the kinds' paint off the region's |
 | `engine/game/collision.ts` | The trunk as a cylinder the sled meets — the `collision` skill's |
 | `engine/mapgen/terrain.ts` | The country's shape (R2, R3) — the `mapgen-improvement` skill's, but every judgement about how it READS is this one's |
-| `pwa/src/game/forest.ts` | THE WOODS AS DRAWN: two shapes (a narrow spruce, a broader heavier-laden fir), each a stack of drooping skirts white on the upper face and dark green under the lip, built into vertex colours; each tree scaled to its own height and crown, turned and tinted by a hash of where it stands; instanced in TWO bands of distance (FULL, then FAR — a three-tier sketch), binned into 64 m cells and frustum-tested per frame; and a THIRD SET that is drawn only into the shadow map — every tree whose shadow can reach the sun's circle (`shadow-box.ts`'s `castsInto`), whatever band draws it and whichever side of the lens it stands, under SHADOWS MEDIUM and HIGH only (SLEDS casts no tree), each its own crown on FOREST HIGH and the sketch drawn a touch inside it below that (`FOREST_LOOK[row].casters`). No band casts: a band decided by distance to the lens is a shadow that switches on as the rider comes nearer. `FOREST_LOOK`, `SHADOW_LOOK` |
+| `pwa/src/game/forest.ts` | THE WOODS AS DRAWN: one instanced mesh per variant a map grows (sized to its own trees), each tree scaled to its own height and crown, turned and tinted by a hash of where it stands; instanced in TWO bands of distance (FULL, then FAR — two sketches a kind), binned into 64 m cells and frustum-tested per frame; and a THIRD SET that is drawn only into the shadow map — every tree whose shadow can reach the sun's circle (`shadow-box.ts`'s `castsInto`), whatever band draws it and whichever side of the lens it stands, under SHADOWS MEDIUM and HIGH only (SLEDS casts no tree), each its own crown on FOREST HIGH and the sketch drawn a touch inside it below that (`FOREST_LOOK[row].casters`). No band casts: a band decided by distance to the lens is a shadow that switches on as the rider comes nearer. `FOREST_LOOK`, `SHADOW_LOOK` |
 | `pwa/src/game/terrain.ts` | THE GROUND AS A MESH: a camera-centred CLIPMAP of nested grids (a quarter metre a vertex at the lens, doubling per level, eight levels past the rim), nothing baked into the mesh — the vertex shader reads the heights from a float texture of the generator's own heightfield. Three textures per level: the heights, the GROUND map (gradient, packed, how wooded), the track direction. `TERRAIN_QUALITY` |
 | `pwa/src/game/snow-glsl.ts` | The terrain's shader — `snow-look`'s — but its FOREST TINT (the woods past the far band, read off the ground map) is where this skill's trees end and the ground's paint begins; the two must agree on where a wood is |
 | `pwa/src/identity.ts` | `PALETTE.pine`, `pineDark`, `snow`, `snowShadow` — the colours every piece of nature is drawn from |
@@ -69,8 +72,15 @@ code change.
   has, and the one thing that makes the rim read as high.
 - **A loaded conifer is its banding.** White over dark green, tier over
   tier. A tree that is all green reads as summer; all white reads as a cone.
-  The two shapes and the per-tree tint are what stop a wood reading as one
-  tree copied.
+  The kinds, their ten variants each and the per-tree tint are what stop a
+  wood reading as one tree copied — judge a new variant on `make trees`
+  beside its nine siblings.
+- **A wood is seen INTO, and ridden THROUGH.** Clumps bunch the trunks so
+  the ground between is open; lanes give the eye a line down; pines and
+  self-pruned stand trees are bare under the lens's height. `make forest`
+  measures it: SIGHT IN is how far the eye goes inside a wood, CLEAR the
+  narrowest way between two groups, SEALED any pocket a sled cannot reach
+  (always 0).
 - **The track is cut through the woods, never planted over.** `forest.corridor`
   keeps trunks clear of the track's edge; a trunk inside it is a generator
   bug (`analysis` reports `treesOnCorridor`).
@@ -98,7 +108,9 @@ code change.
 ## The loop
 
 1. **Plan**: `make level SEED=<n>` — where the woods, meadows and clearings
-   fall, and where the trees stand against the track.
+   fall, and where the trees stand against the track; `make forest SEED=<n>
+   ARGS=--compare` for what being in them is like, and `COUNT=12` for the
+   sweep's means before and after.
 2. **Look**: `make world SEED=<n> ARGS=--views=forest,vista,track,spawn`
    (its own bundle; `CHROMIUM_PATH=/opt/pw-browsers/chromium` in a web
    session). `forest` is in the woods, `vista` the country from above, `track`

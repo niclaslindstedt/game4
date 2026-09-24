@@ -143,6 +143,10 @@ export type ForestLook = {
   full: number;
   /** The share of the far band's sketches that stand, 0..1. */
   farShare: number;
+  /** How many of each kind's ten variants are drawn (`tree-variants.ts`,
+   * the most telling first): a mesh and a draw call each in the full band,
+   * and another in the casters under FULL. */
+  variants: number;
   /** What a tree casts under SHADOWS ALL: its own full-detail crown, or the
    * far band's sketch drawn a touch inside it (a quarter of the triangles
    * in the shadow pass, and it reads the same on the snow). */
@@ -152,9 +156,9 @@ export type ForestLook = {
 export type TreeCasters = "full" | "sketch";
 
 export const FOREST_LOOK: Record<Tier, ForestLook> = {
-  low: { full: 90, farShare: 0.5, casters: "sketch" },
-  medium: { full: 130, farShare: 0.75, casters: "sketch" },
-  high: { full: 160, farShare: 1, casters: "full" },
+  low: { full: 90, farShare: 0.5, variants: 2, casters: "sketch" },
+  medium: { full: 130, farShare: 0.75, variants: 4, casters: "sketch" },
+  high: { full: 160, farShare: 1, variants: 10, casters: "full" },
 };
 
 export type DistanceLook = {

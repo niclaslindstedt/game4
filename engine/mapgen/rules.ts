@@ -104,11 +104,21 @@
 //       `forest.clearings.count` round clearings cut out of the woods. A
 //       tree is `forest.height` (6–19 m) tall with a trunk of
 //       `forest.trunk` and a crown `forest.crown` of its height across, never
-//       wider than `forest.crownMax`. No two trunks stand closer than
-//       `forest.gap` (9 m), so a sled can be ridden between any two trees.
-//       No tree stands within `forest.corridor` metres of the track's edge,
-//       on ground steeper than `forest.maxSlope`, above `forest.treeLine` of
-//       the way up the rim, or on a kicker.
+//       wider than `forest.crownMax`. The woods GROUP: now and then a
+//       CLUMP of `forest.clumps.trees` (4–8) trunks stands within
+//       `forest.clumps.radius` metres of its centre, as close as
+//       `forest.clumps.gap` to each other — at most one to a
+//       `forest.clumps.spacing` metre cell — and apart from a clump's own,
+//       no two trunks stand closer than `forest.gap` (9 m), so a sled can be
+//       ridden between any two trees or clumps. LANES wind through every
+//       wood — `forest.lanes.families` sets of lines `forest.lanes.spacing`
+//       metres apart, `forest.lanes.width` wide, with no trunk on them —
+//       and between them the woods keep `forest.open` of their density, so
+//       a rider sees into a wood as well as down its lanes. No tree stands
+//       within `forest.corridor` metres of the track's edge, on ground
+//       steeper than `forest.maxSlope`, above `forest.treeLine` of the way
+//       up the rim, or on a kicker. (Generator version 1 grew neither
+//       clumps nor lanes, at the whole density.)
 //   R15 A WINTER DAY. The map lies at a seeded latitude in
 //       `sun.latitude` (46–64°N) on a seeded day of the year in
 //       `sun.dayOfYear` (mid-January to mid-March), and the race starts at a
@@ -178,7 +188,7 @@
 //       R14's density, meadow share, tallest trees and tree line — and may
 //       keep its woods below `forest.lowland` metres over the loop's mean
 //       height, so a high basin's trees stand only in its hollows. It names
-//       what grows (spruce, birch), off a hash of where each trunk stands,
+//       what grows (spruce, fir, pine, larch, birch), off a hash of where each trunk stands,
 //       and deals R15's latitude and day from bands of its own. It may lay
 //       WIND CRUST — a packed share of `crust.packed` pressed into the
 //       powder over about `crust.cover` of the country and over every crest
@@ -399,8 +409,36 @@ export const LEVEL_RULES = {
     crownMax: 3.2,
     /** The least distance between two trunks, m: with two crowns at their
      * widest that leaves a lane of 2.6 m under the boughs, twice a sled's
-     * width. */
+     * width. Two trunks of ONE clump are the exception. */
     gap: 9,
+    /** The share of the woods' density kept between the lanes — thinner
+     * than a wood left to itself, so the eye goes in among the trunks. */
+    open: 0.95,
+    /** CLUMPS: a few trunks grown close together — a thicket of spruce, a
+     * stand of birch off one root. One chance a `spacing` metre cell (the
+     * centre jittered inside it), taken with `woods` odds in the thick of
+     * a wood and `meadow` odds out in the open (a tree island in a
+     * meadow); `trees` trunks within `radius` m of the centre, no two
+     * closer than `gap` m. */
+    clumps: {
+      spacing: 36,
+      woods: 0.7,
+      meadow: 0.16,
+      trees: { min: 4, max: 8 } as Band,
+      radius: 6.5,
+      gap: 2.6,
+    },
+    /** LANES: `families` sets of parallel lines at a seeded heading each,
+     * `spacing` m apart, bent `swing` m either side of straight by a noise
+     * of wavelength `scale` m, with no trunk within half their `width`
+     * (m) — the old tracks through a wood a rider can follow and see down. */
+    lanes: {
+      families: 2,
+      spacing: 150,
+      width: 16,
+      swing: 28,
+      scale: 280,
+    },
     /** Clear ground between the track's edge and any trunk, m: past the
      * flat shoulder and the berm (R18), with a metre to spare. */
     corridor: 9,

@@ -26,6 +26,9 @@ export interface TreeDef {
   /** What grows here (R21) — a spruce when left out. Drawn only: a trunk
    * is a trunk to the sled. */
   kind?: TreeKind;
+  /** The CLUMP it grew in (R14), numbered from 0 — trunks of one clump may
+   * stand closer than `forest.gap`; left out for a tree standing alone. */
+  clump?: number;
 }
 
 /** A gate across the track. Index 0 of `Level.checkpoints` is the start/finish line. */
