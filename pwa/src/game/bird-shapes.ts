@@ -267,8 +267,9 @@ export function buildBird(spec: BirdSpec, style: BirdStyle): THREE.BufferGeometr
 
 /**
  * The species' material: Lambert, flat, vertex-coloured, in the haze, with
- * the wing hinges grafted into its vertex shader. `wrist` is baked in as a
- * literal: the material belongs to one species.
+ * the wing hinges grafted into its vertex shader. The species' own wrist is
+ * a UNIFORM, so every species' material grafts the same source and three
+ * links ONE program for the whole roster rather than one per species.
  */
 export function birdMaterial(spec: BirdSpec, haze: HazeUniforms): THREE.MeshLambertMaterial {
   const material = new THREE.MeshLambertMaterial({
@@ -280,8 +281,10 @@ export function birdMaterial(spec: BirdSpec, haze: HazeUniforms): THREE.MeshLamb
   });
   const num = (v: number): string => v.toFixed(4);
   const wrist = (spec.span / 2) * spec.wing.wrist;
-  return hazeMaterial(material, haze, `bird:${spec.id}`, (shader) => {
-    shader.vertexShader = `attribute float aWing;
+  return hazeMaterial(material, haze, "bird", (shader) => {
+    shader.uniforms.uWrist = { value: wrist };
+    shader.vertexShader = `uniform float uWrist;
+attribute float aWing;
 attribute float aFlap;
 attribute float aFold;
 ${shader.vertexShader}`.replace(
@@ -292,12 +295,12 @@ ${shader.vertexShader}`.replace(
 \t\tfloat x = abs(position.x);
 \t\tfloat y = position.y;
 \t\tfloat z = position.z;
-\t\tfloat hand = x - ${num(wrist)};
+\t\tfloat hand = x - uWrist;
 \t\tif (hand > 0.0) {
 \t\t\tfloat a = aFold * ${num(HAND_FOLD)};
 \t\t\tfloat c = cos(a);
 \t\t\tfloat s = sin(a);
-\t\t\tx = ${num(wrist)} + hand * c + z * s;
+\t\t\tx = uWrist + hand * c + z * s;
 \t\t\tz = -hand * s + z * c;
 \t\t}
 \t\tfloat b = aFold * ${num(ARM_FOLD)};

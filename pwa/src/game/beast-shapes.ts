@@ -504,7 +504,9 @@ export function buildBeast(
 
 /**
  * The species' material: Lambert, flat, vertex-coloured, in the haze, with
- * the legs' swing and the head's graze grafted into its vertex shader.
+ * the legs' swing and the head's graze grafted into its vertex shader. The
+ * species' own numbers are UNIFORMS (`gaitGraft`), so the whole roster
+ * shares one program.
  */
 export function beastMaterial(
   spec: BeastSpec,
@@ -512,7 +514,7 @@ export function beastMaterial(
   haze: HazeUniforms,
 ): THREE.MeshLambertMaterial {
   const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
-  return hazeMaterial(material, haze, `beast:${spec.id}`, gaitGraft(spec, pivot));
+  return hazeMaterial(material, haze, "beast", gaitGraft(spec, pivot));
 }
 
 /** The shadow's material: the same graft over three's depth pass, so the
@@ -524,18 +526,30 @@ export function beastDepthMaterial(
   const material = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
   const graft = gaitGraft(spec, pivot);
   material.onBeforeCompile = (shader) => graft(shader);
-  material.customProgramCacheKey = (): string => `beast-depth:${spec.id}`;
+  material.customProgramCacheKey = (): string => "beast-depth";
   return material;
 }
 
-/** The legs' swing and the head's graze, as a vertex-shader graft. */
+/** The legs' swing and the head's graze, as a vertex-shader graft. The
+ * species' numbers go in as uniforms rather than literals: the source is
+ * then the same for every species, and three links it once. */
 function gaitGraft(
   spec: BeastSpec,
   pivot: { y: number; z: number },
-): (shader: { vertexShader: string }) => void {
-  const num = (v: number): string => v.toFixed(4);
+): (shader: { vertexShader: string; uniforms: Record<string, THREE.IUniform> }) => void {
+  const gait = {
+    uLegSwing: { value: LEG_SWING[spec.gait] },
+    uLegLift: { value: spec.height * 0.12 },
+    uLegReach: { value: spec.height },
+    uHeadPivot: { value: new THREE.Vector2(pivot.y, pivot.z) },
+  };
   return (shader) => {
-    shader.vertexShader = `attribute float aLeg;
+    Object.assign(shader.uniforms, gait);
+    shader.vertexShader = `uniform float uLegSwing;
+uniform float uLegLift;
+uniform float uLegReach;
+uniform vec2 uHeadPivot;
+attribute float aLeg;
 attribute float aHip;
 attribute float aHead;
 attribute float aGait;
@@ -546,18 +560,18 @@ ${shader.vertexShader}`.replace(
       `#include <begin_vertex>
 \tif (aLeg > 0.5) {
 \t\tfloat ph = aGait + (aLeg - 1.0) * 6.2831853;
-\t\tfloat swing = sin(ph) * aStride * ${num(LEG_SWING[spec.gait])};
+\t\tfloat swing = sin(ph) * aStride * uLegSwing;
 \t\tfloat dy = transformed.y - aHip;
-\t\tfloat lift = max(0.0, cos(ph)) * aStride * ${num(spec.height * 0.12)} * clamp(-dy / ${num(spec.height)}, 0.0, 1.0);
+\t\tfloat lift = max(0.0, cos(ph)) * aStride * uLegLift * clamp(-dy / uLegReach, 0.0, 1.0);
 \t\ttransformed.y = aHip + dy * cos(swing) + lift;
 \t\ttransformed.z += dy * sin(swing);
 \t}
 \tif (aHead > 0.5) {
-\t\tfloat g = aGraze * ${num(GRAZE_ANGLE)};
-\t\tfloat hy = transformed.y - ${num(pivot.y)};
-\t\tfloat hz = transformed.z - ${num(pivot.z)};
-\t\ttransformed.y = ${num(pivot.y)} + hy * cos(g) - hz * sin(g);
-\t\ttransformed.z = ${num(pivot.z)} + hy * sin(g) + hz * cos(g);
+\t\tfloat g = aGraze * ${GRAZE_ANGLE.toFixed(4)};
+\t\tfloat hy = transformed.y - uHeadPivot.x;
+\t\tfloat hz = transformed.z - uHeadPivot.y;
+\t\ttransformed.y = uHeadPivot.x + hy * cos(g) - hz * sin(g);
+\t\ttransformed.z = uHeadPivot.y + hy * sin(g) + hz * cos(g);
 \t}`,
     );
   };

@@ -305,8 +305,13 @@ export function bindHaze(
 /**
  * Put the haze into a built-in material. `extra` runs after it with the
  * same shader, for a caller with its own graft (the trees' snow). The
- * `name` goes into the program's cache key: two materials whose
- * `onBeforeCompile` differ must never be handed each other's program.
+ * program's cache key is three's own parameters plus ours: every material
+ * with the haze alone grafts the same source, so they all SHARE one key and
+ * three links the program once for the lot (each material keeps its own
+ * uniforms either way); a material with an `extra` puts its `name` in the
+ * key, since two materials whose `onBeforeCompile` differ must never be
+ * handed each other's program. A program linked twice for one source is
+ * paid for on the loading card, and on a phone's driver that is the card.
  */
 export function hazeMaterial<M extends THREE.Material>(
   material: M,
@@ -314,7 +319,8 @@ export function hazeMaterial<M extends THREE.Material>(
   name: string,
   extra?: (shader: THREE.WebGLProgramParametersWithUniforms) => void,
 ): M {
-  material.customProgramCacheKey = (): string => `haze:${name}`;
+  const key = extra ? `haze:${name}` : "haze";
+  material.customProgramCacheKey = (): string => key;
   material.onBeforeCompile = (shader) => {
     bindHaze(shader, u);
     shader.vertexShader = shader.vertexShader
