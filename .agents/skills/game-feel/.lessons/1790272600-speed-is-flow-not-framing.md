@@ -16,3 +16,8 @@ grain answer the second. Stills cannot judge any of it; judge the SIZE of the
 sled across speeds in stills and the rest by riding. In `make world` the
 PLAYER is the RED slot — a yellow sled at the lens is a rival, not the rig
 misframing.
+
+The tremor first shipped at 3 cm of lens travel (0.0035 rad of aim and
+roll) and was played as shaking far too much; a third of that — 1 cm,
+0.0012 rad — is the level asked for. A shake is felt long before it is seen
+in a still, so size it by riding, from well under what a still suggests.
