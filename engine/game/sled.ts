@@ -501,6 +501,17 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
     // a heavier machine is a weaker hand — the touring sled spun where the
     // crossover held.
     const heft = I.y / inertiaOf(SLED).y;
+    // THE SCRUB (`steer.scrub`): the bend the skis ask for on the groomer
+    // is paid out of the way — the grooves the keels and the lugs cut
+    // through it — at the CoG, so it turns nothing. Powder already charges
+    // for what it is shoved aside by (the plough). Read off the rate asked
+    // rather than the grip's own sideways forces, which chatter step to step
+    // as a ski meets a kicker's face and would brake a sled going straight.
+    if (flat > 1) {
+      const scrub = S.scrub * packed * m * Math.abs(asked * way);
+      fx -= (scrub * c.vx) / flat;
+      fz -= (scrub * c.vz) / flat;
+    }
     tb.y +=
       clamp(-S.yawHold * (c.wy - asked) - S.slipHold * slip, -S.yawHoldMax, S.yawHoldMax) *
       heft *

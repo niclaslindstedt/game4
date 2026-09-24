@@ -1,0 +1,6 @@
+---
+type: Changed
+title: A steadier camera in the woods, bends that cost speed, sturdier landings and faster powder
+---
+
+The chase cameras **no longer jolt in toward the rider when a tree passes between him and the lens** — a bough may cross the frame for a moment, but the camera stays where it was; it still keeps out of the checkpoint poles and the start arch, and the replay's broadcast camera and the crash camera still keep out of the trees. **Bends are gentler and cost speed**: full lock now holds about nine tenths of a g instead of well over one, the tail slides less when you brake into a turn, and a bend taken with the throttle pinned scrubs off speed instead of being free — a full-lock bend at 100 km/h about holds its speed where it used to gain 30 km/h. **Landings on the track are sturdier**: a sled that comes down on its skis and its tread rides a jump away — the stadium kicker overshot at race speed costs about 6 % of your speed where it cost 30 %, a 3 m drop costs nothing, and a landing a little nose-down onto the slope no longer throws the rider (a real nose-in still does). **Every sled is faster in deep snow**: the crossover now runs about 80 % of its groomer top speed in powder (130 of 162 km/h, up from 95), and climbs much further up a powder slope.

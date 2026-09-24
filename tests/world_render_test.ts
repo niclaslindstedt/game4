@@ -260,6 +260,16 @@ describe("the lens kept out of the woods", () => {
     expect(arm).toBeGreaterThan(PULL_MIN * 0.5);
   });
 
+  it("leaves the ridden boom out at its length past a tree — a bough in the frame, never a jolt", () => {
+    const p = past();
+    const boomClear = createLineClear(level, { trees: false });
+    const free = frameRig(RIGS.chase, p, createBoomState(), 1 / 60, level.groundAt);
+    const st = createBoomState();
+    const rode = frameRig(RIGS.chase, p, st, 1 / 60, level.groundAt, boomClear);
+    expect(st.pull).toBe(1);
+    expect(rode.eye).toEqual(free.eye);
+  });
+
   it("lets the arm back out slowly once the tree is behind it", () => {
     const st = createBoomState();
     frameRig(RIGS.chase, past(), st, 1 / 60, level.groundAt, clear);

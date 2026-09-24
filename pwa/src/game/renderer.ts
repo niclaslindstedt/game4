@@ -233,6 +233,8 @@ export function createWorldRenderer(
   let spray: Spray | null = null;
   let wildlife: Wildlife | null = null;
   let clear: LineClear | undefined;
+  /** The ridden booms' clear: the course's marks, never the trees. */
+  let boomClear: LineClear | undefined;
   let riders: Rider[] = [];
   let ghost: GhostModel | null = null;
   let ghostRun: GameState | null = null;
@@ -288,6 +290,7 @@ export function createWorldRenderer(
     terrain = forest = gates = trail = spray = null;
     wildlife = null;
     clear = undefined;
+    boomClear = undefined;
     riders = [];
     level = null;
     skyLevel = null;
@@ -429,6 +432,7 @@ export function createWorldRenderer(
       gates = createGates(lv, env.haze);
       gates.group.name = "checkpoints";
       clear = createLineClear(lv);
+      boomClear = createLineClear(lv, { trees: false });
       scene.add(gates.group);
       wildlife = createWildlife(lv, env.haze);
       scene.add(wildlife.group);
@@ -544,7 +548,7 @@ export function createWorldRenderer(
       rigPose.airborne = sled.airborne;
       const inside = lens.rung() === "hood" || lens.rung() === "bars";
       player.model.setRiderVisible(!inside);
-      const ladder = lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, clear);
+      const ladder = lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, boomClear);
       // THE DEATH CAM (`camera-death.ts`) takes the lens off the ladder while
       // the player is off the sled, on WALL time: `dt` is the run's, slowed
       // by the rate it handed out.

@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // HOW A SLED TURNS, and what the lever does to it (`sled.ts`, the arcade's
 // hands in `TUNING.arcade` and `TUNING.steer`). A crossover at full lock on
-// the groomer holds past a g and settles into its bend in a tenth of a
-// second; the snow pushes back along its own normal, so a chassis rolled on
+// the groomer holds about nine tenths of a g — the yaw hand asks for
+// `pathShare` of the corner grip and no more, so a bend is firm without
+// being a flick — and settles into it in a tenth of a second; a bend taken
+// flat out pays for itself in the way (the scrub); the snow pushes back along its own normal, so a chassis rolled on
 // its springs is not shoved out of the turn; the lever moves the load the
 // way the physics of a sled says — throttle off the skis and wide, a lift or
 // the brake onto them and tighter — and a pinned brake never locks the belt
@@ -42,7 +44,7 @@ function settle(state: GameState, steer: number, seconds: number, kmh: number) {
 }
 
 describe("the bend", () => {
-  it("holds past a g on the groomer at full lock, and turns in at once", () => {
+  it("holds nine tenths of a g on the groomer at full lock, and turns in at once", () => {
     const state = bend(70);
     settle(state, 0, 0.5, 70);
     let t90 = -1;
@@ -51,9 +53,26 @@ describe("the bend", () => {
       if (t90 < 0 && Math.abs(state.sled.wy) > 0.5) t90 = i * TUNING.dt;
     }
     const g = (state.sled.speed * Math.abs(state.sled.wy)) / TUNING.g;
-    expect(g).toBeGreaterThan(1.05);
+    expect(g).toBeGreaterThan(0.85);
+    expect(g).toBeLessThan(1.0);
     expect(t90).toBeGreaterThan(0);
     expect(t90).toBeLessThan(0.2);
+  });
+
+  it("pays for a bend taken flat out: full lock at 100 km/h no longer gains", () => {
+    const run = (steer: number) => {
+      const state = bend(100);
+      for (let i = 0; i < 2.5 * TUNING.physicsHz; i++) {
+        step(state, { steer, throttle: 1, brake: 0, lean: 0, reset: false });
+      }
+      return state.sled.speed * 3.6;
+    };
+    const straight = run(0);
+    const bent = run(1);
+    // The scrub: the same lever through a full-lock bend is well down on
+    // the straight, and about holds the speed it came in at.
+    expect(straight - bent).toBeGreaterThan(15);
+    expect(bent).toBeLessThan(100 * 1.1);
   });
 
   it("unloads the skis and runs wide on the throttle, tightens on a lift", () => {

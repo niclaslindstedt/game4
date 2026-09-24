@@ -122,8 +122,9 @@ describe("the death cam", () => {
     expect(down / across).toBeGreaterThan(2);
     const rolls = frames.slice(rest, end).map((f) => f.lens!.roll);
     expect(Math.max(...rolls) - Math.min(...rolls)).toBeGreaterThan(0.03);
-    // ...for long enough to be seen: the still beat, slowed.
-    expect((end - rest) * FRAME).toBeGreaterThan(1.5);
+    // ...for long enough to be seen: the still beat, slowed — well over the
+    // engine's own `lieStill` on screen.
+    expect((end - rest) * FRAME).toBeGreaterThan(TUNING.crash.lieStill * 1.3);
   });
 
   it("comes back to full speed after the reset", () => {
