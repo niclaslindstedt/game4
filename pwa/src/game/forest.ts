@@ -109,8 +109,12 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     thin[i] = hash(t.x * 1.7 + 11, t.z * 0.6 - 5);
     q.setFromAxisAngle(up, h * Math.PI * 2);
     // The crown the generator gives is the collision's idea of it; drawn a
-    // touch narrower so a wood keeps gaps between its trees.
-    s.set(t.crown * 0.95, t.height, t.crown * 0.95);
+    // touch narrower so a wood keeps gaps between its trees — and every tree
+    // a little broader or slimmer and a little oval, off a hash of its
+    // place, so no two of one variant stand as the same tree.
+    const broad = 0.86 + 0.18 * hash(t.x * 0.37 + 3, t.z * 1.9);
+    const oval = 0.9 + 0.2 * hash(t.x * 2.3, t.z * 0.41 - 7);
+    s.set(t.crown * 0.95 * broad * oval, t.height, (t.crown * 0.95 * broad) / oval);
     // Sunk a little, so a tree on a slope stands in the snow.
     p.set(t.x, t.y - 0.3, t.z);
     m.compose(p, q, s).toArray(matrices, i * 16);
