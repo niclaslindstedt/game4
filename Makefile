@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky sled birds build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky sled birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -72,6 +72,24 @@ sky:
 # `world`. ARGS="--rows=raven,ptarmigan,reindeer" narrows it.
 birds:
 	npm run birds -- $(ARGS)
+
+# THE TREE LAB: every kind of tree (spruce, fir, pine, larch, birch) and each
+# of its ten variants side by side through the game's own builder and
+# material, over snow, seen from the rider's head (2.2 m) standing off
+# each tree — previews/trees.png. Its own one-off bundle from pwa/trees-preview.html
+# (never deployed); needs a Chromium like `world`. REGION=id paints it as
+# that country; ARGS="--kinds=pine,larch" or "--sketch" (the far band's).
+trees:
+	npm run trees -- $(if $(REGION),--region $(REGION),) $(ARGS)
+
+# THE FOREST LAB: what it is like to be IN a map's woods, from the engine
+# and the tree table alone (pure Node, seconds): the trees and their kinds,
+# the clumps, the narrowest gap between two groups, how far a rider sees
+# into the woods and from the track, any pocket a sled cannot reach — and
+# a window of the woods from above, previews/forest-<seed>.png.
+# `make forest SEED=38 ARGS=--compare` (version 1 beside it) · `COUNT=12`
+forest:
+	npm run forest -- $(if $(SEED),--seed $(SEED),) $(if $(COUNT),--count $(COUNT),) $(if $(REGION),--region $(REGION),) $(ARGS)
 
 # ---------------------------------------------------------------------------
 # The desktop app (tauri/)

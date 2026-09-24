@@ -61,7 +61,22 @@ export const BIRD_CALLS: Readonly<Record<BirdId, BirdCall | null>> = {
     reach: 150,
     flush: "grouse_whirr",
   },
+  // The smaller forest grouse: near silent in winter, the whirr as it goes.
+  blackgrouse: {
+    sound: "capercaillie_knock",
+    airborne: 0.4,
+    perched: 0.1,
+    ref: 18,
+    reach: 130,
+    flush: "grouse_whirr",
+  },
   crossbill: { sound: "crossbill_chip", airborne: 10, perched: 5, ref: 14, reach: 110 },
+  // A twittering whirl over the snow.
+  bunting: { sound: "crossbill_chip", airborne: 12, perched: 2, ref: 14, reach: 100 },
+  // The woodpecker's drum and the owl's hoot are spring's; a winter wood
+  // hears neither.
+  woodpecker: null,
+  owl: null,
   eagle: null,
   swan: { sound: "swan_whoop", airborne: 4, perched: 1, ref: 70, reach: 650 },
   goose: { sound: "goose_honk", airborne: 8, perched: 1, ref: 60, reach: 560 },

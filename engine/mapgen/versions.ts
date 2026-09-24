@@ -92,6 +92,10 @@ export type GeneratorTraits = {
   /** LEGACY (v1): a quieter country — no rollers, no cliffs, one to three
    * kickers on the loop at least 450 m apart and five to ten off it. */
   fewerJumps?: JumpTraits;
+  /** LEGACY (v1): R14 as it grew then — every trunk `forest.gap` from every
+   * other, no clumps, no lanes, the woods at their whole density
+   * (`engine/mapgen/forest.ts`). */
+  scatteredForest?: boolean;
 };
 
 /** Every version the generator can still build, oldest first.
@@ -103,7 +107,8 @@ export const GENERATOR_VERSIONS: readonly GeneratorTraits[] = [
     version: 1,
     note:
       "The generator as the campaign's pinned maps were curated on it (R1–R21). " +
-      "v2 filled the country with rollers and cliffs and doubled the kickers.",
+      "v2 filled the country with rollers and cliffs and doubled the kickers; v3 grew " +
+      "the woods in clumps with lanes cut through them (R14).",
     fewerJumps: {
       rollers: false,
       cliffs: false,
@@ -111,10 +116,16 @@ export const GENERATOR_VERSIONS: readonly GeneratorTraits[] = [
       onSpacing: 450,
       offCount: { min: 5, max: 10 },
     },
+    scatteredForest: true,
   },
+  // Version 2 (air everywhere: the rollers, the cliffs, more kickers) was
+  // current until version 3 and no campaign map named it, so its row went
+  // in the ground with it; everything it built, version 3 builds too.
   {
-    version: 2,
-    note: "Air everywhere: R3's rollers, R22's cliffs, more kickers on the loop and off it (R4, R9).",
+    version: 3,
+    note:
+      "Air everywhere — R3's rollers, R22's cliffs, more kickers on the loop and off it " +
+      "(R4, R9) — and R14's woods in clumps, thinner between, with lanes cut through them.",
   },
 ];
 

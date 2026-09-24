@@ -113,7 +113,10 @@ describe("a region is named in five places, and all five agree", () => {
     ];
     expect(ones.every((v) => v === 1)).toBe(true);
     expect(b.forest.lowland).toBeNull();
-    expect(b.forest.roster).toEqual([{ kind: "spruce", share: 1 }]);
+    // The roster is DRAWN only (a hash of where each trunk stands), so the
+    // boreal's mix of kinds moves no trunk; spruce is still most of it.
+    expect(b.forest.roster[0].kind).toBe("spruce");
+    expect(b.forest.roster[0].share).toBeGreaterThan(0.3);
     expect(b.sun.latitude).toBe(R.sun.latitude);
     expect(b.sun.dayOfYear).toBe(R.sun.dayOfYear);
     expect(b.crust).toBeNull();
@@ -141,7 +144,7 @@ describe("the boreal is the map every seed always built", () => {
     expect(plain.crust).toBeUndefined();
     expect(plain.ice).toBeUndefined();
     expect(plain.iceAt).toBeUndefined();
-    expect(plain.trees.every((t) => t.kind === undefined)).toBe(true);
+    plain.trees.forEach((t, i) => expect(named.trees[i].kind).toBe(t.kind));
   });
 
   it("a hand-built map without a region reads as the boreal", () => {

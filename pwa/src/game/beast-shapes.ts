@@ -6,7 +6,10 @@
 // SEEN ACROSS THE SNOW at chase range is the design constraint: what reads
 // is the SILHOUETTE against white — the hare's long ears and its tucked
 // shape, the fox's brush, the reindeer's antlers and pale neck, the moose's
-// hump and long face over its pale legs, the lynx's tufts and stub tail —
+// hump and long face over its pale legs, the lynx's tufts and stub tail,
+// the squirrel's tail curled up over its back, the roe's white rump, the
+// wolf's long legs and straight-carried tail, the musk ox's skirt of hair
+// and the horns hooked down its face, the chamois's little hooked horns —
 // and the colour, which on a winter hill is mostly dark against light (and,
 // on the one white animal, the black tips of its ears).
 //
@@ -35,6 +38,14 @@ export type BeastStyle = {
   readonly ears: number;
   readonly tail: number;
   readonly antlers?: number;
+  /** HORNS and their colour: a musk ox's BOSS (hooked down the face and up
+   * at the tips) or a chamois's HOOKS (straight up, crooked back). */
+  readonly horns?: { readonly color: number; readonly form: "boss" | "hooks" };
+  /** The tail's thickness as a share of the body's half-depth (a squirrel's
+   * and a fox's brush are thick), and the colour of its last fifth — the
+   * fox's white tip, the wolf's black one. */
+  readonly tailThick?: number;
+  readonly tailTip?: number;
   /** The body's width as a share of the height, how thick a leg is as a
    * share of the height, how long the neck is as a share of the length and
    * how high it carries the head (0 level, 1 straight up), the head's own
@@ -92,6 +103,8 @@ export const BEAST_STYLES: Readonly<Record<BeastId, BeastStyle>> = {
     tailLength: 0.62,
     droop: 0.25,
     depth: 0.52,
+    tailThick: 0.26,
+    tailTip: 0xf4f2ee,
   },
   // Grey-brown with the pale neck and the antlers the cows keep all winter.
   reindeer: {
@@ -148,6 +161,143 @@ export const BEAST_STYLES: Readonly<Record<BeastId, BeastStyle>> = {
     tailLength: 0.16,
     droop: 0.55,
     depth: 0.5,
+  },
+  // Rust-red, a pale belly, ear tufts, and the tail curled up over its back.
+  squirrel: {
+    coat: 0x9a4a26,
+    belly: 0xefe6d8,
+    legs: 0x8a4222,
+    head: 0x9a4a26,
+    ears: 0x7a3a1e,
+    tail: 0xa6532c,
+    width: 0.6,
+    leg: 0.2,
+    neck: 0.1,
+    carriage: 0.6,
+    headLength: 0.28,
+    ear: 0.45,
+    tailLength: 0.7,
+    droop: -0.75,
+    depth: 0.72,
+    tailThick: 0.42,
+  },
+  // White on white, the dark nose and eyes; a thicker, shorter fox.
+  arcticfox: {
+    coat: 0xf1f3f4,
+    belly: 0xf8f9f9,
+    legs: 0xe6e9ea,
+    head: 0xf1f3f4,
+    ears: 0xe2e6e8,
+    tail: 0xeef0f1,
+    width: 0.5,
+    leg: 0.13,
+    neck: 0.14,
+    carriage: 0.35,
+    headLength: 0.24,
+    ear: 0.16,
+    tailLength: 0.5,
+    droop: 0.3,
+    depth: 0.58,
+    tailThick: 0.3,
+  },
+  // Grey-brown in winter, pale beneath, and the white rump patch.
+  roedeer: {
+    coat: 0x6c5a4a,
+    belly: 0xb4a898,
+    legs: 0x5e4e40,
+    head: 0x6a584a,
+    ears: 0x5a4a3c,
+    tail: 0xf4f0ea,
+    width: 0.4,
+    leg: 0.09,
+    neck: 0.32,
+    carriage: 0.65,
+    headLength: 0.22,
+    ear: 0.18,
+    tailLength: 0.06,
+    droop: 0.6,
+    depth: 0.42,
+    tailThick: 0.8,
+  },
+  // Dark brown in its winter coat, the pale face, the black hooks.
+  chamois: {
+    coat: 0x3a2e26,
+    belly: 0x2e241e,
+    legs: 0x2a221c,
+    head: 0xd8ccb8,
+    ears: 0x3a2e26,
+    tail: 0x2a221c,
+    horns: { color: 0x141210, form: "hooks" },
+    width: 0.42,
+    leg: 0.1,
+    neck: 0.28,
+    carriage: 0.6,
+    headLength: 0.2,
+    ear: 0.14,
+    tailLength: 0.06,
+    droop: 0.8,
+    depth: 0.5,
+  },
+  // Near-black and shaggy, the skirt of hair to the snow, the pale saddle
+  // and the horns hooked down the face.
+  muskox: {
+    coat: 0x2a2018,
+    belly: 0x241a14,
+    legs: 0xb8ab98,
+    head: 0x2a2018,
+    ears: 0x2a2018,
+    tail: 0x2a2018,
+    horns: { color: 0xcfc2a8, form: "boss" },
+    width: 0.62,
+    leg: 0.12,
+    neck: 0.1,
+    carriage: 0.1,
+    headLength: 0.22,
+    ear: 0.06,
+    tailLength: 0.03,
+    droop: 0.9,
+    depth: 0.72,
+    hump: 0.14,
+  },
+  // Dark brown, low and heavy, with the pale band down its flank.
+  wolverine: {
+    coat: 0x2e2218,
+    belly: 0x8c6a44,
+    legs: 0x221a14,
+    head: 0x3a2c22,
+    ears: 0x2e2218,
+    tail: 0x2e2218,
+    width: 0.62,
+    leg: 0.17,
+    neck: 0.12,
+    carriage: 0.3,
+    headLength: 0.2,
+    ear: 0.1,
+    tailLength: 0.22,
+    droop: 0.4,
+    depth: 0.6,
+    tailThick: 0.35,
+  },
+  // Grizzled grey, pale beneath, long in the leg, the tail carried low and
+  // black at the tip.
+  wolf: {
+    coat: 0x80786c,
+    belly: 0xd8d0c2,
+    legs: 0x9a9284,
+    head: 0x8a8274,
+    ears: 0x5a5248,
+    tail: 0x7a7266,
+    width: 0.38,
+    leg: 0.1,
+    neck: 0.2,
+    carriage: 0.3,
+    headLength: 0.26,
+    ear: 0.14,
+    tailLength: 0.4,
+    droop: 0.55,
+    depth: 0.45,
+    tailThick: 0.25,
+    tailTip: 0x1e1c1a,
   },
 };
 
@@ -300,6 +450,27 @@ export function buildBeast(
       );
     }
   }
+  // Horns: a musk ox's boss, down the side of the face and up at the tips;
+  // a chamois's hooks, straight up and crooked back.
+  if (style.horns) {
+    const h = style.horns.color;
+    for (const side of [-1, 1]) {
+      const root: P = [side * hr * 0.35, headBase[1] + hr * 0.75, headBase[2] - hl * 0.02];
+      if (style.horns.form === "boss") {
+        const out: P = [side * hr * 1.35, root[1] - hr * 0.2, root[2] + hl * 0.05];
+        const down: P = [side * hr * 1.45, root[1] - hr * 1.2, root[2] + hl * 0.2];
+        const tip: P = [side * hr * 1.7, root[1] - hr * 0.9, root[2] + hl * 0.45];
+        b.tube(root, out, hr * 0.32, h, 5, hr * 0.26);
+        b.tube(out, down, hr * 0.26, h, 5, hr * 0.16);
+        b.tube(down, tip, hr * 0.16, h, 4, hr * 0.04);
+      } else {
+        const up: P = [side * hr * 0.4, root[1] + hr * 1.3, root[2] + hl * 0.05];
+        const tip: P = [side * hr * 0.42, up[1] + hr * 0.1, up[2] - hl * 0.3];
+        b.tube(root, up, hr * 0.14, h, 4, hr * 0.1);
+        b.tube(up, tip, hr * 0.1, h, 4, hr * 0.02);
+      }
+    }
+  }
   tag(b, tags, fromHead, 0, 0, 1);
 
   // ── The tail ──────────────────────────────────────────────────────────
@@ -309,11 +480,16 @@ export function buildBeast(
     const root: P = [0, bodyY + ry * 0.5, -L * 0.5];
     const d = style.droop;
     const tip: P = [0, root[1] - tl * d, root[2] - tl * Math.sqrt(Math.max(0, 1 - d * d))];
-    b.tube(root, tip, ry * 0.22, style.tail, 5, ry * (spec.id === "fox" ? 0.2 : 0.12));
-    // The fox's brush ends in white.
-    if (spec.id === "fox") {
-      const end: P = [0, tip[1] - tl * 0.1, tip[2] - tl * 0.15];
-      b.tube(tip, end, ry * 0.2, 0xf4f2ee, 5, ry * 0.05);
+    const thick = style.tailThick ?? 0.22;
+    b.tube(root, tip, ry * thick, style.tail, 5, ry * (style.tailThick ? thick * 0.8 : 0.12));
+    // A brush ending in a colour of its own: the fox's white, the wolf's black.
+    if (style.tailTip !== undefined) {
+      const end: P = [
+        0,
+        tip[1] - tl * d * 0.25,
+        tip[2] - tl * Math.sqrt(Math.max(0, 1 - d * d)) * 0.25,
+      ];
+      b.tube(tip, end, ry * thick * 0.8, style.tailTip, 5, ry * 0.05);
     }
   }
   tag(b, tags, fromTail, 0, 0, 0);

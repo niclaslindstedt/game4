@@ -52,6 +52,16 @@ export const BIRD_STYLES: Readonly<Record<BirdId, BirdStyle>> = {
     bill: 0x202020,
     tail: 0x17181a,
   },
+  // The blackcock: glossy blue-black, white wing bars and the lyre tail's
+  // white undertail.
+  blackgrouse: {
+    back: 0x1a1d24,
+    belly: 0x15171c,
+    tip: 0x2a2c30,
+    head: 0x1c2028,
+    bill: 0x202020,
+    tail: 0xe8e8ea,
+  },
   // The cock: slate-black, a brown wing, a pale bill.
   capercaillie: {
     back: 0x2d3034,
@@ -63,6 +73,12 @@ export const BIRD_STYLES: Readonly<Record<BirdId, BirdStyle>> = {
   },
   // The cock's brick red with the dark wings of a finch.
   crossbill: { back: 0xb8453a, belly: 0xc65d4c, tip: 0x3a302c, head: 0xb8453a, bill: 0x3a3530 },
+  // White below and across the wing, black at the tips and on the back.
+  bunting: { back: 0x3a3632, belly: 0xf4f4f2, tip: 0x121314, head: 0xeeeae2, bill: 0x2a2826 },
+  // Black all over, the red cap, the pale bill.
+  woodpecker: { back: 0x131416, belly: 0x17181a, tip: 0x0e0f10, head: 0xc0282a, bill: 0xcfc6a8 },
+  // Grey, barred, the great pale disc of a face and the yellow eyes.
+  owl: { back: 0x8a8680, belly: 0xb4b0a8, tip: 0x5e5a54, head: 0xa8a49c, bill: 0xd8c24a },
   // Dark brown, darker below, the gold nape that names it.
   eagle: {
     back: 0x4b3627,

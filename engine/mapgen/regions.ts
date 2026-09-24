@@ -33,8 +33,68 @@ import { LEVEL_RULES as R, type Band } from "./rules.ts";
 export type RegionId = "boreal" | "alpine" | "tundra" | "birch";
 
 /** What a tree is (R14, R21): the drawn shape and nothing the physics reads —
- * a trunk is a trunk to the sled whatever grows on it. */
-export type TreeKind = "spruce" | "birch";
+ * a trunk is a trunk to the sled whatever grows on it. The trees of the
+ * northern and the high snow countries in winter, twenty of them:
+ *
+ *   THE CONIFERS — the SPRUCE every wood is mostly made of; the FIR, narrower
+ *   and heavier-laden; the PINE, a bare trunk under a flat crown; the LARCH,
+ *   a conifer that drops its needles (a grey skeleton in winter); the BLACK
+ *   SPRUCE of the bogs and the tundra's edge, a thin spire with a club of
+ *   boughs at its top; the STONE PINE of the timberline, a dense rounded
+ *   crown down to the snow; the WHITE PINE, its boughs in flat layers; the
+ *   LODGEPOLE, a tall straight pole with a small crown; the HEMLOCK, whose
+ *   leader nods over; the JUNIPER, a dark column; the DWARF PINE (mountain
+ *   pine), sprawling on several stems; and the SNAG, a conifer long dead.
+ *   THE BROADLEAVES, bare in winter — the BIRCH, pale and banded; the ASPEN,
+ *   tall and grey-green; the ROWAN, its red berries still on it; the ALDER,
+ *   dark, along the wet ground; the WILLOW, a thicket of orange twigs; the
+ *   BEECH, which keeps its dead copper leaves through the winter; the MAPLE,
+ *   a broad dome; and the ASH, grey and sparse-twigged with its keys. */
+export type TreeKind =
+  | "spruce"
+  | "fir"
+  | "pine"
+  | "larch"
+  | "blackspruce"
+  | "stonepine"
+  | "whitepine"
+  | "lodgepole"
+  | "hemlock"
+  | "juniper"
+  | "dwarfpine"
+  | "snag"
+  | "birch"
+  | "aspen"
+  | "rowan"
+  | "alder"
+  | "willow"
+  | "beech"
+  | "maple"
+  | "ash";
+
+/** Every kind, in the order a sheet shows them. */
+export const TREE_KINDS: readonly TreeKind[] = [
+  "spruce",
+  "fir",
+  "pine",
+  "larch",
+  "blackspruce",
+  "stonepine",
+  "whitepine",
+  "lodgepole",
+  "hemlock",
+  "juniper",
+  "dwarfpine",
+  "snag",
+  "birch",
+  "aspen",
+  "rowan",
+  "alder",
+  "willow",
+  "beech",
+  "maple",
+  "ash",
+];
 
 export type Region = {
   readonly id: RegionId;
@@ -56,7 +116,9 @@ export type Region = {
    * of the way up the rim trees stop at. `lowland`, when set, is a SECOND
    * tree line in metres over the loop's mean height: the country above it
    * is bare — a high basin whose woods keep to the hollows. `roster` is
-   * what grows, each kind with its share of the trees. */
+   * what grows, each kind with its share of the trees — DRAWN ONLY, dealt
+   * off a hash of where each trunk stands (`treeKindAt`), so a roster moves
+   * no trunk and no digest. */
   readonly forest: {
     readonly density: number;
     readonly meadow: number;
@@ -111,7 +173,25 @@ export const REGIONS: Readonly<Record<RegionId, Region>> = {
       height: 1,
       treeLine: 1,
       lowland: null,
-      roster: [{ kind: "spruce", share: 1 }],
+      // A northern forest: mostly spruce, pine on the drier ground, a
+      // birch or a larch among them, the odd fir.
+      roster: [
+        { kind: "spruce", share: 0.36 },
+        { kind: "pine", share: 0.14 },
+        { kind: "birch", share: 0.08 },
+        { kind: "blackspruce", share: 0.07 },
+        { kind: "aspen", share: 0.05 },
+        { kind: "lodgepole", share: 0.04 },
+        { kind: "larch", share: 0.04 },
+        { kind: "fir", share: 0.04 },
+        { kind: "rowan", share: 0.03 },
+        { kind: "alder", share: 0.03 },
+        { kind: "juniper", share: 0.03 },
+        { kind: "snag", share: 0.03 },
+        { kind: "willow", share: 0.02 },
+        { kind: "whitepine", share: 0.02 },
+        { kind: "hemlock", share: 0.02 },
+      ],
     },
     kickers: 1,
     sun: { latitude: R.sun.latitude, dayOfYear: R.sun.dayOfYear },
@@ -141,7 +221,20 @@ export const REGIONS: Readonly<Record<RegionId, Region>> = {
       height: 0.55,
       treeLine: 0.5,
       lowland: -4,
-      roster: [{ kind: "spruce", share: 1 }],
+      // The timberline's own: fir and spruce, the larch that turns gold
+      // and drops, a stone pine on the ridges.
+      roster: [
+        { kind: "fir", share: 0.22 },
+        { kind: "spruce", share: 0.18 },
+        { kind: "larch", share: 0.16 },
+        { kind: "stonepine", share: 0.14 },
+        { kind: "dwarfpine", share: 0.1 },
+        { kind: "beech", share: 0.05 },
+        { kind: "maple", share: 0.05 },
+        { kind: "pine", share: 0.04 },
+        { kind: "rowan", share: 0.03 },
+        { kind: "snag", share: 0.03 },
+      ],
     },
     kickers: 1.5,
     sun: { latitude: { min: 42, max: 48 }, dayOfYear: { min: 30, max: 90 } },
@@ -170,7 +263,16 @@ export const REGIONS: Readonly<Record<RegionId, Region>> = {
       height: 0.12,
       treeLine: 0.6,
       lowland: 1,
-      roster: [{ kind: "spruce", share: 1 }],
+      // The forest-tundra's last trees: stunted spruce and mountain birch.
+      roster: [
+        { kind: "spruce", share: 0.35 },
+        { kind: "birch", share: 0.25 },
+        { kind: "blackspruce", share: 0.15 },
+        { kind: "willow", share: 0.1 },
+        { kind: "juniper", share: 0.08 },
+        { kind: "dwarfpine", share: 0.04 },
+        { kind: "snag", share: 0.03 },
+      ],
     },
     kickers: 0.8,
     sun: { latitude: { min: 66, max: 71 }, dayOfYear: { min: 72, max: 105 } },
@@ -199,8 +301,14 @@ export const REGIONS: Readonly<Record<RegionId, Region>> = {
       treeLine: 1.1,
       lowland: null,
       roster: [
-        { kind: "birch", share: 0.82 },
-        { kind: "spruce", share: 0.18 },
+        { kind: "birch", share: 0.66 },
+        { kind: "aspen", share: 0.08 },
+        { kind: "alder", share: 0.05 },
+        { kind: "spruce", share: 0.05 },
+        { kind: "willow", share: 0.05 },
+        { kind: "rowan", share: 0.04 },
+        { kind: "pine", share: 0.04 },
+        { kind: "ash", share: 0.03 },
       ],
     },
     kickers: 1,

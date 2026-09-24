@@ -63,6 +63,8 @@ export type LevelAnalysis = {
     spacingMax: number;
     /** The closest two trunks stand, m (R14). */
     treeGap: number;
+    /** How many clumps the woods grew (R14) — none on a version-1 map. */
+    clumps: number;
     trees: number;
     /** Trees standing within R14's corridor. */
     treesOnCorridor: number;
@@ -353,17 +355,29 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   }
   if (treesOnCorridor > 0)
     add("R14", "error", `${treesOnCorridor} tree(s) stand on the track's corridor`);
-  // ...and room to ride between them: the closest two trunks, read off a
-  // hash of gap-sized buckets.
-  const buckets = new Map<number, { x: number; z: number }[]>();
+  // ...and room to ride between them: the closest two trunks of different
+  // groups, read off a hash of gap-sized buckets — and inside a clump, the
+  // closest two of its own, which may stand no further than a clump's
+  // width apart.
+  const buckets = new Map<number, { x: number; z: number; clump?: number }[]>();
   let treeGap = Infinity;
+  let clumpGap = Infinity;
+  let clumpSpread = 0;
+  const clumps = new Set<number>();
   for (const t of level.trees) {
     const bx = Math.floor(t.x / R.forest.gap);
     const bz = Math.floor(t.z / R.forest.gap);
+    if (t.clump !== undefined) clumps.add(t.clump);
     for (let dz = -1; dz <= 1; dz++) {
       for (let dx = -1; dx <= 1; dx++) {
         for (const u of buckets.get((bx + dx) * 8192 + bz + dz) ?? []) {
-          treeGap = Math.min(treeGap, Math.hypot(u.x - t.x, u.z - t.z));
+          const d = Math.hypot(u.x - t.x, u.z - t.z);
+          if (t.clump !== undefined && u.clump === t.clump) {
+            clumpGap = Math.min(clumpGap, d);
+            clumpSpread = Math.max(clumpSpread, d);
+          } else {
+            treeGap = Math.min(treeGap, d);
+          }
         }
       }
     }
@@ -375,6 +389,12 @@ export function analyzeLevel(level: Level): LevelAnalysis {
   }
   if (treeGap < R.forest.gap - 0.01) {
     add("R14", "error", `two trunks stand ${fmt(treeGap)} m apart (least ${R.forest.gap} m)`);
+  }
+  if (clumpGap < R.forest.clumps.gap - 0.01) {
+    add("R14", "error", `two trunks of a clump stand ${fmt(clumpGap)} m apart`);
+  }
+  if (clumpSpread > 2 * R.forest.clumps.radius + 0.01) {
+    add("R14", "error", `a clump spreads ${fmt(clumpSpread)} m`);
   }
   if (level.trees.length < 1000 * regionOf(level).forest.density) {
     add("R14", "warn", `only ${level.trees.length} trees`);
@@ -529,6 +549,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       spacingMin,
       spacingMax,
       treeGap,
+      clumps: clumps.size,
       trees: level.trees.length,
       treesOnCorridor,
       relief: hi - lo,
