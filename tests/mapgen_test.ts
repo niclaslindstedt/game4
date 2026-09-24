@@ -10,6 +10,8 @@ import { describe, expect, it } from "vitest";
 import {
   bermCrest,
   bermProfile,
+  cliffFootprint,
+  cliffProfile,
   dealDrifts,
   generateLevel,
   LEVEL_RULES as R,
@@ -217,7 +219,10 @@ describe("the kickers (R4, R9)", () => {
           return level.groundAt(p.x, p.z);
         };
         // Up the ramp to the lip, then down: the grade breaks at the lip.
-        expect(at(0) - at(-k.ramp)).toBeGreaterThan(k.height * 0.6);
+        // The line under the ramp may itself fall as steeply as R9's
+        // approach grade, which the lip's own rise is read net of.
+        const under = R.kickers.on.approachGrade * k.ramp;
+        expect(at(0) - at(-k.ramp)).toBeGreaterThan(k.height * 0.6 + under);
         expect((at(0) - at(-2)) / 2 - (at(2) - at(0)) / 2).toBeGreaterThan(0.15);
       }
     }
@@ -433,5 +438,95 @@ describe("the track queries", () => {
     expect(Math.hypot(j.x - level.track.points[0].x, j.z - level.track.points[0].z)).toBeLessThan(
       R.track.step,
     );
+  });
+});
+
+describe("the rollers (R3)", () => {
+  it("fold the basin floor into crests a sled at speed leaves the ground over", () => {
+    // Crests along lines across the basin floor sharp enough to throw a sled
+    // at 70 km/h (curvature over g/v²), per km: the rollers roughly double
+    // what the country had without them (v1).
+    const launching = (level: GeneratedLevel): number => {
+      const v = 70 / 3.6;
+      const need = 9.81 / (v * v);
+      const b = level.basin;
+      let crests = 0;
+      for (let a = 0; a < 8; a++) {
+        const th = (a / 8) * Math.PI;
+        const dx = Math.sin(th);
+        const dz = Math.cos(th);
+        let inCrest = false;
+        for (let t = -450; t < 450; t += 1) {
+          const x = b.x + dx * t;
+          const z = b.z + dz * t;
+          const y0 = level.groundAt(x - dx * 3, z - dz * 3);
+          const y1 = level.groundAt(x, z);
+          const y2 = level.groundAt(x + dx * 3, z + dz * 3);
+          const launch = -(y0 - 2 * y1 + y2) / 9 > need;
+          if (launch && !inCrest) crests++;
+          inCrest = launch;
+        }
+      }
+      return crests / (8 * 0.9);
+    };
+    const seed = LEVEL_SEEDS[0];
+    expect(launching(levelFor(seed))).toBeGreaterThan(
+      1.6 * launching(generateLevel(seed, { version: 1 })),
+    );
+  });
+});
+
+describe("the cliffs (R22)", () => {
+  it("stands cliffs on nearly every map, each a drop clear of the track", () => {
+    const clear = R.track.width.max / 2 + R.cliff.clearance;
+    let withCliffs = 0;
+    for (const level of corpus()) {
+      if (level.cliffs.length >= R.cliff.count.min) withCliffs++;
+      for (const c of level.cliffs) {
+        expect(withinBand(c.drop, R.cliff.drop)).toBe(true);
+        expect(withinBand(c.shelf, R.cliff.shelf)).toBe(true);
+        expect(withinBand(c.width, R.cliff.width)).toBe(true);
+        for (const p of cliffFootprint(c)) {
+          expect(nearestTrackPoint(level, p.x, p.z).distance).toBeGreaterThan(clear - 1);
+        }
+        // The face, read on the ground across its middle: the drop is there.
+        const fx = Math.sin(c.heading);
+        const fz = Math.cos(c.heading);
+        const top = level.groundAt(c.x - fx, c.z - fz);
+        const foot = level.groundAt(c.x + fx * (c.face + 1), c.z + fz * (c.face + 1));
+        expect(top - foot).toBeGreaterThan(c.drop * 0.75);
+        // Nothing grows on it or on its landing.
+        for (const t of level.trees) {
+          const u = (t.x - c.x) * fx + (t.z - c.z) * fz;
+          const v = Math.abs((t.x - c.x) * fz - (t.z - c.z) * fx);
+          const onIt = u > -c.shelf && u < c.face + c.landing && v < c.width / 2;
+          expect(onIt, `a tree on ${c.id} of seed ${level.seed}`).toBe(false);
+        }
+      }
+    }
+    expect(withCliffs).toBeGreaterThanOrEqual(Math.ceil(LEVEL_SEEDS.length * 0.75));
+  });
+
+  it("shapes a level shelf, a sheer face and a landing falling away below it", () => {
+    const c = { drop: 8, shelf: 80, face: 3.2, apron: 4, landing: 24 };
+    expect(cliffProfile(c, -c.shelf)).toBe(0);
+    expect(cliffProfile(c, 0)).toBeCloseTo(c.drop + c.apron, 9);
+    // Level at the top: the last metre of the shelf climbs almost nothing.
+    expect(cliffProfile(c, 0) - cliffProfile(c, -1)).toBeLessThan(0.05);
+    // The face: the whole drop over its run, steeper than a sled can ride.
+    expect(cliffProfile(c, 0) - cliffProfile(c, c.face)).toBeCloseTo(c.drop, 9);
+    expect(c.drop / c.face).toBeGreaterThan(2);
+    // The landing falls away, steepest where it is met first.
+    const at = (u: number): number => cliffProfile(c, c.face + u);
+    expect(at(0) - at(2)).toBeGreaterThan(at(c.landing - 2) - at(c.landing));
+    expect(at(c.landing)).toBe(0);
+  });
+
+  it("keeps the v1 generator's quieter country for the maps pinned on it", () => {
+    const level = generateLevel(LEVEL_SEEDS[0], { version: 1 });
+    expect(level.cliffs).toEqual([]);
+    const onTrack = level.kickers.filter((k) => k.onTrack).length;
+    expect(onTrack).toBeGreaterThanOrEqual(1);
+    expect(onTrack).toBeLessThanOrEqual(3);
   });
 });

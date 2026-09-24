@@ -213,6 +213,45 @@ function furrow(): LensPose {
   };
 }
 
+/** A CLIFF (R22): the tallest the map has, from out on its landing looking
+ * back up at the face, and from the shelf behind the edge looking over it. */
+function cliffView(over: boolean): { pose: LensPose; note: string } | null {
+  const cliffs = level.cliffs ?? [];
+  if (cliffs.length === 0) return null;
+  const c = cliffs.reduce((a, b) => (b.drop > a.drop ? b : a));
+  const fx = Math.sin(c.heading);
+  const fz = Math.cos(c.heading);
+  const note = `${c.id}, a ${c.drop.toFixed(1)} m face`;
+  if (over) {
+    const ex = c.x - fx * 12;
+    const ez = c.z - fz * 12;
+    const tx = c.x + fx * 40;
+    const tz = c.z + fz * 40;
+    return {
+      pose: {
+        eye: { x: ex, y: level.groundAt(ex, ez) + 1.6, z: ez },
+        target: { x: tx, y: level.groundAt(tx, tz), z: tz },
+        fov: 60,
+        roll: 0,
+      },
+      note: `${note}, from the shelf`,
+    };
+  }
+  // Off to one side, far enough down the landing to take in the whole face.
+  const back = c.face + c.landing + 10;
+  const ex = c.x + fx * back + fz * c.width * 0.35;
+  const ez = c.z + fz * back - fx * c.width * 0.35;
+  return {
+    pose: {
+      eye: { x: ex, y: level.groundAt(ex, ez) + 1.8, z: ez },
+      target: { x: c.x, y: c.y - c.drop * 0.4, z: c.z },
+      fov: 55,
+      roll: 0,
+    },
+    note: `${note}, from below`,
+  };
+}
+
 /** THE WILDLIFE: the biggest kind of animal the map holds, from beside it
  * at head height — the herd at its wood's edge, the fox on its meadow. */
 function herdView(): { pose: LensPose; note: string } | null {
@@ -422,6 +461,22 @@ const shots: Record<string, () => string> = {
     still();
     renderer.setOverride(null);
     return `lying ${off.t.toFixed(1)} s after, tumbled ${(off.tumble / (2 * Math.PI)).toFixed(1)} turns`;
+  },
+  cliff() {
+    const view = cliffView(false);
+    if (!view) return "no cliff on this map";
+    renderer.setOverride(view.pose);
+    still();
+    renderer.setOverride(null);
+    return view.note;
+  },
+  "cliff-edge"() {
+    const view = cliffView(true);
+    if (!view) return "no cliff on this map";
+    renderer.setOverride(view.pose);
+    still();
+    renderer.setOverride(null);
+    return view.note;
   },
   herd() {
     const view = herdView();

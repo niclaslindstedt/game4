@@ -45,7 +45,7 @@ const seeds =
 const f = (v, d = 1) => (Number.isFinite(v) ? v.toFixed(d) : "inf");
 
 console.log(
-  "seed   ms  try  length  width      turn  grade  climb  kick  off  cps    gap  trees  sun   findings",
+  "seed   ms  try  length  width      turn  grade  climb  kick  off  clf  cps    gap  trees  sun   findings",
 );
 const rows = [];
 let broken = 0;
@@ -69,7 +69,7 @@ for (const seed of seeds) {
   console.log(
     `${String(seed).padStart(4)} ${f(ms, 0).padStart(4)} ${String(s.attempt).padStart(4)} ${f(s.length, 0).padStart(7)} ` +
       `${f(s.widthMin)}-${f(s.widthMax)} ${f(s.minRadius, 0).padStart(6)} ${f(s.maxGrade * 100).padStart(6)} ` +
-      `${f(s.relief, 0).padStart(6)} ${String(s.trackKickers).padStart(5)} ${String(s.offKickers).padStart(4)} ` +
+      `${f(s.relief, 0).padStart(6)} ${String(s.trackKickers).padStart(5)} ${String(s.offKickers).padStart(4)} ${String(s.cliffs).padStart(4)} ` +
       `${String(s.checkpoints).padStart(4)} ${f(s.treeGap, 1).padStart(6)} ${String(s.trees).padStart(6)} ` +
       `${f(s.sunElevation, 0).padStart(4)}°  ${findings || "clean"}`,
   );
@@ -80,7 +80,8 @@ if (rows.length > 1) {
     const v = rows.map((r) => r[key] * k).sort((a, b) => a - b);
     return `${f(v[0], d)} / ${f(v[Math.floor(v.length / 2)], d)} / ${f(v[v.length - 1], d)}`;
   };
-  const kick = [0, 1, 2, 3]
+  const most = Math.max(0, ...rows.map((r) => r.trackKickers));
+  const kick = Array.from({ length: most + 1 }, (_, k) => k)
     .map((k) => `${k}:${rows.filter((r) => r.trackKickers === k).length}`)
     .join(" ");
   console.log("");
@@ -91,7 +92,7 @@ if (rows.length > 1) {
     `min / median / max — build ms ${spread("ms", 0)}, length ${spread("length", 0)} m, tightest turn ${spread("minRadius", 0)} m`,
   );
   console.log(
-    `  grade ${spread("maxGrade", 1, 100)} %, climb ${spread("relief", 0)} m, trees ${spread("trees", 0)}, tree gap ${spread("treeGap", 1)} m`,
+    `  grade ${spread("maxGrade", 1, 100)} %, climb ${spread("relief", 0)} m, trees ${spread("trees", 0)}, tree gap ${spread("treeGap", 1)} m, cliffs ${spread("cliffs", 0)}`,
   );
   console.log(`track kickers per map — ${kick}`);
 }

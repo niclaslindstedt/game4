@@ -85,6 +85,9 @@ export interface Level {
   packed?: Heightfield;
   /** Every crest shaped to throw a sled, on the track and off it (R4, R9). */
   kickers?: Kicker[];
+  /** Every cliff cut into the country (R22) — none on a generator version
+   * without them. */
+  cliffs?: Cliff[];
   /** The basin's middle, and how far out its rim starts (R2). */
   basin?: { x: number; z: number; rim: number };
   /** Which sub-seed attempt the search accepted (0 = the first). */
@@ -152,7 +155,15 @@ export type GeneratedLevel = Level &
   Required<
     Pick<
       Level,
-      "packed" | "kickers" | "basin" | "attempt" | "drifts" | "weather" | "version" | "region"
+      | "packed"
+      | "kickers"
+      | "cliffs"
+      | "basin"
+      | "attempt"
+      | "drifts"
+      | "weather"
+      | "version"
+      | "region"
     >
   >;
 
@@ -180,6 +191,32 @@ export interface Kicker {
   /** One of the TRICK FIELD's (R20, `T1…`), laid on the track only on a
    * map built for a tricks run. */
   trick?: boolean;
+}
+
+/** A cliff a sled is ridden off into the lower ground below (R22). `x, z`
+ * is the middle of its EDGE, the top of the face. */
+export interface Cliff {
+  /** `C1…`, in the order they were laid. */
+  id: string;
+  x: number;
+  z: number;
+  /** Ground height at the top of the edge, m. */
+  y: number;
+  /** The direction a rider goes over the edge in — down the country's fall
+   * (heading convention). */
+  heading: number;
+  /** The face's height, m. */
+  drop: number;
+  /** The face's run, edge to foot, m. */
+  face: number;
+  /** The landing apron below the face: its height over the country at the
+   * face's foot, and its run from there to where it meets the country, m. */
+  apron: number;
+  landing: number;
+  /** The shelf behind the edge, foot to edge, m. */
+  shelf: number;
+  /** Full-height length of the edge across, m. */
+  width: number;
 }
 
 /** What a caller may ask of the generator beyond the seed. */

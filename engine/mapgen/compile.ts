@@ -12,6 +12,7 @@
 import { sampleField, sampleFieldGradient, type Heightfield } from "../lib/heightfield.ts";
 import type {
   Checkpoint,
+  Cliff,
   GeneratedLevel,
   Kicker,
   Level,
@@ -33,6 +34,7 @@ export type LevelParts = {
   grid: Spawn[];
   trees: TreeDef[];
   kickers: Kicker[];
+  cliffs: Cliff[];
   sun: Level["sun"];
   laps: number;
   basin: GeneratedLevel["basin"];
@@ -80,6 +82,7 @@ export function compileLevel(parts: LevelParts): GeneratedLevel {
     laps: parts.laps,
     packed,
     kickers: parts.kickers,
+    cliffs: parts.cliffs,
     basin: parts.basin,
     attempt: parts.attempt,
     drifts: parts.drifts,

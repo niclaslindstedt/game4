@@ -44,14 +44,31 @@
 // a map that did not (add a version here, keep the old behaviour on the old
 // row, and leave the map's digest alone).
 
+import { LEVEL_RULES as R, type Band } from "./rules.ts";
+
 /** A generator version — a whole number that only ever counts up. */
 export type GeneratorVersion = number;
+
+/** How much a version throws a sled: the rollers in the country (R3), the
+ * cliffs (R22) and how many kickers it lays on the loop and off it (R9,
+ * R4). The one trait the generator has had to keep so far. */
+export type JumpTraits = {
+  /** Whether the country carries R3's rollers. */
+  readonly rollers: boolean;
+  /** Whether the country carries R22's cliffs. */
+  readonly cliffs: boolean;
+  /** R9's count and least spacing between two lips, m. */
+  readonly onCount: Band;
+  readonly onSpacing: number;
+  /** R4's count, before the region's multiple. */
+  readonly offCount: Band;
+};
 
 /** One version of the generator: what it is, and every way it differs from
  * the current rules.
  *
- * `version` and `note` are the whole row today, because there is one
- * version and it has nothing to be different from. A LEGACY trait is added
+ * `version` and `note` are the whole of the current row, which has nothing
+ * to be different from. A LEGACY trait is added
  * here as an OPTIONAL field the moment a change first re-rolls a pinned map
  * — `{ narrowKickers?: boolean }`, `{ checkpointSpacing?: Band }` — set on
  * the old rows and absent from the current one, so the code reads
@@ -72,6 +89,9 @@ export type GeneratorTraits = {
    * what the version AFTER it changed — which is what tells the next
    * session whether the row is still earning its keep. */
   note: string;
+  /** LEGACY (v1): a quieter country — no rollers, no cliffs, one to three
+   * kickers on the loop at least 450 m apart and five to ten off it. */
+  fewerJumps?: JumpTraits;
 };
 
 /** Every version the generator can still build, oldest first.
@@ -81,7 +101,20 @@ export type GeneratorTraits = {
 export const GENERATOR_VERSIONS: readonly GeneratorTraits[] = [
   {
     version: 1,
-    note: "The generator as the campaign's pinned maps were curated on it (R1–R19).",
+    note:
+      "The generator as the campaign's pinned maps were curated on it (R1–R21). " +
+      "v2 filled the country with rollers and cliffs and doubled the kickers.",
+    fewerJumps: {
+      rollers: false,
+      cliffs: false,
+      onCount: { min: 1, max: 3 },
+      onSpacing: 450,
+      offCount: { min: 5, max: 10 },
+    },
+  },
+  {
+    version: 2,
+    note: "Air everywhere: R3's rollers, R22's cliffs, more kickers on the loop and off it (R4, R9).",
   },
 ];
 
@@ -108,5 +141,20 @@ export function generatorTraits(version: GeneratorVersion | undefined): Generato
   return (
     GENERATOR_VERSIONS.find((row) => row.version === version) ??
     GENERATOR_VERSIONS[GENERATOR_VERSIONS.length - 1]
+  );
+}
+
+/** What a version throws a sled with (`JumpTraits`): a legacy row's own
+ * numbers, or the rules as they stand. The ONE place the generator and the
+ * analysis ask it. */
+export function jumpsOf(version: GeneratorVersion | undefined): JumpTraits {
+  return (
+    generatorTraits(version).fewerJumps ?? {
+      rollers: true,
+      cliffs: true,
+      onCount: R.kickers.on.count,
+      onSpacing: R.kickers.on.spacing,
+      offCount: R.kickers.off.count,
+    }
   );
 }

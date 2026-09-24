@@ -24,6 +24,8 @@ import { declinationOf } from "../mapgen/sun.ts";
 import { WEATHER_KINDS, sunsetOf, weatherOf } from "../mapgen/weather.ts";
 import { maxGradeOf, minRadius, minSeparation } from "../mapgen/track.ts";
 import type { Level } from "../mapgen/types.ts";
+import { jumpsOf } from "../mapgen/versions.ts";
+import { checkCliffs } from "./cliffs.ts";
 import { selfCrossings } from "./crossings.ts";
 import { checkTrickField } from "./trick-field.ts";
 
@@ -54,6 +56,8 @@ export type LevelAnalysis = {
     maxCrossSlope: number;
     trackKickers: number;
     offKickers: number;
+    /** Cliffs cut into the country (R22). */
+    cliffs: number;
     checkpoints: number;
     spacingMin: number;
     spacingMax: number;
@@ -196,13 +200,12 @@ export function analyzeLevel(level: Level): LevelAnalysis {
 
   // R9 — the kickers on the track: how many, how far apart, and that each
   // is a crest. The trick field's are R20's, and held below.
+  // The count and the spacing are the version's (`jumpsOf`): a pinned map
+  // built by the quieter v1 is held to what v1 laid.
+  const jumps = jumpsOf(level.version);
   const crests = trackKickers.filter((k) => !k.trick);
-  if (crests.length < R.kickers.on.count.min || crests.length > R.kickers.on.count.max) {
-    add(
-      "R9",
-      "error",
-      `${crests.length} kicker(s) on the track (band ${bandText(R.kickers.on.count)})`,
-    );
+  if (!withinBand(crests.length, jumps.onCount)) {
+    add("R9", "error", `${crests.length} kicker(s) on the track (band ${bandText(jumps.onCount)})`);
   }
   for (let a = 0; a < crests.length; a++) {
     const k = crests[a];
@@ -219,7 +222,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       add("R9", "warn", `${k.id} at s ${fmt(s0, 0)} m breaks only ${fmt(kick, 2)} over its lip`);
     for (let b = a + 1; b < crests.length; b++) {
       const ds = Math.abs((k.s ?? 0) - (crests[b].s ?? 0));
-      if (Math.min(ds, L - ds) < R.kickers.on.spacing - 1) {
+      if (Math.min(ds, L - ds) < jumps.onSpacing - 1) {
         add(
           "R9",
           "error",
@@ -236,9 +239,12 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       add("R4", "error", `${k.id} stands ${fmt(hit.distance, 0)} m from the track`);
     }
   }
-  if (offKickers.length < scaleCount(R.kickers.off.count, regionOf(level).kickers).min) {
+  if (offKickers.length < scaleCount(jumps.offCount, regionOf(level).kickers).min) {
     add("R4", "warn", `only ${offKickers.length} kicker(s) off the track`);
   }
+
+  // R22 — the cliffs, on a version that cuts them.
+  checkCliffs(level, add);
 
   // R20 — the trick field, when the map carries one.
   checkTrickField(level, trackKickers, add);
@@ -518,6 +524,7 @@ export function analyzeLevel(level: Level): LevelAnalysis {
       maxCrossSlope: maxCross,
       trackKickers: trackKickers.length,
       offKickers: offKickers.length,
+      cliffs: level.cliffs?.length ?? 0,
       checkpoints: cps.length,
       spacingMin,
       spacingMax,

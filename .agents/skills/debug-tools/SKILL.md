@@ -71,7 +71,7 @@ LINK puts the whole URL on the clipboard.
 The loop that makes performance work on a real phone possible:
 
 1. On the device: DEVELOPER ▸ BENCHMARK. The pinned race (`benchmark-plan.ts`
-   — seed 39, the race with the whole field, chase camera, fair sky at 11:00,
+   — seed 37, the race with the whole field, chase camera, fair sky at 11:00,
    1800 frames at a sixtieth) is stood up behind the loading card, its lights
    counted out there as the warm-up, then timed.
 2. The score is an INDEX: 100 is real time. The red line is the run so far;

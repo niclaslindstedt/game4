@@ -345,9 +345,18 @@ describe("the animals in the snow", () => {
     const spook = spookAt(g, loud, CALM, ground);
     expect(spook).not.toBe(CALM);
     expect(Math.hypot(spook.dx, spook.dz)).toBeCloseTo(spec.flee, 5);
-    const before = Math.hypot(pose.x - loud.sled.x, pose.z - loud.sled.z);
+    // A minute on it has settled: it stands `flee` metres from where its
+    // round would have had it, off the side away from the engine — the
+    // round itself walks on and may well come back past the sled.
+    const awayX = pose.x - loud.sled.x;
+    const awayZ = pose.z - loud.sled.z;
+    const calm = freshBeastPose();
+    beastPose(g, 0, 40 + 60, ground, calm);
     beastPose(g, 0, 40 + 60, ground, pose, spook);
-    expect(Math.hypot(pose.x - loud.sled.x, pose.z - loud.sled.z)).toBeGreaterThan(before);
+    const dx = pose.x - calm.x;
+    const dz = pose.z - calm.z;
+    expect(Math.hypot(dx, dz)).toBeCloseTo(spec.flee, 1);
+    expect(dx * awayX + dz * awayZ).toBeGreaterThan(0);
     // Still running, it is not frightened again.
     loud.t = 41;
     expect(spookAt(g, loud, spook, ground)).toBe(spook);
