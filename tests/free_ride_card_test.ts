@@ -8,21 +8,29 @@
 
 import { describe, expect, it } from "vitest";
 
-import { SLED, createGame, generateLevel, NEUTRAL_INPUT, SNOW_DIAL, step } from "@engine";
+import {
+  SLED,
+  createGame,
+  generateLevel,
+  NEUTRAL_INPUT,
+  SNOW_DIAL,
+  restSinkOf,
+  step,
+} from "@engine";
 
 import {
-  FREE_DAYS,
-  dateLabel,
-  dayOnTravel,
+  SEASONS,
+  SNOW_STOPS,
+  depthOf,
   freeGameOptions,
   freshRide,
-  hourLabel,
   mergeRide,
   spotOn,
 } from "../pwa/src/game/free-ride.ts";
 import { CHART_VIEW, fromChart, seedSchematic, toChart } from "../pwa/src/game/seed-chart.ts";
 import { freshSettings, mergeSettings } from "../pwa/src/game/settings.ts";
 import { takeSnapshot } from "../pwa/src/game/snapshot.ts";
+import { STRINGS } from "../pwa/src/game/strings.ts";
 import { readParams } from "../pwa/src/game/url-params.ts";
 import { syntheticLevel } from "./support/synthetic.ts";
 
@@ -31,9 +39,9 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
     const ride = freshSettings().ride;
     expect(ride).toEqual({
       seed: null,
-      day: null,
-      hour: null,
-      depth: 1,
+      season: null,
+      time: null,
+      snow: "medium",
       spot: null,
       weather: null,
       region: "boreal",
@@ -47,25 +55,34 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
   it("checks every field of a stored ride on its own", () => {
     const ride = mergeRide({
       seed: 42,
-      day: 400,
-      hour: 30,
-      depth: 1.6,
+      season: "late",
+      time: "night",
+      snow: "deep",
       spot: { seed: 42, x: 100, z: 200 },
     });
     expect(ride.seed).toBe(42);
-    expect(ride.day).toBe(FREE_DAYS.max);
-    expect(ride.hour).toBe(24);
-    // Onto the dial's grid.
-    expect(ride.depth).toBe(1.5);
+    expect(ride.season).toBe("late");
+    expect(ride.time).toBe("night");
+    expect(ride.snow).toBe("deep");
     expect(ride.spot).toEqual({ seed: 42, x: 100, z: 200 });
-    const junk = mergeRide({ seed: -3, day: "x", depth: 99, spot: { x: 1 } });
+    const junk = mergeRide({ seed: -3, season: "summer", time: 11, snow: "slush", spot: { x: 1 } });
     expect(junk.seed).toBeNull();
-    expect(junk.day).toBeNull();
-    expect(junk.depth).toBe(SNOW_DIAL.max);
+    expect(junk.season).toBeNull();
+    expect(junk.time).toBeNull();
+    expect(junk.snow).toBe("medium");
     expect(junk.spot).toBeNull();
     expect(mergeRide("nonsense")).toEqual(freshRide());
     expect(mergeRide({ weather: "snow" }).weather).toBe("snow");
     expect(mergeRide({ weather: "hail" }).weather).toBeNull();
+  });
+
+  it("reads the faders' blob onto the nearest snow and hands the day back to the map", () => {
+    const old = mergeRide({ seed: 5, day: 40, hour: 11, depth: 2 });
+    expect(old.snow).toBe("deep");
+    expect(old.season).toBeNull();
+    expect(old.time).toBeNull();
+    expect(mergeRide({ depth: 0.25 }).snow).toBe("thin");
+    expect(mergeRide({ depth: 1 }).snow).toBe("medium");
   });
 
   it("keeps a spot only on the seed it was picked on", () => {
@@ -77,9 +94,9 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
   it("stands a ride up as a free run on the card's answers", () => {
     const ride = {
       seed: 9,
-      day: 40,
-      hour: 11,
-      depth: 1.5,
+      season: "late" as const,
+      time: "morning" as const,
+      snow: "thick" as const,
       spot: { seed: 9, x: 400, z: 200 },
       weather: "fog" as const,
       region: "boreal" as const,
@@ -87,8 +104,8 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
     const opts = freeGameOptions(ride, 9, SLED, { yaw: 1, air: 1 });
     expect(opts.mode).toBe("free");
     expect(opts.seed).toBe(9);
-    expect(opts.snowDepth).toBe(1.5);
-    expect(opts.day).toEqual({ hour: 11, dayOfYear: 40 });
+    expect(opts.snowDepth).toBe(depthOf("thick"));
+    expect(opts.day).toEqual({ time: "morning", dayOfYear: 56 });
     expect(opts.spawn).toEqual({ x: 400, z: 200 });
     // The weather row names the sky and never an hour: the hour is the day's.
     expect(opts.sky).toEqual({ weather: "fog" });
@@ -98,30 +115,30 @@ describe("what the start card remembers (free-ride.ts, settings.ts)", () => {
     const state = createGame({ ...opts, level: syntheticLevel(), quiet: true });
     expect(state.level.weather?.kind).toBe("fog");
     expect(state.rules.course).toBe(false);
-    expect(state.snowDepth).toBe(1.5);
-    expect(state.level.sun.dayOfYear).toBe(40);
+    expect(state.snowDepth).toBe(depthOf("thick"));
+    expect(state.level.sun.dayOfYear).toBe(56);
     expect(freeGameOptions(ride, 10, SLED, { yaw: 1, air: 1 }).spawn).toBeUndefined();
   });
 });
 
-describe("what the rows read", () => {
-  it("reads a count of days as a date, through New Year", () => {
-    expect(dateLabel(1)).toBe("1 JAN");
-    expect(dateLabel(32)).toBe("1 FEB");
-    expect(dateLabel(0)).toBe("31 DEC");
-    expect(dateLabel(FREE_DAYS.min)).toBe("1 DEC");
-    expect(dateLabel(FREE_DAYS.max)).toBe("15 APR");
+describe("what the rows ask for", () => {
+  it("sinks a standing sled as deep as each snow stop says, MEDIUM the race's own", () => {
+    for (const stop of SNOW_STOPS) {
+      expect(restSinkOf(depthOf(stop.id)) * 100).toBeCloseTo(stop.cm, 6);
+      expect(depthOf(stop.id)).toBeGreaterThanOrEqual(SNOW_DIAL.min);
+      expect(depthOf(stop.id)).toBeLessThanOrEqual(SNOW_DIAL.max);
+    }
+    expect(SNOW_STOPS.map((s) => s.cm)).toEqual([10, 26, 38, 50]);
+    expect(depthOf("medium")).toBeCloseTo(1, 9);
+    // The row's hint states every stop's depth.
+    for (const stop of SNOW_STOPS) expect(STRINGS.startSnowHint).toContain(`${stop.cm} cm`);
   });
 
-  it("puts a December day of the year on the row's travel", () => {
-    expect(dayOnTravel(350)).toBe(-15);
-    expect(dayOnTravel(40)).toBe(40);
-  });
-
-  it("reads a solar hour as a clock", () => {
-    expect(hourLabel(10.75)).toBe("10:45");
-    expect(hourLabel(9)).toBe("09:00");
-    expect(hourLabel(23.999)).toBe("00:00");
+  it("puts the seasons in winter's order, December to April", () => {
+    const days = SEASONS.map((s) => s.day);
+    expect(days).toEqual([...days].sort((a, b) => a - b));
+    expect(days[0]).toBeLessThan(0);
+    expect(days[days.length - 1]).toBeLessThanOrEqual(105);
   });
 });
 

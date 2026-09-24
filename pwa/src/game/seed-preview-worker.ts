@@ -19,11 +19,6 @@ import { CHART_PX, seedSchematic, type SeedSchematic } from "./seed-chart.ts";
 /** What the card asks for: one seed, in one kind of snow country (R21). */
 export type PreviewRequest = { seed: number; region: RegionId };
 
-/** THE DAY THIS SEED DEALS (R15) — what the start card's date and time rows
- * stand on until they are moved, and the latitude the hour row's travel is
- * worked out at (`freeHours`). */
-export type SeedDeal = { hour: number; dayOfYear: number; latitude: number };
-
 /** What comes back. A seed the generator refuses is an answer too: the
  * card says so rather than sitting on a spinner forever. The picture is
  * finished where the worker has a canvas of its own, raw pixels where not. */
@@ -34,7 +29,6 @@ export type PreviewReply =
       ok: true;
       picture: Blob | { px: number; rgba: Uint8ClampedArray<ArrayBuffer> };
       schematic: SeedSchematic;
-      deal: SeedDeal;
       /** The loop, m. */
       length: number;
     }
@@ -53,7 +47,6 @@ self.onmessage = async (e: MessageEvent<PreviewRequest>) => {
       region,
       ok: true as const,
       schematic: seedSchematic(level),
-      deal: { ...level.sun },
       length: level.track.length,
     };
     if (typeof OffscreenCanvas !== "undefined") {

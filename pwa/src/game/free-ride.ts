@@ -5,12 +5,16 @@
 // run is stood up with (`freeGameOptions`). DOM-free, so the suite reads all
 // of it (`tests/free_ride_card_test.ts`).
 //
-// EVERY ROW DEFERS TO THE MAP UNTIL IT IS MOVED. A generated map is a whole
-// day — its date, its hour — and a card that arrived with an opinion about
-// either would quietly take that away from every rider who never touched
-// it. So the day's two rows store NULL until they are moved, and null is the
-// seed's own answer; the start card's faders stand on the dealt figure until
-// then, which is the same promise with nothing on the row to explain.
+// THE ROWS ASK IN WORDS, NOT FIGURES. Nobody picks the 43rd day of the year or
+// 10:45 solar time; they pick MIDWINTER and MORNING, and a depth of snow by
+// what it is like to ride. So the day is a SEASON, the hour a TIME OF DAY
+// (the engine's `hourOfTime` says which hour that is on the map's own date
+// and latitude, NIGHT included) and the snow one of four depths.
+//
+// THE DAY'S TWO ROWS DEFER TO THE MAP UNTIL THEY ARE MOVED. A generated map
+// is a whole day, and a card that arrived with an opinion about it would
+// quietly take that away from every rider who never touched it. So both
+// store NULL until moved, and null is the seed's own answer (AS DEALT).
 //
 // THE SPOT BELONGS TO ITS SEED. A place picked on one map's chart is a
 // meaningless coordinate on the next, so it is kept with the seed it was
@@ -18,40 +22,59 @@
 
 import {
   DEFAULT_REGION,
-  SNOW_DIAL,
-  WEATHER_KINDS,
-  clampSnowDepth,
+  TIMES_OF_DAY,
   isRegionId,
+  restSinkOf,
   type RegionId,
+  type TimeOfDay,
   type WeatherKind,
+  WEATHER_KINDS,
   type Assist,
   type CreateGameOptions,
   type SledSpec,
 } from "@engine";
 
-import { STRINGS } from "./strings.ts";
+/** THE SEASON ROW'S STOPS, each a day as a count off Jan 1 (so December
+ * runs through New Year without a seam; the engine folds it, `dayOfYearOf`):
+ * the whole winter a basin like this one holds snow, where R15 deals only
+ * mid-January to mid-March. */
+export const SEASONS = [
+  { id: "early", day: -16 }, // 15 Dec: the lowest sun, the shortest day
+  { id: "mid", day: 20 }, // 20 Jan
+  { id: "late", day: 56 }, // 25 Feb
+  { id: "spring", day: 91 }, // 1 Apr: a high sun and long days
+] as const;
 
-/** THE DATE ROW'S TRAVEL, as a count of days off the first of January: from
- * the first of December (−30) to the middle of April (105) — the whole
- * season a basin like this one holds snow, where R15 deals only mid-January
- * to mid-March. A count rather than a day of the year so the travel runs
- * through New Year without a seam; the engine folds it (`dayOfYearOf`). */
-export const FREE_DAYS = { min: -30, max: 105, step: 1 } as const;
+export type SeasonId = (typeof SEASONS)[number]["id"];
 
-/** One press of the TIME row's arrow, h — a quarter of an hour. */
-export const HOUR_STEP = 0.25;
+/** THE SNOW ROW'S STOPS, by how far a sled standing in untouched powder
+ * sinks, cm. MEDIUM is the snow every race is ridden on. */
+export const SNOW_STOPS = [
+  { id: "thin", cm: 10 },
+  { id: "medium", cm: 26 },
+  { id: "thick", cm: 38 },
+  { id: "deep", cm: 50 },
+] as const;
+
+export type SnowId = (typeof SNOW_STOPS)[number]["id"];
+
+/** The snow dial (`SNOW_DIAL`) a stop asks for: its rest sink over the
+ * ordinary snow's. */
+export function depthOf(snow: SnowId): number {
+  const stop = SNOW_STOPS.find((s) => s.id === snow) ?? SNOW_STOPS[1];
+  return stop.cm / 100 / restSinkOf(1);
+}
 
 /** What the start card writes. */
 export type FreeRide = {
   /** The map; null is the one the front door is standing over. */
   seed: number | null;
-  /** The date as a count of days off Jan 1 ({@link FREE_DAYS}); null is the
-   * map's own. */
-  day: number | null;
-  /** The solar hour the ride starts at; null is the map's own. */
-  hour: number | null;
-  /** The snow dial (`SNOW_DIAL`). */
-  depth: number;
+  /** The season ({@link SEASONS}); null is the map's own date. */
+  season: SeasonId | null;
+  /** The time of day (`hourOfTime`); null is the map's own hour. */
+  time: TimeOfDay | null;
+  /** How deep the powder is ({@link SNOW_STOPS}). */
+  snow: SnowId;
   /** Where on the chart the ride starts, on the seed it was picked on; null
    * is the grid. */
   spot: { seed: number; x: number; z: number } | null;
@@ -65,9 +88,9 @@ export type FreeRide = {
 export function freshRide(): FreeRide {
   return {
     seed: null,
-    day: null,
-    hour: null,
-    depth: 1,
+    season: null,
+    time: null,
+    snow: "medium",
     spot: null,
     weather: null,
     region: DEFAULT_REGION,
@@ -76,8 +99,13 @@ export function freshRide(): FreeRide {
 
 const isNumber = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
+const isSeason = (v: unknown): v is SeasonId => SEASONS.some((s) => s.id === v);
+const isSnow = (v: unknown): v is SnowId => SNOW_STOPS.some((s) => s.id === v);
+
 /** A stored blob — anything at all — made into a ride this build offers,
- * every field checked on its own. */
+ * every field checked on its own. A blob from the build with faders (a
+ * `depth` multiple, a `day`, an `hour`) keeps its snow on the nearest stop
+ * and hands the day back to the map. */
 export function mergeRide(blob: unknown): FreeRide {
   const out = freshRide();
   if (!blob || typeof blob !== "object") return out;
@@ -85,13 +113,14 @@ export function mergeRide(blob: unknown): FreeRide {
   if (isNumber(b.seed) && Number.isInteger(b.seed) && b.seed >= 1 && b.seed <= 0xffffffff) {
     out.seed = b.seed;
   }
-  if (isNumber(b.day)) {
-    out.day = Math.round(Math.min(FREE_DAYS.max, Math.max(FREE_DAYS.min, b.day)));
-  }
-  if (isNumber(b.hour)) out.hour = Math.min(24, Math.max(0, b.hour));
-  if (isNumber(b.depth)) {
-    const d = clampSnowDepth(b.depth);
-    out.depth = Math.round(d / SNOW_DIAL.step) * SNOW_DIAL.step;
+  if (isSeason(b.season)) out.season = b.season;
+  if (TIMES_OF_DAY.includes(b.time as TimeOfDay)) out.time = b.time as TimeOfDay;
+  if (isSnow(b.snow)) out.snow = b.snow;
+  else if (isNumber(b.depth)) {
+    const cm = restSinkOf(b.depth) * 100;
+    out.snow = SNOW_STOPS.reduce((best, s) =>
+      Math.abs(s.cm - cm) < Math.abs(best.cm - cm) ? s : best,
+    ).id;
   }
   if (typeof b.weather === "string" && WEATHER_KINDS.includes(b.weather as WeatherKind)) {
     out.weather = b.weather as WeatherKind;
@@ -130,41 +159,16 @@ export function freeGameOptions(
     assist,
     mode: "free",
     region: ride.region,
-    snowDepth: ride.depth,
-    // ONE PATH FOR THE HOUR: the TIME row's hour goes through `day`
-    // (`withDay`, held to that date's daylight); the WEATHER row names only
-    // the sky, never an hour, so the two cannot disagree.
-    day: { hour: ride.hour, dayOfYear: ride.day },
+    snowDepth: depthOf(ride.snow),
+    // ONE PATH FOR THE HOUR: the TIME row's word goes through `day`
+    // (`withDay`, which reads it on the map's own latitude and the season's
+    // date); the WEATHER row names only the sky, never an hour, so the two
+    // cannot disagree.
+    day: {
+      time: ride.time,
+      dayOfYear: SEASONS.find((s) => s.id === ride.season)?.day ?? null,
+    },
     sky: ride.weather === null ? undefined : { weather: ride.weather },
     spawn: spotOn(ride, seed) ?? undefined,
   };
-}
-
-const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
-
-/** A count of days off Jan 1 as the date a rider reads, `12 FEB` — the
- * calendar of a year with no leap day in it, which is the engine's. */
-export function dateLabel(day: number): string {
-  let d = Math.round(day - 1) % 365;
-  if (d < 0) d += 365;
-  let m = 0;
-  while (d >= MONTH_DAYS[m]) {
-    d -= MONTH_DAYS[m];
-    m += 1;
-  }
-  return STRINGS.date(d + 1, m);
-}
-
-/** A day of the year (1..365) as a count on the date row's travel: a
- * December day reads as the days before New Year. */
-export function dayOnTravel(dayOfYear: number): number {
-  return dayOfYear > FREE_DAYS.max ? dayOfYear - 365 : dayOfYear;
-}
-
-/** A solar hour as the clock a rider reads, `10:45`. */
-export function hourLabel(hour: number): string {
-  const minutes = Math.round((((hour % 24) + 24) % 24) * 60);
-  const h = Math.floor(minutes / 60) % 24;
-  const m = minutes % 60;
-  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }

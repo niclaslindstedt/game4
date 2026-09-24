@@ -14,6 +14,7 @@
 import { createRng } from "../lib/prng.ts";
 import { generateLevel, withDay, withSky } from "../mapgen/index.ts";
 import type { RegionId } from "../mapgen/regions.ts";
+import type { TimeOfDay } from "../mapgen/sun.ts";
 import type { Level, SkyOverride } from "../mapgen/types.ts";
 import { status } from "../output.ts";
 import { freeSpawn, freshProgress, standSled } from "./course.ts";
@@ -74,8 +75,9 @@ export type CreateGameOptions = {
    * ordinary snow's. 1 when left out. */
   snowDepth?: number;
   /** The day to ride the map on instead of the one R15 dealt: an hour of
-   * solar time and a day of the year, either or both (`withDay`). */
-  day?: { hour?: number | null; dayOfYear?: number | null };
+   * solar time or a named time of day (`hourOfTime`), and a day of the
+   * year, any of them (`withDay`). */
+  day?: { hour?: number | null; dayOfYear?: number | null; time?: TimeOfDay | null };
   /** Ride the map under this sky instead of the one R19 dealt it
    * (`withSky`). Applied AFTER `day`: the day owns the date and the
    * daylight hour a rider picks; `sky.hour` is a lab's or a link's, never
