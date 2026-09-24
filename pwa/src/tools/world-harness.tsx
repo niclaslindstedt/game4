@@ -368,6 +368,16 @@ const shots: Record<string, () => string> = {
       ? `in the air ${state.sled.airTime.toFixed(2)} s, t ${state.t.toFixed(1)} s`
       : "no flight found";
   },
+  // Late in a flight, falling fast: where a lens that only trailed the sled
+  // lost the rider out of the bottom of the frame.
+  drop() {
+    renderer.setCamera("chase", true);
+    const found = rideUntil(() => state.sled.airborne && state.sled.vy < -8, state.t + 150);
+    frame(true);
+    return found
+      ? `falling at ${(-state.sled.vy).toFixed(1)} m/s, in the air ${state.sled.airTime.toFixed(2)} s`
+      : "no drop found";
+  },
   landing() {
     rideUntil(() => !state.sled.airborne, state.t + 5);
     for (let i = 0; i < 8; i++) frame(false);
