@@ -132,7 +132,7 @@ import { readHudLayer } from "./game/shot-hud.ts";
 import { createShotRequest } from "./game/shot-request.ts";
 import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
 import { dealSeed, linkWorld, overLink, readParams, type MenuPage } from "./game/url-params.ts";
-import { applyVerdict, createVideoProbe } from "./game/video-probe.ts";
+import { createPictureAuto } from "./game/picture-auto.ts";
 import { UpdateButton } from "./game/update-button.tsx";
 import { clamp } from "./lib/util.ts";
 
@@ -184,8 +184,10 @@ export function App() {
   const specOf = (s: Settings): SledSpec => sledById(linkSledRef.current ?? s.sled);
   /** The picture drawn: the stored one, or a lab's preset for this visit —
    * `?video=` is never written back. */
-  const videoOf = (s: Settings): VideoSettings =>
-    params.video ? withPreset(s.video, params.video) : s.video;
+  const videoOf = (s: Settings): VideoSettings => ({
+    ...(params.video ? withPreset(s.video, params.video) : s.video),
+    ...params.picture,
+  });
   /** THE SEED RACE WILL BUILD, shown on the tile. Pinned by `?seed=`,
    * otherwise dealt fresh after every race stood up. */
   const [nextSeed, setNextSeed] = useState(() => params.seed ?? dealSeed());
@@ -530,6 +532,8 @@ export function App() {
       benchGpu: params.gpu,
       benchHide: params.hide,
       benchAb: params.ab,
+      benchFrames: params.frames,
+      benchVista: params.view === "vista",
     });
 
     pressRef.current = {
@@ -624,14 +628,13 @@ export function App() {
     // Walking a card on the keys is `menu-nav.ts`'s.
     const walk = walkCardsOnKeys(nav, () => shellRef.current !== "run");
 
-    // THE FIRST-VISIT PROBE (`video-probe.ts`): times the design point under
-    // the front door, once, and moves an untouched picture to the tier this
-    // machine can hold. Never over a race, a link's preset or a lab's
-    // `?probe=0`, and never twice.
-    let probe =
-      params.probe && !params.rides && !params.video && !settingsRef.current.probed
-        ? createVideoProbe()
-        : null;
+    // PRESET ▸ AUTO (`picture-auto.ts`): times the race under the front
+    // door and fits every picture row to this machine. Never over a race a
+    // link boots, a link's picture or a lab's `?probe=0`.
+    const pictureAuto = createPictureAuto(
+      params.probe && !params.rides && !params.video && Object.keys(params.picture).length === 0,
+      setSettings,
+    );
 
     let raf = 0;
     let last = performance.now();
@@ -681,16 +684,14 @@ export function App() {
       devRig.frame(frameMs, dtFrame, performance.now() - simAt);
       if (!shown || !appDraws(shellRef.current)) return;
       const still = frozen || held || clock.paused();
-      const timing = probe !== null && !playerRides(shellRef.current) && !loader.busy() && !still;
+      const quiet = !playerRides(shellRef.current) && !loader.busy() && !still;
+      const timing = pictureAuto.wants(settingsRef.current.autoPicture, quiet);
       const drawAt = performance.now();
       renderer.draw(state, clock.alpha(), still ? 0 : dtRun);
       shots.serve();
-      if (timing && probe) {
-        const verdict = probe.frame(frameMs, performance.now() - drawAt + renderer.drain());
-        if (verdict !== null) {
-          probe = null;
-          setSettings((s) => ({ ...s, probed: true, video: applyVerdict(s.video, verdict) }));
-        }
+      if (timing) {
+        const drawMs = performance.now() - drawAt + renderer.drain();
+        pictureAuto.frame(frameMs, drawMs, videoOf(settingsRef.current));
       }
       if (!still) {
         audio.setView(renderer.camera());

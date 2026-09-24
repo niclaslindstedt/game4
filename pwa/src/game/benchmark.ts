@@ -40,7 +40,7 @@
 
 import { TUNING, botInput, step, type GameState } from "@engine";
 
-import { BENCHMARK } from "./benchmark-plan.ts";
+import { BENCHMARK, plannedRows } from "./benchmark-plan.ts";
 import { SAMPLE_EVERY, benchIndex, type BenchSample } from "./benchmark-index.ts";
 import {
   GPU_NAME_CAP,
@@ -50,6 +50,7 @@ import {
   type FrameTiming,
   type GpuTotals,
   type Hideable,
+  type ReportRow,
   type Machine,
   type RunTotals,
   type SceneShare,
@@ -69,6 +70,11 @@ export type BenchmarkStatus = {
   /** `running` is the measured stretch; `done` is the answer. */
   phase: "running" | "done";
   frames: number;
+  /** Frames the run is asked for — the plan's, or a price list's shorter
+   * stretch (`?frames=`). */
+  planned: number;
+  /** The pinned rows as the run was stood up (`runRows`). */
+  plan: ReportRow[];
   /** Wall clock since the green, s — what is measured. */
   seconds: number;
   /** The run so far on the 100-is-real-time scale. */
@@ -207,8 +213,12 @@ export function runBenchmark(
     /** THE INTERLEAVED A/B (`?ab=1`): frame by frame, the picture drawn
      * without each of these in turn and once whole. */
     cycle?: readonly Hideable[];
+    /** Frames to time, over the plan's (`?frames=`). */
+    frames?: number;
+    plan?: ReportRow[];
   },
 ): () => void {
+  const planned = race.frames ?? BENCHMARK.frames;
   const { state, renderer, onStatus } = race;
   const hidden = [...(race.hidden ?? [])];
   const cycle: readonly (Hideable | "")[] = race.cycle ? ["", ...race.cycle] : [];
@@ -232,6 +242,8 @@ export function runBenchmark(
     onStatus({
       phase,
       frames,
+      planned,
+      plan: race.plan ?? plannedRows(),
       seconds: elapsed / 1000,
       index: benchIndex(frames * BENCHMARK.step, elapsed / 1000),
       samples: samples.slice(),
@@ -263,7 +275,7 @@ export function runBenchmark(
     elapsed = now - green;
     const fps = now > framed ? 1000 / (now - framed) : 0;
     framed = now;
-    const finished = frames >= BENCHMARK.frames;
+    const finished = frames >= planned;
     // The card is redrawn only on a reading, a quarter second of game apart
     // — a graph redrawn every frame would be a benchmark of its instrument.
     if (finished || frames % SAMPLE_EVERY === 0) {

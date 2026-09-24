@@ -26,7 +26,7 @@ import {
   pictureCode,
 } from "./benchmark-history.ts";
 import { benchPlot } from "./benchmark-index.ts";
-import { BENCHMARK, plannedRows } from "./benchmark-plan.ts";
+import { BENCHMARK } from "./benchmark-plan.ts";
 import { benchmarkReport, pictureRows } from "./benchmark-report.ts";
 import type { BenchmarkStatus } from "./benchmark.ts";
 import { useReceipt } from "./copy-receipt.ts";
@@ -52,7 +52,7 @@ export function BenchmarkCard({
   onLeave: () => void;
 }) {
   const [said, say] = useReceipt();
-  const plot = benchPlot(status.samples, BENCHMARK.frames, BENCHMARK.step);
+  const plot = benchPlot(status.samples, status.planned, BENCHMARK.step);
   const done = status.phase === "done";
   const report = (): string =>
     benchmarkReport({
@@ -62,7 +62,7 @@ export function BenchmarkCard({
       height: status.height,
       pixelRatio: devicePixelRatio,
       picture: pictureRows(video),
-      plan: plannedRows(),
+      plan: status.plan,
       samples: status.samples,
       costs: status.costs,
       scene: status.scene,
@@ -71,7 +71,7 @@ export function BenchmarkCard({
       hidden: status.hidden,
       machine: status.machine,
       step: BENCHMARK.step,
-      frames: BENCHMARK.frames,
+      frames: status.planned,
     });
   if (done) window.__SH_BENCH__ = report();
   return (
@@ -98,7 +98,7 @@ export function BenchmarkCard({
         <span>
           {done
             ? STRINGS.benchDone(status.seconds)
-            : STRINGS.benchProgress(status.frames, BENCHMARK.frames)}
+            : STRINGS.benchProgress(status.frames, status.planned)}
         </span>
       </div>
       {done && (

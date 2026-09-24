@@ -20,12 +20,19 @@
 //
 // A FACTORY OVER `App.tsx`'s closures, the `app-load.ts` shape.
 
-import { createGame, type GameMode, type GameState } from "@engine";
+import { createGame, type GameMode, type GameState, type Level } from "@engine";
 
 import type { LoadPlan } from "./app-load.ts";
 import { rememberBenchmark } from "./benchmark-history.ts";
 import { BENCHMARK, plannedRows } from "./benchmark-plan.ts";
-import { HIDEABLE, pictureRows, type GpuMode, type Hideable } from "./benchmark-report.ts";
+import {
+  HIDEABLE,
+  pictureRows,
+  type GpuMode,
+  type Hideable,
+  type ReportRow,
+} from "./benchmark-report.ts";
+import type { LensPose } from "./camera-rigs.ts";
 import {
   runBenchmark,
   warmBenchmark,
@@ -59,6 +66,12 @@ export type BenchWorld = {
   hide: readonly Hideable[];
   /** Interleave the A/B: every subsystem hidden a frame in turn (`?ab=1`). */
   ab: boolean;
+  /** A shorter stretch than the plan's (`?frames=`), and the VISTA — the
+   * lens planted high on the basin's edge looking across all of it
+   * (`?view=vista`), the view DISTANCE is dearest from. Both are a price
+   * list's (`make bench --costs`), never a score to hold a run to. */
+  frames: number | null;
+  vista: boolean;
 };
 
 export type BenchRun = {
@@ -70,6 +83,26 @@ export type BenchRun = {
 /** The map's line on the card and in the report. */
 export function benchmarkMap(): string {
   return STRINGS.benchMap(BENCHMARK.seed);
+}
+
+/** THE VISTA: from high over the basin's edge (a tenth of the way in from
+ * a corner, sixty metres over the snow) across its middle to the far rim. */
+export function vistaOf(level: Level): LensPose {
+  const edge = level.size * 0.1;
+  const mid = level.size / 2;
+  return {
+    eye: { x: edge, y: level.groundAt(edge, edge) + 60, z: edge },
+    target: { x: mid, y: level.groundAt(mid, mid), z: mid },
+    fov: 60,
+    roll: 0,
+  };
+}
+
+/** The pinned rows, and what a price list moved off them. */
+export function runRows(world: Pick<BenchWorld, "frames" | "vista">): ReportRow[] {
+  const rows = plannedRows({ ...BENCHMARK, frames: world.frames ?? BENCHMARK.frames });
+  if (world.vista) rows.push({ label: "view", value: "vista" });
+  return rows;
 }
 
 export function createBenchRun(world: BenchWorld): BenchRun {
@@ -98,6 +131,7 @@ export function createBenchRun(world: BenchWorld): BenchRun {
           // Built on the first slice: the race it warms is what the steps
           // before it have just made.
           run: (budget) => {
+            if (!warm && world.vista) world.renderer.setOverride(vistaOf(world.current().level));
             warm ??= warmBenchmark({ state: world.current(), renderer: world.renderer });
             return warm.run(budget);
           },
@@ -110,6 +144,8 @@ export function createBenchRun(world: BenchWorld): BenchRun {
           state: world.current(),
           renderer: world.renderer,
           hidden: world.hide,
+          frames: world.frames ?? undefined,
+          plan: runRows(world),
           cycle: world.ab ? HIDEABLE.filter((h) => !world.hide.includes(h)) : undefined,
           onStatus: (status) => {
             world.setStatus(status);
@@ -126,7 +162,7 @@ export function createBenchRun(world: BenchWorld): BenchRun {
               height: status.height,
               pixelRatio: devicePixelRatio,
               picture: pictureRows(world.video()),
-              plan: plannedRows(),
+              plan: status.plan,
               samples: status.samples,
               costs: status.costs,
               scene: status.scene,
@@ -135,7 +171,7 @@ export function createBenchRun(world: BenchWorld): BenchRun {
               hidden: status.hidden,
               machine: status.machine,
               step: BENCHMARK.step,
-              frames: BENCHMARK.frames,
+              frames: status.planned,
             });
           },
         });
@@ -150,6 +186,7 @@ export function createBenchRun(world: BenchWorld): BenchRun {
       stop = null;
       world.renderer.setGpuTimer("off");
       world.renderer.setHidden([]);
+      if (world.vista) world.renderer.setOverride(null);
       world.setStatus(null);
     },
   };
