@@ -186,7 +186,6 @@ export const STRINGS = {
   resultTricksTitle: "TRICKS",
   pauseSubTricks: (seed: number, points: number): string =>
     `SEED ${seed} · TRICKS · ${points.toLocaleString("en-US")} PTS`,
-  menuSound: (on: boolean): string => (on ? "SOUND ON" : "SOUND OFF"),
 
   menuOptions: "OPTIONS",
   menuBack: "BACK",

@@ -26,8 +26,9 @@
 // its own start card (`menu-start.tsx`) — a second way onto the snow, so a
 // tile, but never a second red one.
 //
-// EVERYTHING THAT IS NOT SNOW, along the foot: the sound switch, the
-// GALLERY of pictures kept (`menu-gallery.tsx`) and the build. And DEVELOPER, once it
+// EVERYTHING THAT IS NOT SNOW, along the foot: OPTIONS (`menu-options.tsx` —
+// the sound switch and every other setting live there, not on this card),
+// the GALLERY of pictures kept (`menu-gallery.tsx`) and the build. And DEVELOPER, once it
 // has been let out: the title HELD for seven seconds (`menu-hold.ts`) is the
 // one door to it, and the chip appearing is the receipt. Low, and not tile-shaped at
 // all, because a thing that does not start a race should not wear the shape
@@ -73,12 +74,11 @@ export function MainMenu({
   pinned,
   laps,
   riders,
-  sound,
   trial,
   onRace,
   onFree,
   onTrial,
-  onSound,
+  onOptions,
   onGallery,
   tricks,
   onTricks,
@@ -99,14 +99,13 @@ export function MainMenu({
   pinned: boolean;
   laps: number;
   riders: number;
-  sound: boolean;
   /** The TIME TRIAL tile: its seed, its length, and the row standing. */
   trial: { seed: number; laps: number; best: { time: number; sled: string } | null };
   onRace: () => void;
   onTrial: () => void;
   /** Onto the free ride's start card. */
   onFree: () => void;
-  onSound: () => void;
+  onOptions: () => void;
   onGallery: () => void;
   /** The TRICKS tile: its seed and how long the run lasts, s. */
   tricks?: { seed: number; seconds: number };
@@ -211,15 +210,9 @@ export function MainMenu({
           </button>
         </div>
         <div class="menu-strip">
-          <button
-            type="button"
-            class="menu-chip"
-            data-menu="sound"
-            aria-pressed={sound}
-            onClick={onSound}
-          >
-            <Glyph name={sound ? "speaker" : "mute"} />
-            <span class="menu-tile-name">{STRINGS.menuSound(sound)}</span>
+          <button type="button" class="menu-chip" data-menu="options" onClick={onOptions}>
+            <Glyph name="sliders" />
+            <span class="menu-tile-name">{STRINGS.menuOptions}</span>
           </button>
           <button type="button" class="menu-chip" data-menu="gallery" onClick={onGallery}>
             <Glyph name="camera" />
