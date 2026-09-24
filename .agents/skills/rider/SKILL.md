@@ -30,8 +30,11 @@ little with the bars and the head looking into the turn.
 
 **HE IS A MAN IN CLOTHES, NOT A STACK OF CAPSULES.** Dressed after
 photographs of sleds ridden from behind: a big helmet sat down on a tall
-collar (no neck showing) with its peak, a rounded chin bar, a stripe over the
-crown and the goggle strap round the back; a wind jacket that is one boxy
+collar (no neck showing) — the goggles set IN the eye port, a thick frame
+wrapped round the face with the lens inside it, a chunky chin bar tipped down
+to a broad front with a vent in it, a peak flat on the brow raked up a
+little (never so far it shows as horns from behind), a stripe over the crown
+and the goggle strap round the back; a wind jacket that is one boxy
 mass from the hem to the shoulders — the shoulders BUILT INTO it, never a
 ball on a stick — under a contrasting yoke; baggy sleeves bunched into flared
 gauntlets; insulated pants round a real seat (two lobes and a cleft), with
@@ -86,7 +89,10 @@ intent from physics deltas.
    most, from behind at the chase camera's height, the rear three-quarter,
    the side and the front three-quarter (`--slot=n` another kit). Judge the
    clothing here; a dark kit hides its folds, so light the pants in a
-   scratch copy of the style to see them, and never commit it.
+   scratch copy of the style to see them, and never commit it. The FACE
+   has its own sheet, `make sled ARGS=--sheet=head`: the helmet alone in
+   every kit from the front, three-quarters, the side, the rear
+   three-quarter, the back and the chase camera's height.
 2. `make world SEED=38 ARGS=--views=orbit,far,jump,landing` — round him,
    at range, in the air and coming down. Judge from BEHIND first (that is
    the game's view), then the side for the crouch and the reach.

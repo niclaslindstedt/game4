@@ -3,7 +3,8 @@
 // works out. Drawn after photographs of sleds ridden from behind, which is
 // where the chase camera sees him: a big helmet sat down on a tall jacket
 // collar with no neck showing, the goggles' strap round its back and a
-// stripe over its crown, a PEAK over the goggles and a rounded chin bar; a
+// stripe over its crown, the goggles framed in the eye port, a PEAK on the
+// brow and a chunky chin bar (the face has its own lab sheet, `head`); a
 // wind jacket that is one broad, boxy mass from the hem to the shoulders —
 // no waist to speak of — gathered across the belly and hanging in folds
 // down the back, the shoulders sloping into the collar under a contrasting
@@ -351,52 +352,94 @@ export function createRider(
     lobe.rotation.set(0.35, 0, side * 0.12);
   }
 
-  // THE HELMET, in its own frame: z forward, y up. Big and a little long,
-  // its back cut down low to the collar.
+  // THE HELMET, in its own frame: z forward, y up. After the helmets
+  // sleds are raced in: a big shell a little long, its back cut down low
+  // to the collar; the EYE PORT filled by the goggles, their thick frame
+  // wrapped round the face and the lens inside it; the CHIN BAR a long,
+  // angular beak jutting forward and down to a point, a vent in its
+  // front; the PEAK flat on the brow, wide, reaching out over the goggles.
   const headGroup = new THREE.Group();
   group.add(headGroup);
-  const SHELL = new THREE.Vector3(0.96, 1, 1.12);
-  const shell = part(geo(new THREE.SphereGeometry(0.158, 14, 10)), helmet, headGroup);
+  const R = 0.158;
+  const SHELL = new THREE.Vector3(0.96, 1.03, 1.12);
+  const shell = part(geo(new THREE.SphereGeometry(R, 14, 10)), helmet, headGroup);
   shell.scale.copy(SHELL);
-  // The chin bar: the shell carried down and forward round the jaw, one
-  // smooth mass under the eye port.
-  const chin = part(geo(new THREE.SphereGeometry(0.105, 10, 6)), helmet, headGroup);
-  chin.scale.set(0.95, 0.66, 1.02);
-  chin.position.set(0, -0.085, 0.07);
-  // A stripe over the crown, front to back, in the peak's colour.
+  // The chin bar, laid along +z from inside the jaw: each ring narrower,
+  // shallower and lower than the last, to the point.
+  const chin = part(
+    geo(
+      shaped(
+        [
+          { y: 0, w: 0.132, d: 0.088 },
+          { y: 0.07, w: 0.126, d: 0.082, z: 0.01 },
+          { y: 0.12, w: 0.106, d: 0.072, z: 0.022 },
+          { y: 0.15, w: 0.082, d: 0.06, z: 0.03 },
+          { y: 0.163, w: 0.052, d: 0.042, z: 0.034 },
+        ],
+        { segments: 12, boxy: 3 },
+      ).rotateX(Math.PI / 2),
+    ),
+    helmet,
+    headGroup,
+  );
+  // Tipped down, so its top runs from under the goggles down to the point.
+  chin.position.set(0, -0.065, 0.035);
+  chin.rotation.x = 0.3;
+  // The vent in the face of the beak.
+  const vent = part(geo(new THREE.BoxGeometry(0.06, 0.03, 0.03)), strap, headGroup);
+  vent.position.set(0, -0.098, 0.182);
+  vent.rotation.x = 0.45;
+  // A stripe over the crown, front to back, in the peak's colour — from
+  // under the peak to the strap, never down over the goggles.
   const stripe = part(
-    geo(new THREE.CylinderGeometry(0.16, 0.16, 0.05, 16, 1, true, 0, Math.PI)),
+    geo(new THREE.CylinderGeometry(R + 0.002, R + 0.002, 0.05, 16, 1, true, 0.5, Math.PI - 0.7)),
     peakMat,
     headGroup,
   );
   stripe.rotation.z = Math.PI / 2;
   stripe.scale.set(1.01, SHELL.x, SHELL.z);
-  // The goggles: the strap round the shell and the lens across the port.
+  stripe.position.y = 0.012;
+  // The goggles: the strap round the back of the shell, the thick frame
+  // wrapped round the eye port, and the lens set in it.
   const band = part(
-    geo(new THREE.CylinderGeometry(0.16, 0.16, 0.045, 16, 1, true)),
+    geo(new THREE.CylinderGeometry(R + 0.002, R + 0.002, 0.045, 16, 1, true)),
     strap,
     headGroup,
   );
   band.scale.set(SHELL.x, 1, SHELL.z);
-  band.position.y = 0.01;
+  band.position.y = 0.015;
+  const frame = part(
+    geo(new THREE.CylinderGeometry(R * 1.07, R * 1.07, 0.084, 14, 1, true, -0.98, 1.96)),
+    peakMat,
+    headGroup,
+  );
+  frame.scale.set(SHELL.x, 1, SHELL.z);
+  frame.position.y = 0.015;
   const goggle = part(
-    geo(
-      shaped(
-        [
-          { y: -0.036, w: 0.112, d: 0.024 },
-          { y: 0.036, w: 0.112, d: 0.024 },
-        ],
-        { boxy: 3 },
-      ),
-    ),
+    geo(new THREE.CylinderGeometry(R * 1.09, R * 1.09, 0.052, 14, 1, true, -0.78, 1.56)),
     lens,
     headGroup,
   );
-  goggle.position.set(0, 0.012, 0.158);
-  // The PEAK over the goggles, raked up and out past the brow.
-  const peak = part(geo(new THREE.BoxGeometry(0.22, 0.014, 0.16)), peakMat, headGroup);
-  peak.position.set(0, 0.1, 0.14);
-  peak.rotation.x = -0.25;
+  goggle.scale.set(SHELL.x, 1, SHELL.z);
+  goggle.position.y = 0.015;
+  // The PEAK, broad on the brow over the goggles, raked up and out past
+  // them — widest at its lip.
+  const peak = part(
+    geo(
+      shaped(
+        [
+          { y: 0, w: 0.1, d: 0.01 },
+          { y: 0.1, w: 0.118, d: 0.01 },
+          { y: 0.16, w: 0.112, d: 0.008 },
+        ],
+        { segments: 8, boxy: 6 },
+      ).rotateX(Math.PI / 2),
+    ),
+    peakMat,
+    headGroup,
+  );
+  peak.position.set(0, 0.092, 0.095);
+  peak.rotation.x = -0.2;
 
   const a = new THREE.Vector3();
   const b = new THREE.Vector3();

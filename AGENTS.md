@@ -49,7 +49,7 @@ This project is tuned by measuring and LOOKING, not guessing. Each lab below is 
 | The springs, the sink, the grip, the drive, the steering, the carve, the air, a landing | `ride` (and `ride ARGS=--card`), `sim` | `sled-physics` |
 | The machine's own numbers (`defs/sled.ts`), the field's pace | `ride ARGS=--card`, `ride`, `sim ARGS="--sled all"` | `sled-tuning` |
 | The sled's look, its liveries | `sled` (every sheet), `world`, `screenshots`, `profile` | `sled-design` |
-| The rider: his look, his pose | `sled ARGS=--sheet=rider`, `sled ARGS=--sheet=poses`, `sled ARGS=--sheet=landing`, `world`, `screenshots` | `rider` |
+| The rider: his look, his pose | `sled ARGS=--sheet=rider`, `sled ARGS=--sheet=head` (the helmet), `sled ARGS=--sheet=poses`, `sled ARGS=--sheet=landing`, `world`, `screenshots` | `rider` |
 | A tree, a rival, the edge, a checkpoint, a lap, the reset | `ride SCENARIO=tree`, `sim` | `collision` |
 | A wipeout, the trench, damage: what throws the rider, the tumble, the dig and the rocking out, a bent ski | `ride` (`tree`, `tree-glance`, `nose-in`, `rollover`, `stuck`, `stuck-held`), `sim`, `world ARGS=--views=wipeout,wipeout-lie` | `crash` |
 | The world generator, its rules, the analyzer | `analyze`, `level`, `sim`, then `rate CAMPAIGN=1` (a pinned map moved is a version row, never a digest) | `mapgen-improvement` |
