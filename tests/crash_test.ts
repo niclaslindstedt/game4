@@ -130,10 +130,11 @@ describe("the wipeout", () => {
     expect(wipeouts(flat)).toHaveLength(0);
   });
 
-  it("a stock kicker overshot at race speed is ridden out, the rebound hop and all", () => {
-    // Launched at 112 km/h, down tail-first 64° nose-up, and a hop later
-    // slapped onto the nose 37° down: the springs handing the landing back,
-    // not a second landing — no machine in the catalog throws its rider.
+  it("a stock kicker overshot at race speed is ridden out", () => {
+    // Launched at 100–118 km/h, 1.4–1.6 s up under the arcade's heavier air,
+    // and down on the flat past the landing tail-first up to 23° nose-up, at
+    // 11–12 m/s into the snow: a hard landing, and no machine in the catalog
+    // throws its rider for it.
     for (const spec of SLEDS) {
       const state = createGame({
         level: syntheticLevel(),
@@ -150,7 +151,7 @@ describe("the wipeout", () => {
       });
       const events = ride(state, 6, FULL);
       expect(
-        events.some((e) => e.kind === "land" && e.airTime > 1.5),
+        events.some((e) => e.kind === "land" && e.airTime > 1.2),
         spec.id,
       ).toBe(true);
       expect(wipeouts(events), spec.id).toHaveLength(0);

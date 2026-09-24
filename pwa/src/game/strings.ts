@@ -110,6 +110,9 @@ export const STRINGS = {
   paused: "PAUSED",
   pausedNote: "The race waits until you come back",
 
+  /** Printed across the start/finish arch's span (gates.ts). */
+  archLine: "START · FINISH",
+
   /* ── THE NEWS COLUMN (run-news.ts) ─────────────────────────────────── */
   newsCheckpoint: (index: number, seconds: number): string => `CP ${index}  ${formatTime(seconds)}`,
   newsStart: "START LINE",

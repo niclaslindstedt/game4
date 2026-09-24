@@ -32,10 +32,10 @@ import { angleDiff, approach, clamp } from "../lib/math.ts";
 import { fromEuler, integrate, rotate, toEuler, unrotate, type Vec3 } from "../lib/quat.ts";
 import { SLED, inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
-import { airTorque, landingLoss } from "./flight.ts";
+import { airTorque, landingAhead, landingLoss } from "./flight.ts";
 import { chassisContacts } from "./chassis.ts";
 import { gripAt, onIce, sinkTarget, snowDrag, type Grip } from "./snow.ts";
-import { cornerGrip, harshSpeedOf } from "./limits.ts";
+import { cornerGrip, flightGravity, harshSpeedOf } from "./limits.ts";
 import { footprintOf } from "./footprint.ts";
 import { probesOf } from "./suspension.ts";
 import { stepRpm, stepTread } from "./traction.ts";
@@ -57,6 +57,18 @@ const ARC = TUNING.arcade;
 const STOP_RATE = 12;
 const STOP_DAMP = 4;
 const MAX_LOAD = 15;
+/** THE STOP IS A BUMPER, NOT A SPRING: a bottoming bumper of foam and
+ * rubber loads at its full rate and gives back only this share of it on
+ * the way out — the hysteresis that makes it swallow a slam. Returned
+ * whole, the stop's stored energy alone was ~2 m/s of rebound on a
+ * kicker's landing: the whole sled thrown back off the snow for 0.4 s. */
+const STOP_RELEASE = 0.2;
+/** BOTTOMING CONTROL: the compression damping rises over the last
+ * `BOTTOM_ZONE` of the stroke, to `1 + BOTTOM_DAMP` times its own at the
+ * end — the position-sensitive valving a sled's shocks carry for landings,
+ * so a big hit is slowed before the stop has to catch it. */
+const BOTTOM_ZONE = 0.3;
+const BOTTOM_DAMP = 2;
 /** The fastest the body may turn about any axis, rad/s — a second fuse,
  * over the explicit gyroscopic term, which a tumble would otherwise feed. */
 const MAX_SPIN = 25;
@@ -318,11 +330,12 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
         : Math.max(0, -(pvx * normal.x + pvy * normal.y + pvz * normal.z)) /
           Math.max(0.3, up.x * normal.x + up.y * normal.y + up.z * normal.z);
     c.comps[i] = comp;
-    const damp = rate > 0 ? p.susp.bump : p.susp.rebound;
+    const deep = clamp((comp / p.susp.travel - (1 - BOTTOM_ZONE)) / BOTTOM_ZONE, 0, 1);
+    const damp = rate > 0 ? p.susp.bump * (1 + BOTTOM_DAMP * deep) : p.susp.rebound;
     let spring = p.susp.rate * soft * comp + damp * dampen * rate;
     if (comp > p.susp.travel) {
       spring +=
-        STOP_RATE * p.susp.rate * (comp - p.susp.travel) +
+        STOP_RATE * p.susp.rate * (comp - p.susp.travel) * (rate > 0 ? 1 : STOP_RELEASE) +
         STOP_DAMP * p.susp.bump * Math.max(0, rate);
     }
     if (spring <= 0) continue;
@@ -421,6 +434,11 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
   c.treadCompression = treadN > 0 ? treadComp / treadN : 0;
   c.packed = loadSum > 0 ? packedLoad / loadSum : level.packedAt(c.x, c.z);
   const grounded = touching > 0;
+  // THE ARCADE'S GRAVITY (`air.gravity`): a sled that was flying at the end
+  // of the last step and has found no snow under a probe this one is pulled
+  // down harder than the ground ever holds it — the hang shortened, never
+  // where it left the snow.
+  if (!grounded && c.airborne) fy -= m * (flightGravity(state.rules) - g);
 
   // ── The belt and the engine ───────────────────────────────────────────
   // THE RIDER'S THUMB (`arcade.brakeSlip`): a pinned lever holds the belt
@@ -489,7 +507,7 @@ export function stepSled(state: GameState, input: SledInput, events: GameEvent[]
       hold *
       state.assist.yaw;
   } else {
-    airTorque(c, tb, state.assist.air);
+    airTorque(c, tb, state.assist.air, landingAhead(c, level, flightGravity(state.rules)));
   }
   // Euler's equations with a diagonal inertia: τ − ω × Iω.
   const gx = (I.z - I.y) * c.wy * c.wz;
