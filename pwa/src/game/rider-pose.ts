@@ -42,15 +42,21 @@ export type V3 = { x: number; y: number; z: number };
 export const BODY = {
   thigh: 0.44,
   shin: 0.46,
-  upperArm: 0.3,
-  forearm: 0.31,
+  upperArm: 0.31,
+  /** The elbow to the middle of the fist round the grip — the forearm and
+   * the hand as one bone, since the hand never leaves the grip. */
+  forearm: 0.34,
   /** Hips to the base of the neck. */
   spine: 0.5,
   /** Half the shoulders' width, and of the hips'. */
-  shoulder: 0.19,
+  shoulder: 0.2,
   hip: 0.12,
   /** Base of the neck to the helmet's centre. */
-  neck: 0.19,
+  neck: 0.18,
+  /** How far the shoulder joints sit below the base of the neck, and
+   * forward of it — rounded toward the bars, the way a rider holds on. */
+  shoulderDrop: 0.06,
+  shoulderFore: 0.03,
 };
 
 /** Where the rider's hands and feet are fixed to the machine. */
@@ -63,7 +69,7 @@ export const MOUNTS = {
   foot: { x: 0.28, y: -0.22, z: -0.2 },
   /** The hips sat on the seat — and stood up over the boards, legs a
    * little bent, which is where they go as `stand` comes up to 1. */
-  hips: { x: 0, y: 0.34, z: -0.42 },
+  hips: { x: 0, y: 0.34, z: -0.38 },
   standHips: { x: 0, y: 0.58, z: -0.3 },
 };
 
@@ -74,8 +80,11 @@ const HANG = 1.1;
 /** The upper body's roll into a turn at the engine's full reach, rad. */
 const HANG_ROLL = 0.42;
 /** The torso's pitch over the bars sat down and stood up, rad. */
-const PITCH_SAT = 0.38;
-const PITCH_STOOD = 0.78;
+const PITCH_SAT = 0.3;
+const PITCH_STOOD = 0.72;
+/** How far the shoulders turn with the bars, as a share of their turn — the
+ * arm pushing the outside grip brings its shoulder round. */
+const TWIST = 0.35;
 
 export type RiderInput = {
   riderRight: number;
@@ -254,8 +263,21 @@ export function riderPose(input: RiderInput): RiderPose {
     neck,
     scale(norm({ x: spineDir.x * 0.35, y: 1, z: spineDir.z * 0.55 }), BODY.neck),
   );
-  // The right-hand direction of the torso, flattened.
-  const across: V3 = norm({ x: Math.cos(roll), y: -Math.sin(roll), z: 0 });
+  // The right-hand direction of the torso: rolled with the hang and turned
+  // a little with the bars.
+  const twist = bars * TWIST;
+  const across: V3 = norm({
+    x: Math.cos(roll) * Math.cos(twist),
+    y: -Math.sin(roll),
+    z: -Math.cos(roll) * Math.sin(twist),
+  });
+  // Out of his chest, square to the spine and the shoulders.
+  const spineUp = norm(spineDir);
+  const chest = norm({
+    x: across.y * spineUp.z - across.z * spineUp.y,
+    y: across.z * spineUp.x - across.x * spineUp.z,
+    z: across.x * spineUp.y - across.y * spineUp.x,
+  });
 
   // The boots on the boards — a little forward when he is up, over the
   // balls of his feet.
@@ -282,17 +304,20 @@ export function riderPose(input: RiderInput): RiderPose {
       z: 1,
     });
   }) as [V3, V3];
-  const shoulders = [-1, 1].map((side) => add(neck, scale(across, side * BODY.shoulder))) as [
+  // The shoulders a little below the base of the neck and rounded forward.
+  const yoke = add(add(neck, scale(spineUp, -BODY.shoulderDrop)), scale(chest, BODY.shoulderFore));
+  const shoulders = [-1, 1].map((side) => add(yoke, scale(across, side * BODY.shoulder))) as [
     V3,
     V3,
   ];
   const hands = [-1, 1].map((side) => gripAt(side, bars)) as [V3, V3];
-  // Elbows UP and out — the attack position a sled is ridden hard in.
+  // Elbows OUT, a little down and back, lifting toward level as he stands
+  // into the attack position — never winged up past the shoulders.
   const elbows = [-1, 1].map((side, i) =>
     solveLimb(shoulders[i], hands[i], BODY.upperArm, BODY.forearm, {
-      x: side,
-      y: -0.1 + 0.3 * stand,
-      z: -0.3,
+      x: side * 0.8,
+      y: -0.7 + 0.35 * stand,
+      z: -0.45,
     }),
   ) as [V3, V3];
   return { hips, neck, head, pitch, roll, knees, feet, shoulders, elbows, hands, bars };

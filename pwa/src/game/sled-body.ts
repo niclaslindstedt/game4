@@ -82,6 +82,7 @@ export const SLED_STYLES: SledStyle[] = [
       helmet: 0x1b1d21,
       visor: 0xd9a21a,
       peak: 0xe8412c,
+      skin: 0xc68863,
     },
   },
   {
@@ -94,6 +95,7 @@ export const SLED_STYLES: SledStyle[] = [
       helmet: 0xf2f2f2,
       visor: 0x6fb4e8,
       peak: 0x2a6fd6,
+      skin: 0xe8b896,
     },
   },
   {
@@ -106,6 +108,7 @@ export const SLED_STYLES: SledStyle[] = [
       helmet: 0xf2bf22,
       visor: 0x2b2f36,
       peak: 0x151515,
+      skin: 0x8a5a3c,
     },
   },
   {
@@ -118,6 +121,7 @@ export const SLED_STYLES: SledStyle[] = [
       helmet: 0x0e1a14,
       visor: 0xd96a2b,
       peak: 0x0f6b48,
+      skin: 0xb07650,
     },
   },
 ];

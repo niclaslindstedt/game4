@@ -18,6 +18,8 @@
 //   node scripts/sled-preview.mjs --sheet=machines     the catalog, by view
 //   node scripts/sled-preview.mjs --sheet=liveries     every machine in every livery
 //   node scripts/sled-preview.mjs --sheet=poses --sled=ibex
+//   node scripts/sled-preview.mjs --sheet=rider --slot=1   the rider close up
+//   node scripts/sled-preview.mjs --sheet=head             the helmet alone, every kit
 //   node scripts/sled-preview.mjs --sheet=landing --vy=8 --skip-build
 
 import { existsSync, mkdirSync } from "node:fs";
@@ -32,7 +34,7 @@ import { serveDir } from "./lib/serve-dist.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const buildDir = join(root, "previews", ".sled-preview");
 const outDir = join(root, "previews");
-const SHEETS = ["machines", "liveries", "poses", "landing"];
+const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing"];
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -48,13 +50,17 @@ const args = parseArgs(
       default: 0,
       help: "the grid slot whose colours it wears (0 the player's)",
     },
-    views: { kind: "string", default: "", help: "only these views (side,front,rear,three,chase)" },
+    views: {
+      kind: "string",
+      default: "",
+      help: "only these views (side,front,rear,three,chase; the rider sheet: back,back3,near,front3)",
+    },
     vy: { kind: "number", default: 6, help: "the landing sheet's sink rate, m/s" },
     cell: { kind: "number", default: 300, help: "one cell's width, px" },
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/sled-preview.mjs [--sheet=machines|poses|landing] [--sled=id] [--views=a,b] [--skip-build]",
+  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing] [--sled=id] [--views=a,b] [--skip-build]",
 );
 
 const wanted = args.sheet ? [args.sheet] : SHEETS;
@@ -122,7 +128,7 @@ for (const sheet of wanted) {
   if (crashed) process.exit(1);
   const drawn = await page.evaluate(() => globalThis.__sled.sheet());
   if (crashed) process.exit(1);
-  const tag = sheet === "machines" || sheet === "liveries" ? "" : `-${args.sled}`;
+  const tag = ["machines", "liveries", "head"].includes(sheet) ? "" : `-${args.sled}`;
   const out = join(outDir, `sled-${sheet}${tag}.png`);
   await page.locator("#sheet").screenshot({ path: out });
   console.log(

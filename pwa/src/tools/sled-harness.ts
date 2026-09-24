@@ -13,6 +13,17 @@
 //              landing, thrown back and forward, the tricks — by view
 //   liveries   every machine in each of its liveries (`sled-liveries.ts`),
 //              three-quarters on and from the side
+//   rider      the rider CLOSE UP on one machine, in the poses that read
+//              most (sat, on the move, hung off, in the air, landed), from
+//              behind at the chase camera's height, the rear three-quarter,
+//              the side and the front three-quarter — the man judged as a
+//              man rather than as sixty pixels on a machine
+//   head       the helmet alone, close — every grid kit a row, round it
+//              from the front, three-quarters, the side, the rear
+//              three-quarter, the back and over the back as the chase
+//              camera sees it, and a PROFILE: the side drawn flat on a
+//              centimetre grid centred on the head's middle, to measure
+//              against a photograph of a real helmet
 //   landing    one machine landing: the rider's body on its legs
 //              (`stepRiderSpring`) kicked by a sled stopped dead from
 //              `vy` m/s, a frame every 60 ms, from the side and the rear
@@ -24,7 +35,14 @@
 import * as THREE from "three";
 import { freshSled, SLED, SLEDS, sledById, type SledSpec, type SledState } from "@engine";
 
-import { createRiderSpring, stepRiderSpring, type RiderSpring } from "../game/rider-pose.ts";
+import { createRider, type RiderFigure } from "../game/rider.ts";
+import {
+  createRiderSpring,
+  riderPose,
+  stepRiderSpring,
+  type RiderInput,
+  type RiderSpring,
+} from "../game/rider-pose.ts";
 import {
   createSledModel,
   REST_SAG,
@@ -34,8 +52,9 @@ import {
 } from "../game/sled-body.ts";
 import { LIVERIES } from "../game/sled-liveries.ts";
 
-type Sheet = "machines" | "poses" | "landing" | "liveries";
-type View = "side" | "front" | "rear" | "three" | "chase" | "top";
+type Sheet = "machines" | "poses" | "landing" | "liveries" | "rider" | "head";
+type View =
+  "side" | "front" | "rear" | "three" | "chase" | "top" | "back" | "back3" | "near" | "front3";
 
 declare global {
   interface Window {
@@ -50,6 +69,9 @@ const spec = sledById(params.get("sled") ?? SLED.id);
 const slot = Number(params.get("slot") ?? 0) % SLED_STYLES.length;
 const landVy = Number(params.get("vy") ?? 6);
 const onlyViews = (params.get("views") ?? "").split(",").filter(Boolean) as View[];
+
+/** The moments the rider sheet shows him close up in. */
+const RIDER_POSES = ["sat", "on the move", "hung off left", "in the air", "landed, folded"];
 
 /** A moment to pose the rider at: what the engine would report. */
 type Moment = {
@@ -83,7 +105,43 @@ const VIEWS_OF: Record<Sheet, View[]> = {
   poses: ["side", "front", "rear", "chase"],
   landing: ["side", "rear"],
   liveries: ["three"],
+  rider: ["back", "back3", "near", "front3"],
+  head: [],
 };
+
+/** The head sheet's angles round the helmet: the bearing from its front,
+ * clockwise from above, deg, and the lens's height over it, m. */
+const HEAD_VIEWS: { name: string; bearing: number; rise: number }[] = [
+  { name: "front", bearing: 0, rise: 0.02 },
+  { name: "three", bearing: 45, rise: 0.05 },
+  { name: "side", bearing: 90, rise: 0.02 },
+  { name: "rear three", bearing: 135, rise: 0.05 },
+  { name: "back", bearing: 180, rise: 0.02 },
+  { name: "chase", bearing: 180, rise: 0.45 },
+  { name: "profile", bearing: -90, rise: 0 },
+];
+/** The pose the head sheet holds him in: on the move, the bars straight. */
+const HEAD_POSE: RiderInput = {
+  stand: 0.62,
+  riderRight: 0,
+  riderAft: 0,
+  lean: 0,
+  steer: 0,
+  airborne: false,
+  landing: 5,
+};
+const riders = new Map<number, RiderFigure>();
+/** The rider alone in a kit, stood at the origin in the head sheet's pose. */
+function riderOf(kit: number): RiderFigure {
+  let r = riders.get(kit);
+  if (!r) {
+    r = createRider(SLED_STYLES[kit].rider, (m) => m);
+    r.pose(HEAD_POSE);
+    scene.add(r.group);
+    riders.set(kit, r);
+  }
+  return r;
+}
 
 const canvas = document.getElementById("stage") as HTMLCanvasElement;
 const host = document.getElementById("sheet") as HTMLDivElement;
@@ -201,6 +259,27 @@ function camera(view: View, s: SledSpec): THREE.Camera {
     return set(0, 0.75, -10);
   }
   lens.aspect = 4 / 3;
+  // THE CLOSE-UPS, aimed at the rider's chest (about 0.7 m over the CoG).
+  const chest = s.cogHeight + 0.7;
+  if (view === "near") {
+    // The side at a metre and a half across, centred on the rider.
+    ortho.left = -0.95;
+    ortho.right = 0.95;
+    ortho.top = 0.71;
+    ortho.bottom = -0.71;
+    ortho.position.set(10, chest - 0.1, -0.2);
+    ortho.lookAt(0, chest - 0.1, -0.2);
+    ortho.updateProjectionMatrix();
+    return ortho;
+  }
+  if (view === "back" || view === "back3" || view === "front3") {
+    lens.fov = 30;
+    const at = { back: [0, 1.75, -3.6], back3: [2.2, 1.55, -2.9], front3: [2.4, 1.5, 2.6] }[view];
+    lens.position.set(at[0], s.cogHeight + at[1], at[2]);
+    lens.lookAt(0, chest - 0.15, -0.2);
+    lens.updateProjectionMatrix();
+    return lens;
+  }
   if (view === "three") {
     lens.fov = 32;
     lens.position.set(5.2, 2.6, 5.4);
@@ -263,13 +342,14 @@ function cells(): { rows: number; cols: number; list: Cell[] } {
     }
     return { rows: SLEDS.length, cols, list };
   }
-  if (sheet === "poses") {
-    for (const at of POSES) {
+  if (sheet === "poses" || sheet === "rider") {
+    const moments = sheet === "poses" ? POSES : POSES.filter((p) => RIDER_POSES.includes(p.name));
+    for (const at of moments) {
       for (const view of views) {
         list.push({ spec, at, legs: null, view, label: `${spec.name} · ${at.name} · ${view}` });
       }
     }
-    return { rows: POSES.length, cols: views.length, list };
+    return { rows: moments.length, cols: views.length, list };
   }
   // THE LANDING: the body on its legs, stepped at 120 Hz through a sled
   // stopped dead from `landVy` m/s down, a frame every 60 ms.
@@ -295,7 +375,71 @@ function cells(): { rows: number; cols: number; list: Cell[] } {
   return { rows: views.length, cols: frames.length, list };
 }
 
+/** THE HEAD SHEET: every kit a row, every angle a column. */
+function drawHeads(): { rows: number; cols: number; note: string } {
+  const rows = SLED_STYLES.length;
+  const cols = HEAD_VIEWS.length;
+  const w = cell;
+  const h = Math.round(cell * 0.75);
+  renderer.setSize(cols * w, rows * h, false);
+  canvas.style.width = `${cols * w}px`;
+  canvas.style.height = `${rows * h}px`;
+  for (const old of host.querySelectorAll(".label")) old.remove();
+  for (const m of models.values()) m.root.visible = false;
+  ground.visible = grid.visible = wall.visible = false;
+  const head = riderPose(HEAD_POSE).head;
+  // The profile's centimetre grid, stood in the plane of symmetry behind
+  // the head, centred on its middle.
+  const cmGrid = new THREE.GridHelper(0.6, 60, 0xd8452e, 0x8795a6);
+  cmGrid.rotation.z = Math.PI / 2;
+  cmGrid.visible = false;
+  scene.add(cmGrid);
+  lens.aspect = 4 / 3;
+  lens.fov = 14;
+  for (let row = 0; row < rows; row++) {
+    for (const [k, r] of riders) r.group.visible = k === row;
+    riderOf(row).group.visible = true;
+    HEAD_VIEWS.forEach((v, col) => {
+      const x = col * w;
+      const y = (rows - 1 - row) * h;
+      renderer.setViewport(x, y, w, h);
+      renderer.setScissor(x, y, w, h);
+      renderer.setClearColor(row % 2 === col % 2 ? 0x51606f : 0x5b6a79);
+      const b = (v.bearing * Math.PI) / 180;
+      if (v.name === "profile") {
+        // Flat, 0.5 m across and centred 4 cm ahead of the head's middle,
+        // the front to the right as a photograph of a helmet's left side
+        // has it.
+        ortho.left = -0.25;
+        ortho.right = 0.25;
+        ortho.top = 0.1875;
+        ortho.bottom = -0.1875;
+        ortho.position.set(head.x - 2, head.y, head.z + 0.04);
+        ortho.lookAt(head.x, head.y, head.z + 0.04);
+        ortho.updateProjectionMatrix();
+        cmGrid.position.set(head.x + 0.3, head.y, head.z);
+        cmGrid.visible = true;
+        renderer.render(scene, ortho);
+        cmGrid.visible = false;
+      } else {
+        lens.position.set(head.x + Math.sin(b) * 1.6, head.y + v.rise, head.z + Math.cos(b) * 1.6);
+        lens.lookAt(head.x, head.y - 0.03, head.z);
+        lens.updateProjectionMatrix();
+        renderer.render(scene, lens);
+      }
+      const label = document.createElement("div");
+      label.className = "label";
+      label.textContent = `slot ${row} · ${v.name}`;
+      label.style.left = `${x + 6}px`;
+      label.style.top = `${row * h + 4}px`;
+      host.appendChild(label);
+    });
+  }
+  return { rows, cols, note: "head · every kit" };
+}
+
 function draw(): { rows: number; cols: number; note: string } {
+  if (sheet === "head") return drawHeads();
   const { rows, cols, list } = cells();
   const w = cell;
   const h = Math.round(cell * 0.75);
