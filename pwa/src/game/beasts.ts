@@ -34,7 +34,7 @@ import {
 import { BEAST_STYLES, beastDepthMaterial, beastMaterial, buildBeast } from "./beast-shapes.ts";
 import { TRACKED, footfall, footfallSpacing, priorPrints } from "./beast-tracks.ts";
 import type { HazeUniforms } from "./haze.ts";
-import type { Stamp } from "./trail-stamp.ts";
+import type { SnowSampler, Stamp } from "./trail-stamp.ts";
 import { wildGround } from "./wild-ground.ts";
 
 /** How far from the lens an animal is drawn, m: a reindeer is a mark on a
@@ -75,7 +75,13 @@ export type Beasts = {
   dispose: () => void;
 };
 
-export function createBeasts(level: Level, haze: HazeUniforms): Beasts {
+/** WHAT SNOW THE PRINTS GO INTO (`snowpack.ts`), as the renderer's run
+ * reads it: the snow at a point, and how much has fallen into last night's
+ * prints since (0..1). Left out, every print is in settled powder over the
+ * packed field. */
+export type PrintSnow = { at: SnowSampler; soften: () => number };
+
+export function createBeasts(level: Level, haze: HazeUniforms, snow?: PrintSnow): Beasts {
   const group = new THREE.Group();
   const plan = beastPlanFor(level);
   const ground = wildGround(level);
@@ -107,7 +113,13 @@ export function createBeasts(level: Level, haze: HazeUniforms): Beasts {
   }
 
   const prior: Stamp[] = [];
-  for (const g of plan.groups) priorPrints(g, level.packedAt, prior);
+  /** Last night's prints, laid into the snow the run is ridden on — so
+   * built when they are first laid, not when the map is. */
+  const layPrior = (): void => {
+    prior.length = 0;
+    const soften = snow?.soften() ?? 0;
+    for (const g of plan.groups) priorPrints(g, level.packedAt, prior, snow?.at, soften);
+  };
   const fresh: Stamp[] = [];
   let laid = false;
   let windowAt: TrailWindow | null = null;
@@ -135,6 +147,7 @@ export function createBeasts(level: Level, haze: HazeUniforms): Beasts {
         windowAt.z !== window.z ||
         windowAt.span !== window.span);
     if (!laid) {
+      layPrior();
       for (const s of prior) stamps.push(s);
       for (const s of fresh) stamps.push(s);
       laid = true;
@@ -182,6 +195,7 @@ export function createBeasts(level: Level, haze: HazeUniforms): Beasts {
                 prints[slot]++,
                 level.packedAt(pose.x, pose.z),
                 stamps,
+                snow?.at(pose.x, pose.z),
               );
             }
             for (let s = before; s < stamps.length && fresh.length < MOST_FRESH; s++) {

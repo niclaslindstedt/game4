@@ -14,6 +14,12 @@
 //     frame that ran two steps cannot swallow it, and a rival's landing
 //     throws the same puff as the player's.
 //
+// THE HEAVY PART ONLY. The fine powder that stalls, hangs and drifts is
+// `snow-cloud.ts`'s; this is the grains and clumps that arc and fall back
+// inside a second — and how much of that there is, and how big a clump, is
+// the snow's (`snowpack.ts`): wet spring snow and a broken wind slab throw
+// clumps and chunks, new snow almost nothing but cloud.
+//
 // One pool of soft sprites for every rider, simulated here in plain arrays
 // (gravity, air drag, a little growth as the cloud disperses) and drawn as
 // one `Points` draw. They are lit as the snow is — the sun's colour and the
@@ -24,6 +30,15 @@ import { rotate, type Level, type SledState } from "@engine";
 
 import { SKY_GLSL, type HazeUniforms } from "./haze.ts";
 import type { SkyLook } from "./sky.ts";
+import type { SnowProps } from "./snowpack.ts";
+
+/** How much HEAVY snow — grains and clumps rather than cloud — a surface
+ * throws, 0..1.5: the loose snow less its fine share, more of it the more
+ * it comes off in clumps. With no snow said, the packed field's powder. */
+export function heavyShare(snow: SnowProps | undefined, packed: number): number {
+  if (!snow) return 1 - packed;
+  return snow.loose * (0.35 + 0.65 * snow.clumps + 0.3 * (1 - snow.fine));
+}
 
 const CAPACITY = 5000;
 
@@ -41,12 +56,20 @@ function makeRandom(seed: number): () => number {
 
 export type Spray = {
   points: THREE.Points;
-  /** Emit for one rider over `dt`; `wasAirborne`/`airTime` are the rider's
-   * state at the last frame, for the landing puff. */
-  emit(sled: SledState, level: Level, dt: number, landed: number): void;
+  /** Emit for one rider over `dt`; `landed` is the landing's measure this
+   * frame (0 for none); `snow` what the rider is on (`snowpack.ts`). */
+  emit(sled: SledState, level: Level, dt: number, landed: number, snow?: SnowProps): void;
   /** A BURST of snow thrown up at a point — a wipeout's (`size` 1) or a
    * body bouncing on the snow (less) — carried along at (vx, vz). */
-  burst(x: number, y: number, z: number, vx: number, vz: number, size: number): void;
+  burst(
+    x: number,
+    y: number,
+    z: number,
+    vx: number,
+    vz: number,
+    size: number,
+    snow?: SnowProps,
+  ): void;
   update(dt: number, look: SkyLook, level: Level): void;
   /** Pixels per metre at one metre from the lens (the projection's scale). */
   setScale(pixelsPerMetre: number): void;
@@ -65,6 +88,9 @@ export function createSpray(haze: HazeUniforms): Spray {
   const size0 = new Float32Array(CAPACITY);
   const size = new Float32Array(CAPACITY);
   const alpha = new Float32Array(CAPACITY);
+  /** How much of a CLUMP a particle is, 0 (a soft grain puff) … 1 (a lump of
+   * wet snow or a piece of slab): harder-edged, shaded, falling faster. */
+  const hard = new Float32Array(CAPACITY);
   let head = 0;
   /** The share of every rate thrown, and the slots in use (`setBudget`). */
   let share = 1;
@@ -75,6 +101,8 @@ export function createSpray(haze: HazeUniforms): Spray {
   const posAttr = new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage);
   const sizeAttr = new THREE.BufferAttribute(size, 1).setUsage(THREE.DynamicDrawUsage);
   const alphaAttr = new THREE.BufferAttribute(alpha, 1).setUsage(THREE.DynamicDrawUsage);
+  const hardAttr = new THREE.BufferAttribute(hard, 1).setUsage(THREE.DynamicDrawUsage);
+  geometry.setAttribute("aHard", hardAttr);
   geometry.setAttribute("position", posAttr);
   geometry.setAttribute("aSize", sizeAttr);
   geometry.setAttribute("aAlpha", alphaAttr);
@@ -89,13 +117,16 @@ export function createSpray(haze: HazeUniforms): Spray {
     vertexShader: /* glsl */ `
       attribute float aSize;
       attribute float aAlpha;
+      attribute float aHard;
       uniform float uScale;
       varying float vAlpha;
+      varying float vHard;
       varying vec3 vWorld;
       void main() {
         vec4 mv = modelViewMatrix * vec4(position, 1.0);
         vWorld = position;
         vAlpha = aAlpha;
+        vHard = aHard;
         gl_PointSize = aSize * uScale / max(-mv.z, 0.1);
         gl_Position = projectionMatrix * mv;
       }
@@ -105,15 +136,18 @@ export function createSpray(haze: HazeUniforms): Spray {
       uniform vec3 uLit;
       uniform vec3 uShade;
       varying float vAlpha;
+      varying float vHard;
       varying vec3 vWorld;
       void main() {
         vec2 c = gl_PointCoord * 2.0 - 1.0;
         float r = dot(c, c);
         if (r > 1.0) discard;
-        float soft = (1.0 - r) * (1.0 - r);
-        // The sunward side of a puff is brighter than its underside.
-        float lit = clamp(0.55 - c.y * 0.45, 0.0, 1.0);
-        vec3 col = mix(uShade, uLit, lit);
+        // A grain puff is soft to its rim; a clump is a lump with an edge.
+        float soft = mix((1.0 - r) * (1.0 - r), smoothstep(1.0, 0.55, r), vHard);
+        // The sunward side of a puff is brighter than its underside, and a
+        // clump's much more so: it is a solid, not a haze.
+        float lit = clamp(0.55 - c.y * 0.45 * (1.0 + vHard), 0.0, 1.0);
+        vec3 col = mix(uShade * (1.0 - 0.3 * vHard), uLit, lit);
         gl_FragColor = vec4(col, soft * vAlpha);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>
@@ -143,8 +177,10 @@ export function createSpray(haze: HazeUniforms): Spray {
     vz: number,
     lifetime: number,
     s: number,
+    h = 0,
   ) {
     const i = head;
+    hard[i] = h;
     head = (head + 1) % cap;
     pos[i * 3] = x;
     pos[i * 3 + 1] = y;
@@ -162,18 +198,22 @@ export function createSpray(haze: HazeUniforms): Spray {
 
   return {
     points,
-    emit(sled, level, dt, landed) {
+    emit(sled, level, dt, landed, snow) {
       let owed = debt.get(sled);
       if (!owed) {
         owed = [0, 0, 0];
         debt.set(sled, owed);
       }
-      const powder = 1 - sled.packed;
+      const powder = heavyShare(snow, sled.packed);
+      const clumps = snow ? snow.clumps : 0.25;
+      // Bare ice has nothing loose on it to throw.
+      const base = snow ? Math.min(1, snow.loose * 5) : 1;
       const treadDown = sled.contacts.some((c) => c.kind === "tread" && c.touching);
       // THE ROOST.
       if (treadDown && sled.treadSpeed > 1) {
-        const drive = sled.throttle * (0.35 + Math.min(1, sled.slip / 4));
-        const rate = drive * Math.min(1, sled.treadSpeed / 12) * (90 + 520 * powder) * share;
+        // A turning tread throws what it digs; power and spin throw more.
+        const drive = (0.3 + 0.7 * sled.throttle) * (0.35 + Math.min(1, sled.slip / 4));
+        const rate = drive * Math.min(1, sled.treadSpeed / 12) * (90 * base + 520 * powder) * share;
         owed[0] += rate * dt;
         while (owed[0] >= 1) {
           owed[0] -= 1;
@@ -191,8 +231,9 @@ export function createSpray(haze: HazeUniforms): Spray {
             sled.vx * 0.55 + kick.x,
             sled.vy * 0.4 + kick.y,
             sled.vz * 0.55 + kick.z,
-            0.5 + random() * 0.7 * (0.4 + powder),
-            0.07 + random() * 0.12,
+            (0.5 + random() * 0.7 * (0.4 + Math.min(1, powder))) * (1 - 0.3 * clumps),
+            (0.07 + random() * 0.12) * (1 + 1.6 * clumps * random()),
+            clumps * (0.4 + 0.6 * random()),
           );
         }
       }
@@ -201,7 +242,7 @@ export function createSpray(haze: HazeUniforms): Spray {
       for (let k = 0; k < 2; k++) {
         const c = sled.contacts[k];
         if (!c || !c.touching) continue;
-        const rate = (carve * 14 + sled.speed * 1.5) * (0.15 + powder) * share;
+        const rate = (carve * 14 + sled.speed * 1.5) * (0.15 * base + powder) * share;
         owed[1 + k] += rate * dt;
         const side = c.side;
         while (owed[1 + k] >= 1) {
@@ -220,13 +261,16 @@ export function createSpray(haze: HazeUniforms): Spray {
             sled.vy * 0.3 + kick.y,
             sled.vz * 0.6 + kick.z,
             0.45 + random() * 0.5,
-            0.1 + random() * 0.12,
+            (0.1 + random() * 0.12) * (1 + 1.2 * clumps * random()),
+            clumps * random(),
           );
         }
       }
       // THE LANDING PUFF.
       if (landed > 0) {
-        const n = Math.round(Math.min(160, 24 + landed * 16 * (0.3 + powder)) * share);
+        const n = Math.round(
+          Math.min(160, 24 * base + landed * 16 * (0.3 * base + powder)) * share,
+        );
         const ground = level.groundAt(sled.x, sled.z);
         for (let i = 0; i < n; i++) {
           const a = random() * Math.PI * 2;
@@ -241,15 +285,17 @@ export function createSpray(haze: HazeUniforms): Spray {
             // Short: a puff is a burst that falls back into the snow, and
             // one that hangs for a second and a half reads as fog.
             0.3 + random() * 0.45,
-            0.18 + random() * 0.22,
+            (0.18 + random() * 0.22) * (1 - 0.4 * clumps),
+            clumps * random(),
           );
         }
       }
     },
-    burst(x, y, z, vx, vz, size) {
-      // THE WIPEOUT'S BURST: a cloud flung up and out, bigger and slower to
+    burst(x, y, z, vx, vz, size, snow) {
+      // THE WIPEOUT'S BURST: snow flung up and out, bigger and slower to
       // fall than a landing's puff — a man and a machine going in separately.
-      const n = Math.round(Math.min(220, 30 + 170 * size) * share);
+      const heavy = snow ? Math.min(1.2, 0.4 + heavyShare(snow, 0)) : 1;
+      const n = Math.round(Math.min(220, (30 + 170 * size) * heavy) * share);
       for (let i = 0; i < n; i++) {
         const a = random() * Math.PI * 2;
         const sp = 1 + random() * (2 + 4 * size);
@@ -297,7 +343,8 @@ export function createSpray(haze: HazeUniforms): Spray {
         }
         const k = i * 3;
         vel[k] *= drag;
-        vel[k + 1] = vel[k + 1] * drag - 6.5 * dt;
+        // A clump falls nearly as a stone does; a grain puff floats a little.
+        vel[k + 1] = vel[k + 1] * drag - (6.5 + 3.3 * hard[i]) * dt;
         vel[k + 2] *= drag;
         pos[k] += vel[k] * dt;
         pos[k + 1] += vel[k + 1] * dt;
@@ -311,12 +358,16 @@ export function createSpray(haze: HazeUniforms): Spray {
           vel[k + 2] *= 0.5;
           age[i] += dt * 5;
         }
-        size[i] = size0[i] * (1 + 1.6 * t);
-        alpha[i] = Math.min(1, t * 12) * (1 - t) * (1 - t) * 0.75;
+        size[i] = size0[i] * (1 + 1.6 * t * (1 - hard[i]));
+        // A clump holds together until it lands; a grain puff thins.
+        const h = hard[i];
+        alpha[i] =
+          Math.min(1, t * 12) * ((1 - t) * (1 - t) * 0.75 * (1 - h) + (1 - t ** 4) * 0.95 * h);
       }
       posAttr.needsUpdate = true;
       sizeAttr.needsUpdate = true;
       alphaAttr.needsUpdate = true;
+      hardAttr.needsUpdate = true;
     },
     setScale(v) {
       material.uniforms.uScale.value = v;

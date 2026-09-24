@@ -22,8 +22,21 @@
 // press a band its own width between them. Laid over each other that is the
 // snowmobile's signature — a wide band with two thin lines either side —
 // and it falls out of the probes rather than being drawn as a decal.
+//
+// THE SNOW DECIDES THE FURROW'S SHAPE (`snowpack.ts`), when the caller says
+// what snow it is: new snow takes the deepest furrow with its walls sloughed
+// back in and hardly a berm; a wind slab a shallow cut with square walls;
+// wet spring snow crisp walls and a real berm beside them; the groomer a
+// scuff. Left unsaid, a probe is in settled powder over the packed field —
+// the picture the game had before it knew one snow from another.
 
 import type { SnowContact } from "@engine";
+
+import type { SnowProps } from "./snowpack.ts";
+
+/** What the snow is at a plan point (`snowpack.ts`'s `snowAt`, bound to a
+ * run's snowpack). */
+export type SnowSampler = (x: number, z: number) => SnowProps;
 
 /** How far loose powder stands over the groomed track, m: the drawn snow is
  * the ground plus this on virgin powder, fading to none on the groomer
@@ -52,6 +65,12 @@ export const TRAIL = {
    * flung arm — and its depth in virgin powder, m. */
   body: 0.7,
   bodyDepth: 0.14,
+  /** The walls of a furrow in settled powder (`SnowProps.wall`), and the
+   * power its cross-section falls away with at the softest and the hardest
+   * wall: 1 − u^k, k from `wallSoft` to `wallHard`. */
+  wall: 0.25,
+  wallSoft: 2,
+  wallHard: 10,
 };
 
 /** One capsule of trail: from (ax, az) to (bx, bz), `half` wide either side
@@ -64,6 +83,9 @@ export type Stamp = {
   half: number;
   depth: number;
   berm: number;
+  /** How its walls stand, 0 sloughed … 1 square (`SnowProps.wall`);
+   * settled powder's (`TRAIL.wall`) when left out. */
+  wall?: number;
 };
 
 /** THE DEPTH A PROBE IS DRAWN AT, m, on snow `packed` (0 powder … 1
@@ -71,11 +93,21 @@ export type Stamp = {
  * kissing the snow on a hop leaves less than one carrying the nose, and the
  * run's snow dial (`GameState.snowDepth`) scales the powder's own furrow the
  * way it scales the physics' sink: a dusting leaves a scuff, a dump a
- * trench. */
-export function drawnDepth(contact: SnowContact, packed: number, load = 1, depth = 1): number {
-  const furrow = (contact.kind === "ski" ? TRAIL.powderSki : TRAIL.powderTread) * depth;
+ * trench. Given the SNOW (`snowpack.ts`), its `give` is the furrow's share
+ * instead — the packed field and the dial are already in it. */
+export function drawnDepth(
+  contact: SnowContact,
+  packed: number,
+  load = 1,
+  depth = 1,
+  snow?: SnowProps,
+): number {
+  const base = contact.kind === "ski" ? TRAIL.powderSki : TRAIL.powderTread;
   const p = Math.min(1, Math.max(0, packed));
-  const drawn = (furrow * (1 - p) + TRAIL.packedDepth * p) * Math.min(1, Math.max(0.25, load));
+  const share = snow
+    ? Math.max(TRAIL.packedDepth, base * snow.give)
+    : base * depth * (1 - p) + TRAIL.packedDepth * p;
+  const drawn = share * Math.min(1, Math.max(0.25, load));
   return Math.min(TRAIL.maxDepth, Math.max(contact.sink, drawn));
 }
 
@@ -94,7 +126,8 @@ export function createPen(probes: number): TrailPen {
  * The capsules one rider lays since its last stamp, pushed onto `out`.
  * `packedAt` is the level's own; `nominalLoad` is the load (N) a probe
  * carries standing still, which is what "a full furrow" is measured
- * against; `depth` is the run's snow dial.
+ * against; `depth` is the run's snow dial; `snowAt`, when given, says what
+ * snow each probe is in (`snowpack.ts`) and shapes the furrow by it.
  */
 export function stampsOf(
   contacts: readonly SnowContact[],
@@ -103,6 +136,7 @@ export function stampsOf(
   nominalLoad: number,
   out: Stamp[],
   depth = 1,
+  snowAt?: SnowSampler,
 ): void {
   for (let i = 0; i < contacts.length && i < pen.xs.length; i++) {
     const c = contacts[i];
@@ -119,7 +153,8 @@ export function stampsOf(
     pen.down[i] = 1;
     if (moved > TRAIL.jump) continue;
     const load = nominalLoad > 0 ? c.load / nominalLoad : 1;
-    const drawn = drawnDepth(c, packedAt(c.x, c.z), load, depth);
+    const snow = snowAt?.(c.x, c.z);
+    const drawn = drawnDepth(c, packedAt(c.x, c.z), load, depth, snow);
     out.push({
       ax,
       az,
@@ -127,7 +162,8 @@ export function stampsOf(
       bz: c.z,
       half: c.width * 0.5,
       depth: drawn,
-      berm: Math.min(TRAIL.maxBerm, drawn * TRAIL.bermShare),
+      berm: Math.min(TRAIL.maxBerm, drawn * (snow ? snow.berm : TRAIL.bermShare)),
+      wall: snow ? snow.wall : TRAIL.wall,
     });
   }
 }
@@ -137,12 +173,14 @@ export function stampsOf(
  * too, and the sprawl it leaves is the one mark on the map that says a
  * crash happened here. One capsule from where he last touched to where he
  * touches now, drawn as a furrow of `TRAIL.body` width at the powder's own
- * depth (a scuff on the groomer); `pen` is a one-probe pen of its own. */
+ * depth (a scuff on the groomer); `pen` is a one-probe pen of its own, and
+ * `snowAt`, when given, shapes it by the snow it slides through. */
 export function bodyStampOf(
   body: { x: number; z: number; touching: boolean },
   pen: TrailPen,
   packedAt: (x: number, z: number) => number,
   out: Stamp[],
+  snowAt?: SnowSampler,
 ): void {
   if (!body.touching) {
     pen.down[0] = 0;
@@ -155,8 +193,11 @@ export function bodyStampOf(
   pen.zs[0] = body.z;
   pen.down[0] = 1;
   if (Math.hypot(body.x - ax, body.z - az) > TRAIL.jump) return;
+  const snow = snowAt?.(body.x, body.z);
   const p = Math.min(1, Math.max(0, packedAt(body.x, body.z)));
-  const depth = TRAIL.bodyDepth * (1 - p) + TRAIL.packedDepth * 2 * p;
+  const depth = snow
+    ? Math.max(TRAIL.packedDepth * 2, TRAIL.bodyDepth * snow.give)
+    : TRAIL.bodyDepth * (1 - p) + TRAIL.packedDepth * 2 * p;
   out.push({
     ax,
     az,
@@ -164,16 +205,28 @@ export function bodyStampOf(
     bz: body.z,
     half: TRAIL.body / 2,
     depth,
-    berm: Math.min(TRAIL.maxBerm, depth * TRAIL.bermShare),
+    berm: Math.min(TRAIL.maxBerm, depth * (snow ? snow.berm : TRAIL.bermShare)),
+    wall: snow ? snow.wall : TRAIL.wall,
   });
+}
+
+/** The power a furrow's cross-section falls away with for walls `wall`
+ * (0 sloughed … 1 square). */
+export function wallPower(wall: number): number {
+  return TRAIL.wallSoft + (TRAIL.wallHard - TRAIL.wallSoft) * Math.min(1, Math.max(0, wall));
 }
 
 /** The cross-section of one furrow at `d` m from its centreline: how far
  * the snow is pressed (0..1 of the stamp's depth) and how much berm stands
- * there (0..1 of its berm). The GLSL in `trail-map.ts` is this, verbatim. */
-export function furrowProfile(d: number, half: number): { press: number; berm: number } {
+ * there (0..1 of its berm), for walls `wall` (settled powder's when left
+ * out). The GLSL in `trail-map.ts` is this, verbatim. */
+export function furrowProfile(
+  d: number,
+  half: number,
+  wall = TRAIL.wall,
+): { press: number; berm: number } {
   const u = d / Math.max(half, 1e-6);
-  const press = u < 1 ? 1 - u * u * u * u : 0;
+  const press = u < 1 ? 1 - u ** wallPower(wall) : 0;
   const reach = TRAIL.bermReach;
   const v = (u - 0.8) / reach;
   const berm = v > 0 && v < 1 ? Math.sin(Math.PI * v) : 0;

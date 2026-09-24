@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky sled birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky cloud sled birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -64,6 +64,17 @@ sled:
 # ARGS="--hours=6,12,18 --view=vista --weathers=overcast,fog" narrows it.
 sky:
 	npm run sky -- $(if $(SEED),--seed $(SEED),) $(ARGS)
+
+# THE CLOUD LAB: the snow a sled rips up and the furrow it leaves, as one
+# labelled contact sheet — previews/cloud-<seed>.png. Each row one ride
+# across the seed's open meadow (a kind of snow × a light × a held speed),
+# each column the same moment from another angle (chase, side, front, high,
+# trail, under, furrow), or with ARGS=--cols=times one angle at several
+# moments. Its own one-off bundle from pwa/cloud-preview.html (never
+# deployed); needs a Chromium like `world`. SEED=n, REGION=id;
+# ARGS="--snow=groomed,hard,soft,new,wet --light=back,low,night --speeds=30,90".
+cloud:
+	npm run cloud -- $(if $(SEED),--seed $(SEED),) $(if $(REGION),--region $(REGION),) $(ARGS)
 
 # THE WILDLIFE LAB: every bird over the woods and every animal in the snow
 # side by side, three poses each through the game's own geometry and

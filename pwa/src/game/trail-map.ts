@@ -125,13 +125,13 @@ function target(size: number): THREE.WebGLRenderTarget {
 
 const STAMP_VERTEX = /* glsl */ `
 attribute vec4 iSeg;
-attribute vec3 iShape;
+attribute vec4 iShape;
 uniform vec2 uOrigin;
 uniform float uSpan;
 uniform float uMinHalf;
 varying vec2 vP;
 varying vec4 vSeg;
-varying vec3 vShape;
+varying vec4 vShape;
 void main() {
   float hw = max(iShape.x, uMinHalf);
   // A stamp widened to the texel floor keeps its volume, not its depth.
@@ -147,7 +147,7 @@ void main() {
   vec2 p = along + n * position.y * reach;
   vP = p;
   vSeg = iSeg;
-  vShape = vec3(hw, iShape.y * thin, iShape.z * thin);
+  vShape = vec4(hw, iShape.y * thin, iShape.z * thin, iShape.w);
   gl_Position = vec4((p - uOrigin) / uSpan * 2.0 - 1.0, 0.0, 1.0);
 }
 `;
@@ -156,14 +156,15 @@ void main() {
 const STAMP_FRAGMENT = /* glsl */ `
 varying vec2 vP;
 varying vec4 vSeg;
-varying vec3 vShape;
+varying vec4 vShape;
 void main() {
   vec2 a = vSeg.xy;
   vec2 ab = vSeg.zw - a;
   float h = clamp(dot(vP - a, ab) / max(dot(ab, ab), 1e-8), 0.0, 1.0);
   float d = length(vP - a - ab * h);
   float u = d / vShape.x;
-  float press = u < 1.0 ? 1.0 - u * u * u * u : 0.0;
+  float k = ${TRAIL.wallSoft.toFixed(1)} + ${(TRAIL.wallHard - TRAIL.wallSoft).toFixed(1)} * clamp(vShape.w, 0.0, 1.0);
+  float press = u < 1.0 ? 1.0 - pow(u, k) : 0.0;
   float v = (u - 0.8) / ${TRAIL.bermReach.toFixed(2)};
   float berm = (v > 0.0 && v < 1.0) ? sin(3.14159265 * v) : 0.0;
   gl_FragColor = vec4(press * vShape.y, berm * vShape.z, 0.0, 1.0);
@@ -215,7 +216,7 @@ export function createTrailMap(mapSize: number, options: TrailOptions): TrailMap
   );
   quad.setIndex([0, 1, 2, 0, 2, 3]);
   const seg = new THREE.InstancedBufferAttribute(new Float32Array(BATCH * 4), 4);
-  const shape = new THREE.InstancedBufferAttribute(new Float32Array(BATCH * 3), 3);
+  const shape = new THREE.InstancedBufferAttribute(new Float32Array(BATCH * 4), 4);
   seg.setUsage(THREE.DynamicDrawUsage);
   shape.setUsage(THREE.DynamicDrawUsage);
   quad.setAttribute("iSeg", seg);
@@ -373,9 +374,10 @@ export function createTrailMap(mapSize: number, options: TrailOptions): TrailMap
           sa[i * 4 + 1] = s.az;
           sa[i * 4 + 2] = s.bx;
           sa[i * 4 + 3] = s.bz;
-          sh[i * 3] = s.half;
-          sh[i * 3 + 1] = s.depth / TRAIL.maxDepth;
-          sh[i * 3 + 2] = s.berm / TRAIL.maxBerm;
+          sh[i * 4] = s.half;
+          sh[i * 4 + 1] = s.depth / TRAIL.maxDepth;
+          sh[i * 4 + 2] = s.berm / TRAIL.maxBerm;
+          sh[i * 4 + 3] = s.wall ?? TRAIL.wall;
         }
         seg.needsUpdate = true;
         shape.needsUpdate = true;

@@ -24,7 +24,7 @@ Pick by what the effect is anchored to:
 
 | Surface | Use for | Lives in |
 | --- | --- | --- |
-| **The three.js scene** | Anything IN THE AIR: the roost, the ski spray, the landing puff — one pool of sprites, lit as the snow is and faded into the same haze | `pwa/src/game/spray.ts` |
+| **The three.js scene** | Anything IN THE AIR: the roost, the ski spray, the landing puff — the heavy grains and clumps as one pool of sprites, and the fine SNOW CLOUD they raise as one instanced draw of volume-shaded puffs, both lit as the snow is and faded into the same haze | `pwa/src/game/spray.ts`, `snow-cloud.ts` |
 | **The trail map** | Anything IN THE SNOW: every furrow a ski or the tread presses, the berm beside it — stamped as capsules into a world-space map the terrain shader lowers the snow by and shades | `pwa/src/game/trail-stamp.ts` decides each stamp (three-free), `trail-map.ts` keeps the maps (`snow-look`'s), `renderer.ts` stamps every rider every frame |
 
 There is no third surface: a decal or a second mesh laid over the snow is lit
@@ -39,6 +39,8 @@ differently from the ground under it and reads as paint. The LENS's reaction
 | THE ROOST: snow flung up and back off the tunnel, harder with power and `slip`, much harder in powder than on the groomer | `spray.ts` |
 | THE SKI SPRAY: a sheet off a carving ski's outside edge in powder, sized by the turn and the speed | `spray.ts` |
 | THE LANDING PUFF: a ring of powder from under a sled coming down, sized by how hard — read off the airborne → grounded TRANSITION rather than the `land` event, so a frame that ran two steps cannot swallow it and a rival's landing throws the same puff | `spray.ts` |
+| THE SNOW CLOUD: the fine powder the tread, the skis, a landing and a wipeout raise — the rooster tail that stalls, swells, drifts and hangs. What each source throws out of which snow and how a puff flies, swells and thins is `snow-cloud-plan.ts` (three-free, `tests/snow_cloud_test.ts`); the flight, the sort, the whole cloud's self-shadow (a sun-first walk through a hashed grid), the shader (noise-carved body, wrap light, Henyey–Greenstein glow, glints, lamps, the soft meeting with the snow) and the chase lens's VEIL through the player's own tail are `snow-cloud.ts` | `snow-cloud-plan.ts`, `snow-cloud.ts` |
+| THE KINDS OF SNOW: groomed, hard, soft, new, wet, ice — where each lies (the packed field, the crust, the ice, a snowing sky's new layer and `fresh`, a spring thaw) and what each does to the cloud, the spray's clumps, a furrow's depth, WALLS and berm, and a print (a crust carries a light foot) | `snowpack.ts` (three-free, `tests/snowpack_test.ts`) |
 | THE TRAILS: a capsule per contact from its last touch to this one; `drawnDepth` (the sink or the powder's furrow, whichever is deeper); `furrowProfile` for the berm; `TRAIL.jump` breaks the line on a reset | `trail-stamp.ts`; `tests/world_render_test.ts` |
 | WHAT IS FELT: the track's CHATTER read off `skiCompression` every step, a landing, a trunk, rolling over (read off the state — there is no event), a checkpoint's light tick; what does NOT rumble and why | `pwa/src/game/rumble.ts` (DOM-free; `tests/rumble_test.ts`) |
 | The motor: the browser's Vibration API or the store shell's tap, the player's switch | `pwa/src/game/haptics.ts` — the only `navigator.vibrate`; the phone's half is `platform-shells`' |
@@ -100,20 +102,47 @@ in code. Snow in the air is:
 
 ## The iterate loop — LOOK at it, ZOOMED
 
-1. **`make world SEED=38`** reaches the moments in one ridden run:
+1. **`make cloud`** is the snow cloud's own lab: one ride per row across
+   the seed's open meadow — a kind of snow (`--snow=`) × a light
+   (`--light=front,back,side,low,overcast,snowing,night`) × a held speed —
+   photographed from several angles at one moment (`--views=chase,side,
+   front,high,trail,under,furrow`), or one angle at several moments
+   (`--cols=times`). The LIGHT is the sun turned to the ride, so BACK is
+   always the chase lens looking into the sun through the cloud. Run it
+   before and after, both sheets in the PR.
+2. **`make world SEED=38`** reaches the moments in one ridden run:
    `powder` and `powder-high` for the roost and the ski spray, `jump` and
    `landing` for the puff, `furrow` and `lookback` for the trails, `track`
    for the thin spray on the groomer. It builds its own bundle; no
    `make build`.
-2. **Zoom** — crop the sled at full resolution; at a quarter size you are
-   judging a smudge.
-3. **Bench the numbers** when the question is WHEN rather than HOW:
+3. **Zoom** — crop the sled at full resolution (`make cloud
+   ARGS="--width=800 --height=450"`); at a quarter size you are judging a
+   smudge.
+4. **Bench the numbers** when the question is WHEN rather than HOW:
    `make ride SCENARIO=kicker` says when the sled leaves and lands, so the
    puff's frame is known before it is looked for.
-4. **Ride it** for anything that moves — a spray's timing and a pulse show in
+5. **Ride it** for anything that moves — a spray's timing and a pulse show in
    no still: `npm run dev`, or `make screenshots` at two offsets
    (`ARGS="--t 12"`, `--t 13`).
-5. Judge, refine the worst beat, re-shoot. `make profile` before and after.
+6. Judge, refine the worst beat, re-shoot. `make profile` before and after.
+
+## What the cloud taught (the snow cloud's own rules)
+
+- **Shade the CLOUD, not the puff.** A puff lit and self-shadowed on its
+  own gets a bright rim on its sun side, and a stream of them reads as a
+  string of rings. The shadow is the whole cloud's (the sun-first walk),
+  the glow against the sun is the whole cloud's thinness, and a puff's own
+  relief is a light touch over that.
+- **Snow is never grey.** Ice scatters nearly all it stops: a shadow deep
+  in the plume is lit again by the cloud round it (the multiple-scatter
+  octave). Single scattering alone turns a snow cloud into dust.
+- **The chase lens rides in its own tail.** Without the veil the player's
+  sled disappears into its own cloud at any speed in powder. A planted lens
+  (a replay's broadcast, a lab view) sees the cloud whole.
+- **A faint puff is still fill.** The biggest puffs on the screen are the
+  near and veiled ones; cull them in the vertex shader, not by alpha.
+- **Fade into the snow on the ball's front surface**, not the card's
+  plane, or a lens looking down cuts every puff into a crescent.
 
 ## Ship checklist
 
@@ -124,7 +153,10 @@ in code. Snow in the air is:
       haze, no foreign fidelity.
 - [ ] Pooled allocations; observed per step where the reading spikes.
 - [ ] You LOOKED at it zoomed, at two moments.
-- [ ] `npx vitest run tests/world_render_test.ts tests/rumble_test.ts`;
+- [ ] `make cloud` before and after for anything in the air, both sheets
+      in the PR.
+- [ ] `npx vitest run tests/world_render_test.ts tests/rumble_test.ts
+      tests/snow_cloud_test.ts tests/snowpack_test.ts`;
       `make profile` both tables in the PR.
 - [ ] A `.changes/unreleased/` fragment — effects are player-visible.
 
