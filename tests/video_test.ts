@@ -273,6 +273,20 @@ describe("fitting the picture to the machine (picture-fit.ts)", () => {
     expect(fitPicture({ ...at, spray: "low" }, cost, cost, prices).spray).toBe("high");
   });
 
+  it("steps down past stops that save nothing to the one that does", () => {
+    // TRAILS priced level from LOW up: the whole saving is at OFF.
+    const prices = {
+      ...PICTURE_PRICES,
+      trails: {
+        off: { cost: 0, benefit: 0 },
+        low: { cost: 0.4, benefit: 50 },
+        medium: { cost: 0.4, benefit: 58 },
+        high: { cost: 0.4, benefit: 62 },
+      },
+    };
+    expect(fitPicture(DEFAULT_VIDEO, 500, FIT_BUDGET_MS, prices).trails).toBe("off");
+  });
+
   it("keeps the canvas's antialiasing, whatever it fits", () => {
     expect(fitPicture({ ...DEFAULT_VIDEO, antialias: false }, 2).antialias).toBe(false);
     expect(fitPicture({ ...DEFAULT_VIDEO, antialias: true }, 500).antialias).toBe(true);

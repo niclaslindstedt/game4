@@ -60,7 +60,7 @@ export const FIT_REFERENCE = { width: 1920, height: 1080 } as const;
 /** The frame with every row at its cheapest stop on the reference machine,
  * ms: the engine, the sky, the ground at its coarsest — what no row can
  * take off. */
-export const FLOOR_MS = 2.51;
+export const FLOOR_MS = 1.92;
 
 /**
  * THE PRICE LIST. Benefits, row by row:
@@ -85,41 +85,41 @@ export const FLOOR_MS = 2.51;
 export const PICTURE_PRICES: PriceList = {
   resolution: {
     low: { cost: 0, benefit: 0 },
-    medium: { cost: 0.67, benefit: 45 },
-    high: { cost: 1.3, benefit: 70 },
+    medium: { cost: 0.63, benefit: 45 },
+    high: { cost: 1.43, benefit: 70 },
   },
   distance: {
     low: { cost: 0, benefit: 0 },
-    medium: { cost: 0.33, benefit: 25 },
-    high: { cost: 0.84, benefit: 35 },
-    max: { cost: 1.1, benefit: 38 },
+    medium: { cost: 0.38, benefit: 25 },
+    high: { cost: 0.76, benefit: 35 },
+    max: { cost: 1.0, benefit: 38 },
   },
   terrain: {
     low: { cost: 0, benefit: 0 },
-    medium: { cost: 0.07, benefit: 8 },
-    high: { cost: 0.44, benefit: 12 },
+    medium: { cost: 0.56, benefit: 8 },
+    high: { cost: 0.76, benefit: 12 },
   },
   trails: {
     off: { cost: 0, benefit: 0 },
-    low: { cost: 0.04, benefit: 50 },
-    medium: { cost: 0.16, benefit: 58 },
-    high: { cost: 0.2, benefit: 62 },
+    low: { cost: 0.36, benefit: 50 },
+    medium: { cost: 0.36, benefit: 58 },
+    high: { cost: 0.36, benefit: 62 },
   },
   forest: {
     low: { cost: 0, benefit: 0 },
-    medium: { cost: 0.22, benefit: 12 },
-    high: { cost: 0.62, benefit: 18 },
+    medium: { cost: 0.15, benefit: 12 },
+    high: { cost: 0.32, benefit: 18 },
   },
   shadows: {
     off: { cost: 0, benefit: 0 },
-    sleds: { cost: 0.51, benefit: 22 },
-    medium: { cost: 0.69, benefit: 40 },
-    high: { cost: 1.85, benefit: 44 },
+    sleds: { cost: 0.55, benefit: 22 },
+    medium: { cost: 0.74, benefit: 40 },
+    high: { cost: 1.98, benefit: 44 },
   },
   spray: {
     low: { cost: 0, benefit: 0 },
-    medium: { cost: 0.07, benefit: 8 },
-    high: { cost: 0.11, benefit: 12 },
+    medium: { cost: 0.06, benefit: 8 },
+    high: { cost: 0.15, benefit: 12 },
   },
 };
 
@@ -157,10 +157,14 @@ function steps(video: VideoSettings, dir: 1 | -1, prices: PriceList): Step[] {
   for (const row of PICTURE_ROWS) {
     const ladder = PICTURE_LADDERS[row] as readonly string[];
     const at = ladder.indexOf(video[row] as string);
-    const to = at + dir;
-    if (at < 0 || to < 0 || to >= ladder.length) continue;
+    const stops = prices[row] as Record<string, StopPrice>;
     const from = price(prices, row, video[row]);
-    const next = (prices[row] as Record<string, StopPrice>)[ladder[to]];
+    let to = at + dir;
+    // Down, past any stop that costs no less: a step that saves nothing is
+    // never taken, and must not stand between the fit and one that does.
+    while (dir < 0 && to > 0 && stops[ladder[to]].cost >= from.cost) to--;
+    if (at < 0 || to < 0 || to >= ladder.length) continue;
+    const next = stops[ladder[to]];
     out.push({
       row,
       stop: ladder[to],
