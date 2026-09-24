@@ -73,4 +73,4 @@ make audition ARGS="--meter --seat hood"                               # ...hear
 
 The page is built by `scripts/audition.mjs`, which inlines the audio modules into one page and plays them on the repo's own synth — so what is auditioned is what ships. A session that cannot listen reads the meter as a SHAPE: idle under cruise under flat out, the air under flat out with the snow gone, the landings at the top of the bank, the chimes at the bottom, nothing within a few dB of the limiter. `tests/audio_test.ts` guards the faults that are silences rather than crashes: an event nothing answers, a mix that creeps, a bed whose numbers never move, a bed that holds under the pause card, a cutoff past a Bluetooth headset's Nyquist.
 
-Music is not built.
+There is no music, by design: the game's sound is its effects alone, as in the jet-ski game.
