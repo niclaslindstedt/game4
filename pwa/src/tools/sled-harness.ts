@@ -21,8 +21,9 @@
 //   head       the helmet alone, close — every grid kit a row, round it
 //              from the front, three-quarters, the side, the rear
 //              three-quarter, the back and over the back as the chase
-//              camera sees it: the face judged where nothing else is in
-//              the frame
+//              camera sees it, and a PROFILE: the side drawn flat on a
+//              centimetre grid centred on the head's middle, to measure
+//              against a photograph of a real helmet
 //   landing    one machine landing: the rider's body on its legs
 //              (`stepRiderSpring`) kicked by a sled stopped dead from
 //              `vy` m/s, a frame every 60 ms, from the side and the rear
@@ -117,6 +118,7 @@ const HEAD_VIEWS: { name: string; bearing: number; rise: number }[] = [
   { name: "rear three", bearing: 135, rise: 0.05 },
   { name: "back", bearing: 180, rise: 0.02 },
   { name: "chase", bearing: 180, rise: 0.45 },
+  { name: "profile", bearing: -90, rise: 0 },
 ];
 /** The pose the head sheet holds him in: on the move, the bars straight. */
 const HEAD_POSE: RiderInput = {
@@ -386,6 +388,12 @@ function drawHeads(): { rows: number; cols: number; note: string } {
   for (const m of models.values()) m.root.visible = false;
   ground.visible = grid.visible = wall.visible = false;
   const head = riderPose(HEAD_POSE).head;
+  // The profile's centimetre grid, stood in the plane of symmetry behind
+  // the head, centred on its middle.
+  const cmGrid = new THREE.GridHelper(0.6, 60, 0xd8452e, 0x8795a6);
+  cmGrid.rotation.z = Math.PI / 2;
+  cmGrid.visible = false;
+  scene.add(cmGrid);
   lens.aspect = 4 / 3;
   lens.fov = 14;
   for (let row = 0; row < rows; row++) {
@@ -398,10 +406,27 @@ function drawHeads(): { rows: number; cols: number; note: string } {
       renderer.setScissor(x, y, w, h);
       renderer.setClearColor(row % 2 === col % 2 ? 0x51606f : 0x5b6a79);
       const b = (v.bearing * Math.PI) / 180;
-      lens.position.set(head.x + Math.sin(b) * 1.6, head.y + v.rise, head.z + Math.cos(b) * 1.6);
-      lens.lookAt(head.x, head.y - 0.03, head.z);
-      lens.updateProjectionMatrix();
-      renderer.render(scene, lens);
+      if (v.name === "profile") {
+        // Flat, 0.5 m across and centred 4 cm ahead of the head's middle,
+        // the front to the right as a photograph of a helmet's left side
+        // has it.
+        ortho.left = -0.25;
+        ortho.right = 0.25;
+        ortho.top = 0.1875;
+        ortho.bottom = -0.1875;
+        ortho.position.set(head.x - 2, head.y, head.z + 0.04);
+        ortho.lookAt(head.x, head.y, head.z + 0.04);
+        ortho.updateProjectionMatrix();
+        cmGrid.position.set(head.x + 0.3, head.y, head.z);
+        cmGrid.visible = true;
+        renderer.render(scene, ortho);
+        cmGrid.visible = false;
+      } else {
+        lens.position.set(head.x + Math.sin(b) * 1.6, head.y + v.rise, head.z + Math.cos(b) * 1.6);
+        lens.lookAt(head.x, head.y - 0.03, head.z);
+        lens.updateProjectionMatrix();
+        renderer.render(scene, lens);
+      }
       const label = document.createElement("div");
       label.className = "label";
       label.textContent = `slot ${row} · ${v.name}`;

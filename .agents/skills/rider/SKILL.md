@@ -30,14 +30,15 @@ little with the bars and the head looking into the turn.
 
 **HE IS A MAN IN CLOTHES, NOT A STACK OF CAPSULES.** Dressed after
 photographs of sleds ridden from behind: a big helmet sat down on a tall
-collar (no neck showing), built as a model of its own (`rider-helmet.ts`):
-a HOLLOW shell — the outer skin with the eye port cut out of it, a dark liner
-seen through the port and a rim joining them — over a HEAD whose face (the
-kit's `skin`) shows in the port, the goggles ON his eyes inside the hollow
-and their strap round the outside of the shell's back; a chunky chin bar
-tipped down to a broad front with a vent in it, a peak on the brow raked up a
-little (never so far it shows as horns from behind), a stripe over the
-crown; a wind jacket that is one boxy
+collar (no neck showing), built as a model of its own (`rider-helmet.ts`)
+and MEASURED off a photograph of a real motocross helmet: a HOLLOW shell
+whose reach from the head's middle is three measured profiles (ahead, behind,
+to the side) — flat at the eyes, the chin bar a long jaw reaching 21 cm
+forward in line with the rim, the peak riding the crown level to 18.5 cm —
+the eye port cut out of it with a dark liner and a rim, over a HEAD whose
+face (the kit's `skin`) shows in the port, the goggles ON his eyes filling
+the port nearly flush and their strap round the outside of the shell's back;
+worn tipped nose-down (`HELMET_TILT`) so the port looks level; a wind jacket that is one boxy
 mass from the hem to the shoulders — the shoulders BUILT INTO it, never a
 ball on a stick — under a contrasting yoke; baggy sleeves bunched into flared
 gauntlets; insulated pants round a real seat (two lobes and a cleft), with
@@ -96,7 +97,11 @@ intent from physics deltas.
    scratch copy of the style to see them, and never commit it. The FACE
    has its own sheet, `make sled ARGS=--sheet=head`: the helmet alone in
    every kit from the front, three-quarters, the side, the rear
-   three-quarter, the back and the chase camera's height.
+   three-quarter, the back and the chase camera's height, and a PROFILE on
+   a centimetre grid centred on the head's middle. A helmet change starts
+   from a PHOTOGRAPH of a real one (a freely licensed one, kept out of the
+   tree): grid it, scale it to a known length, read the numbers off it, and
+   lay the profile beside it at the same scale.
 2. `make world SEED=38 ARGS=--views=orbit,far,jump,landing` — round him,
    at range, in the air and coming down. Judge from BEHIND first (that is
    the game's view), then the side for the crouch and the reach.
