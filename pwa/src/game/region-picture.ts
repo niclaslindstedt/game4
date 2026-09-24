@@ -14,14 +14,16 @@ import * as THREE from "three";
 import { regionOf, type Level } from "@engine";
 
 import { gradeOf, isNeutral } from "./colour-grade.ts";
+import type { GpuTimer } from "./gpu-timer.ts";
 import { createGradePass, gradeSupported, type GradePass } from "./grade-pass.ts";
 
 export type RegionPicture = {
   /** The region `level` is built in becomes the picture's; returns the
    * target the scene must be COMPILED against (null: the canvas). */
   load(level: Level): THREE.WebGLRenderTarget | null;
-  /** Draw `scene` through `camera` onto the canvas, graded or not. */
-  draw(scene: THREE.Scene, camera: THREE.Camera): void;
+  /** Draw `scene` through `camera` onto the canvas, graded or not; the
+   * grade's pass is a slice of its own on the GPU's timer. */
+  draw(scene: THREE.Scene, camera: THREE.Camera, timer?: Pick<GpuTimer, "push" | "pop">): void;
   /** What the last frame's SCENE cost — the grade's own pass not counted. */
   info(): { calls: number; triangles: number; points: number };
   dispose(): void;
@@ -41,7 +43,7 @@ export function createRegionPicture(gl: THREE.WebGLRenderer, samples: number): R
       pass.setGrade(grade);
       return pass.target;
     },
-    draw(scene, camera) {
+    draw(scene, camera, timer) {
       if (!graded || !pass) {
         gl.render(scene, camera);
         const r = gl.info.render;
@@ -60,7 +62,9 @@ export function createRegionPicture(gl: THREE.WebGLRenderer, samples: number): R
       last.triangles = r.triangles;
       last.points = r.points;
       gl.setRenderTarget(onto);
+      timer?.push("grade");
       pass.render(gl);
+      timer?.pop();
     },
     info: () => ({ ...last }),
     dispose() {

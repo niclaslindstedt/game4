@@ -214,6 +214,10 @@ float shadowFaded(float shadow) {
   float d = length(vHazeWorld.xz - uShadowFade.xy);
   return mix(shadow, 1.0, smoothstep(uShadowFade.z, uShadowFade.w, d));
 }
+// Past the rim the fade is whole, and the map is not read at all.
+bool shadowGone() {
+  return length(vHazeWorld.xz - uShadowFade.xy) >= uShadowFade.w;
+}
 `;
 
 /** The riders' own shadows (`shadow-box.ts`, `hero-shadow.ts`), each looked
@@ -278,7 +282,8 @@ const DIR_SHADOW_OPEN = "? getShadow( directionalShadowMap[ i ]";
 const DIR_SHADOW_CLOSE = "vDirectionalShadowCoord[ i ] ) : 1.0;";
 
 /** Three's `lights_fragment_begin` with the directional light's shadow
- * passed through `shadowFaded`, and the riders' own maps taken with it
+ * passed through `shadowFaded` (and not read at all past the rim, where the
+ * fade takes it whole), and the riders' own maps taken with it
  * (`heroShadowed`). Built once, and loudly: a three that moved the line
  * would otherwise leave the rim a hard edge with nothing said. */
 let fadedLights: string | null = null;
@@ -289,7 +294,10 @@ export function lightsWithFade(): string {
     throw new Error("haze.ts: three's directional shadow line moved; re-graft shadowFaded");
   }
   fadedLights = chunk
-    .replace(DIR_SHADOW_OPEN, "? heroShadowed( shadowFaded( getShadow( directionalShadowMap[ i ]")
+    .replace(
+      DIR_SHADOW_OPEN,
+      "? heroShadowed( shadowFaded( shadowGone() ? 1.0 : getShadow( directionalShadowMap[ i ]",
+    )
     .replace(DIR_SHADOW_CLOSE, "vDirectionalShadowCoord[ i ] ) ), geometryNormal ) : 1.0;");
   return fadedLights;
 }

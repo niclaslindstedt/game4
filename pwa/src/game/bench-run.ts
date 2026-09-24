@@ -25,7 +25,7 @@ import { createGame, type GameMode, type GameState } from "@engine";
 import type { LoadPlan } from "./app-load.ts";
 import { rememberBenchmark } from "./benchmark-history.ts";
 import { BENCHMARK, plannedRows } from "./benchmark-plan.ts";
-import { pictureRows } from "./benchmark-report.ts";
+import { HIDEABLE, pictureRows, type GpuMode, type Hideable } from "./benchmark-report.ts";
 import {
   runBenchmark,
   warmBenchmark,
@@ -53,6 +53,12 @@ export type BenchWorld = {
   setStatus: (status: BenchmarkStatus | null) => void;
   /** OPTIONS ▸ PICTURE as it stands, written beside the score. */
   video: () => VideoSettings;
+  /** The GPU timer's cut for the run, and what it is drawn without (the
+   * URL's `?gpu=` and `?hide=`). */
+  gpu: GpuMode;
+  hide: readonly Hideable[];
+  /** Interleave the A/B: every subsystem hidden a frame in turn (`?ab=1`). */
+  ab: boolean;
 };
 
 export type BenchRun = {
@@ -76,6 +82,10 @@ export function createBenchRun(world: BenchWorld): BenchRun {
     world.setMode("free");
     world.renderer.setOverride(null);
     world.renderer.setTrailOverlay(false);
+    // Set before the warm-up, so the frames it warms are drawn the way the
+    // timed ones are.
+    world.renderer.setGpuTimer(world.gpu);
+    world.renderer.setHidden(world.hide);
     let warm: BenchmarkWarmup | null = null;
     world.begin({
       build: () => createGame({ seed: BENCHMARK.seed, mode: BENCHMARK.mode, sky: BENCHMARK.sky }),
@@ -99,6 +109,8 @@ export function createBenchRun(world: BenchWorld): BenchRun {
         stop = runBenchmark({
           state: world.current(),
           renderer: world.renderer,
+          hidden: world.hide,
+          cycle: world.ab ? HIDEABLE.filter((h) => !world.hide.includes(h)) : undefined,
           onStatus: (status) => {
             world.setStatus(status);
             // KEPT AT THE END, by the app rather than the card: a score is
@@ -119,6 +131,8 @@ export function createBenchRun(world: BenchWorld): BenchRun {
               costs: status.costs,
               scene: status.scene,
               totals: status.totals,
+              gpu: status.gpu,
+              hidden: status.hidden,
               machine: status.machine,
               step: BENCHMARK.step,
               frames: BENCHMARK.frames,
@@ -134,6 +148,8 @@ export function createBenchRun(world: BenchWorld): BenchRun {
     stop: () => {
       stop?.();
       stop = null;
+      world.renderer.setGpuTimer("off");
+      world.renderer.setHidden([]);
       world.setStatus(null);
     },
   };

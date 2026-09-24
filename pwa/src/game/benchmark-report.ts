@@ -130,6 +130,96 @@ export function noTotals(): RunTotals {
   };
 }
 
+/** A slice of the GPU's frame (`gpu-timer.ts`): a render pass, or under
+ * SPLIT one subsystem's draw calls inside the scene's pass. */
+export type GpuSlice =
+  | "trail"
+  | "hero"
+  | "shadow"
+  | "scene"
+  | "sky"
+  | "terrain"
+  | "forest"
+  | "field"
+  | "checkpoints"
+  | "cloud"
+  | "spray"
+  | "snowfall"
+  | "wildlife"
+  | "grade"
+  | "overlay";
+
+/** Every slice in the order a frame draws them, and what each is. */
+export const GPU_SLICES: readonly { slice: GpuSlice; what: string }[] = [
+  { slice: "trail", what: "the stamps and the new snow into the trail maps" },
+  { slice: "hero", what: "the riders' own shadow maps (SHADOWS HIGH)" },
+  { slice: "shadow", what: "the sun's shadow map: the casters drawn from the key light" },
+  { slice: "scene", what: "the picture's own pass (under SPLIT, what no subsystem claimed)" },
+  { slice: "sky", what: "the dome: the sky, its cloud, the stars" },
+  { slice: "terrain", what: "the ground: the snow shader over the clipmap" },
+  { slice: "forest", what: "the woods, both bands" },
+  { slice: "field", what: "the sleds and their riders, the ghost" },
+  { slice: "checkpoints", what: "the poles, the flags, the arch" },
+  { slice: "cloud", what: "the snow cloud off every sled" },
+  { slice: "spray", what: "the roost, the ski spray, the puffs" },
+  { slice: "snowfall", what: "the falling snow and the spindrift" },
+  { slice: "wildlife", what: "the birds and the animals" },
+  { slice: "grade", what: "the region's grade over the whole frame" },
+  { slice: "overlay", what: "the developer page's trail-map corner" },
+];
+
+/** WHAT THE GPU SPENT, summed over every WHOLE frame its timer answered
+ * for (`gpu-timer.ts`), ms per slice; divide by `frames`. */
+export type GpuTotals = {
+  /** Frames whose every query was answered. */
+  frames: number;
+  /** Frames thrown away: the driver's clock jumped, or it never answered. */
+  dropped: number;
+  ms: Partial<Record<GpuSlice, number>>;
+  /** THE INTERLEAVED A/B (`?ab=1`): the card's whole frame, summed by what
+   * the frame was drawn without ("" the whole picture). */
+  tags: Record<string, { frames: number; ms: number }>;
+};
+
+/** How much the GPU's timer cuts a frame into (`gpu-timer.ts`): OFF, each
+ * render PASS, or the scene's pass SPLIT by subsystem as well. */
+export type GpuMode = "off" | "passes" | "split";
+export const GPU_MODES: readonly GpuMode[] = ["off", "passes", "split"];
+
+/** What an A/B run may be drawn WITHOUT (`?hide=`): a subsystem's objects,
+ * or a pass the frame skips (its map left as it stood). */
+export type Hideable =
+  | "sky"
+  | "terrain"
+  | "forest"
+  | "field"
+  | "checkpoints"
+  | "cloud"
+  | "spray"
+  | "snowfall"
+  | "wildlife"
+  | "shadow"
+  | "hero"
+  | "trail";
+export const HIDEABLE: readonly Hideable[] = [
+  "sky",
+  "terrain",
+  "forest",
+  "field",
+  "checkpoints",
+  "cloud",
+  "spray",
+  "snowfall",
+  "wildlife",
+  "shadow",
+  "hero",
+  "trail",
+];
+
+export function noGpu(): GpuTotals {
+  return { frames: 0, dropped: 0, ms: {}, tags: {} };
+}
+
 /** WHAT THE MACHINE IS, as much as a browser will say. */
 export type Machine = {
   /** Logical cores, or 0 where the browser withholds it. */
@@ -186,6 +276,11 @@ export type BenchmarkRun = {
   costs: readonly FramePhases[];
   scene: readonly SceneShare[];
   totals: RunTotals;
+  /** The GPU's own timer, where the context has one (`gpu-timer.ts`). */
+  gpu: GpuTotals;
+  /** The subsystems the run was drawn WITHOUT (`?hide=`): an A/B reading,
+   * never a score to compare with a whole picture's. */
+  hidden: readonly string[];
   machine: Machine;
   /** Seconds of game each frame advanced, and the run's length in frames. */
   step: number;
@@ -263,6 +358,56 @@ function whereTheFrameWent(totals: RunTotals, step: number): string[] {
   ];
 }
 
+const SLICE_NAME = 12;
+
+/** WHERE THE GPU WENT: each slice's mean, its share of the card's frame,
+ * and what it is. The shares are of the TIMED sum — the card's own frame,
+ * never the wall. */
+function whereTheGpuWent(gpu: GpuTotals): string[] {
+  if (gpu.frames <= 0) return [];
+  const sum = Object.values(gpu.ms).reduce((a, b) => a + (b ?? 0), 0);
+  const out = [
+    "",
+    `WHERE THE GPU WENT, TIMER QUERIES OVER ${gpu.frames} FRAMES` +
+      (gpu.dropped > 0 ? ` (${gpu.dropped} dropped)` : ""),
+  ];
+  for (const { slice, what } of GPU_SLICES) {
+    const ms = gpu.ms[slice];
+    if (ms === undefined) continue;
+    const mean = ms / gpu.frames;
+    const share = sum > 0 ? (ms / sum) * 100 : 0;
+    out.push(
+      `  ${slice.padEnd(SLICE_NAME)} ${pad(mean.toFixed(3), 7)} ms ` +
+        `${pad(`${Math.round(share)}%`, 4)}   ${what}`,
+    );
+  }
+  out.push(`  ${"─".repeat(SLICE_NAME + 11)}`);
+  out.push(
+    `  ${"card".padEnd(SLICE_NAME)} ${pad((sum / gpu.frames).toFixed(3), 7)} ms` +
+      "         every slice summed",
+  );
+  const whole = gpu.tags[""];
+  const others = Object.entries(gpu.tags).filter(([tag]) => tag !== "");
+  if (whole && whole.frames > 0 && others.length > 0) {
+    const base = whole.ms / whole.frames;
+    out.push("");
+    out.push("A/B, INTERLEAVED FRAME BY FRAME — the card's frame drawn WITHOUT each");
+    out.push(`  ${"without".padEnd(SLICE_NAME)} ${pad("card", 7)}    ${pad("Δ", 7)}  frames`);
+    out.push(
+      `  ${"(nothing)".padEnd(SLICE_NAME)} ${pad(base.toFixed(3), 7)} ms ${pad("", 7)}  ${whole.frames}`,
+    );
+    for (const [tag, t] of others) {
+      if (t.frames <= 0) continue;
+      const mean = t.ms / t.frames;
+      out.push(
+        `  ${tag.padEnd(SLICE_NAME)} ${pad(mean.toFixed(3), 7)} ms ` +
+          `${pad((mean - base).toFixed(3), 7)}  ${t.frames}`,
+      );
+    }
+  }
+  return out;
+}
+
 /** THE REPORT — the text COPY DEBUG REPORT puts on the clipboard. */
 export function benchmarkReport(run: BenchmarkRun): string {
   const { samples, costs, scene, totals, machine, step, frames } = run;
@@ -286,7 +431,9 @@ export function benchmarkReport(run: BenchmarkRun): string {
   out.push("");
   out.push(`PICTURE ${run.picture.map((r) => `${r.label} ${r.value}`).join(" · ")}`);
   out.push(`PINNED  ${run.plan.map((r) => `${r.label} ${r.value}`).join(" · ")}`);
+  if (run.hidden.length > 0) out.push(`HIDDEN  ${run.hidden.join(" · ")} — an A/B reading`);
   out.push(...whereTheFrameWent(totals, step));
+  out.push(...whereTheGpuWent(run.gpu));
 
   if (costs.length > 0) {
     const held = costs[costs.length - 1];

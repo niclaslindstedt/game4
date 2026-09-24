@@ -527,6 +527,9 @@ export function App() {
       toDevPage: () => setPage("dev"),
       video: () => videoOf(settingsRef.current),
       benchNow: params.bench,
+      benchGpu: params.gpu,
+      benchHide: params.hide,
+      benchAb: params.ab,
     });
 
     pressRef.current = {

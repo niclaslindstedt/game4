@@ -92,9 +92,23 @@ SOFTWARE, so its score is this build's CPU cost and a regression's shape —
 never a figure to hold a phone to. It is slow: at `--video low` and
 640×360 the thirty seconds took a quarter of an hour on a four-core container.
 
+`make bench ARGS=--gpu` draws on the host's own GPU instead, and wherever
+the browser offers `EXT_disjoint_timer_query_webgl2` the report carries THE
+GPU'S OWN TIMER (`gpu-timer.ts`, `?gpu=`): WHERE THE GPU WENT, pass by pass —
+the trail maps, the riders' maps, the sun's map, the scene, the grade.
+`--ab` (`?ab=1`) adds the INTERLEAVED A/B: each frame is drawn without one
+subsystem in turn (`HIDEABLE`), and the table bills each subsystem as the
+difference it makes to the card's frame. That is how a subsystem's GPU cost
+is read. `--split` (`?gpu=split`) cuts the scene's pass by subsystem with
+timer queries instead, which a tiled GPU cannot do honestly (its lesson says
+why). `--hide a,b` (`?hide=`) draws a whole run without some subsystems, and
+`--dist <dir>` benchmarks a second build, so two builds can be run
+alternately in one sitting.
+
 What to put in a PR that changes what a frame costs: `make profile` before
 and after, and a BENCHMARK report from each (off a device when the change is
-about a device).
+about a device) — on a machine with a GPU, `--gpu --ab`, both builds
+alternated.
 
 ## When you change these tools
 

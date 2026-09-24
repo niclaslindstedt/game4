@@ -42,6 +42,13 @@
 //                   title's hold lets it out), `unlocks` and `benchHistory` behind it.
 //   ?bench=1        run DEVELOPER ▸ BENCHMARK the moment the app is up —
 //                   how a lab takes a score off the built site.
+//   ?gpu=<mode>     ...with the GPU's timer cutting each frame into its
+//                   render passes (`passes`, the default), the scene split
+//                   by subsystem as well (`split`), or not at all (`off`).
+//   ?hide=<a,b>     ...drawn WITHOUT these subsystems (`HIDEABLE`): the
+//                   A/B reading a slice is checked against.
+//   ?ab=1           ...hiding each subsystem a frame in turn, and timing
+//                   every variant on the GPU (the interleaved A/B).
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -76,6 +83,7 @@ import {
   type WeatherKind,
 } from "@engine";
 
+import { GPU_MODES, HIDEABLE, type GpuMode, type Hideable } from "./benchmark-report.ts";
 import { readPose, type SledPose } from "./debug-readout.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
@@ -113,6 +121,10 @@ export type UrlParams = {
   pose: SledPose | null;
   /** Run the benchmark on boot. */
   bench: boolean;
+  /** ...its GPU timer's cut, and what it is drawn without. */
+  gpu: GpuMode;
+  hide: Hideable[];
+  ab: boolean;
   shot: boolean;
   paused: boolean;
   camera: CameraRung | null;
@@ -170,6 +182,11 @@ export function readParams(search: string): UrlParams {
     t: Number.isFinite(t) && t > 0 ? Math.min(t, 600) : 0,
     pose: readPose(q.get("pose")),
     bench: q.get("bench") === "1",
+    gpu: GPU_MODES.includes(q.get("gpu") as GpuMode) ? (q.get("gpu") as GpuMode) : "passes",
+    hide: (q.get("hide") ?? "")
+      .split(",")
+      .filter((name): name is Hideable => HIDEABLE.includes(name as Hideable)),
+    ab: q.get("ab") === "1",
     shot: q.get("shot") === "1",
     paused,
     camera:

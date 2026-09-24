@@ -43,7 +43,7 @@ import {
   type Wind,
 } from "@engine";
 
-import { noCost } from "./benchmark-report.ts";
+import { noCost, type GpuSlice, type Hideable } from "./benchmark-report.ts";
 import { createLens, type Lens } from "./camera.ts";
 import { createLineClear } from "./camera-clear.ts";
 import { createTvCamera } from "./camera-tv.ts";
@@ -53,6 +53,7 @@ import { createForest, type Forest, type ForestOptions } from "./forest.ts";
 import { createDeathCam, dropDeathCam, frameDeath } from "./camera-death.ts";
 import { createGates, type Gates } from "./gates.ts";
 import { createGhostModel, type GhostModel } from "./ghost-model.ts";
+import { createGpuTimer, type GpuTimer } from "./gpu-timer.ts";
 import { LAMP_SLOTS, hazeMaterial } from "./haze.ts";
 import { createHeroShadow } from "./hero-shadow.ts";
 import {
@@ -189,6 +190,21 @@ type Rider = {
   body: BodyTrack;
 };
 
+/** The GPU timer's slice for each named group the scene is built of
+ * (`gpu-timer.ts`); anything under none of them is the scene's own. */
+const SLICE_OF_GROUP: Readonly<Record<string, GpuSlice & Hideable>> = {
+  sky: "sky",
+  terrain: "terrain",
+  forest: "forest",
+  field: "field",
+  ghost: "field",
+  checkpoints: "checkpoints",
+  "snow-cloud": "cloud",
+  spray: "spray",
+  snowfall: "snowfall",
+  wildlife: "wildlife",
+};
+
 /** The runs a frame draws: the player's first, then the field's. */
 function runsOf(state: GameState): GameState[] {
   return [state, ...state.rivals.map((r) => r.run)];
@@ -287,6 +303,47 @@ export function createWorldRenderer(
   const cost = noCost();
   const overlay = createTrailOverlay();
   let overlayOn = false;
+  /** THE GPU'S TIMER and the A/B reading's hidden subsystems — instruments,
+   * both off unless the benchmark asks (`bench-run.ts`). */
+  const ctx = gl.getContext() as WebGL2RenderingContext;
+  let timer: GpuTimer = createGpuTimer(ctx, "off");
+  let hidden: ReadonlySet<Hideable> = new Set();
+  let hiddenTag = "";
+  const hid: THREE.Object3D[] = [];
+  const sliceOf = new WeakMap<THREE.Object3D, GpuSlice>();
+  const bucket = (object: THREE.Object3D): GpuSlice => {
+    let slice = sliceOf.get(object);
+    if (slice !== undefined) return slice;
+    slice = "scene";
+    for (let o: THREE.Object3D | null = object; o; o = o.parent) {
+      const named = SLICE_OF_GROUP[o.name];
+      if (named !== undefined) {
+        slice = named;
+        break;
+      }
+    }
+    sliceOf.set(object, slice);
+    return slice;
+  };
+  // SPLIT cuts the scene's pass wherever its draw calls pass from one
+  // subsystem to the next; the sun's map is a slice of its own either way.
+  const direct = gl.renderBufferDirect.bind(gl);
+  gl.renderBufferDirect = (camera, sc, geometry, material, object, group) => {
+    if (timer.mode === "split" && timer.inScene()) timer.enter(bucket(object));
+    direct(camera, sc, geometry, material, object, group);
+  };
+  const shadowPass = gl.shadowMap.render.bind(gl.shadowMap);
+  gl.shadowMap.render = (lights, sc, camera) => {
+    const map = gl.shadowMap;
+    const live =
+      timer.mode !== "off" &&
+      map.enabled &&
+      (map.autoUpdate || map.needsUpdate) &&
+      lights.length > 0;
+    if (live) timer.push("shadow");
+    shadowPass(lights, sc, camera);
+    if (live) timer.pop();
+  };
   const lensDir = new THREE.Vector3();
   const rigPose: RigPose = {
     x: 0,
@@ -507,6 +564,7 @@ export function createWorldRenderer(
         // A snowing sky has been filling last night's prints for hours.
         soften: () => (pack ? Math.min(0.75, (pack.laid / NEW_COVER) * 0.6) : 0),
       });
+      wildlife.group.name = "wildlife";
       scene.add(wildlife.group);
       spray = createSpray(env.haze);
       spray.points.name = "spray";
@@ -689,12 +747,14 @@ export function createWorldRenderer(
         TRAIL_LOOK[video.trails].stamp ? stamps : null,
         { x: fine.uFineOrigin.value.x, z: fine.uFineOrigin.value.y, span: fine.uFineSpan.value },
       );
-      trail.update(gl, stamps, sled.x, sled.z);
+      timer.push("trail");
+      if (!hidden.has("trail")) trail.update(gl, stamps, sled.x, sled.z);
       // THE NEW SNOW: it settles into every trail and buries the groomer.
-      if (state.fresh > filled) {
+      if (state.fresh > filled && !hidden.has("trail")) {
         trail.fill(gl, state.fresh - filled);
         filled = state.fresh;
       }
+      timer.pop();
       env.haze.uFresh.value = state.fresh;
       const trailed = performance.now();
       terrain.follow(lens.camera.position.x, lens.camera.position.z);
@@ -712,7 +772,9 @@ export function createWorldRenderer(
       if (present) {
         heroModels.length = 0;
         for (const r of riders) heroModels.push(r.model);
-        hero.render(gl, scene, heroModels, env.shadow());
+        timer.push("hero");
+        if (!hidden.has("hero")) hero.render(gl, scene, heroModels, env.shadow());
+        timer.pop();
       }
       gates?.update(state.progress.nextCheckpoint, state.t);
       lightLamps(look.lamps);
@@ -728,7 +790,23 @@ export function createWorldRenderer(
       snowfall.update(look, wind, lens.camera, level, dt);
 
       const built = performance.now();
-      if (present) picture.draw(scene, lens.camera);
+      if (present) {
+        for (const child of scene.children) {
+          const slice = SLICE_OF_GROUP[child.name];
+          if (slice !== undefined && hidden.has(slice) && child.visible) {
+            child.visible = false;
+            hid.push(child);
+          }
+        }
+        const autoShadow = gl.shadowMap.autoUpdate;
+        if (hidden.has("shadow")) gl.shadowMap.autoUpdate = false;
+        timer.push("scene");
+        picture.draw(scene, lens.camera, timer);
+        timer.pop();
+        gl.shadowMap.autoUpdate = autoShadow;
+        for (const o of hid) o.visible = true;
+        hid.length = 0;
+      }
       const closed = performance.now();
       const r = picture.info();
       cost.poseMs = posed - opened;
@@ -741,7 +819,12 @@ export function createWorldRenderer(
       cost.programs = gl.info.programs?.length ?? 0;
       cost.geometries = gl.info.memory.geometries;
       cost.textures = gl.info.memory.textures;
-      if (present && overlayOn) overlay.draw(gl, trail.uniforms);
+      if (present && overlayOn) {
+        timer.push("overlay");
+        overlay.draw(gl, trail.uniforms);
+        timer.pop();
+      }
+      if (present) timer.frame(hiddenTag);
     },
 
     cost: () => cost,
@@ -749,6 +832,18 @@ export function createWorldRenderer(
     bufferSize: () => ({ w: gl.domElement.width, h: gl.domElement.height }),
     setTrailOverlay(on) {
       overlayOn = on;
+    },
+    setGpuTimer(mode) {
+      timer.dispose();
+      timer = createGpuTimer(ctx, mode);
+    },
+    gpuTotals: () => timer.totals(),
+    resetGpu() {
+      timer.reset();
+    },
+    setHidden(names, tag = "") {
+      hidden = new Set(names);
+      hiddenTag = tag;
     },
     lensPose() {
       const cam = lens.camera;
@@ -859,6 +954,7 @@ export function createWorldRenderer(
       picture.dispose();
       env.dispose();
       hero.dispose();
+      timer.dispose();
       gl.dispose();
     },
   };

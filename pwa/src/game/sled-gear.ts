@@ -66,8 +66,6 @@ export type GearParts = {
 };
 
 export type Gear = {
-  /** Every strut re-laid each frame (the posed merge re-lays them). */
-  struts: Set<THREE.Object3D>;
   pose(sled: SledState, sink: number): void;
 };
 
@@ -91,12 +89,7 @@ export function buildGear(
   const { add, keep, black, rubber, alloy, spring } = parts;
   const F = lookFrame(spec, look);
   const ground = -spec.cogHeight;
-  const struts = new Set<THREE.Object3D>();
-  const rod = (r: number, m: THREE.Material) => {
-    const mesh = add(new THREE.CylinderGeometry(r, r, 1, 6), m);
-    struts.add(mesh);
-    return mesh;
-  };
+  const rod = (r: number, m: THREE.Material) => add(new THREE.CylinderGeometry(r, r, 1, 6), m);
   /** A coil-over: the damper body and the spring round its upper half. */
   const coilOver = (r: number) => ({ body: rod(r, alloy), coil: rod(r * 2, spring) });
 
@@ -280,7 +273,6 @@ export function buildGear(
     s.coil.scale.y *= 0.9;
   };
   return {
-    struts,
     pose(sled, sink) {
       for (let i = 0; i < 2; i++) {
         const s = skis[i];
