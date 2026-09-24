@@ -275,11 +275,11 @@ export const PACE = {
     from: 11,
     full: 30.5,
     /** How far a boom's lens travels at the whole of it, m. */
-    travel: 0.03,
+    travel: 0.01,
     /** How far a bolted lens's aim swings at the whole of it, rad. */
-    aim: 0.0035,
+    aim: 0.0012,
     /** How far the horizon cants at the whole of it, rad. */
-    roll: 0.0035,
+    roll: 0.0012,
     /** The oscillators, Hz: incommensurate, and under the 8 Hz a 30 fps
      * phone still resolves as a wave rather than a lurch. */
     freq: [4.3, 5.9, 7.3],

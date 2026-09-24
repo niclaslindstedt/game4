@@ -349,7 +349,7 @@ describe("the sense of speed", () => {
     };
     expect(spread(ride("chase", 2, { speed: 8 }).lenses)).toBe(0);
     const fast = ride("chase", 2, { speed: 30 });
-    expect(spread(fast.lenses)).toBeGreaterThan(0.01);
+    expect(spread(fast.lenses)).toBeGreaterThan(PACE.tremor.travel * 0.3);
     expect(spread(fast.lenses)).toBeLessThan(PACE.tremor.travel * 2 + 1e-9);
     const powder = ride("chase", 2, { speed: 30, packed: 0 });
     expect(powder.st.buzz).toBeLessThan(fast.st.buzz);
