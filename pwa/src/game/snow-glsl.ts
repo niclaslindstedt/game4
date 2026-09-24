@@ -381,6 +381,16 @@ export const SNOW_FRAGMENT_COLOUR = /* glsl */ `
   vec3 alb = mix(fresh, shade, drift * 0.32);
   // Groomed: greyer and a touch warmer — worked snow on its way to ice.
   alb = mix(alb, vec3(0.7, 0.75, 0.82), snowPacked * 0.9);
+  // THE GRAIN THAT STREAMS PAST: patches of wind-worked and polished snow
+  // a hand to a couple of metres across, a few percent either way — too
+  // fine to see from afar, and the thing close in the eye reads pace off.
+  // Worked snow is the patchier. Each octave fades before it aliases.
+  {
+    float px = length(fwidth(p));
+    float m1 = (snowNoise(p * 0.85) - 0.5) * (1.0 - smoothstep(0.3, 0.7, px * 0.85));
+    float m2 = (snowNoise(p * 2.9 + 3.7) - 0.5) * (1.0 - smoothstep(0.3, 0.7, px * 2.9));
+    alb *= 1.0 + (m1 * 0.55 + m2 * 0.45) * mix(0.14, 0.22, snowPacked) * (1.0 - snowIce);
+  }
   // The berm is snow turned over by the plough: back to fresh white, with
   // the shade of its clods in it.
   float clod = snowNoise(p * 2.2);

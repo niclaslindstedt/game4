@@ -12,6 +12,12 @@
 //     drawn (the draw range), and the picture's SPRAY row caps the pool.
 //     A flake in the player's headlamp beam lights up — the snow streaming
 //     through a lamp is most of what a night fall looks like.
+//   * THE AIR'S CRYSTALS: under a sky that is not snowing the box is never
+//     quite empty — a few thousand of the same flakes, drawn as fine ice
+//     dust that hangs rather than falls, near the lens only. It is the one
+//     thing in open air close enough to stream past: at pace the crystals
+//     whip by the lens, which is most of what says the sled is FAST over a
+//     meadow with nothing else near it. As the fall starts they become it.
 //   * THE SPINDRIFT is a few hundred grains on the CPU, lifted where the
 //     ground CRESTS (the ground over its neighbours) and blown downwind a
 //     metre or two off the snow, fading as they go. Only a wind that could
@@ -32,6 +38,11 @@ const FLAKES = 14000;
 const BOX = 48;
 /** How fast a flake falls through still air, m/s. */
 const FALL_SPEED = 1.1;
+/** The air's crystals at a SPRAY share of 1, how slowly they settle, m/s,
+ * and how far from the lens they are drawn, m (faded from its middle). */
+const MOTES = 4000;
+const MOTE_SETTLE = 0.2;
+const MOTE_REACH = 14;
 /** Spindrift grains at a SPRAY share of 1. */
 const GRAINS = 900;
 /** The wind at which dry snow starts to lift, and where it is all lifting,
@@ -74,6 +85,8 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
     /** How big the flakes are: a flurry's fine crystals to a storm's
      * wet clumps driving past the lens. */
     uSize: { value: 1 },
+    /** 1 when the box holds only the air's crystals, 0 in a fall. */
+    uMote: { value: 0 },
   };
   const fallMat = new THREE.ShaderMaterial({
     uniforms: {
@@ -90,6 +103,7 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
       uniform float uTime;
       uniform float uScale;
       uniform float uSize;
+      uniform float uMote;
       uniform vec3 uLit;
       uniform vec3 uLampPos[${LAMP_SLOTS}];
       uniform vec3 uLampDir[${LAMP_SLOTS}];
@@ -106,14 +120,16 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
         p = mod(p - uCam + ${(BOX / 2).toFixed(1)}, ${BOX.toFixed(1)}) - ${(BOX / 2).toFixed(1)} + uCam;
         vec4 mv = viewMatrix * vec4(p, 1.0);
         float depth = max(-mv.z, 0.05);
-        float size = (0.035 + 0.05 * aSeed.w) * uSize;
+        float size = (0.035 + 0.05 * aSeed.w) * uSize * mix(1.0, 0.35, uMote);
         float px = size * uScale / depth;
         gl_PointSize = clamp(px, 1.0, 24.0);
         float dist = length(p - uCam);
         // A flake smaller than a pixel is drawn a pixel wide and fainter;
-        // the box's edge fades, so its wrap is never seen.
-        vAlpha = min(px, 1.0) * smoothstep(${(BOX / 2).toFixed(1)}, ${(BOX * 0.3).toFixed(1)}, dist)
-          * smoothstep(0.25, 1.0, dist);
+        // the box's edge fades, so its wrap is never seen. The air's
+        // crystals are only drawn near the lens, where they stream past.
+        float reach = mix(${(BOX / 2).toFixed(1)}, ${MOTE_REACH.toFixed(1)}, uMote);
+        vAlpha = min(px, 1.0) * smoothstep(reach, reach * 0.6, dist)
+          * smoothstep(0.25, 1.0, dist) * mix(1.0, 0.6, uMote);
         vec3 L = p - uLampPos[0];
         float d = length(L);
         float beam = smoothstep(0.88, 0.975, dot(L / max(d, 1e-3), uLampDir[0]))
@@ -236,10 +252,14 @@ export function createSnowfall(haze: HazeUniforms): Snowfall {
       own.uCam.value.copy(camera.position);
       own.uTime.value += step;
       const s = own.uShift.value;
+      // A fall of a tenth or more is a fall; under that the box is the
+      // air's crystals, settling slowly, and a fall grows out of them.
+      const mote = 1 - Math.min(1, look.snowfall / 0.1);
+      own.uMote.value = mote;
       s.x = (s.x + wind.x * step) % BOX;
-      s.y = (s.y - FALL_SPEED * step) % BOX;
+      s.y = (s.y - (FALL_SPEED + (MOTE_SETTLE - FALL_SPEED) * mote) * step) % BOX;
       s.z = (s.z + wind.z * step) % BOX;
-      const flakes = Math.round(FLAKES * share * Math.pow(look.snowfall, 0.7));
+      const flakes = Math.round(share * Math.max(FLAKES * Math.pow(look.snowfall, 0.7), MOTES));
       own.uSize.value = 0.8 + 1.3 * look.snowfall;
       fallGeo.setDrawRange(0, flakes);
       fall.visible = flakes > 0;
