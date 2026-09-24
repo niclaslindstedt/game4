@@ -60,8 +60,11 @@ export const TUNING = {
      * displacement hull, and why a bogged sled wants momentum. */
     plough: 80,
     /** POWDER DRAG: what compacting fresh snow costs at speed, as a share
-     * of the probe's load per m/s — gone on packed snow. */
-    powderDrag: 0.008,
+     * of the probe's load per m/s — gone on packed snow. Set so the
+     * crossover runs about four fifths of its groomer top in powder once it
+     * is planing (the mountain and snocross sleds more, the trail and
+     * touring sleds less — their lugs are the answer to other snow). */
+    powderDrag: 0.003,
   },
 
   /** THE FOOTPRINT — how much each machine's own tread is worth against the
@@ -164,10 +167,19 @@ export const TUNING = {
      * rad of slide once it is going faster than `slipFrom` m/s; the two
      * together no more than `yawHoldMax` N·m. Zero is the bare physics. */
     yawHold: 8000,
-    slipHold: 2500,
+    slipHold: 5000,
     yawHoldMax: 5000,
-    pathShare: 1,
+    pathShare: 0.9,
     slipFrom: 3,
+    /** THE SCRUB: a carbide keel or a lug holding the sled sideways cuts a
+     * groove through the groomer, and a sled leaned hard over a bend is
+     * cutting one under every ski and along the belt — a drag against the
+     * travel of this share of the bend's own acceleration (the rate the skis
+     * ask for, times the way), on the packed share of the snow; powder
+     * charges for its own shoving through the plough. Why a bend taken flat
+     * out costs the way rather than being free at full throttle: a full-lock
+     * bend at 100 km/h with the lever pinned about holds its speed. */
+    scrub: 0.35,
     /** The base the skis steer about, m: ski line to the tread's centroid. */
     base: 1.7,
   },
@@ -276,9 +288,9 @@ export const TUNING = {
     /** A LANDING: the speed INTO the slope, m/s, past which the suspension
      * cannot take it all and the sled pays for it — a share of its way per
      * m/s over, up to `harshMax`. */
-    harshSpeed: 6,
-    harshLoss: 0.05,
-    harshMax: 0.35,
+    harshSpeed: 10,
+    harshLoss: 0.03,
+    harshMax: 0.2,
   },
 
   /** THE CHASSIS: points on the belly, the cowl, the bumper and the
@@ -340,14 +352,14 @@ export const TUNING = {
     /** A trunk met at this closing speed or more throws him, m/s (29 km/h):
      * the sled stops and he does not. */
     treeSpeed: 8,
-    /** A landing taken this far nose-down against the slope, rad (29°),
+    /** A landing taken this far nose-down against the slope, rad (34°),
      * at this speed into it or more, m/s, goes over the bars — the landing
      * that ends a real flight of `noseAir` s or more. The hop a sled makes
      * rebounding off its own touchdown (0.15–0.22 s up) is the springs
      * handing back that landing, not a second one: a stock kicker overshot
      * lands tail-first and slaps down onto its nose 37° down a hop later,
      * and an arcade racer forgives that. */
-    noseAngle: 0.5,
+    noseAngle: 0.6,
     noseImpact: 5,
     noseAir: 0.3,
     /** A sled going over (`reset.overUp`) at this speed or more, m/s, puts

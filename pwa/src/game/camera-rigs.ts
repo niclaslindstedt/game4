@@ -188,12 +188,11 @@ export function createBoomState(): BoomState {
  * a trunk, a crown, the arch. `camera-clear.ts` answers it for a map. */
 export type LineClear = (from: Vec3, to: Vec3) => number;
 
-/** THE ARM PULLED IN. A boom stands its lens metres behind the rider, and
- * in a wood those metres are full of spruce; a lens inside a crown is a
- * screen of green. So the arm is shortened to the first thing between the
- * rider's head and the lens — at once, because a frame inside a tree is the
- * fault — and let back out slowly, so a trunk flicking past is a dip toward
- * the rider and not a pump in and out. Never closer than `PULL_MIN` m. */
+/** THE ARM PULLED IN. The arm is shortened to the first thing `clear`
+ * calls solid between the rider's head and the lens — at once, because a
+ * frame inside a post is the fault — and let back out slowly. Never closer
+ * than `PULL_MIN` m. The ridden booms are handed a clear that lets the trees
+ * through (`camera-clear.ts`): a trunk flicking past is not worth a jolt. */
 export const PULL_MIN = 1.6;
 /** How briskly the arm lets back out, 1/s. */
 export const PULL_RELEASE = 1.8;

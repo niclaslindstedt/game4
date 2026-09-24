@@ -17,6 +17,12 @@
 // answer. A rider already under a bough (the helmet inside a crown) is not
 // a reason to pull the lens onto him: the walk starts counting at the first
 // step that is out in the open.
+//
+// THE RIDDEN BOOMS DO NOT ASK ABOUT THE TREES (`{ trees: false }`): a boom
+// pulled in for every trunk flicking past jolts the lens at the rider, and a
+// bough across the frame for a moment is the lesser fault. They still keep
+// out of the course's own marks; the planted lenses (the broadcast, the
+// death cam) ask of the trees as well.
 
 import { treesNear, type Level } from "@engine";
 
@@ -48,7 +54,13 @@ type Banner = {
   y1: number;
 };
 
-export function createLineClear(level: Level): LineClear {
+export type LineClearOptions = {
+  /** Whether the trees are solid to the lens (default true). */
+  trees?: boolean;
+};
+
+export function createLineClear(level: Level, opts: LineClearOptions = {}): LineClear {
+  const trees = opts.trees ?? true;
   const posts: Post[] = [];
   let banner: Banner | null = null;
   level.checkpoints.forEach((cp, index) => {
@@ -116,13 +128,15 @@ export function createLineClear(level: Level): LineClear {
     const dz = to.z - from.z;
     const len = Math.hypot(dx, dy, dz);
     if (len < 1e-6) return 1;
-    treesNear(
-      level,
-      (from.x + to.x) / 2,
-      (from.z + to.z) / 2,
-      Math.hypot(dx, dz) / 2 + 5 + LENS_PAD,
-      near,
-    );
+    if (trees) {
+      treesNear(
+        level,
+        (from.x + to.x) / 2,
+        (from.z + to.z) / 2,
+        Math.hypot(dx, dz) / 2 + 5 + LENS_PAD,
+        near,
+      );
+    }
     const n = Math.max(1, Math.ceil(len / STEP));
     let open = false;
     let last = 0;
