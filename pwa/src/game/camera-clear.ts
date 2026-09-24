@@ -7,8 +7,8 @@
 // meets a trunk, but a lens meets the crown: a spruce is drawn as a cone of
 // skirts from a tenth of its height to its tip (`forest.ts`), and a lens
 // anywhere inside that cone is a frame of green. Beside the trees stand the
-// course's own posts — every checkpoint's two stakes, the start banner's
-// two posts, and the banner itself, a slab across the track at head height.
+// course's own marks — every checkpoint's two stakes, and the start/finish
+// arch's two legs and the span across the track over them (`start-arch.ts`).
 //
 // The trees near the line are asked of the engine's own hash (`treesNear`),
 // once per question, for the circle round the whole line; the line is then
@@ -21,6 +21,7 @@
 import { treesNear, type Level } from "@engine";
 
 import type { LineClear, Vec3 } from "./camera-rigs.ts";
+import { ARCH, archPlan } from "./start-arch.ts";
 
 /** How far off any solid the lens is kept, m — a near plane's worth and a
  * little more, so the branch nearest the lens is never cut open by it. */
@@ -31,9 +32,8 @@ const STEP = 0.3;
  * share of the generator's crown radius the drawing is (`forest.ts`). */
 const CROWN_FROM = 0.08;
 const CROWN_DRAWN = 0.95;
-/** Checkpoint stake and banner post: height and radius, m (`gates.ts`). */
+/** Checkpoint stake: height and radius, m (`gates.ts`). */
 const STAKE = { height: 3.2, radius: 0.06 };
-const POST = { height: 5.6, radius: 0.12 };
 
 type Post = { x: number; z: number; y0: number; y1: number; r: number };
 type Banner = {
@@ -42,6 +42,8 @@ type Banner = {
   ux: number;
   uz: number;
   half: number;
+  /** Half its thickness along the track, m. */
+  thick: number;
   y0: number;
   y1: number;
 };
@@ -50,6 +52,25 @@ export function createLineClear(level: Level): LineClear {
   const posts: Post[] = [];
   let banner: Banner | null = null;
   level.checkpoints.forEach((cp, index) => {
+    if (index === 0) {
+      // The line has no stakes: the arch stands over it instead.
+      const arch = archPlan(level, cp);
+      for (const f of arch.feet) {
+        posts.push({ x: f.x, z: f.z, y0: f.y - 1, y1: arch.top, r: ARCH.tube });
+      }
+      const face = Math.max(ARCH.tube, ARCH.panel / 2);
+      banner = {
+        x: arch.x,
+        z: arch.z,
+        ux: arch.rx,
+        uz: arch.rz,
+        half: arch.reach + ARCH.tube,
+        thick: ARCH.tube,
+        y0: arch.top - face,
+        y1: arch.top + face,
+      };
+      return;
+    }
     const rx = Math.cos(cp.heading);
     const rz = -Math.sin(cp.heading);
     const half = cp.width / 2 + 1;
@@ -59,27 +80,6 @@ export function createLineClear(level: Level): LineClear {
       const y = level.groundAt(x, z);
       posts.push({ x, z, y0: y - 1, y1: y + STAKE.height, r: STAKE.radius });
     }
-    if (index !== 0) return;
-    const reach = half + 0.4;
-    let top = -Infinity;
-    for (const side of [-1, 1]) {
-      const x = cp.x + rx * reach * side;
-      const z = cp.z + rz * reach * side;
-      const y = level.groundAt(x, z) - 0.3;
-      posts.push({ x, z, y0: y - 1, y1: y + POST.height, r: POST.radius });
-      top = Math.max(top, y + 0.3);
-    }
-    const span = reach * 2;
-    const mid = top + POST.height - span / 16 - 0.3;
-    banner = {
-      x: cp.x,
-      z: cp.z,
-      ux: rx,
-      uz: rz,
-      half: reach,
-      y0: mid - span / 16,
-      y1: mid + span / 16,
-    };
   });
 
   const near: number[] = [];
@@ -105,7 +105,7 @@ export function createLineClear(level: Level): LineClear {
       const dz = z - b.z;
       const across = dx * b.ux + dz * b.uz;
       const along = -dx * b.uz + dz * b.ux;
-      if (Math.abs(across) < b.half + LENS_PAD && Math.abs(along) < LENS_PAD) return true;
+      if (Math.abs(across) < b.half + LENS_PAD && Math.abs(along) < b.thick + LENS_PAD) return true;
     }
     return false;
   };

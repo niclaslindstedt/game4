@@ -17,8 +17,8 @@
 //   shape in. A flight off a crest no kicker made is shot from beside its
 //   own take-off, along the line it was going.
 //
-//   THE FLAG is shot from beside the start/finish banner, just past the
-//   line, so the sled comes through the posts at the lens.
+//   THE FLAG is shot from beside the start/finish arch, just past the
+//   line, so the sled comes through the arch at the lens.
 //
 //   ANYTHING ELSE (a pass, a trunk, a rival, a wipeout) from the edge of the
 //   track a little ahead of where it happened.
@@ -27,7 +27,7 @@
 // track's own shoulder on the preferred side, then the other, then pushed
 // further out, and a stand is taken only where the sightline from the moment
 // to the lens is clear all the way (`camera-clear.ts` — the trunks, the
-// crowns as drawn, the course's posts and the banner). Asked FROM the moment
+// crowns as drawn, the course's stakes and the arch). Asked FROM the moment
 // TO the lens, because the line clear starts counting at its first open step:
 // asked the other way, a lens standing inside a spruce would pass.
 //
