@@ -9,6 +9,8 @@
 // lights and nobody else out there, so a simulated run's digest carries the
 // rider and nothing in front of him.
 
+import { TUNING } from "./tuning.ts";
+
 export type RunRules = {
   /** How many OTHER riders start beside the player (`rivals.ts`). */
   rivals: number;
@@ -32,6 +34,11 @@ export type RunRules = {
   /** THE BUZZER, s of run clock: the run ends there, whatever it was doing;
    * 0 is no buzzer at all. */
   limit: number;
+  /** THE PULL ON A SLED IN FLIGHT, as a multiple of `TUNING.g`: the arcade's
+   * heavier air (`TUNING.air.gravity`) on a race, and the real g on a tricks
+   * run, whose strokes and combos are timed to a real hang (`limits.ts`'s
+   * `flightGravity`). */
+  airGravity: number;
 };
 
 /** HOW MUCH HELP THE RIDER IS GIVEN — the arcade's two hands on the sled,
@@ -77,18 +84,37 @@ export function raceRules(laps: number): RunRules {
     course: true,
     tricks: false,
     limit: 0,
+    airGravity: TUNING.air.gravity,
   };
 }
 
 /** What a measurement rides: the level's laps, no lights, nobody else. */
 export function openRules(laps: number): RunRules {
-  return { rivals: 0, laps, countdown: 0, contact: true, course: true, tricks: false, limit: 0 };
+  return {
+    rivals: 0,
+    laps,
+    countdown: 0,
+    contact: true,
+    course: true,
+    tricks: false,
+    limit: 0,
+    airGravity: TUNING.air.gravity,
+  };
 }
 
 /** THE FREE RIDE: nobody else out there, no lights, and no course — the
  * whole map to ride, the clock running only as a record of the outing. */
 export function freeRules(laps: number): RunRules {
-  return { rivals: 0, laps, countdown: 0, contact: true, course: false, tricks: false, limit: 0 };
+  return {
+    rivals: 0,
+    laps,
+    countdown: 0,
+    contact: true,
+    course: false,
+    tricks: false,
+    limit: 0,
+    airGravity: TUNING.air.gravity,
+  };
 }
 
 /** THE SNOW'S DEPTH, a RUN DIAL: how deep untouched powder lets a sled
@@ -135,6 +161,7 @@ export function timeTrialRules(laps: number): RunRules {
     course: true,
     tricks: false,
     limit: 0,
+    airGravity: TUNING.air.gravity,
   };
 }
 
@@ -145,6 +172,10 @@ export const TRICKS_RUN = {
   countdown: RACE.countdown,
   /** The buzzer, s. */
   limit: 120,
+  /** The real g in flight: every stroke, pose and combo (`tricks.ts`) is
+   * sized to the hang a kicker gives at it, and the arcade's heavier air
+   * would land a backflip before it had come round. */
+  airGravity: 1,
 } as const;
 
 /** A tricks run as a rider is dealt it: the lights, the strokes read, the
@@ -158,6 +189,7 @@ export function tricksRules(laps: number): RunRules {
     course: false,
     tricks: true,
     limit: TRICKS_RUN.limit,
+    airGravity: TRICKS_RUN.airGravity,
   };
 }
 

@@ -224,6 +224,17 @@ export const TUNING = {
   /** THE AIR — what the rider can still do with the machine once the snow
    * has let go of it (`flight.ts`). */
   air: {
+    /** ARCADE GRAVITY IN FLIGHT, as a multiple of `g` — models nothing,
+     * and says so. At the real 9.81 a kicker taken at race speed hangs the
+     * sled 8 m up for 2.3 s, and a hang that long on a chase camera reads
+     * as slow motion rather than weight (the sibling rally game flies at
+     * 1.6 g for the same reason). Only a sled genuinely FLYING feels it —
+     * no probe and no chassis point on the snow since the step before —
+     * so the ground holds a sled over a crest at exactly the real g and
+     * where a sled leaves the snow is a fact about the shape and the
+     * speed; what this sets is how soon the air gives it back. The bot's
+     * ballistics read it through `limits.ts`'s `flightGravity`. */
+    gravity: 1.5,
     /** The lean's pitch authority, N·m at full lean (back = nose up). */
     leanTorque: 520,
     /** THE GYRO: the throttle spinning the tread up lifts the nose, and
@@ -255,6 +266,10 @@ export const TUNING = {
     pitchLevelMax: 320,
     pitchAim: 0.35,
     pitchGiveUp: 1.0,
+    /** ...and over the last this many seconds before the snow comes back
+     * (`flight.ts`'s `landingAhead`), s, the nose is eased from half the
+     * flight path onto the slope it will land on instead. */
+    landLook: 0.8,
     /** How long off the snow before it counts as air, s — anything shorter
      * is a sled skipping over a bump. */
     counts: 0.15,

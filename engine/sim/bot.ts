@@ -19,9 +19,8 @@ import { angleDiff, clamp } from "../lib/math.ts";
 import { rotate } from "../lib/quat.ts";
 import { arcAhead, nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Kicker, Level, TrackHit, TrackPoint } from "../mapgen/types.ts";
-import { TUNING } from "../game/defs/tuning.ts";
 import { treesNear } from "../game/collision.ts";
-import { brakeDecel, cornerGrip, harshSpeedOf } from "../game/limits.ts";
+import { brakeDecel, cornerGrip, flightGravity, harshSpeedOf } from "../game/limits.ts";
 import type { SledSpec } from "../game/defs/sled.ts";
 import { NEUTRAL_INPUT, type GameState, type SledInput } from "../game/state.ts";
 
@@ -154,19 +153,39 @@ function bendAt(level: Level, s: number, span: number): number {
  * m — about the length of the ramp. */
 const KICKER_RUNUP = 10;
 
-const kickerSpeeds = new WeakMap<SledSpec, WeakMap<Kicker, number>>();
-function kickerSpeed(level: Level, k: Kicker, spec: SledSpec, profile: BotProfile): number {
-  let mine = kickerSpeeds.get(spec);
+const kickerSpeeds = new WeakMap<SledSpec, Map<number, WeakMap<Kicker, number>>>();
+function kickerSpeed(
+  level: Level,
+  k: Kicker,
+  spec: SledSpec,
+  profile: BotProfile,
+  fall: number,
+): number {
+  let bySpec = kickerSpeeds.get(spec);
+  if (!bySpec) {
+    bySpec = new Map();
+    kickerSpeeds.set(spec, bySpec);
+  }
+  let mine = bySpec.get(fall);
   if (!mine) {
     mine = new WeakMap();
-    kickerSpeeds.set(spec, mine);
+    bySpec.set(fall, mine);
   }
   const known = mine.get(k);
   if (known !== undefined) return known;
   const fx = Math.sin(k.heading);
   const fz = Math.cos(k.heading);
   const lip = level.groundAt(k.x, k.z);
-  const angle = Math.atan((lip - level.groundAt(k.x - fx * 2, k.z - fz * 2)) / 2);
+  // The ramp rises as t² (`kickerProfile`), steepest AT the lip, so its
+  // grade over the last 2 m reads flatter than the one the sled leaves on:
+  // the profile's own share of that difference is put back, exactly.
+  const back = Math.min(2, k.ramp);
+  const averaged = (k.height * (1 - (1 - back / k.ramp) ** 2)) / back;
+  const angle = Math.atan(
+    (lip - level.groundAt(k.x - fx * back, k.z - fz * back)) / back +
+      (2 * k.height) / k.ramp -
+      averaged,
+  );
   const floor = 0.55;
   const limit = harshSpeedOf(spec) * profile.kickerMargin;
   const n = { x: 0, y: 1, z: 0 };
@@ -181,7 +200,7 @@ function kickerSpeed(level: Level, k: Kicker, spec: SledSpec, profile: BotProfil
     for (let t = 0; t < 5; t += 0.02) {
       x += fx * h * 0.02;
       z += fz * h * 0.02;
-      vy -= TUNING.g * 0.02;
+      vy -= fall * 0.02;
       y += vy * 0.02;
       if (y <= level.groundAt(x, z) + floor) {
         level.normalAt(x, z, n);
@@ -216,7 +235,7 @@ function speedAllowed(state: GameState, s: number, speed: number, profile: BotPr
     if (!k.onTrack || k.s === undefined) continue;
     const d = arcAhead(level, s, k.s);
     if (d > reach) continue;
-    const v = kickerSpeed(level, k, spec, profile);
+    const v = kickerSpeed(level, k, spec, profile, flightGravity(state.rules));
     // At its speed a ramp's length SHORT of the lip, and steady up the ramp:
     // a sled braked on the lip loads its skis, and with them gone over the
     // crest it pitches onto its nose before it has left the snow.
