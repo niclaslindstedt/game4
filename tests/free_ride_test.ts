@@ -15,6 +15,7 @@ import {
   dayOfYearOf,
   freeHours,
   freeSpawn,
+  hourOfTime,
   nearestTrackPoint,
   NEUTRAL_INPUT,
   placeRun,
@@ -23,6 +24,8 @@ import {
   restSinkOf,
   sinkTarget,
   step,
+  sunAtRun,
+  TIMES_OF_DAY,
   TUNING,
   withDay,
   type GameState,
@@ -171,6 +174,31 @@ describe("the day a free ride is ridden on", () => {
     const w = freeHours(level.sun.latitude, level.sun.dayOfYear)!;
     expect(withDay(level, { hour: 1 }).sun.hour).toBeCloseTo(w.min);
     expect(withDay(level, { hour: 23 }).sun.hour).toBeCloseTo(w.max);
+  });
+
+  it("reads a time of day as an hour on the map's own date and latitude", () => {
+    const level = syntheticLevel();
+    const hours = TIMES_OF_DAY.map((time) => withDay(level, { time, dayOfYear: 20 }).sun.hour);
+    // In the order the words say, the three lit ones inside the daylight.
+    expect(hours).toEqual([...hours].sort((a, b) => a - b));
+    const w = freeHours(level.sun.latitude, 20)!;
+    for (const hour of hours.slice(0, 3)) {
+      expect(hour).toBeGreaterThanOrEqual(w.min);
+      expect(hour).toBeLessThanOrEqual(w.max);
+    }
+    expect(hourOfTime(level.sun.latitude, 20, "day")).toBeCloseTo((w.min + w.max) / 2);
+  });
+
+  it("stands a NIGHT ride with the sun under the horizon, past the daylight", () => {
+    const level = syntheticLevel();
+    for (const day of [-16, 20, 56, 91]) {
+      const night = withDay(level, { time: "night", dayOfYear: day });
+      expect(sunAtRun(night, 0).elevation).toBeLessThan(-0.1);
+      // A named time wins over an hour.
+      expect(withDay(level, { time: "night", hour: 12, dayOfYear: day }).sun.hour).toBe(
+        night.sun.hour,
+      );
+    }
   });
 
   it("reads a December day off a count before New Year", () => {

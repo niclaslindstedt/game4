@@ -16,7 +16,16 @@ export {
 export { kickerProfile } from "./kickers.ts";
 export { cliffFootprint, cliffProfile } from "./cliffs.ts";
 export { dealDrifts, driftAt } from "./drift.ts";
-export { dayOfYearOf, declinationOf, freeHours, sunWindow, withDay } from "./sun.ts";
+export {
+  TIMES_OF_DAY,
+  dayOfYearOf,
+  declinationOf,
+  freeHours,
+  hourOfTime,
+  sunWindow,
+  withDay,
+  type TimeOfDay,
+} from "./sun.ts";
 export {
   CLEAR_WEATHER,
   WEATHER_KINDS,

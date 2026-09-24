@@ -220,12 +220,20 @@ export const STRINGS = {
     "What kind of snow country the map is built in: boreal forest, high alpine bowls above the tree line, a wind-crusted tundra plateau, or a birch valley with a frozen river through it.",
   /** The REGION row's stops (R21) — a kind of country, never a place. */
   regionNames: { boreal: "BOREAL", alpine: "ALPINE", tundra: "TUNDRA", birch: "BIRCH VALLEY" },
-  startDate: "DATE",
-  startDateHint:
-    "The day of the year: how high the sun climbs and how long the shadows are. Starts on the map's own.",
+  startSeason: "SEASON",
+  startSeasonHint:
+    "The time of winter: how high the sun climbs and how long the shadows lie, from the low sun of December to the long days of April. Starts on the map's own date.",
+  /** The SEASON row's stops; AS DEALT (`weatherDealt`) is the map's own. */
+  seasonNames: {
+    early: "EARLY WINTER",
+    mid: "MIDWINTER",
+    late: "LATE WINTER",
+    spring: "SPRING",
+  },
   startTime: "TIME",
   startTimeHint:
-    "The hour the ride starts at, sunrise to sunset on that date. The sun moves an hour every ten minutes of riding.",
+    "The time of day the ride starts at, on that date at that map's latitude — night rides under the moon and the headlamp. The sun moves an hour every ten minutes of riding.",
+  timeNames: { morning: "MORNING", day: "DAY", evening: "EVENING", night: "NIGHT" },
   startWeather: "WEATHER",
   startWeatherHint:
     "The sky over the ride: the map's own, or clear, fair, high cloud, overcast (flat light, the bumps hard to read), falling snow or a valley fog.",
@@ -241,12 +249,9 @@ export const STRINGS = {
   },
   startSnow: "SNOW",
   startSnowHint:
-    "How deep the powder is: how far a sled sinks in it standing still. Deeper is slower going and softer landings.",
-  /** The date row's reading: a day of a month (0 = January). */
-  date: (day: number, month: number): string =>
-    `${day} ${["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"][month]}`,
-  /** The snow row's reading: the rest sink it asks for. */
-  snowRead: (metres: number): string => `${Math.round(metres * 100)} CM`,
+    "How deep the powder is — how far a sled sinks in it standing still: thin 10 cm, medium 26 cm (the snow a race is ridden on), thick 38 cm, very thick 50 cm. Deeper is slower going and softer landings.",
+  /** The SNOW row's stops (`SNOW_STOPS`; the hint above reads their depths). */
+  snowNames: { thin: "THIN", medium: "MEDIUM", thick: "THICK", deep: "VERY THICK" },
   startGrid: "FROM THE GRID",
   startCaption: "Tap the chart to start anywhere on the map · the arrows are kickers",
   seedReading: "SHAPING THE MAP…",

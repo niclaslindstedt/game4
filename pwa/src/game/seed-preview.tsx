@@ -35,7 +35,7 @@ import { useEffect, useRef, useState } from "preact/hooks";
 
 import { MAP_QUALITY, MAP_TYPE } from "./minimap-bake.ts";
 import { CHART_VIEW, degrees, fromChart, toChart } from "./seed-chart.ts";
-import type { PreviewReply, PreviewRequest, SeedDeal } from "./seed-preview-worker.ts";
+import type { PreviewReply, PreviewRequest } from "./seed-preview-worker.ts";
 import { STRINGS } from "./strings.ts";
 
 /** How long the arrows have to be still before a map is built, ms. */
@@ -54,11 +54,6 @@ export type SeedAnswer =
 /** The chart as the card holds it: the last answer that arrived, and
  * whether it is the answer for the seed on screen. */
 export type SeedChart = { shown: SeedAnswer | null; fresh: boolean };
-
-/** The deal of the chart on screen, once it is the fresh one. */
-export function dealOf(chart: SeedChart): SeedDeal | null {
-  return chart.fresh && chart.shown?.ok ? chart.shown.deal : null;
-}
 
 /** Raw pixels as a picture URL — for a worker with no canvas of its own. */
 function pixelsToUrl(

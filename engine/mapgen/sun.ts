@@ -70,22 +70,56 @@ export function dayOfYearOf(day: number): number {
   return (d < 0 ? d + 365 : d) + 1;
 }
 
+/** THE TIMES OF DAY A FREE RIDE IS ASKED FOR IN — words, not hours, because
+ * the hour a word means moves with the date and the latitude: a February
+ * morning at 68°N is noon's neighbour, one in April is hours before it. */
+export type TimeOfDay = "morning" | "day" | "evening" | "night";
+
+export const TIMES_OF_DAY: readonly TimeOfDay[] = ["morning", "day", "evening", "night"];
+
+/** How far into the night NIGHT is, h after sunset — deep enough that the
+ * sky has gone to the moon and the stars, inside R19's evening band. */
+const NIGHT_AFTER_SUNSET = 2.5;
+
+/** THE SOLAR HOUR A TIME OF DAY MEANS on a day at a latitude: MORNING a fifth
+ * of the way into the sun's hours over R15's floor, DAY the middle of them,
+ * EVENING the low sun near their end, NIGHT a while after sunset. A day the
+ * sun never clears the floor on puts every lit word at noon. */
+export function hourOfTime(latitude: number, dayOfYear: number, time: TimeOfDay): number {
+  const doy = dayOfYearOf(dayOfYear);
+  if (time === "night") {
+    const set = daylightWindow(latitude, 0, declinationOf(doy));
+    return (set ? set.max : 12) + NIGHT_AFTER_SUNSET;
+  }
+  const w = freeHours(latitude, doy);
+  if (!w) return 12;
+  const at = time === "morning" ? 0.2 : time === "day" ? 0.5 : 0.88;
+  return w.min + (w.max - w.min) * at;
+}
+
 /** THE SAME MAP ON ANOTHER DAY: a copy of `level` with its sun moved to the
  * hour and the day asked for — whichever of them is given — and everything
  * else the very objects the seed built. A free ride asks for its own day;
  * the ground, the track and the woods are the seed's and are never rebuilt
- * for it. The hour is held inside the day's daylight (`freeHours`). */
+ * for it. The hour is held inside the day's daylight (`freeHours`); a named
+ * `time` (`hourOfTime`) wins over `hour` and is not. */
 export function withDay<L extends { sun: { hour: number; dayOfYear: number; latitude: number } }>(
   level: L,
-  day: { hour?: number | null; dayOfYear?: number | null },
+  day: { hour?: number | null; dayOfYear?: number | null; time?: TimeOfDay | null },
 ): L {
   const dayOfYear =
     day.dayOfYear === undefined || day.dayOfYear === null
       ? level.sun.dayOfYear
       : dayOfYearOf(day.dayOfYear);
   let hour = day.hour === undefined || day.hour === null ? level.sun.hour : day.hour;
-  const w = freeHours(level.sun.latitude, dayOfYear);
-  if (w) hour = Math.min(w.max, Math.max(w.min, hour));
+  if (day.time) {
+    // A named time is its own answer, and NIGHT is past the daylight on
+    // purpose — the one way a free rider stands the map in the dark.
+    hour = hourOfTime(level.sun.latitude, dayOfYear, day.time);
+  } else {
+    const w = freeHours(level.sun.latitude, dayOfYear);
+    if (w) hour = Math.min(w.max, Math.max(w.min, hour));
+  }
   if (hour === level.sun.hour && dayOfYear === level.sun.dayOfYear) return level;
   return { ...level, sun: { ...level.sun, hour, dayOfYear } };
 }
