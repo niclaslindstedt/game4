@@ -32,12 +32,12 @@ import { hazeMaterial, type HazeUniforms } from "./haze.ts";
 import type { ForestLook, TreeCasters } from "./settings-video.ts";
 import { castsInto, shadowLength, type ShadowBox } from "./shadow-box.ts";
 import { regionLookOf } from "./region-look.ts";
-import { SKETCHES, buildTree, treePaint } from "./tree-shapes.ts";
-import { TREE_VARIANTS, crownAt, treeVariant, type TreeVariant } from "./tree-variants.ts";
+import { buildTree, treePaint } from "./tree-shapes.ts";
+import { VARIANTS, crownAt, leadVariant, treeVariant, type TreeVariant } from "./tree-variants.ts";
 
 /** Where the two bands end (the FOREST row's `full`, the DISTANCE row's
  * `far`, both m), the share of the far band's sketches that stand, how many
- * variants of each kind are drawn, and what the trees cast (the FOREST row's
+ * tree shapes the full band may draw, and what the trees cast (the FOREST row's
  * shape, or none unless SHADOWS is ALL) — `settings-video.ts` says what each
  * stop buys. */
 export type ForestOptions = Omit<ForestLook, "casters"> & {
@@ -157,7 +157,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
   type Band = { meshes: THREE.InstancedMesh[]; fill: number[]; shape: Uint8Array };
   type Casters = { meshes: THREE.InstancedMesh[]; shape: Uint8Array };
   type Shapes = {
-    variants: number;
+    budget: number;
     /** Each tree's variant, for the lens to clear it by. */
     variantOf: TreeVariant[];
     full: Band;
@@ -166,11 +166,25 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     geometries: THREE.BufferGeometry[];
   };
 
-  /** THE SHAPES for `variants` of each kind (the FOREST row's): which
-   * variant every tree is, the meshes the map's own variants are built
-   * into — only the ones it grows — and the two bands and the casters over
-   * them, each mesh sized to the trees that can ever be drawn with it. */
-  function buildShapes(variants: number): Shapes {
+  /** How many trees of each kind the map grows. */
+  const perKind = new Map<string, number>();
+  for (const t of trees)
+    perKind.set(t.kind ?? "spruce", (perKind.get(t.kind ?? "spruce") ?? 0) + 1);
+
+  /** THE SHAPES for a `budget` of full-band meshes (the FOREST row's): each
+   * kind gets its share of the budget by how many of its trees stand here —
+   * one variant at the least, all ten at the most — then which variant
+   * every tree is, the meshes the map's own variants are built into (only
+   * the ones it grows), and the two bands and the casters over them, each
+   * mesh sized to the trees that can ever be drawn with it. The far band
+   * and the casters draw ONE shape a kind (its lead variant: the sketch, or
+   * the full tree when the casters are full), so their cost is the number
+   * of kinds, not of variants. */
+  function buildShapes(budget: number): Shapes {
+    const variantsOf = new Map<string, number>();
+    for (const [kind, n] of perKind) {
+      variantsOf.set(kind, Math.max(1, Math.min(VARIANTS, Math.round((budget * n) / count))));
+    }
     const variantOf: TreeVariant[] = new Array<TreeVariant>(count);
     const fullShape = new Uint8Array(count);
     const farShape = new Uint8Array(count);
@@ -191,16 +205,13 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     for (let i = 0; i < count; i++) {
       const t = trees[i];
       const kind = t.kind ?? "spruce";
-      const v = treeVariant(kind, t.x, t.z, variants);
+      const v = treeVariant(kind, t.x, t.z, variantsOf.get(kind));
       variantOf[i] = v;
       fullShape[i] = indexOf(v, fullRows, fullCount);
-      // The far band's sketch: the kind's low-crowned or high-crowned one,
-      // whichever this variant's crown base is nearer.
-      const [lo, hi] = SKETCHES[kind].map((k) => TREE_VARIANTS[kind][k]);
-      const near = Math.abs(v.base - lo.base) <= Math.abs(v.base - hi.base) ? lo : hi;
-      farShape[i] = indexOf(near, farRows, farCount);
+      farShape[i] = indexOf(leadVariant(kind), farRows, farCount);
     }
     const detailed = fullRows.map((v) => buildTree(v, paint));
+    const leads = farRows.map((v) => buildTree(v, paint));
     const sketch = farRows.map((v) => buildTree(v, paint, true));
     const insetSketch = sketch.map((g) => g.clone().scale(SKETCH_INSET, 1, SKETCH_INSET));
     const makeBand = (geos: THREE.BufferGeometry[], shape: Uint8Array, room: number[]): Band => {
@@ -238,15 +249,15 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       }),
     });
     return {
-      variants,
+      budget,
       variantOf,
       full: makeBand(detailed, fullShape, fullCount),
       far: makeBand(sketch, farShape, farCount),
       casters: {
-        full: makeCasters(detailed, fullShape, fullCount),
+        full: makeCasters(leads, farShape, farCount),
         sketch: makeCasters(insetSketch, farShape, farCount),
       },
-      geometries: [...detailed, ...sketch, ...insetSketch],
+      geometries: [...detailed, ...leads, ...sketch, ...insetSketch],
     };
   }
 
@@ -260,7 +271,7 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
     for (const g of old.geometries) g.dispose();
   }
 
-  let shapes = buildShapes(options.variants);
+  let shapes = buildShapes(options.shapes);
   /** The tallest tree, for how far up-sun a caster can stand. */
   let tallest = 0;
   for (const t of trees) tallest = Math.max(tallest, t.height);
@@ -426,9 +437,9 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       lastShadow.x = Infinity;
     },
     setOptions(next) {
-      if (next.variants !== options.variants) {
+      if (next.shapes !== options.shapes) {
         dropShapes(shapes);
-        shapes = buildShapes(next.variants);
+        shapes = buildShapes(next.shapes);
       }
       options = { ...next };
       lastAt.set(Infinity, 0, 0);

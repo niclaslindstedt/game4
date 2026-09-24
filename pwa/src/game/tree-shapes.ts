@@ -8,12 +8,14 @@
 // where it has not — tier over tier, built into the vertex colours. The
 // normals are a soft "volume" normal out of the crown and up, so foliage is
 // lit as a mass rather than as a pile of plates. A PINE is the opposite
-// read: a bare trunk (grey-brown low, orange where the bark thins up the
-// stem) under separate flat pads of needles, each with its own cap of snow.
-// A LARCH in winter and a BIRCH are bare: fins of twigs drawn from both
-// faces, so they read from either side — a lattice the wood behind shows
-// through. What colour the needles are and how much snow the boughs carry
-// is the region's (`region-look.ts`); the kinds shade it their own way here.
+// read: a bare trunk (or several) under separate pads of needles, each with
+// its own cap of snow. A LARCH in winter, a SNAG and every BROADLEAF are
+// bare: fins of twigs drawn from both faces, so they read from either side
+// — a lattice the wood behind shows through — with a rowan's berries, a
+// beech's kept leaves, an alder's cones in their own colour on the tips.
+// What colour the needles are and how much snow the boughs carry is the
+// region's (`region-look.ts`); each KIND shades it its own way here
+// (`KIND_TONES`).
 //
 // Each shape has a SKETCH beside it for the far band: the same tree at a
 // fraction of the triangles.
@@ -29,46 +31,102 @@ const SNOW = new THREE.Color(0xeef4fb);
 const SNOW_SHADE = new THREE.Color(0xc4d6ea);
 const BARK = new THREE.Color(0x3a2c22);
 
-/** What a region's trees are painted with, per kind. */
+/** What a region paints its trees with: the needles lit and in shade, a
+ * birch's bark and its bare twigs, and how much snow the boughs carry. */
 export type TreePaint = {
   readonly needle: THREE.Color;
   readonly needleDark: THREE.Color;
-  /** A fir's needles: darker and bluer than a spruce's. */
-  readonly firNeedle: THREE.Color;
-  readonly firDark: THREE.Color;
-  /** A pine's: lighter, greyer, a touch yellow. */
-  readonly pineNeedle: THREE.Color;
-  readonly pineDark: THREE.Color;
-  /** A pine's bark low on the stem, and up where it thins to orange. */
-  readonly pineBark: THREE.Color;
-  readonly pineUpper: THREE.Color;
-  /** A larch's bare twigs, and its bark. */
-  readonly larch: THREE.Color;
-  readonly larchBark: THREE.Color;
-  /** A birch's bark and its bare crown. */
-  readonly bark: THREE.Color;
-  readonly twigs: THREE.Color;
-  /** How much snow the boughs carry, 0..1 of a shape's own. */
+  readonly birchBark: THREE.Color;
+  readonly birchTwigs: THREE.Color;
   readonly load: number;
 };
 
 export function treePaint(look: RegionLook): TreePaint {
-  const needle = new THREE.Color(look.needle);
-  const needleDark = new THREE.Color(look.needleDark);
+  return {
+    needle: new THREE.Color(look.needle),
+    needleDark: new THREE.Color(look.needleDark),
+    birchBark: new THREE.Color(look.bark),
+    birchTwigs: new THREE.Color(look.twigs),
+    load: look.load,
+  };
+}
+
+/** How a kind shades the region's paint: its needles pulled toward a
+ * colour of its own (and how far), its bark low on the stem and high up,
+ * its bare twigs, and the colour of whatever it carries on them (berries,
+ * kept leaves, cones, keys). Null keeps the region's own. */
+type KindTone = {
+  readonly needle?: readonly [number, number];
+  readonly bark: number | null;
+  readonly upper?: number;
+  readonly twigs?: number | null;
+  readonly accent?: number;
+};
+
+const KIND_TONES: Readonly<Record<TreeKind, KindTone>> = {
+  spruce: { bark: 0x3a2c22 },
+  fir: { needle: [0x173532, 0.4], bark: 0x4a4240 },
+  pine: { needle: [0x5b7246, 0.45], bark: 0x5a4838, upper: 0x9a5a38 },
+  larch: { bark: 0x5c4a3e, twigs: 0x857462 },
+  // Darker and duller than a spruce, the bog's own.
+  blackspruce: { needle: [0x1a2a22, 0.45], bark: 0x2e2620 },
+  // Dense and dark, grey-barked.
+  stonepine: { needle: [0x2f4a32, 0.35], bark: 0x5a524a, upper: 0x6a5a4a },
+  // Soft blue-grey needles, smooth grey bark.
+  whitepine: { needle: [0x5d7a70, 0.5], bark: 0x5e5850, upper: 0x6e665c },
+  // A plain brown pole.
+  lodgepole: { needle: [0x4f6a40, 0.4], bark: 0x5a4636, upper: 0x6e5238 },
+  // Softer, brighter green.
+  hemlock: { needle: [0x2f5a3e, 0.3], bark: 0x4a3428 },
+  // Near-black blue-green.
+  juniper: { needle: [0x223a34, 0.5], bark: 0x5a4032 },
+  dwarfpine: { needle: [0x243a28, 0.45], bark: 0x3e3228, upper: 0x4a3a2e },
+  // Weathered silver-grey wood.
+  snag: { bark: 0x6a655e, twigs: 0x7c766e },
+  birch: { bark: null, twigs: null },
+  aspen: { bark: 0xb4bcac, twigs: 0x6b5f58 },
+  rowan: { bark: 0x6d6259, twigs: 0x5b4a44, accent: 0xc0282a },
+  alder: { bark: 0x4a4540, twigs: 0x3e342f, accent: 0x2a211c },
+  willow: { bark: 0x7a5a3c, twigs: 0xb8742e, accent: 0xd8d4c8 },
+  beech: { bark: 0x9aa0a2, twigs: 0x5a4a40, accent: 0xb0662c },
+  maple: { bark: 0x6f6a62, twigs: 0x5e4c42, accent: 0x8a6a42 },
+  ash: { bark: 0x8c8a80, twigs: 0x6a6258, accent: 0x7a5a36 },
+};
+
+/** The colours one kind is built in, off the region's paint. */
+type KindPaint = {
+  readonly needle: THREE.Color;
+  readonly dark: THREE.Color;
+  readonly bark: THREE.Color;
+  readonly upper: THREE.Color;
+  readonly twigs: THREE.Color;
+  readonly accent: THREE.Color;
+  /** Dark marks on the bark. */
+  readonly marks: THREE.Color;
+  readonly load: number;
+};
+
+function kindPaint(paint: TreePaint, kind: TreeKind): KindPaint {
+  const t = KIND_TONES[kind];
+  const needle = paint.needle.clone();
+  const dark = paint.needleDark.clone();
+  if (t.needle) {
+    needle.lerp(new THREE.Color(t.needle[0]), t.needle[1]);
+    dark.lerp(new THREE.Color(t.needle[0]).multiplyScalar(0.55), t.needle[1]);
+  }
+  const bark = t.bark === null ? paint.birchBark.clone() : new THREE.Color(t.bark);
   return {
     needle,
-    needleDark,
-    firNeedle: needle.clone().lerp(new THREE.Color(0x173532), 0.4),
-    firDark: needleDark.clone().lerp(new THREE.Color(0x0c1e1e), 0.4),
-    pineNeedle: needle.clone().lerp(new THREE.Color(0x5b7246), 0.45),
-    pineDark: needleDark.clone().lerp(new THREE.Color(0x2c3a22), 0.4),
-    pineBark: new THREE.Color(0x5a4838),
-    pineUpper: new THREE.Color(0x9a5a38),
-    larch: new THREE.Color(0x857462),
-    larchBark: new THREE.Color(0x5c4a3e),
-    bark: new THREE.Color(look.bark),
-    twigs: new THREE.Color(look.twigs),
-    load: look.load,
+    dark,
+    bark,
+    upper: t.upper === undefined ? bark : new THREE.Color(t.upper),
+    twigs:
+      t.twigs === null || t.twigs === undefined
+        ? paint.birchTwigs.clone()
+        : new THREE.Color(t.twigs),
+    accent: new THREE.Color(t.accent ?? 0x6a4a36),
+    marks: bark.clone().multiplyScalar(0.25),
+    load: paint.load,
   };
 }
 
@@ -88,7 +146,10 @@ class Shape {
   readonly pos: number[] = [];
   readonly col: number[] = [];
   readonly nrm: number[] = [];
-  constructor(private readonly lean: number) {}
+  private readonly lean: number;
+  constructor(lean: number) {
+    this.lean = lean;
+  }
   push(p: V3, c: THREE.Color, n: V3): void {
     this.pos.push(p[0] + p[1] * this.lean * 4, p[1], p[2]);
     this.col.push(c.r, c.g, c.b);
@@ -209,38 +270,43 @@ function tiersOf(count: number, base: number, top: number, taper: number): Tier[
   return out;
 }
 
-/** A spruce or a fir: a stack of drooping skirts. */
-function conifer(
-  v: TreeVariant,
-  form: ConiferForm,
-  paint: TreePaint,
-  sketch: boolean,
-  seed: number,
-) {
+const smooth = (a: number, b: number, x: number): number => {
+  const t = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};
+
+/** A conifer: a stack of drooping skirts. */
+function conifer(v: TreeVariant, form: ConiferForm, p: KindPaint, sketch: boolean, seed: number) {
   const s = new Shape(v.lean);
-  const fir = v.kind === "fir";
-  const needle = fir ? paint.firNeedle : paint.needle;
-  const dark = fir ? paint.firDark : paint.needleDark;
-  const snow = form.snow * paint.load;
+  const needle = p.needle;
+  const dark = p.dark;
+  const snow = form.snow * p.load;
   const c = new THREE.Color();
+  // The leader NODDING over: every tier pushed sideways by the cube of how
+  // far up the crown it stands.
+  const nodAt = (y: number): number =>
+    form.nod * Math.pow(Math.max(0, (y - v.base) / Math.max(1e-6, v.top - v.base)), 3);
   // The trunk, up into the lowest skirt — longer under a stand tree's
   // lifted crown, where it is the whole of what a rider sees.
   const trunkTop = Math.max(0.25, v.base + 0.15);
-  s.tube([0, 0, 0], [0, trunkTop, 0], 0.035, 0.022, sketch ? 3 : 5, BARK);
+  s.tube([0, 0, 0], [0, trunkTop, 0], 0.035, 0.022, sketch ? 3 : 5, p.bark);
   const count = sketch ? 3 : form.tiers;
   const tiers = tiersOf(count, v.base, v.top, sketch ? form.taper : v.taper).map((t, i) => {
-    // The lowest skirt spread across the snow (a krummholz), and a flat top
-    // (the old fir's stork's nest) — both off the shape's own numbers.
+    // The lowest skirt spread across the snow (a krummholz), a flat top
+    // (the old fir's stork's nest), a club of boughs at the top (the black
+    // spruce's) — all off the shape's own numbers.
     const u = i / count;
     let radius = t.radius * v.width;
     if (i === 0) radius *= 1 + form.skirt;
     if (form.flat > 0 && u > 0.55) radius = Math.max(radius, form.flat * 0.55 * v.width);
+    radius *= 1 + form.club * 1.4 * smooth(0.62, 0.9, u);
     return { ...t, radius };
   });
   const sides = sketch ? 5 : form.sides;
   tiers.forEach((t, ti) => {
     if (!sketch && form.missing.includes(ti)) return;
     const twist = ti * 0.9 + seed;
+    const ox = nodAt(t.bottom);
     const rim: V3[] = [];
     const mid: V3[] = [];
     const snowy: boolean[] = [];
@@ -248,20 +314,22 @@ function conifer(
       const k = seed * 31 + ti * 17 + i;
       const a = ((i + (jitter(k) - 0.5) * 0.5) / sides) * Math.PI * 2 + twist;
       const jag = i % 2 === 0 ? 1 : 0.7 + jitter(k + 3) * 0.12;
-      // A flagged tree's boughs grow on its lee (+x) side.
+      // A flagged tree's boughs grow on its lee (+x) side; a rough one's
+      // come and go.
       const lee = 1 + form.flag * Math.cos(a) * 0.9 - form.flag * 0.25;
-      const r = t.radius * jag * (0.9 + jitter(k + 5) * 0.2) * Math.max(0.15, lee);
+      const ragged = 1 + form.rough * (jitter(k + 13) - 0.5) * 0.9;
+      const r = t.radius * jag * (0.9 + jitter(k + 5) * 0.2) * Math.max(0.15, lee) * ragged;
       const droop = (t.top - t.bottom) * (0.12 + 0.1 * jitter(k + 7)) * jag * form.droop;
-      rim.push([Math.cos(a) * r, t.bottom - droop, Math.sin(a) * r]);
+      rim.push([ox + Math.cos(a) * r, t.bottom - droop, Math.sin(a) * r]);
       const mr = r * 0.55;
-      mid.push([Math.cos(a) * mr, t.bottom + (t.top - t.bottom) * 0.5, Math.sin(a) * mr]);
+      mid.push([ox + Math.cos(a) * mr, t.bottom + (t.top - t.bottom) * 0.5, Math.sin(a) * mr]);
       snowy.push(jitter(k + 11) < snow);
     }
-    const apex: V3 = [0, t.top, 0];
-    const under: V3 = [0, t.bottom + (t.top - t.bottom) * 0.15, 0];
-    const vol = (p: V3, up: number): V3 => {
-      const r = Math.hypot(p[0], p[2]) || 1;
-      return [(p[0] / r) * 0.65, up, (p[2] / r) * 0.65];
+    const apex: V3 = [nodAt(t.top), t.top, 0];
+    const under: V3 = [ox, t.bottom + (t.top - t.bottom) * 0.15, 0];
+    const vol = (q: V3, up: number): V3 => {
+      const r = Math.hypot(q[0] - ox, q[2]) || 1;
+      return [((q[0] - ox) / r) * 0.65, up, (q[2] / r) * 0.65];
     };
     for (let i = 0; i < sides; i++) {
       const j = (i + 1) % sides;
@@ -294,7 +362,7 @@ function conifer(
     // A second leader off the top whorl, a little lower and to one side.
     const from = v.base + (v.top - v.base) * 0.72;
     for (const t of tiersOf(3, from, v.top * 0.95, 1.2)) {
-      const off = 0.2;
+      const off = 0.2 * Math.max(0.5, v.width);
       const r = t.radius * 0.35 * v.width;
       for (let i = 0; i < 6; i++) {
         const a = (i / 6) * Math.PI * 2 + seed;
@@ -310,74 +378,86 @@ function conifer(
   }
   if (!sketch && form.spire > 0) {
     // The dead spire a broken top leaves: bare wood over the last whorl.
-    s.tube(
-      [0, v.top - 0.04, 0],
-      [0.01, v.top + form.spire, 0],
-      0.018,
-      0.004,
-      4,
-      BARK,
-      paint.larchBark,
-    );
+    s.tube([0, v.top - 0.04, 0], [0.01, v.top + form.spire, 0], 0.018, 0.004, 4, BARK, p.upper);
   }
   return s.geometry();
 }
 
-/** A pine: a bare trunk under flat pads of needles. */
-function pine(v: TreeVariant, form: PineForm, paint: TreePaint, sketch: boolean, seed: number) {
+/** A pine: bare stems under pads of needles. */
+function pine(v: TreeVariant, form: PineForm, p: KindPaint, sketch: boolean, seed: number) {
   const s = new Shape(v.lean);
-  const snow = form.snow * paint.load;
+  const snow = form.snow * p.load;
   const kinkX = (y: number): number =>
     form.kink > 0 && y > form.kink ? Math.min(1, (y - form.kink) / 0.12) * form.kinkBy : 0;
-  // The stem: grey-brown low, orange up where the bark thins; bent at a
-  // kink if it has one.
-  const stops = sketch ? [0, 0.5, 0.95] : [0, 0.3, 0.55, form.kink || 0.75, 0.95];
-  stops.sort((a, b) => a - b);
-  for (let i = 0; i + 1 < stops.length; i++) {
-    const y0 = stops[i];
-    const y1 = stops[i + 1];
-    const c0 = paint.pineBark
-      .clone()
-      .lerp(paint.pineUpper, Math.min(1, Math.max(0, (y0 - 0.35) / 0.3)));
-    const c1 = paint.pineBark
-      .clone()
-      .lerp(paint.pineUpper, Math.min(1, Math.max(0, (y1 - 0.35) / 0.3)));
-    s.tube(
-      [kinkX(y0), y0, 0],
-      [kinkX(y1), y1, 0],
-      0.07 * (1 - y0 * 0.7),
-      0.07 * (1 - y1 * 0.7),
-      sketch ? 3 : 6,
-      c0,
-      c1,
-    );
+  const stems = sketch ? Math.min(2, form.stems) : form.stems;
+  // Each stem's lean off the root: the first stands straightest; a unit of
+  // height is some four crown radii, hence the factor on the splay.
+  const stemX = (st: number, y: number): [number, number] => {
+    if (stems === 1) return [kinkX(y), 0];
+    const a = st * 2.4 + seed;
+    const tilt = form.splay * (st === 0 ? 0.3 : 1) * 1.6 * y;
+    return [kinkX(y) + Math.cos(a) * tilt, Math.sin(a) * tilt];
+  };
+  const barkAt = (y: number): THREE.Color =>
+    p.bark.clone().lerp(p.upper, Math.min(1, Math.max(0, (y - 0.35) / 0.3)));
+  for (let st = 0; st < stems; st++) {
+    const reach = st === 0 ? 0.95 : 0.8 + 0.1 * jitter(seed + st);
+    // The stem's joints, low to high — a kink at a joint's own height is one
+    // joint, not a stem of no length.
+    const joints = sketch ? [0, 0.5, reach] : [0, 0.3, 0.55, form.kink || 0.75, reach];
+    const stops = [...new Set(joints.filter((y) => y <= reach))].sort((a, b) => a - b);
+    const r0 = 0.07 * (stems > 1 ? 0.75 : 1);
+    for (let i = 0; i + 1 < stops.length; i++) {
+      const y0 = stops[i];
+      const y1 = stops[i + 1];
+      const [x0, z0] = stemX(st, y0);
+      const [x1, z1] = stemX(st, y1);
+      s.tube(
+        [x0, y0, z0],
+        [x1, y1, z1],
+        r0 * (1 - y0 * 0.7),
+        r0 * (1 - y1 * 0.7),
+        sketch ? 3 : 6,
+        barkAt(y0),
+        barkAt(y1),
+      );
+    }
   }
   // The pads, from the crown's base to its top: spread out off the stem on
-  // an old pine, a cone of whorls on a young one.
-  const pads = sketch ? Math.min(3, form.pads) : form.pads;
+  // an old pine, a cone of whorls on a young one, flat layers round it on
+  // a white pine; shared out among the stems.
+  const pads = sketch ? Math.min(3 + stems, form.pads) : form.pads;
   for (let i = 0; i < pads; i++) {
+    const st = i % stems;
     const u = pads === 1 ? 0.5 : i / (pads - 1);
     const k = seed * 13 + i * 7;
-    const y = v.base + (v.top - v.base - form.thick) * (0.08 + 0.92 * u);
-    const a = i * 2.39996 + seed;
+    let y = v.base + (v.top - v.base - form.thick) * (0.08 + 0.92 * u);
+    let a = i * 2.39996 + seed;
     const topPad = i === pads - 1;
-    const reach = topPad
+    let reach = topPad
       ? 0.05
       : form.spread * v.width * (0.35 + 0.65 * jitter(k)) * (1 - form.young * u * 0.8);
-    const cx = kinkX(y) + Math.cos(a) * reach;
-    const cz = Math.sin(a) * reach;
-    const pr = (0.4 + 0.22 * jitter(k + 1)) * v.width * (1 - form.young * (u * 0.7 - 0.25));
+    if (form.layers > 0 && !topPad) {
+      // LAYERS: the pads in flat whorls, each whorl's pads evenly round the
+      // stem and reaching the further the lower the whorl.
+      const per = Math.max(1, Math.ceil((pads - 1) / form.layers));
+      const layer = Math.floor(i / per);
+      const lu = form.layers === 1 ? 0.5 : layer / (form.layers - 1);
+      y = v.base + (v.top - v.base - form.thick) * (0.05 + 0.8 * lu);
+      a = ((i % per) / per) * Math.PI * 2 + layer * 1.1 + seed;
+      reach = form.spread * v.width * (0.95 - 0.55 * lu) * (0.85 + 0.3 * jitter(k));
+    }
+    const [sx, sz] = stemX(st, y);
+    const cx = sx + Math.cos(a) * reach;
+    const cz = sz + Math.sin(a) * reach;
+    const pr =
+      (0.4 + 0.22 * jitter(k + 1)) *
+      v.width *
+      (1 - form.young * (u * 0.7 - 0.25)) *
+      (stems > 1 ? 0.8 : 1);
     // A branch from the stem to the pad.
     if (!topPad && !sketch) {
-      s.tube(
-        [kinkX(y), y - form.thick * 0.6, 0],
-        [cx, y, cz],
-        0.016,
-        0.01,
-        3,
-        paint.pineBark,
-        paint.pineUpper,
-      );
+      s.tube([sx, y - form.thick * 0.6, sz], [cx, y, cz], 0.016, 0.01, 3, p.bark, p.upper);
     }
     const sides = sketch ? 5 : 8;
     const rim: V3[] = [];
@@ -397,15 +477,13 @@ function pine(v: TreeVariant, form: PineForm, paint: TreePaint, sketch: boolean,
     const snowy = jitter(k + 9) < snow;
     for (let j = 0; j < sides; j++) {
       const q = (j + 1) % sides;
-      const out = (p: V3, up: number): V3 => [p[0] - cx, up, p[2] - cz];
+      const out = (w: V3, up: number): V3 => [w[0] - cx, up, w[2] - cz];
       // The cap of snow on top, the green showing round its edge.
-      const cap = snowy
-        ? SNOW.clone().lerp(paint.pineNeedle, 0.12)
-        : SNOW.clone().lerp(paint.pineNeedle, 0.6);
+      const cap = snowy ? SNOW.clone().lerp(p.needle, 0.12) : SNOW.clone().lerp(p.needle, 0.6);
       s.push(crown, cap, [0, 1, 0]);
       s.push(inner[q], cap, out(inner[q], 1.2));
       s.push(inner[j], cap, out(inner[j], 1.2));
-      const edge = j % 2 ? paint.pineNeedle : paint.pineDark;
+      const edge = j % 2 ? p.needle : p.dark;
       s.push(inner[j], cap, out(inner[j], 0.8));
       s.push(inner[q], cap, out(inner[q], 0.8));
       s.push(rim[q], edge, out(rim[q], 0.2));
@@ -413,19 +491,28 @@ function pine(v: TreeVariant, form: PineForm, paint: TreePaint, sketch: boolean,
       s.push(rim[q], edge, out(rim[q], 0.2));
       s.push(rim[j], edge, out(rim[j], 0.2));
       // The dark underside.
-      s.push(belly, paint.pineDark, [0, -1, 0]);
-      s.push(rim[j], paint.pineDark, out(rim[j], -0.4));
-      s.push(rim[q], paint.pineDark, out(rim[q], -0.4));
+      s.push(belly, p.dark, [0, -1, 0]);
+      s.push(rim[j], p.dark, out(rim[j], -0.4));
+      s.push(rim[q], p.dark, out(rim[q], -0.4));
     }
   }
   return s.geometry();
 }
 
-/** A larch in winter: a skeleton of drooping whorls. */
-function larch(v: TreeVariant, form: LarchForm, paint: TreePaint, sketch: boolean, seed: number) {
+/** A larch in winter — or a snag: a skeleton of whorls. */
+function larch(v: TreeVariant, form: LarchForm, p: KindPaint, sketch: boolean, seed: number) {
   const s = new Shape(v.lean);
-  const snowTint = SNOW.clone().lerp(paint.larch, 0.3);
-  s.tube([0, 0, 0], [0, v.top, 0], 0.04, 0.004, sketch ? 3 : 5, paint.larchBark, paint.larch);
+  const snowTint = SNOW.clone().lerp(p.twigs, 0.3);
+  // A snag's trunk is the whole of it: stout, and blunt where it broke.
+  s.tube(
+    [0, 0, 0],
+    [0, v.top, 0],
+    form.dead ? 0.06 : 0.04,
+    form.dead ? 0.02 : 0.004,
+    sketch ? 3 : 5,
+    p.bark,
+    p.twigs,
+  );
   const whorls = sketch ? 4 : form.whorls;
   const arms = sketch ? 4 : form.arms;
   for (let w = 0; w < whorls; w++) {
@@ -434,14 +521,16 @@ function larch(v: TreeVariant, form: LarchForm, paint: TreePaint, sketch: boolea
     const r = v.width * Math.pow(Math.max(0.05, 1 - u * 0.95), v.taper);
     for (let a = 0; a < arms; a++) {
       const k = seed * 17 + w * 11 + a;
+      // A dead tree has lost arms, and what is left is a stub.
+      if (form.dead && jitter(k + 9) < 0.3) continue;
       const t = (a / arms) * Math.PI * 2 + w * 1.3 + jitter(k) * 0.5 + seed;
-      const reach = r * (0.8 + 0.3 * jitter(k + 1));
+      const reach = r * (0.8 + 0.3 * jitter(k + 1)) * (form.dead ? 0.75 : 1);
       const tipY = y - form.droop * 0.06 - reach * 0.02 + (1 - form.droop) * 0.03;
       const root: V3 = [Math.cos(t) * 0.02, y, Math.sin(t) * 0.02];
       const tip: V3 = [Math.cos(t) * reach, tipY, Math.sin(t) * reach];
-      const top = u < 0.7 && jitter(k + 3) < form.snow * paint.load ? snowTint : paint.larch;
-      s.fin(root, tip, 0.07 + 0.06 * (1 - u), paint.larchBark, paint.larch, top);
-      if (!sketch) {
+      const top = u < 0.7 && jitter(k + 3) < form.snow * p.load ? snowTint : p.twigs;
+      s.fin(root, tip, (0.07 + 0.06 * (1 - u)) * (form.dead ? 1.3 : 1), p.bark, p.twigs, top);
+      if (!sketch && !form.dead) {
         // Hanging sprays off the arm, the larch's weeping twigs — a haze
         // of them, which is what a larch in winter is from any distance.
         for (const at of [0.45, 0.8]) {
@@ -452,7 +541,7 @@ function larch(v: TreeVariant, form: LarchForm, paint: TreePaint, sketch: boolea
             mid[1] - 0.03 - form.droop * 0.05,
             mid[2] + mid[0] * side * 0.8,
           ];
-          s.fin(mid, hang, 0.02, paint.larch, paint.larch, top, 2.5);
+          s.fin(mid, hang, 0.008, p.twigs, p.twigs, top, 3);
         }
       }
     }
@@ -460,11 +549,11 @@ function larch(v: TreeVariant, form: LarchForm, paint: TreePaint, sketch: boolea
   return s.geometry();
 }
 
-/** A birch in winter: pale banded stems under a bare crown of twigs. */
-function birch(v: TreeVariant, form: BirchForm, paint: TreePaint, sketch: boolean, seed: number) {
+/** A broadleaf in winter: bare stems under fans of twigs, and whatever the
+ * kind still carries on their tips. */
+function broadleaf(v: TreeVariant, form: BirchForm, p: KindPaint, sketch: boolean, seed: number) {
   const s = new Shape(v.lean);
-  const snow = SNOW.clone().lerp(paint.twigs, 0.35);
-  const dark = paint.bark.clone().multiplyScalar(0.25);
+  const snow = SNOW.clone().lerp(p.twigs, 0.35);
   const stems = sketch ? Math.min(2, form.stems) : form.stems;
   const fins = sketch ? 16 : form.fins;
   for (let st = 0; st < stems; st++) {
@@ -474,15 +563,14 @@ function birch(v: TreeVariant, form: BirchForm, paint: TreePaint, sketch: boolea
     const dx = Math.sin(tilt) * Math.cos(sa) * 4;
     const dz = Math.sin(tilt) * Math.sin(sa) * 4;
     const along = (y: number): V3 => [dx * y * 0.25, y, dz * y * 0.25];
-    const height = st === 0 ? 1 : 0.8 + 0.15 * jitter(seed + st);
-    // The trunk, in bands — the bark's white broken by the dark marks a
-    // birch is known by.
+    const height = (st === 0 ? 1 : 0.8 + 0.15 * jitter(seed + st)) * v.top;
+    // The trunk, in bands — broken by dark marks on a birch or an aspen.
     const bands = sketch ? 2 : 7;
-    const r = 0.045 * (st === 0 ? 1 : 0.8);
+    const r = 0.045 * (st === 0 ? 1 : 0.8) * (stems > 3 ? 0.7 : 1);
     for (let b = 0; b < bands; b++) {
       const y0 = (b / bands) * 0.82 * height;
       const y1 = ((b + 1) / bands) * 0.82 * height;
-      const tone = jitter(seed * 13 + b * 7 + st) < 0.28 ? dark : paint.bark;
+      const tone = jitter(seed * 13 + b * 7 + st) < form.marks ? p.marks : p.bark;
       s.tube(
         along(y0),
         along(y1),
@@ -493,28 +581,48 @@ function birch(v: TreeVariant, form: BirchForm, paint: TreePaint, sketch: boolea
       );
     }
     // The crown: sprays of twigs, lower ones wider and flatter, the top
-    // ones steep — the teardrop a birch's crown makes against the sky, or
-    // hanging, on a weeping one.
+    // ones steep — a teardrop against the sky, or a dome, or hanging on a
+    // weeping one.
     const own = Math.round(fins / stems);
     for (let i = 0; i < own; i++) {
       const u = (i + 0.5) / own;
+      const k = seed + i * 3 + st * 101;
       const a = i * 2.39996 + seed + st;
       const base = (v.base + (0.8 - v.base) * u + (jitter(seed * 5 + i) - 0.5) * 0.06) * height;
+      const outline = Math.pow(Math.sin(Math.PI * Math.min(1, u * 1.1)), 1 - 0.7 * form.dome);
       const reach =
-        (0.35 + 0.75 * Math.sin(Math.PI * Math.min(1, u * 1.1))) *
+        (0.35 + 0.75 * outline) *
         (0.75 + 0.5 * jitter(i + seed + st * 3)) *
         v.width *
         (stems > 1 ? 0.75 : 1);
       // A unit of height is some four crown radii, so a spray reaching out
       // a crown radius and up a tenth of the height climbs at about 45°.
-      const rise = (0.05 + 0.09 * u) * (1 - form.weep) - form.weep * 0.06 * (1 - u);
+      const rise =
+        (0.05 + 0.09 * u) * (1 - form.weep) * (1 - 0.4 * form.dome) - form.weep * 0.06 * (1 - u);
       const root = along(base);
       root[0] += Math.cos(a) * 0.03;
       root[2] += Math.sin(a) * 0.03;
       const tip: V3 = [root[0] + Math.cos(a) * reach, base + rise, root[2] + Math.sin(a) * reach];
-      const top =
-        u < 0.6 && jitter(seed + i * 3 + st) < form.snow * paint.load ? snow : paint.twigs;
-      s.fin(root, tip, 0.018 + 0.012 * (1 - u), paint.twigs, paint.twigs, top, 3.5);
+      const top = u < 0.6 && jitter(k) < form.snow * p.load ? snow : p.twigs;
+      const w = (0.018 + 0.012 * (1 - u)) * form.stiff;
+      s.fin(root, tip, w, p.twigs, p.twigs, top, 3.5 / Math.max(0.6, form.stiff));
+      if (sketch) continue;
+      // What the kind carries: a berry cluster on the tip, or leaves, cones
+      // or keys along the spray — a small fan of its own colour.
+      if (jitter(k + 5) < form.berries) {
+        const end: V3 = [tip[0] * 1.06, tip[1] - 0.025, tip[2] * 1.06];
+        s.fin(tip, end, 0.09, p.accent, p.accent, p.accent, 1.4);
+      }
+      if (jitter(k + 7) < form.leaves) {
+        const at = 0.55 + 0.35 * jitter(k + 8);
+        const mid: V3 = [
+          root[0] + (tip[0] - root[0]) * at,
+          root[1] + (tip[1] - root[1]) * at,
+          root[2] + (tip[2] - root[2]) * at,
+        ];
+        const hang: V3 = [mid[0] * 1.12, mid[1] - 0.03, mid[2] * 1.12];
+        s.fin(mid, hang, 0.07, p.accent, p.accent, p.accent, 1.8);
+      }
     }
   }
   return s.geometry();
@@ -523,25 +631,15 @@ function birch(v: TreeVariant, form: BirchForm, paint: TreePaint, sketch: boolea
 /** One variant's mesh — its sketch for the far band when `sketch`. */
 export function buildTree(v: TreeVariant, paint: TreePaint, sketch = false): THREE.BufferGeometry {
   const seed = v.index * 3 + 1;
+  const p = kindPaint(paint, v.kind);
   switch (v.shape.form) {
     case "conifer":
-      return conifer(v, v.shape, paint, sketch, seed);
+      return conifer(v, v.shape, p, sketch, seed);
     case "pine":
-      return pine(v, v.shape, paint, sketch, seed);
+      return pine(v, v.shape, p, sketch, seed);
     case "larch":
-      return larch(v, v.shape, paint, sketch, seed);
+      return larch(v, v.shape, p, sketch, seed);
     case "birch":
-      return birch(v, v.shape, paint, sketch, seed);
+      return broadleaf(v, v.shape, p, sketch, seed);
   }
 }
-
-/** Which of a kind's two far-band SKETCHES a variant is drawn as: the
- * low-crowned one or the high-crowned one, whichever its own crown's base
- * is nearer. */
-export const SKETCHES: Readonly<Record<TreeKind, readonly [number, number]>> = {
-  spruce: [0, 3],
-  fir: [0, 3],
-  pine: [3, 0],
-  larch: [0, 3],
-  birch: [0, 3],
-};

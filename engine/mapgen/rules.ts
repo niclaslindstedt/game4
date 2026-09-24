@@ -188,7 +188,7 @@
 //       R14's density, meadow share, tallest trees and tree line — and may
 //       keep its woods below `forest.lowland` metres over the loop's mean
 //       height, so a high basin's trees stand only in its hollows. It names
-//       what grows (spruce, fir, pine, larch, birch), off a hash of where each trunk stands,
+//       what grows (twenty kinds of tree, conifer and bare broadleaf), off a hash of where each trunk stands,
 //       and deals R15's latitude and day from bands of its own. It may lay
 //       WIND CRUST — a packed share of `crust.packed` pressed into the
 //       powder over about `crust.cover` of the country and over every crest

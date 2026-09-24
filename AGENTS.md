@@ -182,7 +182,7 @@ By area first. Each row's skill owns the file-by-file map inside that area — g
 | The ground as a mesh: the clipmap round the lens | `pwa/src/game/terrain.ts` | `nature`, `snow-look` |
 | The snow as DRAWN: the shader, the glitter, the groomed track | `pwa/src/game/snow-glsl.ts` | `snow-look` |
 | THE TRAILS: what a contact stamps, and the maps that keep it | `pwa/src/game/trail-stamp.ts` (three-free), `trail-map.ts` | `snow-look`, `visual-effects` |
-| The woods as drawn: every kind's ten VARIANTS as data and their silhouette (`crownAt`), the builder, the bands | `pwa/src/game/tree-variants.ts` (three-free), `tree-shapes.ts`, `forest.ts` | `nature` |
+| The woods as drawn: the twenty kinds' ten VARIANTS each as data and their silhouette (`crownAt`), the builder and each kind's paint, the bands and the FOREST row's shape budget | `pwa/src/game/tree-variants.ts` (three-free), `tree-shapes.ts`, `forest.ts` | `nature` |
 | THE BIRDS: the roster, where a flock lives, where a bird is at a moment (the flush, the crossings), the look | `pwa/src/game/bird-defs.ts`, `bird-roost.ts`, `bird-plan.ts` (three-free), `bird-shapes.ts`, `birds.ts` | `nature` |
 | THE ANIMALS IN THE SNOW: the roster, where a group lives, its round and its fright, its prints, the look; the rarity ladder and what both placers ask of a map | `pwa/src/game/beast-defs.ts`, `beast-plan.ts`, `beast-tracks.ts` (three-free), `beast-shapes.ts`, `beasts.ts`, `wildlife.ts`; `rarity.ts`, `wild-ground.ts` | `nature` |
 | The checkpoints as drawn: the poles, the flags, the start banner | `pwa/src/game/gates.ts` | `collision` |

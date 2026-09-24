@@ -29,8 +29,8 @@ import { buildTree, treePaint } from "../game/tree-shapes.ts";
 import { TREE_VARIANTS } from "../game/tree-variants.ts";
 
 /** One cell, px. */
-const CELL_W = 190;
-const CELL_H = 300;
+const CELL_W = 170;
+const CELL_H = 260;
 /** The tree every cell stands up, m. */
 const HEIGHT = 14;
 const CROWN = 3.2;

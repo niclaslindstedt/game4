@@ -12,9 +12,15 @@ tenth of a UNIT of y per crown radius, not one — the first birch built with
 same way (`Shape` multiplies by ~4). Judge any new shape on `make trees`
 (seen from the rider's head) before `make world`.
 
-Each (kind, variant) in the full band is an InstancedMesh and a draw call, and
-again in the casters under FOREST HIGH: ten variants of five kinds took the
-race moment from 54 to 121 draws. `FOREST_LOOK[row].variants` (2/4/10, the
-most telling first per `VARIANT_ORDER`) is the lever; size each mesh to the
-trees that use it (not `trees.length`), or fifty meshes allocate fifty
-full-forest instance buffers.
+Each (kind, variant) in the full band is an InstancedMesh and a draw call.
+Ten variants of five kinds took the race moment from 54 to 121 draws; twenty
+kinds would have been hundreds. So FOREST's rung is a BUDGET of full-band
+meshes (`FOREST_LOOK[row].shapes`) shared among a map's kinds by how many of
+each it grows (1–10 variants a kind, `VARIANT_ORDER` most telling first), and
+the far band and the casters draw ONE shape a kind (`leadVariant`). Size each
+mesh to the trees that use it (not `trees.length`). `BatchedMesh` would make it
+one draw, but three.js falls back to a draw per INSTANCE where
+`WEBGL_multi_draw` is missing — thousands — so it is not a safe swap.
+
+`tree-shapes.ts` must stay loadable by `--experimental-strip-types` (no
+parameter properties): a lab or a probe that imports it dies otherwise.

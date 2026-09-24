@@ -102,12 +102,29 @@ const INK = {
   ray: [255, 214, 90, 150],
   clump: [255, 255, 255, 120],
 };
+/** Each kind's colour in the picture: the conifers in greens and olives,
+ * the bare trees in browns, greys and mauves. */
 const KIND_INK = {
   spruce: [36, 92, 60],
   fir: [26, 86, 92],
   pine: [132, 128, 60],
   larch: [176, 136, 92],
+  blackspruce: [20, 56, 40],
+  stonepine: [70, 110, 60],
+  whitepine: [96, 140, 128],
+  lodgepole: [150, 150, 80],
+  hemlock: [60, 130, 80],
+  juniper: [30, 70, 70],
+  dwarfpine: [90, 100, 50],
+  snag: [140, 136, 128],
   birch: [178, 150, 184],
+  aspen: [170, 180, 160],
+  rowan: [200, 70, 70],
+  alder: [90, 76, 70],
+  willow: [200, 130, 60],
+  beech: [190, 110, 60],
+  maple: [150, 120, 100],
+  ash: [160, 150, 130],
 };
 
 /** A trunk's drawn crown radius at height `h` over its foot, m, and how
