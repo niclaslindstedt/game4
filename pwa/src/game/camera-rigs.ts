@@ -18,6 +18,24 @@
 // sled rather than a mean water line, and the chase row sits lower than a
 // jet ski's: the three furrows it cuts are the thing a player looks back
 // down, and a lens two metres up at five metres back is where they read.
+//
+// THE SENSE OF SPEED (`PACE`). A lens that only frames reads 100 km/h over
+// open snow as half that, so three readings of pace are folded in on top of
+// the framing, each small enough to go unnoticed until it is gone:
+//
+//   * THE STRETCH. The fov widens with speed while the boom pulls in along
+//     its own line (`hold`), so the sled keeps its size in the frame and
+//     the WORLD is what rushes out past the edges. A boom that ran out with
+//     speed as the fov widened would shrink the sled into the distance,
+//     which is the one picture that reads as slow.
+//   * THE SURGE. The lens has mass on the end of its arm: it falls behind a
+//     sled pulling away and swings in over one braking, and settles back to
+//     its length when the pace is steady.
+//   * THE TREMOR. Past a brisk pace the lens buzzes, harder on the groomer
+//     than in powder, and goes still the moment the sled leaves the snow —
+//     the air is quiet, which is half of what makes it air. A few
+//     incommensurate oscillators under 8 Hz on an eased envelope, never a
+//     fresh random offset per frame.
 
 import { rotate, type Quat } from "@engine";
 
@@ -36,6 +54,8 @@ export type RigPose = {
   vz: number;
   speed: number;
   airborne: boolean;
+  /** The packed share under the sled, 0 powder .. 1 groomed. */
+  packed: number;
   /** Body → world (`lib/quat.ts`'s convention). */
   q: Quat;
 };
@@ -54,6 +74,8 @@ export type BoltedRig = {
   fovPerSpeed: number;
   /** Share of the machine's roll the horizon keeps, 0..1. */
   rollShare: number;
+  /** Share of `PACE.tremor` the lens takes. */
+  tremor: number;
 };
 
 export type BoomRig = {
@@ -69,6 +91,12 @@ export type BoomRig = {
   fov: number;
   fovPerSpeed: number;
   fovMax: number;
+  /** THE STRETCH: share of the fov's widening the arm pulls in along its
+   * own line to keep the sled its size in the frame, 0..1. */
+  hold: number;
+  /** Shares of `PACE.surge` and `PACE.tremor` the lens takes. */
+  surge: number;
+  tremor: number;
   /** How briskly the yaw follows the nose, 1/s. */
   followRate: number;
   /** Share of the travel direction (against the nose) the yaw takes. */
@@ -101,29 +129,34 @@ export const RIGS: Record<Rung, Rig> = {
     kind: "bolted",
     eye: { x: 0, y: 0.48, z: 0.95 },
     look: 30,
-    fov: 74,
-    fovPerSpeed: 0.25,
+    fov: 72,
+    fovPerSpeed: 0.4,
     rollShare: 0.8,
+    tremor: 1,
   },
   // The rider's own eyes over the bars.
   bars: {
     kind: "bolted",
     eye: { x: 0, y: 1.02, z: -0.32 },
     look: 30,
-    fov: 70,
-    fovPerSpeed: 0.2,
+    fov: 68,
+    fovPerSpeed: 0.35,
     rollShare: 0.6,
+    tremor: 0.8,
   },
   chase: {
     kind: "boom",
     dist: 5.2,
-    distPerSpeed: 0.04,
+    distPerSpeed: 0,
     height: 1.9,
     aimAhead: 7,
     aimHeight: 0.7,
-    fov: 62,
-    fovPerSpeed: 0.45,
-    fovMax: 80,
+    fov: 60,
+    fovPerSpeed: 0.62,
+    fovMax: 84,
+    hold: 0.45,
+    surge: 1,
+    tremor: 1,
     followRate: 4.2,
     slipWeight: 0.3,
     heightFollow: 6,
@@ -133,13 +166,16 @@ export const RIGS: Record<Rung, Rig> = {
   far: {
     kind: "boom",
     dist: 10,
-    distPerSpeed: 0.06,
+    distPerSpeed: 0.02,
     height: 3.6,
     aimAhead: 10,
     aimHeight: 0.8,
-    fov: 58,
-    fovPerSpeed: 0.3,
-    fovMax: 72,
+    fov: 56,
+    fovPerSpeed: 0.45,
+    fovMax: 76,
+    hold: 0.5,
+    surge: 1.4,
+    tremor: 0.6,
     followRate: 2.6,
     slipWeight: 0.4,
     heightFollow: 3.5,
@@ -156,6 +192,9 @@ export const RIGS: Record<Rung, Rig> = {
     fov: 56,
     fovPerSpeed: 0.2,
     fovMax: 66,
+    hold: 0,
+    surge: 1,
+    tremor: 0.3,
     followRate: 2,
     slipWeight: 0.5,
     heightFollow: 2.5,
@@ -177,10 +216,114 @@ export function turn(a: number, b: number): number {
  * has sprung to, the orbit's angle, and how far out along its arm the lens
  * is let stand (`pull`, 1 the whole arm). `fresh` asks the next frame to
  * snap rather than ease (a new run, a reset). */
-export type BoomState = { yaw: number; y: number; orbit: number; pull: number; fresh: boolean };
+export type BoomState = {
+  yaw: number;
+  y: number;
+  orbit: number;
+  pull: number;
+  fresh: boolean;
+  /** THE SURGE's memory: the last frame's speed, m/s, the acceleration
+   * read off it, m/s², and the metres of standoff it has the arm out to. */
+  lastSpeed: number;
+  accel: number;
+  surge: number;
+  /** THE TREMOR's memory: its own clock, s, and its envelope, 0..1. */
+  clock: number;
+  buzz: number;
+};
 
 export function createBoomState(): BoomState {
-  return { yaw: 0, y: 0, orbit: 0, pull: 1, fresh: true };
+  return {
+    yaw: 0,
+    y: 0,
+    orbit: 0,
+    pull: 1,
+    fresh: true,
+    lastSpeed: 0,
+    accel: 0,
+    surge: 0,
+    clock: 0,
+    buzz: 0,
+  };
+}
+
+/** THE SENSE OF SPEED — every number the three readings of pace are made
+ * of (the header says what each is for). The rigs only scale them. */
+export const PACE = {
+  tremor: {
+    /** Where it starts, and where it is whole, m/s (40 and 110 km/h). */
+    from: 11,
+    full: 30.5,
+    /** How far a boom's lens travels at the whole of it, m. */
+    travel: 0.03,
+    /** How far a bolted lens's aim swings at the whole of it, rad. */
+    aim: 0.0035,
+    /** How far the horizon cants at the whole of it, rad. */
+    roll: 0.0035,
+    /** The oscillators, Hz: incommensurate, and under the 8 Hz a 30 fps
+     * phone still resolves as a wave rather than a lurch. */
+    freq: [4.3, 5.9, 7.3],
+    /** Share of it in deep powder against the groomer: powder floats. */
+    powder: 0.5,
+    /** How briskly the envelope follows, 1/s — gone at once when the snow
+     * falls away, back a beat after a landing. */
+    rise: 5,
+    fall: 16,
+  },
+  surge: {
+    /** Metres of standoff per m/s² along the way, and the most either way:
+     * a sled pulling 6 m/s² is let fall a metre behind. */
+    gain: 0.16,
+    max: 1.1,
+    /** How briskly the acceleration is read, and the arm follows it, 1/s. */
+    read: 4,
+    follow: 3,
+  },
+} as const;
+
+/** THE TREMOR at this frame: advances the envelope and returns the wave,
+ * each axis in -1..1 times the envelope, with the share it was asked for. */
+function tremorAt(
+  st: BoomState,
+  pose: RigPose,
+  share: number,
+  dt: number,
+): { x: number; y: number; r: number } {
+  const T = PACE.tremor;
+  const pace = Math.max(0, Math.min(1, (pose.speed - T.from) / (T.full - T.from)));
+  const ground = T.powder + (1 - T.powder) * Math.max(0, Math.min(1, pose.packed));
+  const want = pose.airborne ? 0 : pace * pace * ground * share;
+  const rate = want > st.buzz ? T.rise : T.fall;
+  st.buzz = st.fresh ? want : st.buzz + (want - st.buzz) * (1 - Math.exp(-rate * dt));
+  st.clock += dt;
+  if (st.buzz < 1e-4) return { x: 0, y: 0, r: 0 };
+  const w = st.clock * Math.PI * 2;
+  const a = Math.sin(w * T.freq[0]);
+  const b = Math.sin(w * T.freq[1] + 2.1);
+  const c = Math.sin(w * T.freq[2] + 4.3);
+  return {
+    x: (a * 0.6 + c * 0.4) * st.buzz,
+    y: (b * 0.7 + c * 0.3) * st.buzz,
+    r: (a * 0.5 - b * 0.5) * st.buzz,
+  };
+}
+
+/** THE SURGE at this frame: metres the arm is let out past its length. */
+function surgeAt(st: BoomState, pose: RigPose, share: number, dt: number): number {
+  const S = PACE.surge;
+  if (st.fresh || dt <= 0) {
+    st.lastSpeed = pose.speed;
+    st.accel = 0;
+    st.surge = 0;
+    return 0;
+  }
+  // Read along the ground only: a fall gains speed the throttle did not.
+  const raw = pose.airborne ? 0 : (pose.speed - st.lastSpeed) / dt;
+  st.lastSpeed = pose.speed;
+  st.accel += (raw - st.accel) * (1 - Math.exp(-S.read * dt));
+  const want = Math.max(-S.max, Math.min(S.max, st.accel * S.gain)) * share;
+  st.surge += (want - st.surge) * (1 - Math.exp(-S.follow * dt));
+  return st.surge;
 }
 
 /** WHAT THE LENS MAY NOT STAND INSIDE: the share (0..1) of the line from
@@ -212,7 +355,10 @@ export function frameRig(
   if (rig.kind === "bolted") {
     const off = rotate(pose.q, rig.eye);
     const eye = { x: pose.x + off.x, y: pose.y + off.y, z: pose.z + off.z };
-    const fwd = rotate(pose.q, { x: 0, y: 0, z: rig.look });
+    // Bolted on, the tremor swings the aim: the whole world buzzes.
+    const shake = tremorAt(st, pose, rig.tremor, dt);
+    const swing = rig.look * PACE.tremor.aim;
+    const fwd = rotate(pose.q, { x: shake.x * swing, y: shake.y * swing, z: rig.look });
     const target = { x: eye.x + fwd.x, y: eye.y + fwd.y, z: eye.z + fwd.z };
     st.yaw = pose.heading;
     st.y = pose.y;
@@ -221,7 +367,7 @@ export function frameRig(
       eye,
       target,
       fov: rig.fov + rig.fovPerSpeed * pose.speed,
-      roll: pose.roll * rig.rollShare,
+      roll: pose.roll * rig.rollShare + shake.r * PACE.tremor.roll,
     };
   }
   if (rig.kind === "orbit") {
@@ -245,12 +391,24 @@ export function frameRig(
     ? 1
     : 1 - Math.exp(-(pose.airborne ? rig.heightFollowAir : rig.heightFollow) * dt);
   st.y += (pose.y - st.y) * hk;
+  const surge = surgeAt(st, pose, rig.surge, dt);
+  const shake = tremorAt(st, pose, rig.tremor, dt);
   const snap = st.fresh;
   st.fresh = false;
   const fx = Math.sin(st.yaw);
   const fz = Math.cos(st.yaw);
-  const dist = rig.dist + rig.distPerSpeed * pose.speed;
-  const eye = { x: pose.x - fx * dist, y: st.y + rig.height, z: pose.z - fz * dist };
+  // THE STRETCH: the arm pulled in along its own line by the share of the
+  // fov's widening it holds, so the sled keeps its size in the frame.
+  const fov = Math.min(rig.fovMax, rig.fov + rig.fovPerSpeed * pose.speed);
+  const half = (d: number) => Math.tan((d * Math.PI) / 360);
+  const arm = 1 - rig.hold * (1 - half(rig.fov) / half(fov));
+  const dist = (rig.dist + rig.distPerSpeed * pose.speed) * arm + surge;
+  const buzz = PACE.tremor.travel;
+  const eye = {
+    x: pose.x - fx * dist + fz * shake.x * buzz,
+    y: st.y + rig.height * arm + shake.y * buzz,
+    z: pose.z - fz * dist - fx * shake.x * buzz,
+  };
   const floor = groundAt(eye.x, eye.z) + rig.clearance;
   if (eye.y < floor) eye.y = floor;
   if (clear) pullIn(eye, pose, st, snap, dt, clear, groundAt);
@@ -259,8 +417,7 @@ export function frameRig(
     y: st.y + rig.aimHeight,
     z: pose.z + fz * rig.aimAhead,
   };
-  const fov = Math.min(rig.fovMax, rig.fov + rig.fovPerSpeed * pose.speed);
-  return { eye, target, fov, roll: 0 };
+  return { eye, target, fov, roll: shake.r * PACE.tremor.roll };
 }
 
 /** Shorten the arm from the rider's helmet to `eye` to what is clear. */

@@ -14,6 +14,7 @@ import {
   blendLens,
   createBoomState,
   frameRig,
+  PACE,
   PULL_MIN,
   RIGS,
   turn,
@@ -192,6 +193,7 @@ function pose(over: Partial<RigPose> = {}): RigPose {
     vz: 10,
     speed: 10,
     airborne: false,
+    packed: 1,
     q: { x: 0, y: 0, z: 0, w: 1 },
     ...over,
   };
@@ -242,6 +244,62 @@ describe("the camera ladder", () => {
     expect(mid).toBeGreaterThan(a.eye.y);
     expect(mid).toBeLessThan(b.eye.y);
     expect(turn(3, -3)).toBeCloseTo(2 * Math.PI - 6, 9);
+  });
+});
+
+describe("the sense of speed", () => {
+  /** Ride `rig` for `secs` at a steady pace (or a ramp from `from`). */
+  const ride = (rung: "chase" | "hood", secs: number, over: Partial<RigPose>, from?: number) => {
+    const st = createBoomState();
+    const dt = 1 / 60;
+    const n = Math.round(secs / dt);
+    const lenses = [];
+    for (let i = 0; i <= n; i++) {
+      const speed =
+        from === undefined ? (over.speed ?? 10) : from + ((over.speed ?? 10) - from) * (i / n);
+      lenses.push(frameRig(RIGS[rung], pose({ ...over, vz: speed, speed }), st, dt, flat));
+    }
+    return { st, lenses };
+  };
+  const back = (l: { eye: { z: number } }) => 100 - l.eye.z;
+
+  it("widens the fov with pace and pulls the arm in, so the sled keeps nearly its size", () => {
+    const slow = ride("chase", 1, { speed: 2 }).lenses.at(-1)!;
+    const fast = ride("chase", 1, { speed: 28 }).lenses.at(-1)!;
+    expect(fast.fov).toBeGreaterThan(slow.fov + 12);
+    expect(back(fast)).toBeLessThan(back(slow));
+    // How big the sled stands in the frame: its size over the half-height
+    // the frame spans at its distance.
+    const size = (l: typeof fast) => 1 / (back(l) * Math.tan((l.fov * Math.PI) / 360));
+    expect(size(fast) / size(slow)).toBeGreaterThan(0.8);
+  });
+
+  it("lets the arm fall behind a sled pulling away, and back when the pace is steady", () => {
+    const pulling = ride("chase", 1.5, { speed: 26 }, 12);
+    expect(pulling.st.surge).toBeGreaterThan(0.2);
+    const steady = ride("chase", 4, { speed: 26 });
+    expect(Math.abs(steady.st.surge)).toBeLessThan(0.01);
+    const braking = ride("chase", 1.5, { speed: 10 }, 24);
+    expect(braking.st.surge).toBeLessThan(-0.2);
+    expect(braking.st.surge).toBeGreaterThanOrEqual(-PACE.surge.max);
+  });
+
+  it("buzzes past a brisk pace, never at a crawl, and goes still in the air", () => {
+    const spread = (ls: { eye: { x: number; y: number } }[]) => {
+      const ys = ls.slice(-60).map((l) => l.eye.y);
+      return Math.max(...ys) - Math.min(...ys);
+    };
+    expect(spread(ride("chase", 2, { speed: 8 }).lenses)).toBe(0);
+    const fast = ride("chase", 2, { speed: 30 });
+    expect(spread(fast.lenses)).toBeGreaterThan(0.01);
+    expect(spread(fast.lenses)).toBeLessThan(PACE.tremor.travel * 2 + 1e-9);
+    const powder = ride("chase", 2, { speed: 30, packed: 0 });
+    expect(powder.st.buzz).toBeLessThan(fast.st.buzz);
+    const air = ride("chase", 2, { speed: 30, airborne: true });
+    expect(air.st.buzz).toBe(0);
+    // Bolted on, the whole world buzzes: the aim swings, the horizon cants.
+    const hood = ride("hood", 2, { speed: 30 }).lenses.slice(-60);
+    expect(new Set(hood.map((l) => l.roll.toFixed(6))).size).toBeGreaterThan(10);
   });
 });
 

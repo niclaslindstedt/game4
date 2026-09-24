@@ -300,6 +300,7 @@ export function createWorldRenderer(
     vz: 0,
     speed: 0,
     airborne: false,
+    packed: 1,
     q: { x: 0, y: 0, z: 0, w: 1 },
   };
   const nominalLoad = (totalMass(SLED) * 9.81) / 10;
@@ -639,6 +640,7 @@ export function createWorldRenderer(
       rigPose.vz = sled.vz;
       rigPose.speed = sled.speed;
       rigPose.airborne = sled.airborne;
+      rigPose.packed = sled.packed;
       const inside = lens.rung() === "hood" || lens.rung() === "bars";
       player.model.setRiderVisible(!inside);
       const ladder = lens.frame(rigPose, Math.min(dt, 0.1), level.groundAt, boomClear);
