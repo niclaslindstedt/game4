@@ -9,7 +9,8 @@
 // `n` × `n` cells at `spacing` metres, and every level after it doubles the
 // spacing and cuts a hole where the finer one already is. Eight levels
 // reach three kilometres out, past the rim, on a couple of hundred thousand
-// vertices.
+// vertices — and a shorter DISTANCE (`settings-video.ts`) builds only the
+// levels it takes to reach its mist's wall.
 //
 // NOTHING IS BAKED INTO THE MESH. Its vertices are integer grid positions;
 // the vertex shader (`snow-glsl.ts`) places them round the lens, reads the

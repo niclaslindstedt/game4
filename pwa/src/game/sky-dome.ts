@@ -169,6 +169,7 @@ export function createSkyDome(haze: HazeUniforms, radius: number): SkyDome {
         c += vec3(0.5, 0.6, 0.8) * pow(max(mm, 0.0), 900.0) * 0.12 * uMoonLit * uNight * clearSky;
 
         c = mix(c, cloud, hide);
+        c = mix(c, hazeColour(d), mistBand(d));
         gl_FragColor = vec4(c, 1.0);
         #include <tonemapping_fragment>
         #include <colorspace_fragment>

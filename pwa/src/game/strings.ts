@@ -274,6 +274,7 @@ export const STRINGS = {
   optLow: "LOW",
   optMedium: "MEDIUM",
   optHigh: "HIGH",
+  optMax: "MAX",
   optShadowSleds: "SLEDS",
   optCustom: "CUSTOM",
   optUnset: "—",
@@ -334,9 +335,10 @@ export const STRINGS = {
   optResolutionHint: "How many pixels are drawn, as a share of the screen's own.",
   optDistance: "DISTANCE",
   optDistanceHint:
-    "How far out the woods are drawn as trees. Shorter is cheaper, and a hazier day hides the edge.",
+    "How far out anything is drawn. Shorter is cheaper, and a mist closes before the edge. MAX draws the whole basin, clear to the rim.",
   optTerrain: "TERRAIN",
-  optTerrainHint: "How fine the ground's mesh is under the sled. Every setting reaches the rim.",
+  optTerrainHint:
+    "How fine the ground's mesh is under the sled. Every setting reaches as far as DISTANCE draws.",
   optTrails: "TRAILS",
   optTrailsHint:
     "How finely the snow keeps every furrow ridden, and how far round the sled. Off leaves the snow untouched.",
