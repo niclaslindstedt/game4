@@ -102,6 +102,7 @@ data and arithmetic, three-free so `tests/world_render_test.ts` reads it;
 | Where a BOOM lens stands behind, and how it pulls back with speed | `dist`, `distPerSpeed`, `height`, `fovPerSpeed`, `fovMax` |
 | How it follows the heave, on the snow and in the air | `heightFollow`, `heightFollowAir`, `followRate` |
 | Looking through a slide | `slipWeight` — the blend between the nose and the way |
+| Never losing the rider off a jump or a cliff | `lagMax` (the most the sprung height may trail, eased into with a tanh) and `frame` (the share of the vertical half-fov the rider is kept inside — the look TILTS past a knee at half of it); `tiltToFrame` |
 | Never inside the snow | `clearance` |
 | Never inside a post; a tree is let through | `camera-clear.ts` — the `LineClear` a boom pulls its arm in against: the checkpoint stakes and the start/finish arch (`start-arch.ts`), walked from the helmet out. The RIDDEN booms are handed it with `{ trees: false }` — an arm pulled in for every trunk flicking past is a jolt at the rider, and a bough across the frame for a moment is the lesser fault; the planted lenses (the broadcast, the death cam) keep out of the trees AS DRAWN (a lens meets the crown, not the trunk) |
 | A switch that is a move rather than a cut | `HANDOVER` seconds of `blendLens` in `camera.ts` |

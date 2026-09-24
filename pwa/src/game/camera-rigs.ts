@@ -36,6 +36,16 @@
 //     the air is quiet, which is half of what makes it air. A few
 //     incommensurate oscillators under 8 Hz on an eased envelope, never a
 //     fresh random offset per frame.
+//
+// THE RIDER STAYS IN THE PICTURE. The boom's height is sprung, and slowly
+// in the air, which is what makes a flight hang — but a sled dropping off
+// a cliff falls faster than any spring follows, and a lens that trailed it
+// by its whole lag (and aimed from that lagged height) lost the rider out
+// of the bottom of the frame. Two things answer it, neither felt on the
+// snow: the lag is let run only to `lagMax` metres, easing into it rather
+// than hitting it, and the look TILTS — the aim is pitched down (or up)
+// just far enough that the rider stays inside `frame` of the half-fov, the
+// way an operator tips the head to follow a drop.
 
 import { rotate, type Quat } from "@engine";
 
@@ -105,6 +115,10 @@ export type BoomRig = {
    * the air. */
   heightFollow: number;
   heightFollowAir: number;
+  /** The most the lens's height is let trail the sled's, m — a soft cap. */
+  lagMax: number;
+  /** Share of the half-fov (vertical) the rider is kept inside, 0..1. */
+  frame: number;
   /** The lens is never closer to the snow under it than this, m. */
   clearance: number;
 };
@@ -161,6 +175,8 @@ export const RIGS: Record<Rung, Rig> = {
     slipWeight: 0.3,
     heightFollow: 6,
     heightFollowAir: 3.2,
+    lagMax: 2.2,
+    frame: 0.6,
     clearance: 0.9,
   },
   far: {
@@ -180,6 +196,8 @@ export const RIGS: Record<Rung, Rig> = {
     slipWeight: 0.4,
     heightFollow: 3.5,
     heightFollowAir: 2.2,
+    lagMax: 3.2,
+    frame: 0.6,
     clearance: 1.4,
   },
   high: {
@@ -199,6 +217,8 @@ export const RIGS: Record<Rung, Rig> = {
     slipWeight: 0.5,
     heightFollow: 2.5,
     heightFollowAir: 1.6,
+    lagMax: 4.5,
+    frame: 0.6,
     clearance: 3,
   },
   orbit: { kind: "orbit", radius: 16, height: 6, spin: 0.14, fov: 55 },
@@ -391,6 +411,10 @@ export function frameRig(
     ? 1
     : 1 - Math.exp(-(pose.airborne ? rig.heightFollowAir : rig.heightFollow) * dt);
   st.y += (pose.y - st.y) * hk;
+  // The height the lens is FRAMED from: the spring's, with its lag eased
+  // into `lagMax` so a long fall cannot leave the lens up on the cliff.
+  const lag = pose.y - st.y;
+  const y = pose.y - rig.lagMax * Math.tanh(lag / rig.lagMax);
   const surge = surgeAt(st, pose, rig.surge, dt);
   const shake = tremorAt(st, pose, rig.tremor, dt);
   const snap = st.fresh;
@@ -406,7 +430,7 @@ export function frameRig(
   const buzz = PACE.tremor.travel;
   const eye = {
     x: pose.x - fx * dist + fz * shake.x * buzz,
-    y: st.y + rig.height * arm + shake.y * buzz,
+    y: y + rig.height * arm + shake.y * buzz,
     z: pose.z - fz * dist - fx * shake.x * buzz,
   };
   const floor = groundAt(eye.x, eye.z) + rig.clearance;
@@ -414,10 +438,40 @@ export function frameRig(
   if (clear) pullIn(eye, pose, st, snap, dt, clear, groundAt);
   const target = {
     x: pose.x + fx * rig.aimAhead,
-    y: st.y + rig.aimHeight,
+    y: y + rig.aimHeight,
     z: pose.z + fz * rig.aimAhead,
   };
+  tiltToFrame(eye, target, pose, ((fov * Math.PI) / 360) * rig.frame);
   return { eye, target, fov, roll: shake.r * PACE.tremor.roll };
+}
+
+/** Where on the rider the tilt frames: the middle of his body, m over the
+ * sled's origin. */
+export const FRAME_AT = 0.9;
+/** The steepest the tilt ever pitches the look, rad — short of straight
+ * down, where `lookAt`'s up vector has no answer. */
+const TILT_MAX = 1.35;
+/** Share of the kept band the rider roams before the look starts to tip. */
+const TILT_KNEE = 0.5;
+
+/** THE TILT: pitch the look from `eye` through `target` so the rider
+ * stands within `half` rad of its axis, keeping the aim's bearing and its
+ * reach. Inside the knee (half of `half`) the look is left alone; past it
+ * the rider's offset is eased into `half` rather than stopped at it, so the
+ * lens tips into a drop and back out of it without a kink. Moves only
+ * `target.y`. */
+function tiltToFrame(eye: Vec3, target: Vec3, pose: RigPose, half: number): void {
+  const reach = Math.hypot(target.x - eye.x, target.z - eye.z);
+  if (reach < 1e-6 || half <= 0) return;
+  const aim = Math.atan2(target.y - eye.y, reach);
+  const rider = Math.atan2(pose.y + FRAME_AT - eye.y, Math.hypot(pose.x - eye.x, pose.z - eye.z));
+  const off = rider - aim;
+  const knee = half * TILT_KNEE;
+  if (Math.abs(off) <= knee) return;
+  const room = half - knee;
+  const kept = Math.sign(off) * (knee + room * Math.tanh((Math.abs(off) - knee) / room));
+  const pitch = Math.max(-TILT_MAX, Math.min(TILT_MAX, rider - kept));
+  target.y = eye.y + reach * Math.tan(pitch);
 }
 
 /** Shorten the arm from the rider's helmet to `eye` to what is clear. */

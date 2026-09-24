@@ -13,6 +13,7 @@ import { LONE_TREE, syntheticLevel } from "./support/synthetic.ts";
 import {
   blendLens,
   createBoomState,
+  FRAME_AT,
   frameRig,
   PACE,
   PULL_MIN,
@@ -244,6 +245,63 @@ describe("the camera ladder", () => {
     expect(mid).toBeGreaterThan(a.eye.y);
     expect(mid).toBeLessThan(b.eye.y);
     expect(turn(3, -3)).toBeCloseTo(2 * Math.PI - 6, 9);
+  });
+});
+
+describe("the rider stays in the picture", () => {
+  /** Where the rider's middle stands against the look's axis, as a share
+   * of the vertical half-fov (1 the frame's edge, negative below). */
+  const offAxis = (l: ReturnType<typeof frameRig>, p: RigPose) => {
+    const aim = Math.atan2(
+      l.target.y - l.eye.y,
+      Math.hypot(l.target.x - l.eye.x, l.target.z - l.eye.z),
+    );
+    const at = Math.atan2(p.y + FRAME_AT - l.eye.y, Math.hypot(p.x - l.eye.x, p.z - l.eye.z));
+    return (at - aim) / ((l.fov * Math.PI) / 360);
+  };
+  /** Ride along +z at `vz` over `ground`, thrown up at `vy0` at z = 100. */
+  const fly = (
+    rung: "chase" | "far" | "high",
+    ground: (x: number, z: number) => number,
+    vz: number,
+    vy0 = 0,
+  ) => {
+    const st = createBoomState();
+    const dt = 1 / 60;
+    let z = 60;
+    let y = ground(100, z);
+    let vy = 0;
+    let air = false;
+    let worst = 0;
+    for (let i = 0; i < 360; i++) {
+      if (!air && vy0 > 0 && z >= 100) [vy, air] = [vy0, true];
+      z += vz * dt;
+      const g = ground(100, z);
+      if (!air && g < y - 0.05) air = true;
+      if (air) {
+        vy -= 9.81 * dt;
+        y += vy * dt;
+        if (y <= g) [y, vy, air] = [g, 0, false];
+      } else y = g;
+      const p = pose({ z, y, vy, vz, speed: Math.hypot(vy, vz), airborne: air });
+      const o = offAxis(frameRig(RIGS[rung], p, st, dt, ground), p);
+      if (Math.abs(o) > Math.abs(worst)) worst = o;
+    }
+    return worst;
+  };
+  const cliff = (_x: number, z: number) => (z < 120 ? 30 : 10);
+
+  it("tips the booms after a sled dropping off a cliff, and off a big kicker", () => {
+    for (const rung of ["chase", "far", "high"] as const) {
+      expect(Math.abs(fly(rung, cliff, 20))).toBeLessThan(0.7);
+      expect(Math.abs(fly(rung, flat, 30, 14))).toBeLessThan(0.7);
+    }
+  });
+
+  it("leaves the look alone on level snow", () => {
+    const st = createBoomState();
+    const lens = frameRig(RIGS.chase, pose(), st, 1 / 60, flat);
+    expect(lens.target.y).toBeCloseTo(10 + (RIGS.chase as { aimHeight: number }).aimHeight, 9);
   });
 });
 

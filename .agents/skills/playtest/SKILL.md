@@ -48,7 +48,7 @@ photographs the last change. `make world` builds its own bundle.
 | `lookback`, `furrow` | Back down the furrows the player has cut; close on them |
 | `track` | On the groomed track at pace — the corduroy, the flags |
 | `hood`, `bars`, `far` | The bolted and far rungs of the camera ladder |
-| `jump`, `landing` | Off a kicker — the hang; the puff coming down |
+| `jump`, `drop`, `landing` | Off a kicker — the hang; late in the flight, falling fast (the chase lens must still hold the rider); the puff coming down |
 | `vista`, `forest` | The country from above; in the woods |
 | `approach-140`, `-90`, `-60`, `-40` | The forest view's line walked in toward the wood: what a tree's shadow does as the lens closes on it. A shadow that appears between two of them was switched on by distance to the lens — the fault the caster set exists to prevent |
 | `orbit` | Round the sled — the menu's camera |
