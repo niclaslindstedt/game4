@@ -80,7 +80,6 @@ starting point.
 
 | Future skill | Will own |
 | --- | --- |
-| `soundtrack` | The scores — a second view of the one synth in `audio/bus.ts`, its own fader (the rally game's) |
 | `tricks` | The aerial vocabulary and its scoring (the jet-ski game's `tricks.ts`) |
 | `replay` | A race recorded as its controls and watched again (the jet-ski game's `replay.ts`; the tape it would read is built — `pwa/src/game/ghost.ts`, the time trial's ghost) |
 | `store-listing`, `store-shots` | The storefront's words and its screenshot set |

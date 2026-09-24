@@ -94,8 +94,8 @@ all.
 - **A SETTING THE APP IGNORES IS WORSE THAN NO SETTING.** The player moves it,
   nothing happens, and nothing else on the page can be trusted either. Every
   OPTIONS row is read by something (the renderer, the bus, the manager, the
-  thumb zones, `createGame`'s `assist`); there is no MUSIC fader because there
-  is no score. A row lands the day the thing behind it exists. A row a
+  thumb zones, `createGame`'s `assist`); there is no MUSIC fader because the
+  game has no music, by design. A row lands the day the thing behind it exists. A row a
   machine cannot use is not OFFERED to it (the keys without a keyboard, the
   thumbs without a touchscreen) — and is still stored.
 - **THE PICTURE APPLIES AT ONCE, OVER THE LIVE RACE** — that is why it is on

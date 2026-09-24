@@ -11,8 +11,7 @@
 // requirement: a browser gives a page one usable AudioContext's worth of
 // goodwill, and the echo bus and the master limiter only do their jobs if
 // every voice in the game — the engine, a landing, a chime — passes
-// through the same pair. The day a score arrives (`soundtrack`) it is a
-// second VIEW of this synth with its own fader, never a second synth.
+// through the same pair.
 
 import { createSynth } from "../../lib/synth.ts";
 import type { Layer, Synth } from "../../lib/voice.ts";

@@ -4,8 +4,7 @@
 // That second half is the rule this page is written to. A settings screen
 // carrying a row the app ignores is worse than one without it: the player
 // moves it, nothing happens, and now nothing else on the page can be trusted
-// either. So there is no MUSIC fader, because there is no score yet; it
-// becomes a row here on the day the score exists.
+// either. So there is no MUSIC fader: the game has no music, by design.
 //
 // A ROW IS ALSO NOT OFFERED TO A MACHINE THAT CANNOT USE IT: the door to the
 // keys only where there are keys, the thumbs' three rows only where there is
