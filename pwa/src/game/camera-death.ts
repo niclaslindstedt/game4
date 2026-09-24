@@ -8,11 +8,11 @@
 // closes in on him as he goes — the zoom narrowing and the arm drawing in.
 // As he comes down on the snow the picture SLOWS: the time rate eases down
 // ahead of the impact (read off how long his fall has left to go, so it is
-// already slow when he lands) and holds there, then runs at a lazy share
-// while he slides. When he has stopped (`Thrown.still`) the lens TILTS DOWN
-// ON HIM AND RISES: it swings in over the body looking down and climbs into
-// the sky, swaying, until the reset stands him up and the picture cuts
-// back to the ladder.
+// already slow when he lands) and holds there a beat, then comes most of
+// the way back up while he slides. When he has stopped (`Thrown.still`) the
+// lens TILTS DOWN ON HIM AND RISES: it swings in over the body looking down
+// and climbs into the sky, swaying, until the reset stands him up and the
+// picture cuts back to the ladder.
 //
 // EVERY MOVE IS EASED, NOTHING IS CUT IN. The lens, its aim and its zoom
 // chase what the phase wants at their own rates from wherever the ladder
@@ -42,8 +42,8 @@ export const DEATH = {
    * after he meets the snow; the share the slide and the rise run at. */
   slow: 0.2,
   lead: 0.8,
-  hold: 1.2,
-  lie: 0.4,
+  hold: 0.45,
+  lie: 0.7,
   /** How briskly the rate chases its target going in and coming back, 1/s. */
   ease: 4,
   easeOut: 4,
@@ -64,10 +64,10 @@ export const DEATH = {
    * after; the arm off the vertical it ends on (so it looks nearly straight
    * down); the lens's pace up there; the zoom it opens to. */
   top: 24,
-  rise: 3,
-  climb: 1.5,
+  rise: 1.8,
+  climb: 2.5,
   over: 3,
-  riseRate: 2,
+  riseRate: 3,
   fovRise: 48,
   /** THE SWAY: how far the lens drifts side to side, m, how far the
    * horizon tips, rad, and the period, s. */
