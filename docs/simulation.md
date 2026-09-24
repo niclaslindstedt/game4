@@ -39,16 +39,16 @@ It exits non-zero when the bot finishes NO seed at all — a sled that cannot ge
 
 ```
  seed  fin    time              laps     cps    len  pow  mean   top   air  best  jmp hrsh tree wipe  rst auto miss  plc  score    digest
-    1  yes   431.7       144/143/143   67/67   3277  14%    82   140  11.2   1.3    9    0    0    0    0    0    0    1   1559  f36e28fb
-    2  yes   459.0       153/152/152   58/58   2915  43%    69   137  13.0   1.6    9    3    0    0    0    0    0    1   2120  b087c700
-    3  yes   415.1       138/138/138   61/61   2992   2%    79   136  10.9   1.4    9    3    0    0    0    0    0    1   1530  af33f7c9
-    4  yes   384.3       129/127/127   58/58   2908   6%    82   145  10.0   1.2    9    0    0    0    0    0    0    1   1188  f68939c5
-    5  yes   448.4       150/149/149   61/61   2986  37%    72   144  11.4   1.3    9    0    0    0    0    0    0    1   1676  2976e6e0
-    6  yes   505.6       168/168/168   67/67   3281  40%    71   140  11.6   1.4    9    0    0    0    0    0    0    1   1726  b3ca7172
-    7  yes   371.7       124/123/123   55/55   2687   4%    79   130  12.2   1.4    9    0    0    0    0    0    0    1   1989  1a607aaf
-    8  yes   433.5       145/143/144   61/61   2927  29%    73   135  11.3   1.4    9    3    0    0    0    0    0    1   1567  8c7bae0d
+    1  yes   399.5       133/133/133   67/67   3277  14%    89   131  18.6   1.0   21   18    0    0    0    0    0    1   2170  72d7f889
+    2  yes   401.1       134/133/133   58/58   2915  27%    79   146  19.8   1.0   24   18    0    0    0    0    0    1   1971  25a89de8
+    3  yes   375.9       125/124/124   61/61   2992   2%    87   139  20.5   1.0   24   21    0    0    0    0    0    1   2338  772cad92
+    4  yes   347.4       116/115/115   58/58   2908   6%    91   148  16.1   1.1   18   13    0    0    0    0    0    1   1861  9d04db48
+    5  yes   399.0       133/132/132   61/61   2986  35%    82   145  19.9   1.0   21   21    0    0    0    0    0    1   2560  cef39b28
+    6  yes   440.2       147/146/146   67/67   3281  35%    81   150  22.1   1.0   24   21    0    0    0    0    0    1   2720  21b8c3f3
+    7  yes   331.2       110/110/110   55/55   2687   4%    88   129  18.9   1.0   21   18    0    0    0    0    0    1   2351  07db7184
+    8  yes   390.6       130/129/129   61/61   2927  28%    82   144  14.6   1.0   18    5    0    0    0    0    0    1   1481  b6e94e0d
 
-8/8 finished · mean 76 km/h · top 145 km/h · air 11.4 s/run · jumps 72 · harsh 9 · trees 0 · wipeouts 0 · resets 0 (auto 0) · missed 0 · score 1669/run
+8/8 finished · mean 85 km/h · top 150 km/h · air 18.8 s/run · jumps 171 · harsh 135 · trees 0 · wipeouts 0 · resets 0 (auto 0) · missed 0 · score 2182/run
 ```
 
 ## Reading the table
@@ -72,7 +72,7 @@ A deterministic rider that reads the same `GameState` the HUD reads and produces
 - **Where it is**: the nearest point of the loop, restricted to the stretch between the last checkpoint it took and the one it owes — so a hairpin's other leg is never mistaken for its own, and a checkpoint gone past is ridden back to.
 - **What it steers at**: a point `lookBase` + `lookPerSpeed`·v metres further along the centreline, against the heading its yaw rate is carrying it to (`yawLead`); in powder it reads further ahead and asks for less, because a sled turns there off its roll, which lags the bars.
 - **Off the grid**: before the start line it aims onto the track a few metres SHORT of it, so the line is crossed riding along the track; and it brakes for the turn onto the track before the grid's lane runs out.
-- **How fast**: for every bend within braking reach, the speed its curvature allows at `cornerShare` of the corner grip, less what braking at `brakeShare` of the grip can take off before it; for every on-track KICKER, the fastest a sled can leave its lip and still land on its landing (flown once per kicker over the real snow, `kickerSpeed`); and pure pursuit's own curvature for the turn onto its aim. Over that it brakes; near it it eases; under it, flat out.
+- **How fast**: for every bend within braking reach, the speed its curvature allows at `cornerShare` of the corner grip, less what braking at `brakeShare` of the grip can take off before it; for every on-track KICKER, the fastest a sled can leave its lip and still land on its landing (flown once per kicker over the real snow under the run's own flight pull, `flightGravity`, off the lip's own slope — the ramp rises as t², so a grade averaged over its last metres reads flatter than the one the sled leaves on — `kickerSpeed`); and pure pursuit's own curvature for the turn onto its aim. Over that it brakes; near it it eases; under it, flat out.
 - **In the air**: levels the pitch to the slope it is going to land on, with the lean.
 - **Trees**: moves its aim off a trunk standing in its line.
 - **Giving up**: asks to be reset after `giveUpAfter` = 35 s without a checkpoint.

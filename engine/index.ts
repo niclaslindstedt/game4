@@ -120,7 +120,7 @@ export {
   type Grip,
 } from "./game/snow.ts";
 export { powerShare, driveForce, maxDriveForce, rpmAtTop } from "./game/traction.ts";
-export { landingLoss } from "./game/flight.ts";
+export { landingAhead, landingLoss, type Landing } from "./game/flight.ts";
 export { noseDown, wipeoutCause, crashOver } from "./game/crash.ts";
 export { trenched, trenchGrip } from "./game/trench.ts";
 export { dampShare, harshShare, skiBite, skiPull, springShare, takeDamage } from "./game/damage.ts";

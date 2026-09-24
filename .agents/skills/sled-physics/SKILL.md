@@ -61,7 +61,7 @@ term and the comment's claim has to stay true.
 
 | Force | Model | Where |
 | --- | --- | --- |
-| Suspension | Raycast vehicle: each probe a spring-damper along the body's down axis against the snow's SUPPORT (the surface less the sink), a bump stop past its travel; the damper's rate is the compression's own change, read off the same surface as the spring; the snow answers along its OWN NORMAL, the spring over the cosine between strut and normal | `suspension.ts`, `sled.ts` |
+| Suspension | Raycast vehicle: each probe a spring-damper along the body's down axis against the snow's SUPPORT (the surface less the sink), rebound near ζ 0.75 per axle, bottoming control over the stroke's last 30 %, and a HYSTERETIC bump stop past its travel (`STOP_RELEASE` — a bumper, never a spring that hands a slam back); the damper's rate is the compression's own change, read off the same surface as the spring; the snow answers along its OWN NORMAL, the spring over the cosine between strut and normal | `suspension.ts`, `sled.ts` |
 | The sink | The planing-hull analogy: support rises with speed as exp(−(v/planeSpeed)²), blended by `packed`, eased over `sinkLag` | `snow.ts` — `sinkTarget` |
 | Resistance | Rolling resistance as a share of the load; THE PLOUGH (the bow wave of a sunk footprint, ∝ width · sink · v², front row only); powder drag ∝ load · v | `snow.ts` — `snowDrag` |
 | Grip | Coulomb on the probe's load, each coefficient a `tanh` of its slip over a reference speed (a lugged belt and a carbide keel let go progressively), blended by `packed`, scaled by the machine's footprint (studs, carbides, ski width); the TREAD's drive and side are ONE budget along the combined slip (the friction ellipse) | `snow.ts` — `gripAt`; summed in `sled.ts` |
@@ -74,7 +74,8 @@ term and the comment's claim has to stay true.
 | Air control | Lean → pitch, throttle → nose up (the belt as a gyroscope), brake → nose down, a little yaw off the bars, the rider levelling the roll up to `rollGiveUp` | `flight.ts` |
 | Landing cost | Past `harshSpeed` INTO the slope, a share of the way per m/s over, capped | `flight.ts` — `landingLoss` |
 | Chassis contacts | Velocity-level impulse through the effective mass (angular term in), a little restitution, a capped push-out, Coulomb friction; against the powder's FLOOR | `chassis.ts` |
-| Gravity, air drag | g on the CoG; ½ ρ C_dA v² with ρ at −10 °C | `sled.ts`, `TUNING.airDensity` |
+| Gravity, air drag | g on the CoG, and in genuine flight the run's heavier ARCADE pull (`RunRules.airGravity`: `air.gravity` on a race, 1 on a tricks run; `limits.ts`'s `flightGravity`, which the bot reads too); ½ ρ C_dA v² with ρ at −10 °C | `sled.ts`, `TUNING.airDensity`, `TUNING.air.gravity` |
+| The landing looked for | ARCADE: the pitch hand eases the nose onto the slope the ballistic arc will land on over the last `landLook` s (`landingAhead`) | `flight.ts` |
 
 ## The instrument: `make ride`
 

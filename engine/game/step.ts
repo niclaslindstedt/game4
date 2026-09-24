@@ -99,6 +99,7 @@ export function rulesFor(options: CreateGameOptions, level: Level): RunRules {
     course: base.course,
     tricks: base.tricks,
     limit: base.limit,
+    airGravity: base.airGravity,
   };
 }
 

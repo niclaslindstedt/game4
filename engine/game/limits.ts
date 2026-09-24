@@ -5,6 +5,7 @@
 // machine. Nothing here has state: they are questions about a SPEC.
 
 import { SLED, totalMass, type SledSpec } from "./defs/sled.ts";
+import type { RunRules } from "./defs/modes.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { footprintOf, skiShare } from "./footprint.ts";
 import { gripAt, type Grip } from "./snow.ts";
@@ -60,6 +61,14 @@ export function cornerGrip(spec: SledSpec, packed: number): number {
     TUNING.g *
     Math.min((ski * share + tread * (1 - share)) * TUNING.arcade.sideGrip, tipLimit(spec))
   );
+}
+
+/** THE PULL ON A SLED IN FLIGHT under `rules`, m/s² — the run's own
+ * (`RunRules.airGravity`: the arcade's heavier air on a race, the real g on
+ * a tricks run), which the physics applies once a sled is flying and the
+ * bot's ballistics read to know where a kicker puts it down. */
+export function flightGravity(rules: Pick<RunRules, "airGravity">): number {
+  return TUNING.g * rules.airGravity;
 }
 
 /** How hard a sled can stop, m/s², on snow `packed` 0..1: the tread locked
