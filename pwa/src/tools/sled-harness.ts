@@ -13,6 +13,11 @@
 //              landing, thrown back and forward, the tricks — by view
 //   liveries   every machine in each of its liveries (`sled-liveries.ts`),
 //              three-quarters on and from the side
+//   rider      the rider CLOSE UP on one machine, in the poses that read
+//              most (sat, on the move, hung off, in the air, landed), from
+//              behind at the chase camera's height, the rear three-quarter,
+//              the side and the front three-quarter — the man judged as a
+//              man rather than as sixty pixels on a machine
 //   landing    one machine landing: the rider's body on its legs
 //              (`stepRiderSpring`) kicked by a sled stopped dead from
 //              `vy` m/s, a frame every 60 ms, from the side and the rear
@@ -34,8 +39,9 @@ import {
 } from "../game/sled-body.ts";
 import { LIVERIES } from "../game/sled-liveries.ts";
 
-type Sheet = "machines" | "poses" | "landing" | "liveries";
-type View = "side" | "front" | "rear" | "three" | "chase" | "top";
+type Sheet = "machines" | "poses" | "landing" | "liveries" | "rider";
+type View =
+  "side" | "front" | "rear" | "three" | "chase" | "top" | "back" | "back3" | "near" | "front3";
 
 declare global {
   interface Window {
@@ -50,6 +56,9 @@ const spec = sledById(params.get("sled") ?? SLED.id);
 const slot = Number(params.get("slot") ?? 0) % SLED_STYLES.length;
 const landVy = Number(params.get("vy") ?? 6);
 const onlyViews = (params.get("views") ?? "").split(",").filter(Boolean) as View[];
+
+/** The moments the rider sheet shows him close up in. */
+const RIDER_POSES = ["sat", "on the move", "hung off left", "in the air", "landed, folded"];
 
 /** A moment to pose the rider at: what the engine would report. */
 type Moment = {
@@ -83,6 +92,7 @@ const VIEWS_OF: Record<Sheet, View[]> = {
   poses: ["side", "front", "rear", "chase"],
   landing: ["side", "rear"],
   liveries: ["three"],
+  rider: ["back", "back3", "near", "front3"],
 };
 
 const canvas = document.getElementById("stage") as HTMLCanvasElement;
@@ -201,6 +211,27 @@ function camera(view: View, s: SledSpec): THREE.Camera {
     return set(0, 0.75, -10);
   }
   lens.aspect = 4 / 3;
+  // THE CLOSE-UPS, aimed at the rider's chest (about 0.7 m over the CoG).
+  const chest = s.cogHeight + 0.7;
+  if (view === "near") {
+    // The side at a metre and a half across, centred on the rider.
+    ortho.left = -0.95;
+    ortho.right = 0.95;
+    ortho.top = 0.71;
+    ortho.bottom = -0.71;
+    ortho.position.set(10, chest - 0.1, -0.2);
+    ortho.lookAt(0, chest - 0.1, -0.2);
+    ortho.updateProjectionMatrix();
+    return ortho;
+  }
+  if (view === "back" || view === "back3" || view === "front3") {
+    lens.fov = 30;
+    const at = { back: [0, 1.75, -3.6], back3: [2.2, 1.55, -2.9], front3: [2.4, 1.5, 2.6] }[view];
+    lens.position.set(at[0], s.cogHeight + at[1], at[2]);
+    lens.lookAt(0, chest - 0.15, -0.2);
+    lens.updateProjectionMatrix();
+    return lens;
+  }
   if (view === "three") {
     lens.fov = 32;
     lens.position.set(5.2, 2.6, 5.4);
@@ -263,13 +294,14 @@ function cells(): { rows: number; cols: number; list: Cell[] } {
     }
     return { rows: SLEDS.length, cols, list };
   }
-  if (sheet === "poses") {
-    for (const at of POSES) {
+  if (sheet === "poses" || sheet === "rider") {
+    const moments = sheet === "poses" ? POSES : POSES.filter((p) => RIDER_POSES.includes(p.name));
+    for (const at of moments) {
       for (const view of views) {
         list.push({ spec, at, legs: null, view, label: `${spec.name} · ${at.name} · ${view}` });
       }
     }
-    return { rows: POSES.length, cols: views.length, list };
+    return { rows: moments.length, cols: views.length, list };
   }
   // THE LANDING: the body on its legs, stepped at 120 Hz through a sled
   // stopped dead from `landVy` m/s down, a frame every 60 ms.
