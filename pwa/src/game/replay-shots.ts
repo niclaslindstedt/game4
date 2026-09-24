@@ -27,7 +27,7 @@
 //   bump     another sled met at speed (`bump`).
 //   hit      a trunk met at speed (`hit`).
 //   wipeout  the rider thrown off (`wipeout`).
-//   finish   the flag (`finish`) — always worth the banner's lens.
+//   finish   the flag (`finish`) — always worth the arch's lens.
 //
 // AND THE SLOW MOTION, the other thing only a replay may have. It is part of
 // the shot rather than a setting, runs over the thing worth watching, and

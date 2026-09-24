@@ -6,7 +6,7 @@
 //   terrain.ts      the ground: a clipmap round the lens, shaded as snow
 //   trail-map.ts    every furrow any rider has cut, lowering that snow
 //   forest.ts       the snow-loaded conifers, two bands and their casters
-//   gates.ts        the checkpoints' poles and flags, the start banner
+//   gates.ts        the checkpoints' poles and flags, the start/finish arch
 //   sled-body.ts    the four machines and their riders
 //   spray.ts        the roost, the ski spray and the landing puff
 //   snowfall.ts     the snow falling round the lens, the spindrift

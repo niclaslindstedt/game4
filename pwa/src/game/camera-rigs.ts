@@ -185,7 +185,7 @@ export function createBoomState(): BoomState {
 
 /** WHAT THE LENS MAY NOT STAND INSIDE: the share (0..1) of the line from
  * `from` to `to` that is clear before it first runs into something solid —
- * a trunk, a crown, a banner. `camera-clear.ts` answers it for a map. */
+ * a trunk, a crown, the arch. `camera-clear.ts` answers it for a map. */
 export type LineClear = (from: Vec3, to: Vec3) => number;
 
 /** THE ARM PULLED IN. A boom stands its lens metres behind the rider, and
