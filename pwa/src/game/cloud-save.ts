@@ -22,7 +22,7 @@
 //   settings  THE RIDER'S HALF. The camera, the sled, the sound and its
 //             faders, the keys, the help, damage, the trial's length, the
 //             level card's map, the free ride's card, the HUD switch — a
-//             person's preferences. NOT the picture (`video`, `probed`: what
+//             person's preferences. NOT the picture (`video`, `probed`, `autoPicture`: what
 //             THIS machine can hold) and NOT the thumbs (`touch`: the travel
 //             of a screen this size) and NOT the developer page (`developer`,
 //             `dev`: a bench let out on one machine is not let out on the
@@ -81,7 +81,14 @@ export const CLOUD_BUDGET = 900_000;
 
 /** The rows that are a fact about the MACHINE, not the rider: never carried,
  * never overwritten by another device's. */
-export const DEVICE_SETTINGS = ["video", "probed", "touch", "developer", "dev"] as const;
+export const DEVICE_SETTINGS = [
+  "video",
+  "probed",
+  "autoPicture",
+  "touch",
+  "developer",
+  "dev",
+] as const;
 type DeviceKey = (typeof DEVICE_SETTINGS)[number];
 
 /** The rider's half of the settings. */

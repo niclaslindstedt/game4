@@ -25,7 +25,7 @@ import { findLevel } from "./campaign.ts";
 import { freshRide, mergeRide, type FreeRide } from "./free-ride.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
-import { DEFAULT_VIDEO, mergeVideo, type VideoSettings } from "./settings-video.ts";
+import { DEFAULT_VIDEO, mergeVideo, videoUntouched, type VideoSettings } from "./settings-video.ts";
 import { LIVERIES } from "./sled-liveries.ts";
 
 /** THE LADDER C WALKS, nearest first. "orbit" is not on it: that is the
@@ -91,6 +91,10 @@ export type Settings = {
   video: VideoSettings;
   /** Whether the first-visit probe has had its say (`video-probe.ts`). */
   probed: boolean;
+  /** PRESET ▸ AUTO: the picture is the probe's to fit to this machine, on
+   * every visit (`video-probe.ts`, `picture-fit.ts`); a row moved by hand
+   * or a preset pressed makes it the rider's. */
+  autoPicture: boolean;
   keys: KeyBindings;
   touch: TouchSettings;
   assist: AssistSettings;
@@ -149,6 +153,7 @@ export function freshSettings(): Settings {
     audio: { master: 1, engine: 1, effects: 1 },
     video: { ...DEFAULT_VIDEO },
     probed: false,
+    autoPicture: true,
     keys: freshKeys(),
     touch: { lever: "right", sensitivity: 1, invertLean: false },
     assist: { steer: "full", air: "full" },
@@ -213,6 +218,9 @@ export function mergeSettings(parsed: unknown): Settings {
   }
   out.video = mergeVideo(blob.video);
   if (typeof blob.probed === "boolean") out.probed = blob.probed;
+  // A blob from before AUTO: the fit's only where nobody moved the picture.
+  out.autoPicture =
+    typeof blob.autoPicture === "boolean" ? blob.autoPicture : videoUntouched(out.video);
   out.keys = mergeKeys(blob.keys);
   const touch = record(blob.touch);
   out.touch.lever = onLadder(touch.lever, LEVER_SIDES, out.touch.lever);

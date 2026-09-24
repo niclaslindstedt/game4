@@ -67,7 +67,7 @@ all.
 | --- | --- |
 | What the game REMEMBERS: the camera rung, the sled picked, the sound switch, the three faders, the picture, the keys, the thumbs and the assist — versioned, merged field by field | `pwa/src/game/settings.ts` (`mergeSettings`, `mixOf`, `assistOf`, `RUN_CAMERAS`, `nextCamera`) |
 | WHAT THE PICTURE COSTS: eight rows, each a ladder cheapest first, the presets, `presetOf` | `pwa/src/game/settings-video.ts` — DOM-free, three-free; `tests/video_test.ts` holds the whole ladder. `renderer.setVideo` is the ONE place a row becomes a draw call |
-| The first visit's picture: time MEDIUM under the front door, then promote to HIGH or demote to LOW — only a picture nobody touched | `pwa/src/game/video-probe.ts` (`judgeTier`, DOM-free), fed from `App.tsx`'s loop; off under `?probe=0`, `?video=` and any race a link boots |
+| PRESET ▸ AUTO: time the race under the front door and FIT every picture row to sixty frames a second by each stop's measured cost and judged benefit — once a visit and when AUTO is pressed, in up to three rounds | `pwa/src/game/video-probe.ts` (the timing, DOM-free), `picture-fit.ts` (the price list and the fit, DOM-free), fed from `App.tsx`'s loop; off under `?probe=0`, `?video=`, `?picture=` and any race a link boots; a price list is `make bench ARGS="--gpu --costs"` |
 | The rows every settings page is built from (a ladder, a fader, a link, a binding), the page head and the ONE caption | `pwa/src/game/menu-knobs.tsx` |
 | Which key does what, and the page that changes it | `settings-input.ts` (`KEY_ACTIONS`, `bindKey`, `clashesWith`, `mergeKeys`) + `menu-keys.tsx`; the manager takes the answer through `setBindings` |
 | Every parameter the app reads off its URL | `pwa/src/game/url-params.ts` — DOM-free |

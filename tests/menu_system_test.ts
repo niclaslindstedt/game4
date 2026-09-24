@@ -277,6 +277,17 @@ describe("what the game remembers (settings.ts)", () => {
     expect(mergeSettings({ touch: { lever: "up" } }).touch.lever).toBe("right");
   });
 
+  it("fits the picture to the machine unless the rider has made it theirs", () => {
+    expect(freshSettings().autoPicture).toBe(true);
+    // A blob from before AUTO: the fit's only if nobody moved the picture.
+    expect(mergeSettings({ video: DEFAULT_VIDEO }).autoPicture).toBe(true);
+    expect(mergeSettings({ video: { ...DEFAULT_VIDEO, spray: "low" } }).autoPicture).toBe(false);
+    expect(
+      mergeSettings({ video: { ...DEFAULT_VIDEO, spray: "low" }, autoPicture: true }).autoPicture,
+    ).toBe(true);
+    expect(mergeSettings({ autoPicture: false }).autoPicture).toBe(false);
+  });
+
   it("keeps damage off unless it was asked for, and only as a switch", () => {
     expect(freshSettings().damage).toBe(false);
     expect(mergeSettings({ damage: true }).damage).toBe(true);

@@ -49,6 +49,8 @@ export type DevAppWorld = {
   benchGpu: GpuMode;
   benchHide: readonly Hideable[];
   benchAb: boolean;
+  benchFrames: number | null;
+  benchVista: boolean;
 };
 
 export type DevRig = {
@@ -94,6 +96,8 @@ export function useDevApp(): DevApp {
       gpu: world.benchGpu,
       hide: world.benchHide,
       ab: world.benchAb,
+      frames: world.benchFrames,
+      vista: world.benchVista,
     });
     /** From the press to the way out — the load under the card included. */
     let benching = false;
