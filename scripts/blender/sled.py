@@ -166,21 +166,76 @@ tube("bumper", [(-bw * 0.84, zb, yb), (-bw * 0.94, Z1 + 0.014, yb + 0.03), (-bw 
                 (bw * 0.52, Z1 + 0.1, yb + 0.055), (bw * 0.94, Z1 + 0.014, yb + 0.03), (bw * 0.84, zb, yb)],
      0.013, ALU, smooth_n=6)
 
-# The windscreen (none on a mountain or a race sled): a wrapped shell from
-# the traced base to the traced top edge.
+def cowl_top(x, z):
+    """The cowl cage's upper surface at (x, z): the section's crown half read across."""
+    ring = section(z)[SHOULDER:HALF]              # the flank's shoulder in to the crown
+    xs = [(abs(q.x), q.z) for q in reversed(ring)]
+    return interp(xs, min(abs(x), xs[-1][0]))
+
+# The windscreen (none on a mountain or a race sled), off its four traced
+# corners: the front edge from the base up to the top, the side edge from
+# the foot up to the back. Across it the glass wraps from the front edge on
+# the centreline round to the side edge at each end, and its lower edge sits
+# on the cowl — a touring screen's tall wings reach back past the bars.
 scr = L.get("screen")
 if scr:
-    SB, STP = Vector((0, *P(scr["base"]))), Vector((0, *P(scr["top"])))
+    base, top, foot, back = (Vector(P(scr[k])) for k in ("base", "top", "foot", "back"))
+    hw = scr["width"] / 2
+    across = [-1 + 2 * j / 16 for j in range(17)]
+    seat_dy = {}
+    for sgn in across:
+        z, y = base.lerp(foot, sgn * sgn)
+        seat_dy[sgn] = cowl_top(sgn * hw, z) - 0.006 - y
     rows = []
     for i in range(9):
         u = i / 8
-        p = SB.lerp(STP, u)
-        hw = scr["width"] / 2 + 0.08 * (1 - u)
-        rows.append([Vector((s * hw, p.y - 0.09 * s * s * (1 - 0.3 * u), p.z - 0.02 * s * s + 0.015 * u * (1 - s * s)))
-                     for s in (-1 + 2 * j / 16 for j in range(17))])
+        front, side = base.lerp(top, u), foot.lerp(back, u)
+        row = []
+        for sgn in across:
+            z, y = front.lerp(side, sgn * sgn)
+            row.append(Vector((sgn * hw * (1 - 0.06 * u), z, y + seat_dy[sgn] * (1 - u) + 0.012 * u * (1 - sgn * sgn))))
+        rows.append(row)
     wind = loft("windscreen", rows, [GLASS], closed=False, cap=False)
     wind.modifiers.new("thick", "SOLIDIFY").thickness = 0.005
     tube("screen_trim", rows[0], 0.006, MATTE)
+    tube("screen_edge", [r[0] for r in rows] + rows[-1][1:-1] + [r[-1] for r in reversed(rows)], 0.004, MATTE)
+
+# The mirrors (a touring or a work sled's, traced): a stalk off the screen's
+# side up to a housing with its glass facing back.
+if L.get("mirror"):
+    (m0z, m0y), (m1z, m1y) = (P(p) for p in L["mirror"])
+    x = (scr["width"] / 2 if scr else 0.3) + 0.06
+    for sx in (-1, 1):
+        tube("mirror_stalk", [(sx * (x - 0.07), m1z, m1y), (sx * x, (m0z + m1z) / 2, m0y - 0.03), (sx * x, m0z, m0y)],
+             0.008, MATTE, smooth_n=3)
+        ellipsoid("mirror", (sx * (x + 0.02), m0z, m0y + 0.02), (0.06, 0.02, 0.04), BLACK)
+        box("mirror_glass", (sx * (x + 0.02), m0z - 0.018, m0y + 0.02), (0.1, 0.004, 0.065), ALU, bevel=0.002)
+
+# A race sled's number plates: one on each upper flank of the cowl and one
+# on the nose ahead of the lamps — patches laid on the cage, so a plate
+# follows the panel's curve rather than cutting through it.
+def ring_at(z, t):
+    """The cage's section at z, a fractional index t along the right half."""
+    sec, i = section(z), min(int(t), HALF - 2)
+    q = sec[i].lerp(sec[i + 1], t - i)
+    return Vector((abs(q.x), q.y, q.z))
+
+def patch(name, grid, m):
+    p = loft(name, grid, [m], closed=False, cap=False)
+    p.modifiers.new("thick", "SOLIDIFY").thickness = 0.004
+
+if L.get("plates"):
+    zp = Z0 + LEN * 0.4
+    for sx in (-1, 1):
+        grid = []
+        for i in range(7):
+            z = zp - 0.15 + 0.3 * i / 6
+            row = [ring_at(z, 4.25 + 1.5 * j / 6) + Vector((0.008, 0, 0.002)) for j in range(7)]
+            grid.append([Vector((sx * q.x, q.y, q.z)) for q in row])
+        patch("race_plate", grid, WHITE)
+    zn = Z1 - LEN * 0.2
+    patch("race_plate_nose", [[Vector((x, z, cowl_top(x, z) + 0.006)) for x in (-0.12 + 0.24 * j / 8 for j in range(9))]
+                              for z in (zn - 0.08 + 0.16 * i / 6 for i in range(7))], WHITE)
 
 # ---------------------------------------------------------------- the BARS
 gz, gy = P(L["grip"])
@@ -246,7 +301,7 @@ def pack(name, outline, m, half_width):
         rings.append([Vector((x, z, (top + base) / 2 + v)) for x, v in sec])
     return loft(name, rings, [m])
 
-for key, m in (("tailbox", BLACK), ("cargo", BLACK), ("luggage", BLACK)):
+for key, m in (("tailbox", BLACK), ("cargo", BLACK), ("luggage", PAINT)):
     if L.get(key):
         pack(key, L[key], m, TW * 0.95)
 if L.get("backrest"):
@@ -273,8 +328,14 @@ for sx in (-1, 1):
         holes = bpy.data.collections.new("tunnel_holes")
         cutters.children.link(holes)
         for f in (0.36, 0.53, 0.70, 0.87):
+            # Lightening holes where the plate is deep enough to keep a rim
+            # round one: a touring tunnel is a few centimetres at the tail,
+            # and a hole through its edge leaves the boolean nothing whole.
             z = tail_end * f
-            y = interp(TUN_BOT, z) + 0.055
+            lo, hi = interp(TUN_BOT, z), interp(TUN_TOP, z)
+            if hi - lo < 0.11:
+                continue
+            y = (lo + hi) / 2
             c = cutter_cyl((sx * (TW - 0.06), z, y), (sx * (TW + 0.07), z, y), 0.032)
             cutters.objects.unlink(c)
             holes.objects.link(c)
@@ -295,7 +356,13 @@ tube("rear_bumper", [(-TW - 0.01, 0.22, ty - 0.03), (-TW - 0.02, 0.04, ty + 0.01
 
 # The snow flap (traced): rubber.
 if L.get("flap"):
-    line = catmull([Vector(P(p)) for p in L["flap"]], n=6)
+    # Hung off the tunnel's tail: where the trace starts below the deck (a
+    # touring tunnel is a few centimetres deep there), it is carried up to it.
+    fl = [P(p) for p in L["flap"]]
+    deck_y = interp(TUN_TOP, max(fl[0][0], 0.0)) - 0.01
+    if fl[0][1] < deck_y - 0.02:
+        fl.insert(0, (fl[0][0], deck_y))
+    line = catmull([Vector(p) for p in fl], n=6)
     f = loft("snow_flap", [[Vector((sx * (TW + 0.01), p.x, p.y)) for sx in (-1, 1)] for p in line],
              [RUBBER], closed=False, cap=False)
     f.modifiers.new("thick", "SOLIDIFY").thickness = 0.008

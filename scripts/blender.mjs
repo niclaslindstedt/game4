@@ -17,6 +17,7 @@
 //
 //   node scripts/blender.mjs                                the Fox, both qualities
 //   node scripts/blender.mjs --id=ibex --quality=game
+//   node scripts/blender.mjs --id=all --quality=game   every sled, one after another
 //   node scripts/blender.mjs --quality=render --views=three,side --samples=32
 //
 // Blender is looked for at `BLENDER`, then the macOS app, then `blender` on
@@ -62,7 +63,7 @@ const args = parseArgs(
     id: {
       kind: "string",
       default: "",
-      help: "which one (a sled's id); the kind's default (fox) when left out",
+      help: "which one (a sled's id), or all; the kind's default (fox) when left out",
     },
     quality: {
       kind: "string",
@@ -93,23 +94,29 @@ if (!qualities.every((q) => QUALITIES.includes(q))) {
 
 aliasEngine(root);
 const ids = await kind.ids();
-const id = args.id || kind.fallback;
-if (!ids.includes(id)) {
-  console.error(`unknown ${args.kind} "${id}" (${ids.join(", ")})`);
+const wanted = args.id === "all" ? ids : [args.id || kind.fallback];
+const unknown = wanted.find((id) => !ids.includes(id));
+if (unknown) {
+  console.error(`unknown ${args.kind} "${unknown}" (${ids.join(", ")}, all)`);
   process.exit(2);
 }
 
 const outDir = join(root, args.out);
 mkdirSync(outDir, { recursive: true });
-const data = join(outDir, `${id}.json`);
-writeFileSync(data, JSON.stringify(await kind.data(id), null, 2));
 
 const blender =
   [process.env.BLENDER, "/Applications/Blender.app/Contents/MacOS/Blender"].find(
     (c) => c && existsSync(c),
   ) ?? "blender";
 
-for (const quality of qualities) {
+for (const id of wanted) {
+  const data = join(outDir, `${id}.json`);
+  writeFileSync(data, JSON.stringify(await kind.data(id), null, 2));
+  for (const quality of qualities) await model(id, data, quality);
+}
+
+/** One builder pass over one asset at one quality; a Python error ends the run. */
+async function model(id, data, quality) {
   const t0 = Date.now();
   const code = await new Promise((done) => {
     const child = spawn(
