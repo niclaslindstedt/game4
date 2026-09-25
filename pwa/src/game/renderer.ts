@@ -513,7 +513,8 @@ export function createWorldRenderer(
       if (cloud && i < TAIL_SLOTS && level > 0) {
         const tail = lampMounts(r.spec).tail;
         lampV.set(tail[0], tail[1], tail[2]).applyQuaternion(lampQ);
-        cloud.setTail(i, at.x + lampV.x, at.y - r.sink + lampV.y, at.z + lampV.z, level);
+        lampF.set(0, 0, -1).applyQuaternion(lampQ);
+        cloud.setTail(i, at.x + lampV.x, at.y - r.sink + lampV.y, at.z + lampV.z, level, lampF);
       }
       lampF.set(0, -Math.sin(HEADLAMP_DIP), Math.cos(HEADLAMP_DIP)).applyQuaternion(lampQ);
       lampV.set(cam.x - at.x, cam.y - at.y, cam.z - at.z).normalize();
