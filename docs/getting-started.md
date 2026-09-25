@@ -29,7 +29,7 @@ Open [game4.niclaslindstedt.se](https://game4.niclaslindstedt.se/). To keep it o
 
 - **The air pays** by the second and by the metre, more the longer you hang.
 - **Flips**: carry the lean all the way back off the lip (**E** / **Shift**) and the sled throws a **BACKFLIP**; all the way forward (**Q** / **Z**) a **FRONT FLIP** — the brake's gyro helps it over. **360s**: throw the bars all the way over. One full press is one throw; tap it again for more rotation, out of what the flight allows. You cannot start one on the way down. Short of full lean, the lean is the usual air control — how you check a flip for the landing.
-- **Poses**: hold the trick button (**F** / **X**, or the **TRICK** press on a touchscreen) in the air: with the bars over, a **ONE-FOOTER**; with the lean back, a **CAN-CAN**; otherwise a **TUCK**. While you pose the lean and the bars move you, not the sled — and let go before you land.
+- **Poses**: hold the trick button (**F** / **X** on a keyboard) in the air: with the bars over, a **ONE-FOOTER**; with the lean back, a **CAN-CAN**; otherwise a **TUCK**. While you pose the lean and the bars move you, not the sled — and let go before you land.
 - **The combo**: everything turned in one flight, and in flights linked by landing and taking the next kicker within a second or so, is one combo: its points × its multiplier, over the nose while it is in hand, banked when you have been back on the snow a moment. A second revolution in one flight is worth more than two single ones; a flip and a 360 in one flight is a **TWIST**. Land it hard (**SKETCHY**) and you are paid the points without the multiplier; land on the nose, get thrown, reset, or come down still in a pose and the combo is lost.
 
 The HUD shows the **SCORE** and the seconds **LEFT** where a race keeps its laps; the finish plate is the score. The record book keeps no tricks scores.
@@ -94,7 +94,7 @@ The whole game is two grounds under one machine. On the **packed track** the ski
 
 W and S lean only when they go down while the sled is IN THE AIR (a throttle held off the lip stays a throttle, or every jump would land on its nose), S leaning does not brake, and a lean key held over them wins.
 
-**Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it is WIDE OPEN the moment your thumb lands; slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera. On a tricks run a **TRICK** press over the speed is held for a pose.
+**Touch:** the lower-left of the screen is the **handlebar** — touch anywhere there and move the thumb: sideways travel steers, vertical travel leans. The lower-right is the **lever** — it is WIDE OPEN the moment your thumb lands; slide UP to ease off the throttle, and further up to brake. The top-right corner carries three presses: pause, reset, camera.
 
 **Cameras** (C, or the camera press): **hood** and **bars** are bolted to the sled and pitch and roll with it; **chase** (the default), **far** and **high** stand behind on a boom. The game remembers the one you chose.
 

@@ -180,12 +180,10 @@ export type TouchChannel = {
   throttle: number;
   brake: number;
   lever: boolean;
-  /** The TRICK press held (a tricks run's HUD only). */
-  trick: boolean;
 };
 
 export function neutralTouch(): TouchChannel {
-  return { steer: 0, lean: 0, bar: false, throttle: 0, brake: 0, lever: false, trick: false };
+  return { steer: 0, lean: 0, bar: false, throttle: 0, brake: 0, lever: false };
 }
 
 /** The keyboard's ramped axes, screen-space. Advanced once per STEP (§37.1)
@@ -307,6 +305,6 @@ export function sampleInput(
     brake,
     lean: clamp(lean, -1, 1),
     reset,
-    trick: keys.trick || touch.trick,
+    trick: keys.trick,
   });
 }

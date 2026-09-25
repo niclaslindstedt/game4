@@ -2,13 +2,13 @@
 // THE SCORE OVER A TRICKS RUN: the run's banked points and the buzzer in the
 // top row where a race keeps its laps, the COMBO in hand over the nose —
 // what the elements read as, and what they are worth so far, base × mult —
-// and, for a moment after it closes, what it paid or what was lost. On a
-// touchscreen, the TRICK press the poses are held on.
+// and, for a moment after it closes, what it paid or what was lost. There is
+// no press for a thumb: a pose is the keyboard's (the TRICK key), and on a
+// touchscreen the strokes on the lean and the bars are the whole of it.
 //
 // Everything is drawn from the snapshot's `TrickTile` (`trick-tile.ts`); no
 // number here is worked out, and no word is written here (`strings.ts`).
 
-import type { InputManager } from "./input.ts";
 import { STRINGS } from "./strings.ts";
 import type { TrickTile } from "./trick-tile.ts";
 
@@ -55,29 +55,5 @@ export function ComboTile({ tile }: { tile: TrickTile }) {
         {last.bailed ? STRINGS.comboBailed(last.points) : STRINGS.comboBanked(last.points)}
       </span>
     </div>
-  );
-}
-
-/** THE TRICK PRESS for a thumb: held, the rider poses (`strokes.ts`). It
- * writes the input manager's touch channel directly, from the pointer events
- * every finger gets — a thumb is already on the bar or the lever. */
-export function TrickPress({ input }: { input: InputManager }) {
-  const up = (): void => {
-    input.touch.trick = false;
-  };
-  return (
-    <button
-      type="button"
-      class="hud-trick-press"
-      onPointerDown={(e) => {
-        e.preventDefault();
-        input.touch.trick = true;
-      }}
-      onPointerUp={up}
-      onPointerCancel={up}
-      onPointerLeave={up}
-    >
-      {STRINGS.trickPress}
-    </button>
   );
 }
