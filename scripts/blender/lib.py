@@ -12,18 +12,65 @@
 #   QUALITY=game     the real-time budget: GAME is true, and every helper
 #                    spends fewer segments
 #   VIEWS=a,b        only these cameras
+#
+# THE RIG. An asset is exported SKINNED: every part rides one bone, rigidly
+# (every vertex weighted 1 to its part's bone), so the game poses it the way
+# it poses its own figures (`posed-merge.ts`). A builder says which bone the
+# parts it makes ride (`rides`), registers each bone (`bone`) — a DRIVER the
+# game sets off the engine's readings, or a LINKAGE aimed at a target on
+# another part, rigid or stretched, whose target is written into the glTF as
+# the bone's extras (`aim`, `stretch`) so the game can re-lay it — and
+# registers the CLIPS (`clip`) that play the drivers over time, baked with
+# the linkages following, one glTF animation each.
 
 import bpy, bmesh, math, os
-from mathutils import Euler, Matrix, Vector
+from mathutils import Euler, Matrix, Quaternion, Vector
 
 GAME = os.environ.get("QUALITY") == "game"
-GROUP = "body"
+FPS = 30
+RIDES = "body"
+BONES = {"body": dict(head=(0, 0, 0), tail=(0, 0.3, 0), parent=None, deform=True)}
+CLIPS = []
+MORPHS = {}
+WEIGHTS = {}
 
-def group(name):
-    """Every object made from here on moves with this group in the game
-    (one mesh per group is exported: the parts that move on their own)."""
-    global GROUP
-    GROUP = name
+def rides(name):
+    """Every object made from here on rides this bone."""
+    global RIDES
+    RIDES = name
+    return name
+
+def bone(name, head, tail, parent="body", aim=None, stretch=False, deform=True, extras=None, roll_to=None):
+    """A bone of the rig, in the asset's frame. A LINKAGE names the bone it
+    AIMS at (its tail laid on that bone's head, which must be where the
+    tail stands at rest), and whether it STRETCHES to reach it or only turns.
+    `extras` are written into the glTF on the bone's node; `roll_to` turns
+    the bone's +z toward a direction."""
+    BONES[name] = dict(head=tuple(head), tail=tuple(tail), parent=parent, aim=aim, stretch=stretch,
+                       deform=deform, extras=extras or {}, roll_to=roll_to)
+    return name
+
+def marker(name, at, parent):
+    """A target a linkage aims at: a short bone riding `parent`, its head `at`."""
+    return bone(name, at, Vector(at) + Vector((0, 0, 0.03)), parent, deform=False)
+
+def clip(name, seconds, at):
+    """A clip: `at(t)` gives, for every driver it moves, a `lift` (m, up the
+    asset's z) and a `turn` (rad, about the bone's own axis) — or its whole
+    `matrix` in the armature's frame — and for a morphed object (`morph(...)`)
+    its weight, keyed as `{object: w}` under "morph"."""
+    CLIPS.append((name, seconds, at))
+
+def weights(ob, fn):
+    """A part that BENDS: `fn(co)` gives each vertex's `{bone: weight}` —
+    where every other part rides its one bone wholly."""
+    WEIGHTS[ob.name] = fn
+    return ob
+
+def morph(ob, key, coords):
+    """A shape key `key` on `ob`, its vertices at `coords` — added after the
+    modifiers are baked in, which a key would forbid."""
+    MORPHS[ob.name] = (ob, key, coords)
 # ---------------------------------------------------------------- scene reset
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
@@ -106,7 +153,7 @@ def resample(poly, step, closed=True):
 
 def link(ob):
     COL.objects.link(ob)
-    ob["group"] = GROUP
+    ob["bone"] = RIDES
     return ob
 
 def mesh_obj(name, verts, faces, mats, face_mats=None, smooth=True, recalc=True):
@@ -283,11 +330,11 @@ def _select_only(objs):
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
 
-def _studio(centre, size):
+def _studio(centre, size, floor=0.0):
     """A snow floor, a winter sky, a low sun and a fill, and five cameras
     round `centre`, at distances in proportion to the asset's `size` (m)."""
     snow = mat("snow", (0.86, 0.9, 0.96), rough=0.55)
-    bpy.ops.mesh.primitive_plane_add(size=60, location=(centre[0], centre[1], -0.001))
+    bpy.ops.mesh.primitive_plane_add(size=60, location=(centre[0], centre[1], floor - 0.001))
     bpy.context.active_object.data.materials.append(snow)
     world = bpy.data.worlds.new("sky")
     scene.world = world
@@ -349,39 +396,175 @@ def _cycles(samples):
     scene.view_settings.view_transform = "AgX"
     scene.view_settings.look = "AgX - Medium High Contrast"
 
-def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1))):
+def _weigh(o):
+    """Every vertex of a part to its own bone, wholly: rigid skinning — or,
+    for a part that bends (`weights`), to the bones its function names."""
+    fn = WEIGHTS.get(o.name)
+    if not fn:
+        vg = o.vertex_groups.new(name=o["bone"])
+        vg.add(range(len(o.data.vertices)), 1.0, "REPLACE")
+        return
+    groups = {}
+    for v in o.data.vertices:
+        for b, w in fn(v.co).items():
+            if b not in groups:
+                groups[b] = o.vertex_groups.get(b) or o.vertex_groups.new(name=b)
+            groups[b].add([v.index], w, "REPLACE")
+
+def _rig(root):
+    """The armature from `BONES`, every mesh skinned to it, every linkage
+    constrained to its target and its target written into its extras."""
+    arm_data = bpy.data.armatures.new("rig")
+    arm = bpy.data.objects.new("rig", arm_data)
+    COL.objects.link(arm)
+    arm.parent = root
+    _select_only([arm])
+    bpy.ops.object.mode_set(mode="EDIT")
+    for n, b in BONES.items():
+        eb = arm_data.edit_bones.new(n)
+        eb.head, eb.tail = b["head"], b["tail"]
+        eb.use_deform = b["deform"]
+        if b.get("roll_to") is not None:
+            eb.align_roll(Vector(b["roll_to"]))
+    for n, b in BONES.items():
+        if b["parent"]:
+            arm_data.edit_bones[n].parent = arm_data.edit_bones[b["parent"]]
+    bpy.ops.object.mode_set(mode="OBJECT")
+    for n, b in BONES.items():
+        pb = arm.pose.bones[n]
+        pb.rotation_mode = "QUATERNION"
+        for holder in (pb, arm_data.bones[n]):
+            for k, v in b.get("extras", {}).items():
+                holder[k] = v
+        if b.get("aim"):
+            for holder in (pb, arm_data.bones[n]):
+                holder["aim"] = b["aim"]
+                holder["stretch"] = 1 if b["stretch"] else 0
+            c = pb.constraints.new("STRETCH_TO" if b["stretch"] else "DAMPED_TRACK")
+            c.target, c.subtarget = arm, b["aim"]
+            if b["stretch"]:
+                c.volume = "NO_VOLUME"
+                c.rest_length = (Vector(b["tail"]) - Vector(b["head"])).length
+    for o in list(root.children):
+        if o.type == "MESH":
+            o.parent = arm
+            m = o.modifiers.new("skin", "ARMATURE")
+            m.object = arm
+            o.modifiers.move(len(o.modifiers) - 1, 0)
+    return arm
+
+def _clips(arm):
+    """Every registered clip keyed on its drivers a frame at a time, baked
+    with the linkages following, and laid on an NLA track of its name — one
+    glTF animation each. The rest pose is left live for the stills."""
+    if not CLIPS:
+        return
+    bpy.context.preferences.edit.keyframe_new_interpolation_type = "LINEAR"
+    scene.render.fps = FPS
+    arm.animation_data_create()
+    names = []
+    for name, seconds, at in CLIPS:
+        n = round(seconds * FPS)
+        act = bpy.data.actions.new(name)
+        arm.animation_data.action = act
+        keyed = {}
+        for f in range(n + 1):
+            pose = at(f / FPS)
+            for m_name, w in pose.pop("morph", {}).items():
+                ob = MORPHS[m_name][0]
+                kb = ob.data.shape_keys.key_blocks[MORPHS[m_name][1]]
+                kd = ob.data.shape_keys
+                if m_name not in keyed:
+                    kd.animation_data_create()
+                    kd.animation_data.action = bpy.data.actions.new(f"{name}_{m_name}")
+                    keyed[m_name] = kd
+                kb.value = w
+                kb.keyframe_insert("value", frame=f)
+            for b_name, d in pose.items():
+                pb = arm.pose.bones[b_name]
+                if "matrix" in d:
+                    pb.matrix = d["matrix"]
+                else:
+                    rest = arm.data.bones[b_name].matrix_local.to_3x3()
+                    pb.location = rest.inverted() @ Vector((0, 0, d.get("lift", 0.0)))
+                    pb.rotation_quaternion = Quaternion((0, 1, 0), d.get("turn", 0.0))
+                pb.keyframe_insert("location", frame=f)
+                pb.keyframe_insert("rotation_quaternion", frame=f)
+        scene.frame_start, scene.frame_end = 0, n
+        _select_only([arm])
+        bpy.ops.object.mode_set(mode="POSE")
+        bpy.ops.nla.bake(frame_start=0, frame_end=n, only_selected=False, visual_keying=True,
+                         clear_constraints=False, use_current_action=True, bake_types={"POSE"})
+        bpy.ops.object.mode_set(mode="OBJECT")
+        for holder in [arm.animation_data] + [k.animation_data for k in keyed.values()]:
+            track = holder.nla_tracks.new()
+            track.name = name
+            track.strips.new(name, 0, holder.action)
+            track.mute = True       # or it plays under the next clip's bake
+            holder.action = None
+        for pb in arm.pose.bones:
+            pb.location, pb.rotation_quaternion = (0, 0, 0), (1, 0, 0, 0)
+        for ob, key, _ in MORPHS.values():
+            ob.data.shape_keys.key_blocks[key].value = 0.0
+        names.append(f"{name} {seconds:g}s")
+    for holder in [arm.animation_data] + [ob.data.shape_keys.animation_data for ob, _, _ in MORPHS.values()
+                                          if ob.data.shape_keys.animation_data]:
+        holder.use_nla = False     # the stills are of the machine at rest
+        for track in holder.nla_tracks:
+            track.mute = False
+    scene.frame_set(0)
+    print("CLIPS", ", ".join(names))
+
+def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1)), extras=None, floor=0.0):
     """Everything after the modelling: curves to meshes, the parts under one
-    root, the studio, the renders, and — in the game quality — the parts
-    joined by group, LOD0 and the decimated LODs exported as glTF, every
-    count printed (`GROUPS`, `TRIANGLES`)."""
+    root (carrying `extras`), the rig and its clips, the studio, the renders,
+    and — in the game quality — the parts joined into one skinned mesh, LOD0
+    and the decimated LODs exported as glTF, every count printed (`BONES`,
+    `CLIPS`, `TRIANGLES`)."""
     curves = [o for o in COL.objects if o.type == "CURVE"]
     if curves:
         _select_only(curves)
         bpy.ops.object.convert(target="MESH")
     root = bpy.data.objects.new(name, None)
     COL.objects.link(root)
+    for k, v in (extras or {}).items():
+        root[k] = v
     for o in list(COL.objects):
         if o is not root and o.parent is None:
             o.parent = root
     if GAME:
-        # Bake every modifier in, then one mesh per group: what moves on its own.
+        # Bake every modifier in, then ONE skinned mesh (a morphed part keeps
+        # its own mesh: a key would stop the join's modifiers being applied).
         _select_only([o for o in root.children if o.type == "MESH"])
         bpy.ops.object.convert(target="MESH")
-        groups = {}
+        counts = {}
         for o in root.children:
-            groups.setdefault(o.get("group", "body"), []).append(o)
-        for g, objs in groups.items():
-            _select_only(objs)
-            bpy.ops.object.join()
-            o = bpy.context.view_layer.objects.active
-            o.name = g
-            bm = bmesh.new()
-            bm.from_mesh(o.data)
-            bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0005)
-            bm.to_mesh(o.data)
-            bm.free()
-        print("GROUPS", {o.name: _tri_count([o]) for o in root.children})
-    cams = _studio(centre, size)
+            counts[o["bone"]] = counts.get(o["bone"], 0) + _tri_count([o])
+        print("BONES", len(BONES), {k: v for k, v in sorted(counts.items(), key=lambda kv: -kv[1])[:6]})
+        for o in root.children:
+            _weigh(o)
+        joined = [o for o in root.children if o.type == "MESH" and o.name not in MORPHS]
+        _select_only(joined)
+        bpy.ops.object.join()
+        o = bpy.context.view_layer.objects.active
+        o.name = o.data.name = "machine"
+        bm = bmesh.new()
+        bm.from_mesh(o.data)
+        bmesh.ops.remove_doubles(bm, verts=bm.verts, dist=0.0005)
+        bm.to_mesh(o.data)
+        bm.free()
+    else:
+        for o in root.children:
+            if o.type == "MESH":
+                _weigh(o)
+    for ob, key, coords in MORPHS.values():
+        ob.shape_key_add(name="Basis")
+        k = ob.shape_key_add(name=key)
+        for v, co in zip(k.data, coords):
+            v.co = co
+    arm = _rig(root)
+    _clips(arm)
+    cams = _studio(centre, size, floor)
     _cycles(samples)
     tag = "game" if GAME else "render"
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, f"{name}-{tag}.blend"))
@@ -401,17 +584,23 @@ def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1)
 
     def export(path):
         _select_only([root] + list(root.children_recursive))
-        bpy.ops.export_scene.gltf(filepath=path, use_selection=True, export_apply=True)
+        bpy.ops.export_scene.gltf(filepath=path, use_selection=True, export_apply=True, export_extras=True,
+                                  export_skins=True, export_morph=True, export_animations=True,
+                                  export_animation_mode="NLA_TRACKS", export_def_bones=False)
 
     export(os.path.join(out, f"{name}-lod0.glb"))
     # The lower LODs are a blind decimation: fine at range, torn up close.
     for lod, ratio in lods:
-        for o in parts:
+        # A morphed part is left whole: a key forbids the decimation's apply,
+        # and the lugs are a few hundred triangles.
+        thinned = [o for o in parts if o.name not in MORPHS]
+        for o in thinned:
             d = o.modifiers.new("lod", "DECIMATE")
             d.ratio = ratio
             d.use_collapse_triangulate = True
+            o.modifiers.move(len(o.modifiers) - 1, 0)   # before the skin, which the export leaves live
         print("TRIANGLES", tag, lod, _tri_count(parts))
         export(os.path.join(out, f"{name}-{lod}.glb"))
         render(["chase", "three"], "-" + lod)
-        for o in parts:
+        for o in thinned:
             o.modifiers.remove(o.modifiers["lod"])

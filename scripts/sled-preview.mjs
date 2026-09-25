@@ -23,7 +23,10 @@
 //   node scripts/sled-preview.mjs --sheet=landing --vy=8 --skip-build
 //   node scripts/sled-preview.mjs --asset=previews/blender/fox-lod0.glb,previews/blender/fox-lod2.glb
 //                                  the builder's machine beside modelled
-//                                  versions of it (the `blender-assets` skill)
+//                                  versions of it (the `blender-assets` skill):
+//                                  the asset sheet, the rig sheet (every one
+//                                  posed at the same engine moments) and the
+//                                  clips sheet (the first model's clips played)
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
@@ -37,7 +40,9 @@ import { serveDir } from "./lib/serve-dist.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const buildDir = join(root, "previews", ".sled-preview");
 const outDir = join(root, "previews");
-const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing", "asset"];
+const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing"];
+/** The sheets that draw modelled versions (`--asset`, `--rider`). */
+const ASSET_SHEETS = ["asset", "rig", "clips", "figure"];
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -64,11 +69,16 @@ const args = parseArgs(
       default: "",
       help: "modelled versions of --sled as .glb files, comma-separated; draws the asset sheet",
     },
+    rider: {
+      kind: "string",
+      default: "",
+      help: "a modelled rider as a .glb (make blender KIND=rider); draws the figure sheet, and rides the models",
+    },
     cell: { kind: "number", default: 300, help: "one cell's width, px" },
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing|asset] [--sled=id] [--views=a,b] [--asset=a.glb,b.glb] [--skip-build]",
+  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing|asset|rig|clips] [--sled=id] [--views=a,b] [--asset=a.glb,b.glb] [--skip-build]",
 );
 
 const assets = args.asset
@@ -81,14 +91,27 @@ for (const a of assets) {
     process.exit(2);
   }
 }
-const wanted = args.sheet ? [args.sheet] : assets.length ? ["asset"] : SHEETS.slice(0, -1);
-if (wanted.includes("asset") && !assets.length) {
-  console.error("the asset sheet needs --asset=<file.glb>[,…]");
+const rider = args.rider ? resolve(args.rider) : "";
+if (rider && !existsSync(rider)) {
+  console.error(`no such rider: ${rider}`);
   process.exit(2);
 }
+/** What each modelled sheet needs: a machine, a rider, or either. */
+const NEEDS = { asset: [assets], rig: [assets], figure: [rider], clips: [assets, rider] };
+const wanted = args.sheet
+  ? args.sheet.split(",")
+  : assets.length || rider
+    ? ASSET_SHEETS.filter((s) => NEEDS[s].some((n) => n.length))
+    : SHEETS;
 for (const s of wanted) {
-  if (!SHEETS.includes(s)) {
-    console.error(`unknown sheet "${s}" (${SHEETS.join(", ")})`);
+  if (NEEDS[s] && !NEEDS[s].some((n) => n.length)) {
+    console.error(`the ${s} sheet needs ${s === "figure" ? "--rider" : "--asset"}=<file.glb>`);
+    process.exit(2);
+  }
+}
+for (const s of wanted) {
+  if (![...SHEETS, ...ASSET_SHEETS].includes(s)) {
+    console.error(`unknown sheet "${s}" (${[...SHEETS, ...ASSET_SHEETS].join(", ")})`);
     process.exit(2);
   }
 }
@@ -113,6 +136,7 @@ if (!args["skip-build"] || !existsSync(join(buildDir, "sled-preview.html"))) {
 
 // The modelled versions are served beside the page and never built into it.
 assets.forEach((a, i) => copyFileSync(a, join(buildDir, `asset-${i}.glb`)));
+if (rider) copyFileSync(rider, join(buildDir, "rider.glb"));
 
 const found = await findChromium();
 if (!found) process.exit(1);
@@ -146,6 +170,7 @@ for (const sheet of wanted) {
     vy: String(args.vy),
     cell: String(args.cell),
     assets: assets.map((a) => basename(a, ".glb")).join(","),
+    rider: rider ? basename(rider, ".glb") : "",
   }).toString();
   const t0 = Date.now();
   await page.goto(`${server.url}sled-preview.html?${query}`);

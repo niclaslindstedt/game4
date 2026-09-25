@@ -39,7 +39,7 @@ import {
   type RiderInput,
 } from "./rider-pose.ts";
 import { SLED_BODY } from "./sled-colours.ts";
-import { buildGear, profile, strip } from "./sled-gear.ts";
+import { BAR_TURN, buildGear, profile, strip } from "./sled-gear.ts";
 import { LIVERIES, PATTERNS, type Livery, type PatternId } from "./sled-liveries.ts";
 import { SLED_LOOKS, lookFrame } from "./sled-looks.ts";
 
@@ -749,7 +749,7 @@ export function createSledModel(
           trick,
         });
       }
-      bars.rotation.y = sled.steer * 0.42;
+      bars.rotation.y = sled.steer * BAR_TURN;
       braking = sled.brake;
       merged.update();
     },

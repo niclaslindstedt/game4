@@ -129,6 +129,18 @@ intent from physics deltas.
 - **Proportions are `BODY`'s.** Fix a REACH at the mounts or the pose,
   never by lengthening an arm.
 
+## A modelled rider
+
+`make blender KIND=rider` models him in Blender off `BODY`, the riding
+pose and the helmet's measured shell — his flesh the ANSUR II survey's
+mean man and his kit a snowmobile racer's (chest protector and shoulder
+cups under the jacket, knee guards, tall buckled boots, gauntlets), which
+is also the reference to hold this figure's proportions to — skinned on bones that ARE the pose's
+spans (`pwa/src/tools/rider-rig.ts`'s `riderBones`), with clips sampled off
+`riderPose` and `stepRiderSpring` — so a change here moves the model and
+its clips on the next run. `make sled ARGS="--sheet=figure --rider=previews/blender/rider0-lod0.glb"`
+sets it beside this figure in every pose. `blender-assets` owns it.
+
 ## What is not here yet
 
 The rider THROWN — he never leaves the machine; a rollover keeps him on it

@@ -32,6 +32,21 @@
 //              (`asset-<i>.glb` beside the page, never in the tree — the
 //              `blender-assets` skill makes them), each set down on the
 //              spec by `lookFrame` and ridden by the game's own rider
+//   rig        the builder's machine and every modelled one side by side,
+//              posed at the same engine moments — the bars turned, each end
+//              of the suspension at its bump and its droop — the models by
+//              their rigs (`asset-rig.ts`), as the game would pose one
+//   clips      every clip the first model carries, played across its
+//              length a frame a column (the rider left off: a clip turns
+//              the bars without him) — and every clip of a modelled RIDER
+//              (`rider=`), him alone
+//   figure     a modelled RIDER (`rider.glb` beside the page) beside the
+//              game's own, on the builder's machine, in every pose of the
+//              poses sheet — both posed by the same `riderPose`, the model
+//              through its bones (`rider-rig.ts`)
+//
+// A modelled rider also takes the game's figure's place on the asset and
+// rig sheets, so a modelled machine is judged with a modelled man on it.
 //
 // The elevations (side, front, rear) are ORTHOGRAPHIC — a drawing, the
 // scale the traced profiles in `sled-body.ts` are stated at — with a metre
@@ -39,6 +54,9 @@
 
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { TRAVEL } from "../game/sled-gear.ts";
+import { rigAsset, type AssetRig } from "./asset-rig.ts";
+import { rigRider, type RiderRig } from "./rider-rig.ts";
 import { freshSled, SLED, SLEDS, sledById, type SledSpec, type SledState } from "@engine";
 
 import { createRider, type RiderFigure } from "../game/rider.ts";
@@ -60,7 +78,17 @@ import {
 import { LIVERIES } from "../game/sled-liveries.ts";
 import { lookFrame } from "../game/sled-looks.ts";
 
-type Sheet = "machines" | "poses" | "landing" | "liveries" | "rider" | "head" | "asset";
+type Sheet =
+  | "machines"
+  | "poses"
+  | "landing"
+  | "liveries"
+  | "rider"
+  | "head"
+  | "asset"
+  | "rig"
+  | "clips"
+  | "figure";
 type View =
   "side" | "front" | "rear" | "three" | "chase" | "top" | "back" | "back3" | "near" | "front3";
 
@@ -78,6 +106,7 @@ const slot = Number(params.get("slot") ?? 0) % SLED_STYLES.length;
 const landVy = Number(params.get("vy") ?? 6);
 const onlyViews = (params.get("views") ?? "").split(",").filter(Boolean) as View[];
 const assetNames = (params.get("assets") ?? "").split(",").filter(Boolean);
+const riderName = params.get("rider") ?? "";
 
 /** The moments the rider sheet shows him close up in. */
 const RIDER_POSES = ["sat", "on the move", "hung off left", "in the air", "landed, folded"];
@@ -94,6 +123,9 @@ type Moment = {
   trick?: "oneFoot" | "canCan" | "tuck";
   /** The machine rolled, rad (a hang is ridden rolled into the turn). */
   roll?: number;
+  /** Either end's compression past its rest, m. */
+  front?: number;
+  rear?: number;
 };
 
 const POSES: Moment[] = [
@@ -109,6 +141,20 @@ const POSES: Moment[] = [
   { name: "can-can", stand: 1, airborne: true, trick: "canCan" },
 ];
 
+/** The moments the rig sheet poses every machine at: the steer, and each
+ * end of the suspension through the drawn travel. */
+const RIG_MOMENTS: Moment[] = [
+  { name: "rest", stand: 0.62 },
+  { name: "steer left", stand: 0.62, steer: -1 },
+  { name: "steer right", stand: 0.62, steer: 1 },
+  { name: "front bump", stand: 0.62, front: TRAVEL.ski[1] },
+  { name: "front droop", stand: 0.62, front: TRAVEL.ski[0] },
+  { name: "rear bump", stand: 0.62, rear: TRAVEL.tread[1] },
+  { name: "rear droop", stand: 0.62, rear: TRAVEL.tread[0] },
+];
+/** The clips sheet's frames across a clip. */
+const CLIP_FRAMES = 6;
+
 const VIEWS_OF: Record<Sheet, View[]> = {
   machines: ["side", "front", "rear", "three", "chase"],
   poses: ["side", "front", "rear", "chase"],
@@ -117,6 +163,9 @@ const VIEWS_OF: Record<Sheet, View[]> = {
   rider: ["back", "back3", "near", "front3"],
   head: [],
   asset: ["side", "front", "rear", "three", "chase"],
+  rig: ["three", "side", "front", "rear"],
+  clips: ["three"],
+  figure: ["back", "back3", "near", "front3", "three", "side"],
 };
 
 /** The head sheet's angles round the helmet: the bearing from its front,
@@ -197,8 +246,8 @@ function modelOf(s: SledSpec, livery = -1): SledModel {
 /** The engine's state for a machine at a moment, at rest on the flat. */
 function stateAt(s: SledSpec, at: Moment): SledState {
   const c = freshSled(s);
-  c.skiCompression[0] = c.skiCompression[1] = REST_SAG;
-  c.treadCompression = REST_SAG;
+  c.skiCompression[0] = c.skiCompression[1] = REST_SAG + (at.front ?? 0);
+  c.treadCompression = REST_SAG + (at.rear ?? 0);
   c.steer = at.steer ?? 0;
   c.skiAngle = (at.steer ?? 0) * s.skiLock * 0.6;
   c.lean = at.lean ?? 0;
@@ -245,7 +294,11 @@ function riderAt(c: SledState, at: Moment, legs: RiderSpring | null): RiderInput
  * the way `lookFrame` sets a trace. They carry no rider: the game's own
  * rides each, seated where the builder seats him. */
 const assets: THREE.Group[] = [];
+const rigs: AssetRig[] = [];
 let assetRider: RiderFigure | null = null;
+/** A modelled rider, turned as a modelled machine is, in a holder that
+ * stands where the game's figure stands (its frame is the pose's). */
+let riderModel: { holder: THREE.Group; rig: RiderRig } | null = null;
 async function loadAssets(): Promise<void> {
   const F = lookFrame(spec);
   const loader = new GLTFLoader();
@@ -259,6 +312,17 @@ async function loadAssets(): Promise<void> {
     holder.visible = false;
     scene.add(holder);
     assets.push(holder);
+    rigs.push(rigAsset(gltf.scene, gltf.animations));
+  }
+  if (riderName) {
+    const gltf = await new GLTFLoader().loadAsync("rider.glb");
+    gltf.scene.rotation.y = Math.PI;
+    const holder = new THREE.Group();
+    holder.add(gltf.scene);
+    holder.position.copy(riderSeat(spec)).add(new THREE.Vector3(0, spec.cogHeight, 0));
+    holder.visible = false;
+    scene.add(holder);
+    riderModel = { holder, rig: rigRider(holder, gltf.animations) };
   }
   assetRider = createRider(SLED_STYLES[slot].rider, (m) => m);
   assetRider.group.position.copy(riderSeat(spec)).add(new THREE.Vector3(0, spec.cogHeight, 0));
@@ -266,14 +330,35 @@ async function loadAssets(): Promise<void> {
   scene.add(assetRider.group);
 }
 
-/** Show modelled version `i` (-1: none) with the rider posed at a moment. */
-function showAsset(i: number, at: Moment): void {
+/** Show modelled version `i` (-1: none), posed by its rig at a moment —
+ * or playing a clip, riderless — with the rider posed at the moment. */
+function showAsset(i: number, at: Moment, clip?: { name: string; t: number }): void {
   assets.forEach((a, k) => (a.visible = k === i));
   if (!assetRider) return;
-  assetRider.group.visible = i >= 0;
+  assetRider.group.visible = i >= 0 && !clip && !riderModel;
   if (i < 0) return;
   for (const m of models.values()) m.root.visible = false;
-  assetRider.pose(riderAt(stateAt(spec, at), at, null));
+  const c = stateAt(spec, at);
+  if (clip) rigs[i].play(clip.name, clip.t);
+  else rigs[i].pose(c);
+  assetRider.pose(riderAt(c, at, null));
+}
+
+/** The modelled rider in a cell: posed at the moment by the game's own
+ * pose, playing one of his clips alone, or away. On the machine he stands
+ * in for the game's figure, which is hidden. */
+function showRider(c: Cell, onMachine: boolean): void {
+  if (!riderModel) return;
+  const { holder, rig } = riderModel;
+  holder.visible = onMachine || !!c.riderClip;
+  for (const m of models.values()) m.setRiderVisible(!holder.visible);
+  if (c.riderClip) {
+    for (const m of models.values()) m.root.visible = false;
+    assets.forEach((a) => (a.visible = false));
+    rig.play(c.riderClip.name, c.riderClip.t);
+  } else if (holder.visible) {
+    rig.pose(riderPose(riderAt(stateAt(c.spec, c.at), c.at, c.legs)));
+  }
 }
 
 const ortho = new THREE.OrthographicCamera(-2, 2, 1.5, -1.5, 0.1, 50);
@@ -354,6 +439,12 @@ function camera(view: View, s: SledSpec): THREE.Camera {
 type Cell = {
   /** The modelled version drawn instead of the builder's machine. */
   asset?: number;
+  /** The modelled rider on the machine instead of the game's figure. */
+  model?: boolean;
+  /** One of the modelled rider's clips, played with him alone. */
+  riderClip?: { name: string; t: number };
+  /** A clip of it played at a moment instead of its rig posed. */
+  clip?: { name: string; t: number };
   spec: SledSpec;
   at: Moment;
   legs: RiderSpring | null;
@@ -394,6 +485,68 @@ function cells(): { rows: number; cols: number; list: Cell[] } {
       }
     });
     return { rows: rows.length, cols: views.length, list };
+  }
+  if (sheet === "rig") {
+    const machines = ["builder", ...assetNames];
+    for (const at of RIG_MOMENTS) {
+      machines.forEach((name, k) => {
+        for (const view of views) {
+          list.push({
+            spec,
+            at,
+            legs: null,
+            view,
+            label: `${name} · ${at.name} · ${view}`,
+            asset: k - 1,
+          });
+        }
+      });
+    }
+    return { rows: RIG_MOMENTS.length, cols: machines.length * views.length, list };
+  }
+  if (sheet === "figure") {
+    for (const at of POSES) {
+      for (const model of [false, true]) {
+        for (const view of views) {
+          const label = `${model ? riderName : "game"} · ${at.name} · ${view}`;
+          list.push({ spec, at, legs: null, view, label, model });
+        }
+      }
+    }
+    return { rows: POSES.length, cols: 2 * views.length, list };
+  }
+  if (sheet === "clips") {
+    const clips = rigs[0]?.clips ?? [];
+    const riderClips = riderModel?.rig.clips ?? [];
+    for (const name of riderClips) {
+      const seconds = riderModel!.rig.seconds(name);
+      for (let f = 0; f < CLIP_FRAMES; f++) {
+        const t = (seconds * f) / (CLIP_FRAMES - 1);
+        list.push({
+          spec,
+          at: POSES[1],
+          legs: null,
+          view: views[0] ?? "three",
+          label: `${riderName} · ${name} · ${t.toFixed(2)} s`,
+          riderClip: { name, t },
+        });
+      }
+    }
+    for (const c of clips) {
+      for (let f = 0; f < CLIP_FRAMES; f++) {
+        const t = (c.seconds * f) / (CLIP_FRAMES - 1);
+        list.push({
+          spec,
+          at: POSES[1],
+          legs: null,
+          view: views[0] ?? "three",
+          label: `${assetNames[0]} · ${c.name} · ${t.toFixed(2)} s`,
+          asset: 0,
+          clip: { name: c.name, t },
+        });
+      }
+    }
+    return { rows: clips.length + riderClips.length, cols: CLIP_FRAMES, list };
   }
   if (sheet === "liveries") {
     const cols = Math.max(...SLEDS.map((s) => LIVERIES[s.id].length));
@@ -526,7 +679,8 @@ function draw(): { rows: number; cols: number; note: string } {
     renderer.setScissor(x, y, w, h);
     renderer.setClearColor(row % 2 === col % 2 ? 0x51606f : 0x5b6a79);
     posed(c.spec, c.at, c.legs, c.livery ?? -1);
-    showAsset(c.asset ?? -1, c.at);
+    showAsset(c.asset ?? -1, c.at, c.clip);
+    showRider(c, !!c.model || (c.asset !== undefined && c.asset >= 0 && !c.clip));
     renderer.render(scene, camera(c.view, c.spec));
     const label = document.createElement("div");
     label.className = "label";
@@ -538,4 +692,8 @@ function draw(): { rows: number; cols: number; note: string } {
   return { rows, cols, note: `${sheet}${sheet === "machines" ? "" : ` · ${spec.name}`}` };
 }
 
-window.__sled = { ready: sheet === "asset" ? loadAssets() : Promise.resolve(), sheet: draw };
+const WITH_ASSETS: Sheet[] = ["asset", "rig", "clips", "figure"];
+window.__sled = {
+  ready: WITH_ASSETS.includes(sheet) ? loadAssets() : Promise.resolve(),
+  sheet: draw,
+};
