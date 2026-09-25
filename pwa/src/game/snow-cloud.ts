@@ -305,10 +305,13 @@ void main() {
     float toward = 0.5 + 0.5 * pow(max(0.0, dot(-toEye, uLampDir[i])), 3.0);
     col += uLampCol * uLampOn[i] * cone * fall * fall * toward * 1.4;
   }
+  // A taillight is a small lamp: it tints the powder within a metre of it,
+  // not the whole cloud a stalled sled sits in. Against a moonlit cloud a
+  // few hundredths bright, a wider or brighter term turns the lot pink.
   for (int i = 0; i < ${TAIL_SLOTS}; i++) {
     if (uTailOn[i] <= 0.0) continue;
     float gap = length(vWorld - uTailPos[i]);
-    col += vec3(1.0, 0.1, 0.05) * uTailOn[i] * exp(-gap * gap / 3.0) * 0.25;
+    col += vec3(1.0, 0.1, 0.05) * uTailOn[i] * exp(-gap * gap / 0.8) * 0.1;
   }
 
   gl_FragColor = vec4(col, alpha);

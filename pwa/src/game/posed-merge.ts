@@ -14,9 +14,9 @@
 // so one material draws them all.
 //
 // THE GPU LAYS THE PARTS, as RIGID SKINNING: every part is a bone whose
-// matrix is the part's world matrix, and every vertex is bound to its own
-// part's bone alone, so a frame's posing is one matrix a part copied into
-// the skeleton — a few hundred — rather than every vertex of four machines
+// matrix is the part's matrix in the root's frame, and every vertex is bound
+// to its own part's bone alone, so a frame's posing is one matrix a part set
+// into the skeleton — a few hundred — rather than every vertex of four machines
 // and their riders re-laid on the processor and re-sent to the card (a
 // hundred and fifty thousand vertices a figure, which was half of the
 // benchmark's frame on a desktop). Three skins in every pass it draws the
@@ -24,6 +24,13 @@
 // follow the pose with nothing more said. A part whose ancestors are hidden
 // (the rider in the cockpit views) gets a zero matrix: its vertices collapse
 // onto a point, which draws nothing.
+//
+// The bones are the ROOT's, not the world's, and the mesh is bound DETACHED:
+// the mesh's own model matrix — the root's — puts the machine in the world.
+// So what moves the root or anything above it (the sled card's turntable
+// spinning a pivot over a machine posed once) moves the whole draw with no
+// re-pose; world bones froze every part where the last pose left it and only
+// the windshield, a mesh of its own, turned.
 //
 // Three skins a normal through the bone's matrix itself, which bends it on a
 // part scaled unevenly (a stretched strut, a helmet's shell); the material
@@ -179,6 +186,7 @@ export function mergePosed(
     ),
     new THREE.Matrix4(),
   );
+  mesh.bindMode = THREE.DetachedBindMode;
   mesh.boundingSphere = geo.boundingSphere;
   mesh.castShadow = true;
   mesh.receiveShadow = true;
@@ -195,10 +203,13 @@ export function mergePosed(
     return true;
   };
 
+  const toRoot = new THREE.Matrix4();
   const update = (): void => {
     root.updateMatrixWorld(true);
+    toRoot.copy(root.matrixWorld).invert();
     for (const part of list) {
-      part.bone.matrixWorld.copy(shown(part.mesh) ? part.mesh.matrixWorld : collapsed);
+      if (shown(part.mesh)) part.bone.matrixWorld.multiplyMatrices(toRoot, part.mesh.matrixWorld);
+      else part.bone.matrixWorld.copy(collapsed);
     }
   };
   update();
