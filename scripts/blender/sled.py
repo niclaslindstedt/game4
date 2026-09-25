@@ -8,8 +8,16 @@
 # tunnel's end (the trace's z), z up from the snow (the trace's y). glTF
 # turns that to y up and forward on -z; the sled lab's asset sheet turns it
 # back and sets it on the spec with `lookFrame`, as the builder sets a trace.
-# The groups exported are the body, each ski (with its spindle and arms)
-# and the track.
+# THE RIG (lib.py's): the DRIVERS are what the game poses off the engine's
+# readings as it poses its own machine (`sled-gear.ts`, `sled-body.ts`) —
+# `bars` (turned about the post), `ski_l` / `ski_r` (lifted by their
+# compression, turned about the spindle), `track` (lifted by the rear's) and
+# the wheels (turned as the belt runs); every A-arm, coil-over, tie rod and
+# rear arm is a LINKAGE laid from the chassis to its marker on the part it
+# meets. `_l` is the rider's left in THIS frame (x negative). The clips run
+# the game's own travel and turn (`TRAVEL`, `BAR_TURN`, handed in as `gear`)
+# and the spec's lock; `belt_run` moves the lugs one pitch round the belt a
+# second (the root's `beltRunMetres`), so a game plays it at speed / that.
 
 import json, math, os, sys
 
@@ -21,7 +29,7 @@ argv = sys.argv[sys.argv.index("--") + 1:]
 DATA = json.load(open(argv[0]))
 OUT = argv[1]
 SAMPLES = int(argv[2]) if len(argv) > 2 else 64
-SPEC, LOOK = DATA["spec"], DATA["look"]
+SPEC, LOOK, GEAR = DATA["spec"], DATA["look"], DATA["gear"]
 
 # ---------------------------------------------------------------- materials
 PAINT = mat("paint", (0.62, 0.02, 0.015), rough=0.28, coat=1.0)
@@ -246,6 +254,7 @@ box("dash", (0, zd, interp(HOOD_TOP, zd) + 0.002), (0.26, 0.10, 0.05), BLACK, ro
 box("gauge", (0, zd - 0.005, interp(HOOD_TOP, zd) + 0.03), (0.13, 0.07, 0.006), GAUGE,
     rot=(math.radians(-38), 0, 0), bevel=0.002)
 rz, ry = gz + 0.023, gy - 0.045
+rides(bone("bars", (0, pz, py), (0, rz, ry)))
 tube("post", [(0, pz, py), (0, (pz + rz) / 2, (py + ry) / 2 - 0.01), (0, rz, ry)], 0.017, ALU)
 cyl("post_cover", (0, pz + 0.004, py - 0.04), (0, rz + 0.007, ry - 0.03), 0.042, BLACK, r2=0.028)
 box("riser", (0, rz, ry + 0.008), (0.08, 0.05, 0.035), BLACK)
@@ -273,6 +282,7 @@ for sx in (-1, 1):
         rot=(0, 0, -sx * math.radians(12)), bevel=0.002)
 
 # ---------------------------------------------------------------- SEAT and what rides behind it
+rides("body")
 SEAT = by_z(L["seat"])
 SEAT_Z0, SEAT_Z1, SEAT_BASE = SEAT[0][0], SEAT[-1][0], L["seatBase"]
 rings = []
@@ -392,7 +402,6 @@ for sx in (-1, 1):
 # ---------------------------------------------------------------- the TRACK
 # The belt as a loop over the traced idler and drive, its run on the snow
 # standing on its lugs, climbing the traced upper run back to the idler.
-group("track")
 LUG = SPEC["lugHeight"]
 HW, TH = SPEC["treadWidth"] / 2, 0.011
 (iz, _), ir = P(L["idler"]["at"]), L["idler"]["radius"]
@@ -400,6 +409,7 @@ HW, TH = SPEC["treadWidth"] / 2, 0.011
 c1 = L["contact"][1]
 bY = LUG + 0.016
 iy = bY + ir + TH
+rides(bone("track", (0, (iz + c1) / 2, bY), (0, (iz + c1) / 2, bY + 0.2)))
 up = [P(p) for p in L["trackUp"]]
 around = [(iz + (ir + TH) * math.cos(math.radians(a)), iy + (ir + TH) * math.sin(math.radians(a)))
           for a in (100, 150, 195, 240)]
@@ -423,43 +433,61 @@ for i in range(N):
                        p - o * TH + Vector((HW, 0, 0)), p - o * TH + Vector((-HW, 0, 0))])
 loft("belt", belt_rings + [belt_rings[0]], [RUBBER], closed=True, cap=False, smooth=False)
 
-lugs_v, lugs_f = [], []
+# Each lug is laid twice: where it stands, and where the lug a STEP behind
+# it along the loop stands — the belt run's morph, so a clip that runs the
+# key 0 → 1 moves every lug on round the loop and ends where it began (a
+# step is two lugs where they are staggered, so a lug lands on its own kind).
+lugs_v, lugs_f, lugs_run = [], [], []
 count = int(belt_len / 0.0762)            # a 3-inch pitch
+STEP = 1 if GAME else 2
+count -= count % STEP
 for k in range(count):
-    i = int(k * N / count)
-    t, o = frame_at(i)
-    p = path[i] + o * TH
     st = 0.02 if k % 2 else -0.02
     spans = ((-HW + 0.01, HW - 0.01),) if GAME else (
         (-HW + 0.01, -0.07 + st), (-0.05 + st, 0.05 + st), (0.07 + st, HW - 0.01))
     for x0, x1 in spans:
         base = len(lugs_v)
-        for dx, dt, dh in ((x0, -0.012, 0), (x1, -0.012, 0), (x1, 0.012, 0), (x0, 0.012, 0),
-                           (x0, -0.006, LUG), (x1, -0.006, LUG), (x1, 0.004, LUG), (x0, 0.004, LUG)):
-            lugs_v.append(p + Vector((dx, 0, 0)) + t * dt + o * dh)
+        for kk, out in ((k, lugs_v), ((k - STEP) % count, lugs_run)):
+            i = int(kk * N / count)
+            t, o = frame_at(i)
+            p = path[i] + o * TH
+            for dx, dt, dh in ((x0, -0.012, 0), (x1, -0.012, 0), (x1, 0.012, 0), (x0, 0.012, 0),
+                               (x0, -0.006, LUG), (x1, -0.006, LUG), (x1, 0.004, LUG), (x0, 0.004, LUG)):
+                out.append(p + Vector((dx, 0, 0)) + t * dt + o * dh)
         lugs_f += [[base + a for a in f] for f in
                    ((0, 1, 2, 3), (4, 7, 6, 5), (0, 4, 5, 1), (1, 5, 6, 2), (2, 6, 7, 3), (3, 7, 4, 0))]
-mesh_obj("lugs", lugs_v, lugs_f, [RUBBER], smooth=False)
+morph(mesh_obj("lugs", lugs_v, lugs_f, [RUBBER], smooth=False), "run", lugs_run)
+RUN_METRES = STEP * belt_len / count
 
 # The rails, the idler and bogie wheels, the rear suspension's arms and shock.
 wy = bY + TH + 0.06
 span = c1 - 0.2 - iz
 nb = max(2, round(span / 0.35))
-for sx in (-1, 1):
-    tube("rail", [(sx * 0.11, iz + 0.04, bY + 0.035), (sx * 0.11, c1 - 0.1, bY + 0.035),
-                  (sx * 0.11, c1, bY + 0.06), (sx * 0.11, c1 + 0.08, bY + 0.13)], 0.016, TUNNEL, smooth_n=4)
-    wheels = [(iz, iy, ir)] + [(iz + span * k / nb, wy, 0.06) for k in range(1, nb + 1)]
-    for z, y, r in wheels:
+WHEELS = [(iz, iy, ir)] + [(iz + span * k / nb, wy, 0.06) for k in range(1, nb + 1)]
+for w, (z, y, r) in enumerate(WHEELS):    # a pair on one axle, turning about x
+    rides(bone(f"wheel_{w}", (-HW, z, y), (HW, z, y), "track", extras={"radius": r}))
+    for sx in (-1, 1):
         x = sx * (HW - 0.035)
         cyl("wheel", (x - sx * 0.02, z, y), (x + sx * 0.02, z, y), r, BLACK, seg=32)
         cyl("hub", (x + sx * 0.019, z, y), (x + sx * 0.024, z, y), r * 0.55, ALU, seg=24)
-    tube("front_arm", [(sx * 0.12, c1 - 0.05, bY + 0.07), (sx * 0.14, c1 + 0.13, interp(TUN_BOT, c1 + 0.13) - 0.03)],
-         0.018, TUNNEL)
-    zr = iz + 0.54
-    tube("rear_arm", [(sx * 0.12, iz + 0.29, bY + 0.06), (sx * 0.15, zr, interp(TUN_BOT, zr) + 0.04)], 0.018, TUNNEL)
+rides("track")
 cyl("idler_axle", (-HW, iz, iy), (HW, iz, iy), 0.015, STEEL)
+zr = iz + 0.54
+for sx in (-1, 1):
+    side = "l" if sx < 0 else "r"
+    rides("track")
+    tube("rail", [(sx * 0.11, iz + 0.04, bY + 0.035), (sx * 0.11, c1 - 0.1, bY + 0.035),
+                  (sx * 0.11, c1, bY + 0.06), (sx * 0.11, c1 + 0.08, bY + 0.13)], 0.016, TUNNEL, smooth_n=4)
+    # The arms from the rails up to the tunnel: laid from the tunnel down.
+    for arm, foot, head in (("front", (sx * 0.12, c1 - 0.05, bY + 0.07),
+                             (sx * 0.14, c1 + 0.13, interp(TUN_BOT, c1 + 0.13) - 0.03)),
+                            ("rear", (sx * 0.12, iz + 0.29, bY + 0.06), (sx * 0.15, zr, interp(TUN_BOT, zr) + 0.04))):
+        target = marker(f"{arm}_foot_{side}", foot, "track")
+        rides(bone(f"{arm}_arm_{side}", head, foot, aim=target, stretch=True))
+        tube(f"{arm}_arm", [foot, head], 0.018, TUNNEL)
 zs = iz + 0.86
 sa, sb = Vector((0, iz + 0.36, bY + 0.07)), Vector((0, zs, interp(TUN_BOT, zs) - 0.01))
+rides(bone("rear_shock", sb, sa, aim=marker("rear_shock_foot", sa, "track"), stretch=True))
 cyl("rear_shock", sa, sb, 0.024, BLACK)
 coil("rear_spring", sa.lerp(sb, 0.12), sa.lerp(sb, 0.8), 0.04, 0.007, 7, SPRING)
 
@@ -473,8 +501,10 @@ ski_sec = [(x * k, y) for x, y in ((-0.075, 0.004), (-0.075, 0.024), (-0.062, 0.
 tipz, tipy = SKI[-1]
 (s0z, s0y), (s1z, s1y) = (P(p) for p in L["spindle"])
 for sx in (-1, 1):
-    group("ski_l" if sx < 0 else "ski_r")
+    side = "l" if sx < 0 else "r"
     X = sx * STANCE / 2
+    bot, top = Vector((X, s0z, s0y - 0.045)), Vector((X - sx * 0.02, s1z, s1y + 0.013))
+    SKI_BONE = rides(bone(f"ski_{side}", bot, top))
     rings = []
     for i, p in enumerate(ski_line):
         t = (ski_line[min(i + 1, len(ski_line) - 1)] - ski_line[max(i - 1, 0)]).normalized()
@@ -488,25 +518,76 @@ for sx in (-1, 1):
          0.011, BLACK)
     tube("carbide", [(X, SKI[1][0] + 0.1, 0.0), (X, SKI[2][0] - 0.04, -0.001)], 0.006, STEEL)
     box("ski_saddle", (X, s0z, 0.075), (0.05, 0.12, 0.06), ALU)
-    # The spindle (traced), the upper and lower A-arms, a coil-over and a tie rod.
-    bot, top = Vector((X, s0z, s0y - 0.045)), Vector((X - sx * 0.02, s1z, s1y + 0.013))
+    # The spindle (traced), the upper and lower A-arms, a coil-over and a tie
+    # rod — every one laid from the chassis to its marker on the ski.
     cyl("spindle", bot, top, 0.022, TUNNEL)
-    for fz, rz, y_in, end in ((s0z + 0.094, s0z - 0.186, top.z, top + Vector((-sx * 0.01, 0, -0.01))),
-                              (s0z + 0.114, s0z - 0.206, bot.z + 0.12, bot + Vector((-sx * 0.01, 0, 0.07)))):
+    for arm, fz, rz, y_in, end in (("up", s0z + 0.094, s0z - 0.186, top.z, top + Vector((-sx * 0.01, 0, -0.01))),
+                                   ("lo", s0z + 0.114, s0z - 0.206, bot.z + 0.12, bot + Vector((-sx * 0.01, 0, 0.07)))):
+        ball = marker(f"ball_{arm}_{side}", end, SKI_BONE)
+        rides(bone(f"a_arm_{arm}_{side}", (sx * 0.16, (fz + rz) / 2, y_in), end, aim=ball, stretch=True))
         tube("a_arm", [(sx * 0.16, fz, y_in), tuple(end), (sx * 0.16, rz, y_in)], 0.013, PAINT)
         cyl("pivot", (sx * 0.16, fz - 0.03, y_in), (sx * 0.16, rz + 0.03, y_in), 0.018, TUNNEL)
     sa = Vector((X - sx * 0.07, s0z - 0.026, bot.z + 0.09))
     sb = Vector((sx * 0.21, s0z - 0.126, interp(HOOD_BOT, s0z - 0.126) + 0.2))
+    # The coil-over TELESCOPES: the body turns on the chassis to point at the
+    # shaft's foot, the shaft turns on the ski to point at the body's top,
+    # and the spring between them stretches.
+    shock, shaft = f"shock_{side}", f"shaft_{side}"
+    rides(bone(shock, sb, sa, aim=shaft))
     cyl("shock_body", sb, sa.lerp(sb, 0.45), 0.024, BLACK)
-    cyl("shock_shaft", sa, sa.lerp(sb, 0.5), 0.009, STEEL)
     cyl("shock_reservoir", sb + Vector((sx * 0.035, 0.02, -0.03)), sb.lerp(sa, 0.3) + Vector((sx * 0.035, 0.02, 0)),
         0.017, ALU)
+    rides(bone(shaft, sa, sb, SKI_BONE, aim=shock))
+    cyl("shock_shaft", sa, sa.lerp(sb, 0.5), 0.009, STEEL)
+    rides(bone(f"spring_{side}", sb, sa, aim=shaft, stretch=True))
     coil("front_spring", sa.lerp(sb, 0.08), sa.lerp(sb, 0.72), 0.036, 0.0065, 6, SPRING)
     yt = (bot.z + top.z) / 2 + 0.04
-    tube("tie_rod", [(sx * 0.08, top.y - 0.05, yt), (X - sx * 0.05, top.y - 0.024, yt - 0.01)], 0.008, STEEL)
+    rod_in, rod_out = (sx * 0.08, top.y - 0.05, yt), (X - sx * 0.05, top.y - 0.024, yt - 0.01)
+    rides(bone(f"tie_rod_{side}", rod_in, rod_out, aim=marker(f"steer_arm_{side}", rod_out, SKI_BONE), stretch=True))
+    tube("tie_rod", [rod_in, rod_out], 0.008, STEEL)
+    rides("body")
     tube("sway_bar", [(sx * 0.16, top.y + 0.006, yt - 0.02), (sx * 0.30, top.y + 0.026, yt - 0.02)], 0.009, TUNNEL)
+rides("body")
 
+
+# ---------------------------------------------------------------- the CLIPS
+# The game's own travel and bar turn, and the spec's lock. A turn is to the
+# rider's right first: the nose toward +x, a negative turn about the up axis.
+(S_LO, S_HI), (T_LO, T_HI) = GEAR["travel"]["ski"], GEAR["travel"]["tread"]
+SKIS = ("ski_l", "ski_r")
+
+def ease(a, b, u):
+    u = max(0.0, min(1.0, u))
+    return a + (b - a) * u * u * (3 - 2 * u)
+
+def through(t, T, lo, hi):
+    """Rest, up to the bump, back, down to the droop and back, over T s."""
+    q = min(4 * t / T, 3.9999)
+    stops = (0.0, hi, 0.0, lo, 0.0)
+    return ease(stops[int(q)], stops[int(q) + 1], q - int(q))
+
+def land(t, lo, hi):
+    """Hanging at the droop in the air, a landing driven to the bump, and
+    the spring's ring-down to rest."""
+    if t < 0.3:
+        return lo
+    if t < 0.42:
+        return ease(lo, hi, (t - 0.3) / 0.12)
+    u = t - 0.42
+    return hi * math.exp(-4.5 * u) * math.cos(2 * math.pi * 1.6 * u)
+
+clip("steer", 2.0, lambda t: {"bars": {"turn": -GEAR["barTurn"] * math.sin(math.pi * t)},
+                              **{s: {"turn": -SPEC["skiLock"] * math.sin(math.pi * t)} for s in SKIS}})
+clip("front_travel", 2.0, lambda t: {s: {"lift": through(t, 2.0, S_LO, S_HI)} for s in SKIS})
+clip("rear_travel", 2.0, lambda t: {"track": {"lift": through(t, 2.0, T_LO, T_HI)}})
+clip("landing", 1.6, lambda t: {**{s: {"lift": land(t, S_LO, S_HI)} for s in SKIS},
+                                "track": {"lift": land(t - 0.03, T_LO, T_HI)}})
+# The belt runs back along the snow, so each wheel on it rolls forward: a
+# negative turn about +x.
+clip("belt_run", 1.0, lambda t: {"morph": {"lugs": t},
+                                 **{f"wheel_{w}": {"turn": -t * RUN_METRES / r} for w, (_, _, r) in enumerate(WHEELS)}})
 
 # ---------------------------------------------------------------- the STUDIO
 # The cameras aim at the machine's middle, from the tunnel's end to the ski tips.
-finish(SPEC["id"], OUT, SAMPLES, centre=(0, tipz / 2, 0.45), size=tipz)
+finish(SPEC["id"], OUT, SAMPLES, centre=(0, tipz / 2, 0.45), size=tipz,
+       extras={"beltRunMetres": RUN_METRES, "frame": "trace"})

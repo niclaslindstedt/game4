@@ -45,7 +45,12 @@ const KINDS = {
     data: async (id) => {
       const { SLEDS } = await import("../engine/index.ts");
       const { SLED_LOOKS } = await import("../pwa/src/game/sled-looks.ts");
-      return { spec: SLEDS.find((s) => s.id === id), look: SLED_LOOKS[id] };
+      const { TRAVEL, BAR_TURN } = await import("../pwa/src/game/sled-gear.ts");
+      return {
+        spec: SLEDS.find((s) => s.id === id),
+        look: SLED_LOOKS[id],
+        gear: { travel: TRAVEL, barTurn: BAR_TURN },
+      };
     },
     builder: "sled.py",
     fallback: "fox",
@@ -147,7 +152,7 @@ async function model(id, data, quality) {
     // what was saved, and anything that went wrong.
     const echo = (buf) => {
       for (const line of buf.toString().split("\n")) {
-        if (/^(GROUPS|TRIANGLES)|Saved: '|Error|Traceback|File "/.test(line)) {
+        if (/^(BONES|CLIPS|TRIANGLES)|Saved: '|Error|Traceback|File "/.test(line)) {
           console.log(line.replace(/^.*Saved: '(.*)'.*$/, "saved $1").replace(`${root}/`, ""));
         }
       }

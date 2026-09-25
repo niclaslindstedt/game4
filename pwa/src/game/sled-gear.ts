@@ -29,6 +29,29 @@ import { lookFrame, type SledLook } from "./sled-looks.ts";
  * at when the engine reports it (the spec's "about 8 cm"). */
 export const REST_SAG = 0.08;
 
+/** How far the drawn skis and the tread move off their rest, m: the droop
+ * (negative) and the bump either end is drawn through, whatever the engine
+ * reports. A modelled machine's clips run the same travel (`make blender`). */
+export const TRAVEL = { ski: [-0.12, 0.2], tread: [-0.12, 0.25] } as const;
+
+/** The bars' turn about the post at full steer, rad. */
+export const BAR_TURN = 0.42;
+
+const clamp = (v: number, [lo, hi]: readonly [number, number]): number =>
+  Math.max(lo, Math.min(hi, v));
+
+/** Each ski's and the tread's lift off the rest, m, as drawn: the engine's
+ * compression less the rest sag, held to the drawn travel. */
+export function gearLift(sled: SledState): { ski: [number, number]; tread: number } {
+  return {
+    ski: [
+      clamp(sled.skiCompression[0] - REST_SAG, TRAVEL.ski),
+      clamp(sled.skiCompression[1] - REST_SAG, TRAVEL.ski),
+    ],
+    tread: clamp(sled.treadCompression - REST_SAG, TRAVEL.tread),
+  };
+}
+
 type P = [number, number];
 
 /** A side profile in the body's (z, y) plane, extruded `width` across x and
@@ -274,9 +297,10 @@ export function buildGear(
   };
   return {
     pose(sled, sink) {
+      const lifts = gearLift(sled);
       for (let i = 0; i < 2; i++) {
         const s = skis[i];
-        const lift = Math.max(-0.12, Math.min(0.2, sled.skiCompression[i] - REST_SAG));
+        const lift = lifts.ski[i];
         s.group.position.y = ground + lift + sink * 0.7;
         // Clockwise from above is a positive turn about +y in the engine's
         // frame, which is three's too (`lib/quat.ts`).
@@ -308,7 +332,7 @@ export function buildGear(
           d,
         );
       }
-      const rearLift = Math.max(-0.12, Math.min(0.25, sled.treadCompression - REST_SAG));
+      const rearLift = lifts.tread;
       tread.position.y = rearLift + sink * 0.8;
       const ty = tread.position.y;
       for (let i = 0; i < 2; i++) {

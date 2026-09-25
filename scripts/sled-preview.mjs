@@ -23,7 +23,10 @@
 //   node scripts/sled-preview.mjs --sheet=landing --vy=8 --skip-build
 //   node scripts/sled-preview.mjs --asset=previews/blender/fox-lod0.glb,previews/blender/fox-lod2.glb
 //                                  the builder's machine beside modelled
-//                                  versions of it (the `blender-assets` skill)
+//                                  versions of it (the `blender-assets` skill):
+//                                  the asset sheet, the rig sheet (every one
+//                                  posed at the same engine moments) and the
+//                                  clips sheet (the first model's clips played)
 
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { basename, dirname, join, resolve } from "node:path";
@@ -37,7 +40,9 @@ import { serveDir } from "./lib/serve-dist.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const buildDir = join(root, "previews", ".sled-preview");
 const outDir = join(root, "previews");
-const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing", "asset"];
+const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing"];
+/** The sheets that draw modelled versions (`--asset`). */
+const ASSET_SHEETS = ["asset", "rig", "clips"];
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -68,7 +73,7 @@ const args = parseArgs(
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing|asset] [--sled=id] [--views=a,b] [--asset=a.glb,b.glb] [--skip-build]",
+  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing|asset|rig|clips] [--sled=id] [--views=a,b] [--asset=a.glb,b.glb] [--skip-build]",
 );
 
 const assets = args.asset
@@ -81,14 +86,14 @@ for (const a of assets) {
     process.exit(2);
   }
 }
-const wanted = args.sheet ? [args.sheet] : assets.length ? ["asset"] : SHEETS.slice(0, -1);
-if (wanted.includes("asset") && !assets.length) {
-  console.error("the asset sheet needs --asset=<file.glb>[,…]");
+const wanted = args.sheet ? args.sheet.split(",") : assets.length ? ASSET_SHEETS : SHEETS;
+if (wanted.some((s) => ASSET_SHEETS.includes(s)) && !assets.length) {
+  console.error(`the ${ASSET_SHEETS.join(", ")} sheets need --asset=<file.glb>[,…]`);
   process.exit(2);
 }
 for (const s of wanted) {
-  if (!SHEETS.includes(s)) {
-    console.error(`unknown sheet "${s}" (${SHEETS.join(", ")})`);
+  if (![...SHEETS, ...ASSET_SHEETS].includes(s)) {
+    console.error(`unknown sheet "${s}" (${[...SHEETS, ...ASSET_SHEETS].join(", ")})`);
     process.exit(2);
   }
 }

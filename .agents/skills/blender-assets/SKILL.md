@@ -38,10 +38,11 @@ sled) — its judging rules apply to a model too.
 
 | Piece | Role |
 | --- | --- |
-| `scripts/blender.mjs` | THE DRIVER (`make blender`): `KINDS` (per kind: its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`GROUPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error |
-| `scripts/blender/lib.py` | THE SHELF every builder imports: the scene, `mat`, the geometry (`loft`, `superellipse`, `tube`, `cyl`, `box`, `ellipsoid`, `coil`, `catmull`, `resample`, boolean cutters), `group()`, and `finish()` — the studio, the Cycles stills, the join by group, LOD0 and the decimated LODs as glTF |
+| `scripts/blender.mjs` | THE DRIVER (`make blender`): `KINDS` (per kind: its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`BONES`, `CLIPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error |
+| `scripts/blender/lib.py` | THE SHELF every builder imports: the scene, `mat`, the geometry (`loft`, `superellipse`, `tube`, `cyl`, `box`, `ellipsoid`, `coil`, `catmull`, `resample`, boolean cutters), THE RIG (`rides`, `bone`, `marker`, `clip`, `morph`), and `finish()` — the rig built and skinned, the clips baked, the studio, the Cycles stills, the join into one skinned mesh, LOD0 and the decimated LODs as glTF |
 | `scripts/blender/sled.py` | THE SLED BUILDER: the cowl, the lamp pods, the screen, the bars, the seat and what rides behind it, the tunnel, the flap, the boards, the belt and its lugs, the rear suspension, the skis, spindles, A-arms and coil-overs — every dimension off the spec and the trace |
-| `pwa/src/tools/sled-harness.ts` + `scripts/sled-preview.mjs` | THE ASSET SHEET (`make sled ARGS=--asset=a.glb,b.glb`): the builder's machine in the first row, each model below it, every one ridden by the game's rider seated by `riderSeat` |
+| `pwa/src/tools/sled-harness.ts` + `scripts/sled-preview.mjs` | THE ASSET SHEETS (`make sled ARGS=--asset=a.glb,b.glb`): `asset` — the builder's machine in the first row, each model below it, every one ridden by the game's rider seated by `riderSeat`; `rig` — builder and models posed at the same engine moments (steer, each end's bump and droop); `clips` — the first model's clips played across their length |
+| `pwa/src/tools/asset-rig.ts` | THE GAME'S SIDE OF THE RIG: a modelled sled posed off `SledState` exactly as `sled-gear.ts` / `sled-body.ts` pose the builder's (`gearLift`, `BAR_TURN`), every linkage re-laid to its `aim`, and its clips played |
 | `previews/blender/` | Everything made: `<id>.json` (what Blender was handed), `<id>-render-<view>.png`, `<id>-game-*.png`, `<id>-lod{0,1,2}.glb`, `<id>-{render,game}.blend` |
 
 ## The loop
@@ -62,11 +63,16 @@ sled) — its judging rules apply to a model too.
    pictures beside the references. Silhouette first (from the side), then
    the three-quarter, then detail.
 4. **Then the budget**: `make blender ID=fox ARGS=--quality=game` — the
-   parts joined by group, LOD0 and two LODs exported, every count printed.
+   parts joined into one skinned mesh on the rig, the clips baked, LOD0
+   and two LODs exported, every count printed.
 5. **Then the game's lab**: `make sled ARGS="--asset=previews/blender/fox-lod0.glb,previews/blender/fox-lod1.glb --views=side,three,chase --cell=480"`
    → `previews/sled-asset-fox.png`. The chase view is the verdict, as it is
    for the builder's machine (`sled-design`): the rider's back, the tunnel
-   and flap, the skis either side, at sixty pixels.
+   and flap, the skis either side, at sixty pixels. Then the rig:
+   `--sheet=rig,clips` (with `--views=three,front`) — the model beside the
+   builder's machine at the same moments, and every clip played. A linkage
+   that leaves its part, a ski that turns the other way, a clip that shows
+   another clip's pose are all read off these two sheets.
 6. **Report** before and after with the pictures and the triangle table.
 
 ## The frame
@@ -136,9 +142,50 @@ once, lugs one piece across the belt, no boolean holes, coils coarser — is
 screen) to 17.7k (the Bison and the Beaver: tall screens, mirrors, what
 rides behind the seat); the skis and the track barely move, the body is
 the spread. LOD0 is indistinguishable from the render model at any
-game range. The groups are **the parts that move on their own** (the body,
-each ski with its spindle and arms, the track): the game poses each ski off
-its own compression, so a model joined into one mesh could not be ridden.
+game range. It is **one skinned mesh** on the rig (37 bones on the Fox),
+with the lugs a mesh of their own for their morph (a shape key forbids the
+join's modifiers being applied, and the decimation's): two meshes, the
+first one draw per material.
+
+## The rig and the clips
+
+A model the game could ride has to move where the game's machine moves,
+and by the same numbers, so the rig is the game's posing written into the
+model (`lib.py`'s header, `sled.py`'s):
+
+- **Every part rides ONE bone, rigidly** (weight 1): `rides(name)` before
+  making the parts. That is how the game draws its own figures
+  (`posed-merge.ts`: every part a bone).
+- **DRIVERS** are the bones the game sets off the engine: the sled's
+  `bars`, `ski_l` / `ski_r` (bone along the spindle), `track`, the
+  `wheel_*` axles (their `radius` in the extras). `asset-rig.ts` poses them
+  off `gearLift` and `BAR_TURN` — the numbers `sled-gear.ts` poses the
+  builder's by, exported from there, and handed to Blender in the JSON so
+  the clips run the same travel. Never restate either.
+- **LINKAGES** (A-arms, coil-overs, tie rods, rear arms, the rear shock)
+  are laid from the chassis to a `marker` on the part they meet, their
+  tail ON the marker's head at rest. Rigid (`DAMPED_TRACK`: a shock body
+  and its shaft, each aimed at the other's end, so the coil-over
+  TELESCOPES) or stretched (`STRETCH_TO`: arms, springs, rods). The target
+  is written into the glTF (`extras.aim`, `extras.stretch`) so the game
+  re-lays them — constraints do not survive into glTF.
+- **The clips** are keyed on the drivers a frame at a time, BAKED visually
+  (`nla.bake`) so the linkages' motion is in the file, and each laid on an
+  NLA track of its name, exported with `export_animation_mode=NLA_TRACKS`:
+  one glTF animation a clip, the lugs' morph weights merged in by the
+  track's name. The sled carries `steer`, `front_travel`, `rear_travel`,
+  `landing` and `belt_run` (the lugs moved one pitch — two where they are
+  staggered — round the loop, `beltRunMetres` on the root, so a game plays
+  it at speed ÷ that).
+- **Traps met.** An NLA track left unmuted PLAYS under the next clip's
+  bake, and every later clip carries the earlier ones' pose — mute each as
+  it is laid, unmute at the end, and leave `use_nla` off so the stills are
+  at rest. A three.js action set to its full length wraps to frame 0 —
+  `LoopOnce` with `clampWhenFinished`. A joined mesh takes its DATA name
+  from the active part (it came out `a_arm`); name both. The sides are the
+  MODEL's (`_l` is x negative in the trace frame), and a glTF turned to
+  face the game puts that at the game's +x — so the lab matches skis to
+  the engine's by which side of the machine they stand on, never by name.
 
 **The lower LODs are a blind decimation**, and it shows: up close LOD2 tears
 (spikes, a broken stripe). Fine at the range a rival is drawn at; a real
@@ -179,14 +226,14 @@ band), which is open work.
    and `MOUNTS` from `rider-pose.ts`) — imported through `aliasEngine`,
    never restated.
 2. **The builder**, `scripts/blender/<kind>.py`: `from lib import *`, its
-   frame stated in its header, `group()` for each part that moves on its
-   own, `finish(name, OUT, SAMPLES, centre, size)` at the end. A helper two
+   frame stated in its header, `rides()` / `bone()` for the rig, `clip()`
+   for what it plays, `finish(name, OUT, SAMPLES, centre, size)` at the end. A helper two
    kinds need goes into `lib.py`.
 3. **The lab.** The kind's own lab owes an asset view like the sled lab's
    (`--asset=`), with the turn back into the game's frame in the lab, not
-   in the model. A kind with a skeleton (the rider, the animals) needs its
-   bones exported and posed by the game's own pose — `posed-merge.ts`
-   already draws the sled as rigid bones; a skinned figure is new ground.
+   in the model, and a rig sheet posing it by the game's own numbers beside
+   the builder's (the sled's `rig` sheet and `asset-rig.ts` are the
+   pattern).
 4. Register nothing new: `make blender KIND=<kind>` is already the target.
    Update this skill's table and the README's `make blender` row.
 
