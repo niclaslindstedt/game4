@@ -204,6 +204,7 @@ uniform float uLampOn[${LAMP_SLOTS}];
 uniform vec3 uLampCol;
 uniform vec3 uTailPos[${TAIL_SLOTS}];
 uniform float uTailOn[${TAIL_SLOTS}];
+uniform vec3 uTailDir[${TAIL_SLOTS}];
 varying vec2 vUv;
 varying vec2 vSpin;
 varying vec4 vLook;
@@ -305,13 +306,15 @@ void main() {
     float toward = 0.5 + 0.5 * pow(max(0.0, dot(-toEye, uLampDir[i])), 3.0);
     col += uLampCol * uLampOn[i] * cone * fall * fall * toward * 1.4;
   }
-  // A taillight is a small lamp: it tints the powder within a metre of it,
-  // not the whole cloud a stalled sled sits in. Against a moonlit cloud a
-  // few hundredths bright, a wider or brighter term turns the lot pink.
+  // A taillight shines ASTERN: only what hangs behind the lamp is lit by
+  // it. Lit all round, it reddened the cloud beside and ahead of the sled
+  // too, a red with no lamp in sight to come from.
   for (int i = 0; i < ${TAIL_SLOTS}; i++) {
     if (uTailOn[i] <= 0.0) continue;
-    float gap = length(vWorld - uTailPos[i]);
-    col += vec3(1.0, 0.1, 0.05) * uTailOn[i] * exp(-gap * gap / 0.8) * 0.1;
+    vec3 away = vWorld - uTailPos[i];
+    float gap = length(away);
+    float astern = smoothstep(-0.15, 0.35, dot(away, uTailDir[i]) / max(gap, 1e-3));
+    col += vec3(1.0, 0.1, 0.05) * uTailOn[i] * astern * exp(-gap * gap / 3.0) * 0.25;
   }
 
   gl_FragColor = vec4(col, alpha);
@@ -354,8 +357,16 @@ export type SnowCloud = {
   /** The sled the lens is looking at, and how thin its tail is drawn
    * between them (1: whole — a planted lens). */
   setFocus(x: number, y: number, z: number, veil: number): void;
-  /** Where the taillights are and how far on (0 off). */
-  setTail(slot: number, x: number, y: number, z: number, on: number): void;
+  /** Where the taillights are, how far on (0 off) and which way they
+   * shine (a unit vector astern). */
+  setTail(
+    slot: number,
+    x: number,
+    y: number,
+    z: number,
+    on: number,
+    dir?: { x: number; y: number; z: number },
+  ): void;
   /** The SPRAY row's share of the rates and of the pool. */
   setBudget(share: number): void;
   clear(): void;
@@ -412,6 +423,7 @@ export function createSnowCloud(haze: HazeUniforms): SnowCloud {
 
   const noise = noiseTexture();
   const tailPos = Array.from({ length: TAIL_SLOTS }, () => new THREE.Vector3());
+  const tailDir = Array.from({ length: TAIL_SLOTS }, () => new THREE.Vector3(0, 0, -1));
   const material = new THREE.ShaderMaterial({
     uniforms: {
       ...haze,
@@ -427,6 +439,7 @@ export function createSnowCloud(haze: HazeUniforms): SnowCloud {
       uFocus: { value: new THREE.Vector4(0, -1e5, 0, 1) },
       uTailPos: { value: tailPos },
       uTailOn: { value: new Array<number>(TAIL_SLOTS).fill(0) },
+      uTailDir: { value: tailDir },
     },
     vertexShader: VERTEX,
     fragmentShader: FRAGMENT,
@@ -779,9 +792,10 @@ export function createSnowCloud(haze: HazeUniforms): SnowCloud {
     setFocus(x, y, z, veil) {
       (material.uniforms.uFocus.value as THREE.Vector4).set(x, y, z, veil);
     },
-    setTail(slot, x, y, z, on) {
+    setTail(slot, x, y, z, on, dir) {
       if (slot < 0 || slot >= TAIL_SLOTS) return;
       tailPos[slot].set(x, y, z);
+      if (dir) tailDir[slot].set(dir.x, dir.y, dir.z);
       (material.uniforms.uTailOn.value as number[])[slot] = on;
     },
     setBudget(next) {

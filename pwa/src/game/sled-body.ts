@@ -185,6 +185,12 @@ export function lampMounts(spec: SledSpec): {
   };
 }
 
+/** THE TAILLIGHT, lit: the lens's glow by day and what the dark adds to
+ * it (emissive intensity), the brake's multiple of both (a combined tail
+ * and brake lamp, the brake filament the brighter), and the glow round it
+ * seen from behind at night, m across. */
+const TAIL_LIT = { day: 0.6, night: 2.4, brake: 1.2, glow: 1.5 };
+
 /** How far below the body's forward axis the headlamp is aimed, rad. */
 export const HEADLAMP_DIP = 0.1;
 
@@ -286,6 +292,17 @@ export function createSledModel(
   const spring = mat({ color: style.spring ?? style.body, roughness: 0.35, metalness: 0.3 });
   const pattern = PATTERNS[style.pattern ?? LIVERIES[spec.id][0].pattern];
   const lamp = mat({ color: 0xfff6dc, emissive: 0xfff2cc, emissiveIntensity: 0.6, roughness: 0.2 });
+  // THE TAILLIGHT'S LENS: a lamp, not paint — lit from inside, always on
+  // (a sled's tail lamp burns whenever it runs, and must read from 150 m
+  // behind it in the dark), brighter on the brake. It is its own mesh, out
+  // of the merged draw, because the merged draw has one colour per part and
+  // no light of its own: merged, it went as dark as the tunnel at night.
+  const tailLens = mat({
+    color: 0x4a0606,
+    emissive: 0xff1c0c,
+    emissiveIntensity: TAIL_LIT.day,
+    roughness: 0.3,
+  });
   const glass = wrap(
     new THREE.MeshStandardMaterial({
       color: 0x2c3a48,
@@ -464,7 +481,7 @@ export function createSledModel(
       Math.abs(t0[1] - t1[1]) + 0.02,
       Math.abs(t0[0] - t1[0]),
     ),
-    mat({ color: 0xc81818, emissive: 0x800000, roughness: 0.3 }),
+    tailLens,
   );
   tail.position.set(0, (t0[1] + t1[1]) / 2 + 0.01, (t0[0] + t1[0]) / 2);
   // The grab loop over the tail's tip.
@@ -590,7 +607,7 @@ export function createSledModel(
   // stays its own mesh — it is the one transparent thing on the machine.
   const parts: THREE.Mesh[] = [];
   root.traverse((o) => {
-    if (o instanceof THREE.Mesh && o.material !== glass) parts.push(o);
+    if (o instanceof THREE.Mesh && o.material !== glass && o.material !== tailLens) parts.push(o);
   });
   const merged = mergePosed(
     root,
@@ -620,7 +637,16 @@ export function createSledModel(
     return sprite;
   };
   const headGlow = glowOf(0xfff0d0, 1.1, [mounts.head[0], mounts.head[1], mounts.head[2] + 0.05]);
-  const tailGlow = glowOf(0xff2a1a, 0.5, mounts.tail);
+  const tailGlow = glowOf(0xff2a1a, TAIL_LIT.glow, [
+    mounts.tail[0],
+    mounts.tail[1],
+    mounts.tail[2] - 0.04,
+  ]);
+  // Over the snow cloud (drawn at 6): a sled's own tail hangs round its
+  // lamp, and a glow drawn under it was buried there — the red the cloud
+  // took from the lamp then had no lamp to come from.
+  tailGlow.renderOrder = 7;
+  let braking = 0;
 
   const toRoot = new THREE.Quaternion();
   const thrown = new THREE.Quaternion();
@@ -690,16 +716,21 @@ export function createSledModel(
         });
       }
       bars.rotation.y = sled.steer * 0.42;
+      braking = sled.brake;
       merged.update();
     },
     setLamps(level, facing) {
       const ahead = THREE.MathUtils.smoothstep(facing, -0.2, 0.6);
       const behind = THREE.MathUtils.smoothstep(-facing, -0.1, 0.5);
+      const on = Math.min(1, level);
+      const brake = 1 + TAIL_LIT.brake * braking;
+      tailLens.emissiveIntensity = (TAIL_LIT.day + TAIL_LIT.night * on) * brake;
+      tailGlow.scale.setScalar(TAIL_LIT.glow * (1 + 0.4 * braking));
       for (const [sprite, k] of [
         [headGlow, ahead],
-        [tailGlow, 0.9 * behind],
+        [tailGlow, behind * Math.min(1, 0.9 * brake)],
       ] as const) {
-        const o = Math.min(1, level) * k;
+        const o = on * k;
         sprite.visible = o > 0.02;
         (sprite.material as THREE.SpriteMaterial).opacity = o;
       }
