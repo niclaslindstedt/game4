@@ -191,6 +191,12 @@ export function lampMounts(spec: SledSpec): {
  * seen from behind at night, m across. */
 const TAIL_LIT = { day: 0.6, night: 2.4, brake: 1.2, glow: 1.5 };
 
+/** THE HEADLAMPS, lit: the lenses' glow by day and what the dark adds
+ * (emissive intensity), and each lens's glow seen from ahead at night, m
+ * across — larger than the tail's, as a lamp that has to show a rider 30 m
+ * of snow is far brighter than one that only has to be seen. */
+const HEAD_LIT = { day: 0.8, night: 3.2, glow: 1.8 };
+
 /** How far below the body's forward axis the headlamp is aimed, rad. */
 export const HEADLAMP_DIP = 0.1;
 
@@ -291,7 +297,14 @@ export function createSledModel(
   // coil-overs are — the one bright thing in the running gear.
   const spring = mat({ color: style.spring ?? style.body, roughness: 0.35, metalness: 0.3 });
   const pattern = PATTERNS[style.pattern ?? LIVERIES[spec.id][0].pattern];
-  const lamp = mat({ color: 0xfff6dc, emissive: 0xfff2cc, emissiveIntensity: 0.6, roughness: 0.2 });
+  // THE HEADLAMPS' LENSES, lit the same way as the tail's below, and out
+  // of the merged draw for the same reason.
+  const lamp = mat({
+    color: 0xfff6dc,
+    emissive: 0xfff2cc,
+    emissiveIntensity: HEAD_LIT.day,
+    roughness: 0.2,
+  });
   // THE TAILLIGHT'S LENS: a lamp, not paint — lit from inside, always on
   // (a sled's tail lamp burns whenever it runs, and must read from 150 m
   // behind it in the dark), brighter on the brake. It is its own mesh, out
@@ -607,7 +620,14 @@ export function createSledModel(
   // stays its own mesh — it is the one transparent thing on the machine.
   const parts: THREE.Mesh[] = [];
   root.traverse((o) => {
-    if (o instanceof THREE.Mesh && o.material !== glass && o.material !== tailLens) parts.push(o);
+    if (
+      o instanceof THREE.Mesh &&
+      o.material !== glass &&
+      o.material !== lamp &&
+      o.material !== tailLens
+    ) {
+      parts.push(o);
+    }
   });
   const merged = mergePosed(
     root,
@@ -636,16 +656,24 @@ export function createSledModel(
     root.add(sprite);
     return sprite;
   };
-  const headGlow = glowOf(0xfff0d0, 1.1, [mounts.head[0], mounts.head[1], mounts.head[2] + 0.05]);
+  // One glow on each lens: a machine coming at you is two lights.
+  const headGlows = [-1, 1].map((side) =>
+    glowOf(0xfff0d0, HEAD_LIT.glow, [
+      (side * look.lamps.width) / 3,
+      mounts.head[1],
+      mounts.head[2] + 0.05,
+    ]),
+  );
   const tailGlow = glowOf(0xff2a1a, TAIL_LIT.glow, [
     mounts.tail[0],
     mounts.tail[1],
     mounts.tail[2] - 0.04,
   ]);
   // Over the snow cloud (drawn at 6): a sled's own tail hangs round its
-  // lamp, and a glow drawn under it was buried there — the red the cloud
+  // lamps, and a glow drawn under it was buried there — the red the cloud
   // took from the lamp then had no lamp to come from.
   tailGlow.renderOrder = 7;
+  for (const g of headGlows) g.renderOrder = 7;
   let braking = 0;
 
   const toRoot = new THREE.Quaternion();
@@ -726,8 +754,10 @@ export function createSledModel(
       const brake = 1 + TAIL_LIT.brake * braking;
       tailLens.emissiveIntensity = (TAIL_LIT.day + TAIL_LIT.night * on) * brake;
       tailGlow.scale.setScalar(TAIL_LIT.glow * (1 + 0.4 * braking));
+      lamp.emissiveIntensity = HEAD_LIT.day + HEAD_LIT.night * on;
       for (const [sprite, k] of [
-        [headGlow, ahead],
+        [headGlows[0], ahead],
+        [headGlows[1], ahead],
         [tailGlow, behind * Math.min(1, 0.9 * brake)],
       ] as const) {
         const o = on * k;
