@@ -57,6 +57,7 @@ sibling's the day one lands, and add its registry row.
 | `snow-look` | The snow as DRAWN: the shader, the glitter, the groomed track, the trail map and the furrows it lowers |
 | `visual-effects` | What the sled throws and leaves and what the rider feels: the spray, the trails' stamping, the vibration table |
 | `platform-shells` | The desktop app (`tauri/`) and the store app (`native/`): the two-crate split, the WebView and its server, the `__SH_SHELL__` seam, the haptics bridge, the names stated twice |
+| `picture-pricing` | Every PICTURE stop's measured cost and argued benefit, the price list lab (`make bench --costs`), and what PRESET ▸ AUTO keeps because of them |
 | `lab-tooling` | How a lab or a script is built: the `scripts/lib/` shelf, pure-Node versus browser-driven, the harness page, the URL contract, registering a tool |
 | `hud-and-menus` | The HUD's readouts, the three presses, the handlebar and the lever, the keys — what is drawn over a RACE |
 | `menu-system` | The shell around a race: the attract card, the front door, the loading card, the pause card, the settings |

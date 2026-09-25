@@ -52,6 +52,7 @@ export function createEnvironment(
 ): Environment {
   const haze = createHazeUniforms();
   const dome = createSkyDome(haze, domeRadius);
+  dome.mesh.name = "sky";
   scene.add(dome.mesh);
 
   const hemi = new THREE.HemisphereLight(0x88aaff, 0xffffff, 1);

@@ -30,7 +30,9 @@ import {
 import {
   benchmarkReport,
   median,
+  HIDEABLE,
   noCost,
+  noGpu,
   noMachine,
   noTotals,
   pictureRows,
@@ -217,6 +219,13 @@ function fakeRun(frames = 120): BenchmarkRun {
       { name: "terrain", objects: 4, triangles: 150_000 },
     ],
     totals,
+    gpu: {
+      frames: 100,
+      dropped: 2,
+      ms: { shadow: 50, scene: 300, terrain: 120 },
+      tags: { "": { frames: 100, ms: 470 }, forest: { frames: 10, ms: 40 } },
+    },
+    hidden: [],
     machine: { cores: 8, clockMs: 0.1, gpu: "a graphics card" },
     step: 1 / 60,
     frames,
@@ -247,7 +256,8 @@ describe("the report (benchmark-report.ts)", () => {
   });
 
   it("derives `rest` and `unbilled`, and never prints a negative phase", () => {
-    const run = fakeRun();
+    // The A/B's differences are signed on purpose; this is about the phases.
+    const run = { ...fakeRun(), gpu: noGpu() };
     run.totals.pose = 99 * run.totals.frames;
     run.totals.sim = 99 * run.totals.frames;
     const text = benchmarkReport(run);
@@ -267,6 +277,35 @@ describe("the report (benchmark-report.ts)", () => {
     expect(median([1, 2, 100])).toBe(2);
     expect(median([1, 3])).toBe(2);
     expect(median([])).toBe(0);
+  });
+
+  it("bills THE GPU'S OWN TIMER slice by slice, in the order a frame draws them", () => {
+    const text = benchmarkReport(fakeRun());
+    expect(text).toContain("WHERE THE GPU WENT, TIMER QUERIES OVER 100 FRAMES (2 dropped)");
+    const lines = text.split("\n");
+    const at = (slice: string) => lines.findIndex((l) => l.trimStart().startsWith(`${slice} `));
+    expect(at("shadow")).toBeGreaterThan(0);
+    expect(at("shadow")).toBeLessThan(at("scene"));
+    expect(at("scene")).toBeLessThan(at("terrain"));
+    expect(lines[at("scene")]).toMatch(/3\.000 ms\s+64%/);
+    expect(text).toMatch(/card\s+4\.700 ms/);
+    // No timer, no section: a machine without one is not billed zeroes.
+    expect(benchmarkReport({ ...fakeRun(), gpu: noGpu() })).not.toContain("WHERE THE GPU WENT");
+  });
+
+  it("bills the INTERLEAVED A/B as each variant's card time against the whole picture's", () => {
+    const text = benchmarkReport(fakeRun());
+    expect(text).toContain("A/B, INTERLEAVED FRAME BY FRAME");
+    expect(text).toMatch(/\(nothing\)\s+4\.700 ms\s+100/);
+    expect(text).toMatch(/forest\s+4\.000 ms\s+-0\.700\s+10/);
+    const alone = { ...fakeRun().gpu, tags: { "": { frames: 100, ms: 470 } } };
+    expect(benchmarkReport({ ...fakeRun(), gpu: alone })).not.toContain("A/B");
+  });
+
+  it("says a run drawn WITHOUT a subsystem is an A/B reading", () => {
+    expect(benchmarkReport(fakeRun())).not.toContain("HIDDEN");
+    const text = benchmarkReport({ ...fakeRun(), hidden: ["forest", "shadow"] });
+    expect(text).toContain("HIDDEN  forest · shadow — an A/B reading");
   });
 
   it("writes every row of OPTIONS ▸ PICTURE down, the switch as a word", () => {
@@ -457,5 +496,21 @@ describe("what the developer page remembers (settings.ts)", () => {
     expect(readParams("?menu=benchHistory").page).toBe("benchHistory");
     expect(readParams("?bench=1").bench).toBe(true);
     expect(readParams("").bench).toBe(false);
+  });
+
+  it("reads the benchmark's GPU timer and its A/B hide off a link", () => {
+    expect(readParams("?bench=1").gpu).toBe("passes");
+    expect(readParams("?bench=1&gpu=split").gpu).toBe("split");
+    expect(readParams("?bench=1&gpu=nonsense").gpu).toBe("passes");
+    expect(readParams("?bench=1").hide).toEqual([]);
+    expect(readParams("?hide=forest,nothing,cloud").hide).toEqual(["forest", "cloud"]);
+    expect(readParams("?bench=1&ab=1").ab).toBe(true);
+    expect(readParams("?bench=1&frames=600").frames).toBe(600);
+    expect(readParams("?bench=1&frames=5").frames).toBe(null);
+    expect(readParams("?bench=1&frames=99999").frames).toBe(null);
+    expect(readParams("?bench=1&view=vista").view).toBe("vista");
+    expect(readParams("?bench=1").view).toBe("race");
+    expect(readParams("?bench=1").ab).toBe(false);
+    for (const name of HIDEABLE) expect(readParams(`?hide=${name}`).hide).toEqual([name]);
   });
 });

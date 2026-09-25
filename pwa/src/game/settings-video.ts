@@ -283,9 +283,49 @@ export function presetOf(video: VideoSettings): PresetLevel {
   return "custom";
 }
 
+/** True while the rider has expressed no opinion about the picture: every
+ * row where it shipped. */
+export function videoUntouched(video: VideoSettings): boolean {
+  return (Object.keys(DEFAULT_VIDEO) as (keyof VideoSettings)[]).every(
+    (key) => video[key] === DEFAULT_VIDEO[key],
+  );
+}
+
 /** A picture moved onto a preset, the canvas's antialiasing kept. */
 export function withPreset(video: VideoSettings, tier: Tier): VideoSettings {
   return { ...video, ...VIDEO_PRESETS[tier] };
+}
+
+/** The rows a picture is fitted by (`picture-fit.ts`) and a link may set
+ * (`?picture=`), each with its ladder, cheapest first. ANTIALIAS is not
+ * one: the canvas takes it only when it is made. */
+export type PictureRow = Exclude<keyof VideoSettings, "antialias">;
+export const PICTURE_LADDERS: { readonly [R in PictureRow]: readonly VideoSettings[R][] } = {
+  resolution: TIERS,
+  distance: DISTANCE_LEVELS,
+  terrain: TIERS,
+  trails: TRAIL_LEVELS,
+  forest: TIERS,
+  shadows: SHADOW_LEVELS,
+  spray: TIERS,
+};
+export const PICTURE_ROWS = Object.keys(PICTURE_LADDERS) as PictureRow[];
+
+/** A picture as a link spells it, `row:stop` by commas
+ * (`distance:low,shadows:off`), and back: only real rows at real stops. */
+export function readPicture(text: string | null): Partial<VideoSettings> {
+  const out: Partial<Record<PictureRow, string>> = {};
+  for (const pair of (text ?? "").split(",")) {
+    const [row, stop] = pair.split(":");
+    const ladder = PICTURE_LADDERS[row as PictureRow] as readonly string[] | undefined;
+    if (ladder?.includes(stop)) out[row as PictureRow] = stop;
+  }
+  return out as Partial<VideoSettings>;
+}
+export function writePicture(video: Partial<VideoSettings>): string {
+  return PICTURE_ROWS.filter((row) => video[row] !== undefined)
+    .map((row) => `${row}:${video[row]}`)
+    .join(",");
 }
 
 /** A stored blob — anything at all — made into a picture this build offers,

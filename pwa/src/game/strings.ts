@@ -277,6 +277,7 @@ export const STRINGS = {
   optMax: "MAX",
   optShadowSleds: "SLEDS",
   optCustom: "CUSTOM",
+  optAuto: "AUTO",
   optUnset: "—",
   optPrev: "previous",
   optNext: "next",
@@ -330,7 +331,7 @@ export const STRINGS = {
   optPicture: "PICTURE",
   optPreset: "PRESET",
   optPresetHint:
-    "Every row below at once. CUSTOM means a row has been moved off the preset it was on.",
+    "Every row below at once. AUTO times this machine and sets each row for sixty frames a second, keeping what shows most. CUSTOM means a row has been moved off the preset it was on.",
   optResolution: "RESOLUTION",
   optResolutionHint: "How many pixels are drawn, as a share of the screen's own.",
   optDistance: "DISTANCE",

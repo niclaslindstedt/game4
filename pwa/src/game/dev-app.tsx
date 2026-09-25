@@ -16,6 +16,7 @@ import type { GameMode, GameState } from "@engine";
 
 import type { LoadPlan } from "./app-load.ts";
 import { createBenchRun } from "./bench-run.ts";
+import type { GpuMode, Hideable } from "./benchmark-report.ts";
 import type { BenchmarkStatus } from "./benchmark.ts";
 import { DebugOverlay } from "./debug-hud.tsx";
 import type { DebugSnapshot } from "./debug-readout.ts";
@@ -44,6 +45,12 @@ export type DevAppWorld = {
   video: () => VideoSettings;
   /** `?bench=1`: run the benchmark the moment the app is up. */
   benchNow: boolean;
+  /** The benchmark's GPU timer and A/B hide, off the URL. */
+  benchGpu: GpuMode;
+  benchHide: readonly Hideable[];
+  benchAb: boolean;
+  benchFrames: number | null;
+  benchVista: boolean;
 };
 
 export type DevRig = {
@@ -86,6 +93,11 @@ export function useDevApp(): DevApp {
       silence: world.silence,
       setStatus: setBench,
       video: world.video,
+      gpu: world.benchGpu,
+      hide: world.benchHide,
+      ab: world.benchAb,
+      frames: world.benchFrames,
+      vista: world.benchVista,
     });
     /** From the press to the way out — the load under the card included. */
     let benching = false;

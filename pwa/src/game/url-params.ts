@@ -42,6 +42,17 @@
 //                   title's hold lets it out), `unlocks` and `benchHistory` behind it.
 //   ?bench=1        run DEVELOPER ▸ BENCHMARK the moment the app is up —
 //                   how a lab takes a score off the built site.
+//   ?gpu=<mode>     ...with the GPU's timer cutting each frame into its
+//                   render passes (`passes`, the default), the scene split
+//                   by subsystem as well (`split`), or not at all (`off`).
+//   ?hide=<a,b>     ...drawn WITHOUT these subsystems (`HIDEABLE`): the
+//                   A/B reading a slice is checked against.
+//   ?ab=1           ...hiding each subsystem a frame in turn, and timing
+//                   every variant on the GPU (the interleaved A/B).
+//   ?frames=<n>     ...timing this many frames instead of the plan's (60 up
+//                   to the plan's own) — a price list's shorter stretch.
+//   ?view=vista     ...from high over the basin's edge, looking across all
+//                   of it (`vistaOf`): the view DISTANCE is dearest from.
 //   ?weather=<kind> ride the map under this sky instead of the one R19
 //                   dealt it (clear, fair, high, overcast, snow, fog) —
 //                   how a lab photographs every weather on one seed.
@@ -54,6 +65,9 @@
 //   ?video=<tier>   ride this visit at a picture preset (low, medium, high —
 //                   `settings-video.ts`) without storing it: how a lab
 //                   meters or photographs a rung.
+//   ?picture=<r:s,…> ...and these rows at these stops over it
+//                   (`distance:low,shadows:off`, `readPicture`), never stored:
+//                   how the benchmark prices one row at a time.
 //   ?probe=0        do not time the machine on this visit: the first-visit
 //                   probe (`video-probe.ts`) may move the picture, and a lab
 //                   wants it held still.
@@ -76,10 +90,12 @@ import {
   type WeatherKind,
 } from "@engine";
 
+import { BENCHMARK } from "./benchmark-plan.ts";
+import { GPU_MODES, HIDEABLE, type GpuMode, type Hideable } from "./benchmark-report.ts";
 import { readPose, type SledPose } from "./debug-readout.ts";
 import type { CameraRung } from "./renderer-api.ts";
 import { RUN_CAMERAS } from "./settings.ts";
-import { TIERS, type Tier } from "./settings-video.ts";
+import { readPicture, TIERS, type Tier, type VideoSettings } from "./settings-video.ts";
 
 /** The developer's pages (`menu-dev.tsx`). */
 export type DevPage = "dev" | "unlocks" | "benchHistory";
@@ -113,6 +129,12 @@ export type UrlParams = {
   pose: SledPose | null;
   /** Run the benchmark on boot. */
   bench: boolean;
+  /** ...its GPU timer's cut, and what it is drawn without. */
+  gpu: GpuMode;
+  hide: Hideable[];
+  ab: boolean;
+  frames: number | null;
+  view: "race" | "vista";
   shot: boolean;
   paused: boolean;
   camera: CameraRung | null;
@@ -128,6 +150,8 @@ export type UrlParams = {
   page: MenuPage;
   /** A picture preset for this visit only. */
   video: Tier | null;
+  /** Picture rows for this visit only, laid over the preset (`?picture=`). */
+  picture: Partial<VideoSettings>;
   /** Whether the first-visit probe may run. */
   probe: boolean;
   /** A sky and a start hour for this visit's races, over the dealt ones;
@@ -147,6 +171,13 @@ function skyOf(q: URLSearchParams): SkyOverride | null {
   }
   if (q.get("hour") !== null && Number.isFinite(hour) && hour >= 0 && hour <= 24) sky.hour = hour;
   return sky.weather === undefined && sky.hour === undefined ? null : sky;
+}
+
+/** A benchmark's stretch a link may name: whole frames, from a second's
+ * worth to the plan's own. */
+function framesOf(raw: string | null): number | null {
+  const n = Number(raw);
+  return raw !== null && Number.isInteger(n) && n >= 60 && n <= BENCHMARK.frames ? n : null;
 }
 
 /** A seed a link may name: a whole number the generator's stream takes. */
@@ -170,6 +201,13 @@ export function readParams(search: string): UrlParams {
     t: Number.isFinite(t) && t > 0 ? Math.min(t, 600) : 0,
     pose: readPose(q.get("pose")),
     bench: q.get("bench") === "1",
+    gpu: GPU_MODES.includes(q.get("gpu") as GpuMode) ? (q.get("gpu") as GpuMode) : "passes",
+    hide: (q.get("hide") ?? "")
+      .split(",")
+      .filter((name): name is Hideable => HIDEABLE.includes(name as Hideable)),
+    ab: q.get("ab") === "1",
+    frames: framesOf(q.get("frames")),
+    view: q.get("view") === "vista" ? "vista" : "race",
     shot: q.get("shot") === "1",
     paused,
     camera:
@@ -188,6 +226,7 @@ export function readParams(search: string): UrlParams {
     menu: q.get("menu") !== null,
     page: MENU_PAGES.includes(q.get("menu") as MenuPage) ? (q.get("menu") as MenuPage) : "root",
     video: TIERS.includes(q.get("video") as Tier) ? (q.get("video") as Tier) : null,
+    picture: readPicture(q.get("picture")),
     probe: q.get("probe") !== "0",
     sky: skyOf(q),
     region: isRegionId(q.get("region")) ? (q.get("region") as RegionId) : null,

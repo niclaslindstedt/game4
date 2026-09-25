@@ -82,6 +82,9 @@ const stopsOf = <T extends Tier | "off" | "max">(ladder: readonly T[]): Stop<T>[
   ladder.map((id) => ({ id, label: STEP_WORD[id] }));
 
 const TIER_STOPS = stopsOf(TIERS);
+/** PRESET: AUTO first — the fit to this machine (`video-probe.ts`) — then
+ * the whole pictures. */
+const PRESET_STOPS: Stop<Tier | "auto">[] = [{ id: "auto", label: STRINGS.optAuto }, ...TIER_STOPS];
 const DISTANCE_STOPS = stopsOf<DistanceLevel>(DISTANCE_LEVELS);
 const TRAIL_STOPS = stopsOf<TrailLevel>(TRAIL_LEVELS);
 const SHADOW_WORD: Record<ShadowLevel, string> = {
@@ -197,8 +200,9 @@ export function OptionsPage({
 }) {
   const [hint, setHint] = useState<Hint | null>(null);
   const video = settings.video;
+  // A row moved by hand is the rider's picture, not the fit's.
   const setVideo = (next: Partial<VideoSettings>): void =>
-    onSettings({ ...settings, video: { ...video, ...next } });
+    onSettings({ ...settings, autoPicture: false, video: { ...video, ...next } });
   const setTouch = (next: Partial<Settings["touch"]>): void =>
     onSettings({ ...settings, touch: { ...settings.touch, ...next } });
   const setAssist = (next: Partial<Settings["assist"]>): void =>
@@ -307,10 +311,16 @@ export function OptionsPage({
             <StepRow
               label={STRINGS.optPreset}
               hint={STRINGS.optPresetHint}
-              stops={TIER_STOPS}
-              value={preset}
+              stops={PRESET_STOPS}
+              value={settings.autoPicture ? "auto" : preset}
               extra={STRINGS.optCustom}
-              onPick={(tier) => onSettings({ ...settings, video: withPreset(video, tier) })}
+              onPick={(tier) =>
+                onSettings(
+                  tier === "auto"
+                    ? { ...settings, autoPicture: true }
+                    : { ...settings, autoPicture: false, video: withPreset(video, tier) },
+                )
+              }
               onHint={setHint}
             />
             <StepRow

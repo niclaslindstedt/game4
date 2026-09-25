@@ -69,6 +69,7 @@ export function createGhostModel(
         drop();
         spec = run.sled.spec;
         model = createSledModel(spec, GHOST_STYLE, see);
+        model.root.name = "ghost";
         model.root.traverse((o) => {
           o.castShadow = false;
           o.receiveShadow = false;

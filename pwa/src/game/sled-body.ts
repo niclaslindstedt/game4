@@ -586,10 +586,8 @@ export function createSledModel(
 
   // THE WHOLE MACHINE AND ITS RIDER AS ONE DRAW (`posed-merge.ts`): every
   // opaque part keeps its place in the tree for the posing and is drawn
-  // through one vertex-coloured mesh. The parts bolted straight to the
-  // frame are laid once; the skis, the struts, the bars, the tread and the
-  // rider are re-laid each frame. The windshield stays its own mesh — it is
-  // the one transparent thing on the machine.
+  // through one vertex-coloured mesh, each part a bone of it. The windshield
+  // stays its own mesh — it is the one transparent thing on the machine.
   const parts: THREE.Mesh[] = [];
   root.traverse((o) => {
     if (o instanceof THREE.Mesh && o.material !== glass) parts.push(o);
@@ -597,7 +595,6 @@ export function createSledModel(
   const merged = mergePosed(
     root,
     parts,
-    (mesh) => mesh.parent !== root || gear.struts.has(mesh),
     mat({ vertexColors: true, roughness: 0.55, metalness: 0.05 }, "sled-merged"),
   );
   const mounts = lampMounts(spec);

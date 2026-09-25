@@ -178,6 +178,7 @@ describe("the settings: the rider's half, the later change", () => {
     const carried = carriedSettings(freshSettings()) as Record<string, unknown>;
     expect(carried).not.toHaveProperty("video");
     expect(carried).not.toHaveProperty("probed");
+    expect(carried).not.toHaveProperty("autoPicture");
     expect(carried).not.toHaveProperty("touch");
     expect(carried).toHaveProperty("keys");
     expect(carried).toHaveProperty("assist");

@@ -20,25 +20,38 @@ import {
   TRAIL_LEVELS,
   TRAIL_LOOK,
   VIDEO_PRESETS,
+  PICTURE_LADDERS,
+  PICTURE_ROWS,
   mergeVideo,
   mistFor,
+  readPicture,
+  videoUntouched,
+  writePicture,
+  type VideoSettings,
   presetOf,
   terrainLook,
   terrainReach,
   terrainTriangles,
   withPreset,
 } from "../pwa/src/game/settings-video.ts";
+import { createPictureAuto } from "../pwa/src/game/picture-auto.ts";
+import { freshSettings, type Settings } from "../pwa/src/game/settings.ts";
 import {
-  PROBE_HEADROOM,
+  PROBE_ROUNDS,
   PROBE_SAMPLES,
   PROBE_STALLS,
   PROBE_WARMUP,
-  applyVerdict,
   createVideoProbe,
-  judgeTier,
-  videoUntouched,
-  type ProbeSample,
 } from "../pwa/src/game/video-probe.ts";
+import {
+  FIT_BUDGET_MS,
+  FLOOR_MS,
+  PICTURE_PRICES,
+  fitPicture,
+  pictureCost,
+  pictureWorth,
+  samePicture,
+} from "../pwa/src/game/picture-fit.ts";
 
 describe("the picture's ladders (settings-video.ts)", () => {
   it("runs every ladder cheapest first", () => {
@@ -80,9 +93,6 @@ describe("the picture's ladders (settings-video.ts)", () => {
     // Each rung down draws strictly fewer triangles...
     expect(tris[0]).toBeLessThan(tris[1]);
     expect(tris[1]).toBeLessThan(tris[2]);
-    // ...and the top is enough dearer than the design point that the probe's
-    // headroom covers it.
-    expect(tris[2] / tris[1]).toBeLessThan(PROBE_HEADROOM);
     for (const t of TIERS) {
       for (const d of DISTANCE_LEVELS) {
         const reach = DISTANCE_LOOK[d].view;
@@ -173,54 +183,221 @@ describe("the picture's ladders (settings-video.ts)", () => {
   });
 });
 
-describe("the first-visit probe (video-probe.ts)", () => {
-  const steady = (elapsedMs: number, drawMs: number): ProbeSample[] =>
-    Array.from({ length: PROBE_SAMPLES }, () => ({ elapsedMs, drawMs }));
-
-  it("promotes a machine with headroom at the display's own rate", () => {
-    expect(judgeTier(steady(16.7, 4))).toBe("high");
-    // At a hundred and twenty the same frame no longer fits twice and a half.
-    expect(judgeTier(steady(8.3, 4))).toBe("medium");
+describe("fitting the picture to the machine (picture-fit.ts)", () => {
+  const top = (): VideoSettings => ({
+    ...DEFAULT_VIDEO,
+    ...(Object.fromEntries(
+      PICTURE_ROWS.map((row) => [row, PICTURE_LADDERS[row][PICTURE_LADDERS[row].length - 1]]),
+    ) as Partial<VideoSettings>),
+  });
+  const bottom = (): VideoSettings => ({
+    ...DEFAULT_VIDEO,
+    ...(Object.fromEntries(
+      PICTURE_ROWS.map((row) => [row, PICTURE_LADDERS[row][0]]),
+    ) as Partial<VideoSettings>),
   });
 
-  it("keeps a machine that fits but has no headroom where it is", () => {
-    expect(judgeTier(steady(16.7, 12))).toBe("medium");
+  it("prices every stop of every row, nothing at the cheapest, never less up the ladder", () => {
+    for (const row of PICTURE_ROWS) {
+      const ladder = PICTURE_LADDERS[row] as readonly string[];
+      const prices = PICTURE_PRICES[row] as Record<string, { cost: number; benefit: number }>;
+      expect(Object.keys(prices).sort(), row).toEqual([...ladder].sort());
+      expect(prices[ladder[0]], row).toEqual({ cost: 0, benefit: 0 });
+      for (let i = 1; i < ladder.length; i++) {
+        expect(prices[ladder[i]].cost, `${row} ${ladder[i]}`).toBeGreaterThanOrEqual(
+          prices[ladder[i - 1]].cost,
+        );
+        expect(prices[ladder[i]].benefit, `${row} ${ladder[i]}`).toBeGreaterThan(
+          prices[ladder[i - 1]].benefit,
+        );
+      }
+    }
+    expect(pictureCost(bottom())).toBe(FLOOR_MS);
+    expect(pictureWorth(bottom())).toBe(0);
   });
 
-  it("demotes a machine that cannot hold the design point", () => {
-    expect(judgeTier(steady(33.3, 20))).toBe("low");
-    const stutter = steady(16.7, 4);
-    for (let i = 0; i < stutter.length; i += 5) stutter[i] = { elapsedMs: 50, drawMs: 30 };
-    expect(judgeTier(stutter)).toBe("low");
+  it("gives a machine with room to spare the whole picture", () => {
+    expect(samePicture(fitPicture(DEFAULT_VIDEO, 2), top())).toBe(true);
   });
 
-  it("warms up, measures, and says its verdict once", () => {
+  it("brings a slow machine under the budget, and keeps the look that shows most", () => {
+    const at = top();
+    const measured = FIT_BUDGET_MS * 1.3;
+    const fit = fitPicture(at, measured);
+    const scale = measured / pictureCost(at);
+    expect(pictureCost(fit) * scale).toBeLessThanOrEqual(FIT_BUDGET_MS);
+    // Thirty per cent over is not a reason to lose the furrows.
+    expect(fit.trails).not.toBe("off");
+    expect(pictureWorth(fit)).toBeGreaterThan(pictureWorth(bottom()));
+  });
+
+  it("never gives a slower machine more of the look than a faster one", () => {
+    let last = Infinity;
+    for (const measured of [4, 8, 12, 16, 20, 30, 45, 60]) {
+      const worth = pictureWorth(fitPicture(DEFAULT_VIDEO, measured));
+      expect(worth, `${measured} ms`).toBeLessThanOrEqual(last);
+      last = worth;
+    }
+    // A machine no fit can save gets every row at its cheapest.
+    expect(samePicture(fitPicture(DEFAULT_VIDEO, 500), bottom())).toBe(true);
+  });
+
+  it("gives up the step that loses least per millisecond first, and never one that saves nothing", () => {
+    // Two rows that save the same: the one worth less goes; a row that costs
+    // nothing is never taken down and is always taken up.
+    const prices = {
+      ...PICTURE_PRICES,
+      spray: {
+        low: { cost: 0, benefit: 0 },
+        medium: { cost: 0, benefit: 5 },
+        high: { cost: 0, benefit: 9 },
+      },
+      forest: {
+        low: { cost: 0, benefit: 0 },
+        medium: { cost: 1, benefit: 2 },
+        high: { cost: 2, benefit: 4 },
+      },
+      terrain: {
+        low: { cost: 0, benefit: 0 },
+        medium: { cost: 1, benefit: 20 },
+        high: { cost: 2, benefit: 40 },
+      },
+    };
+    const at = top();
+    const cost = pictureCost(at, prices);
+    // Just over by one step's worth: exactly one millisecond has to go.
+    const fit = fitPicture(at, cost + 0.5, cost - 0.5, prices);
+    expect(fit.forest).toBe("medium");
+    expect(fit.terrain).toBe("high");
+    expect(fit.spray).toBe("high");
+    expect(fitPicture({ ...at, spray: "low" }, cost, cost, prices).spray).toBe("high");
+  });
+
+  it("steps down past stops that save nothing to the one that does", () => {
+    // TRAILS priced level from LOW up: the whole saving is at OFF.
+    const prices = {
+      ...PICTURE_PRICES,
+      trails: {
+        off: { cost: 0, benefit: 0 },
+        low: { cost: 0.4, benefit: 50 },
+        medium: { cost: 0.4, benefit: 58 },
+        high: { cost: 0.4, benefit: 62 },
+      },
+    };
+    expect(fitPicture(DEFAULT_VIDEO, 500, FIT_BUDGET_MS, prices).trails).toBe("off");
+  });
+
+  it("keeps the canvas's antialiasing, whatever it fits", () => {
+    expect(fitPicture({ ...DEFAULT_VIDEO, antialias: false }, 2).antialias).toBe(false);
+    expect(fitPicture({ ...DEFAULT_VIDEO, antialias: true }, 500).antialias).toBe(true);
+  });
+});
+
+describe("the probe (video-probe.ts)", () => {
+  /** Drive a probe on a machine whose drained frame is `ms` times the
+   * picture's reference cost, applying what it hands back. */
+  const drive = (speed: number) => {
     const probe = createVideoProbe();
-    let verdict = null;
+    let at: VideoSettings = { ...DEFAULT_VIDEO };
     let frames = 0;
-    while (verdict === null && frames < 1000) {
-      verdict = probe.frame(16.7, 3);
+    const handed: VideoSettings[] = [];
+    while (!probe.done() && frames < 5000) {
+      const next = probe.frame(16.7, pictureCost(at) * speed, at);
+      frames++;
+      if (next) {
+        handed.push(next);
+        at = next;
+      }
+    }
+    return { at, frames, handed };
+  };
+
+  it("warms up, measures, and hands back the fit", () => {
+    const probe = createVideoProbe();
+    let next = null;
+    let frames = 0;
+    while (next === null && frames < 1000) {
+      next = probe.frame(16.7, 2, DEFAULT_VIDEO);
       frames++;
     }
-    expect(verdict).toBe("high");
     expect(frames).toBe(PROBE_WARMUP + PROBE_SAMPLES);
-    expect(probe.done()).toBe(true);
-    expect(probe.frame(16.7, 3)).toBe(null);
+    expect(next?.distance).toBe("max");
+  });
+
+  it("settles a machine the table describes in one move, and a slow one under the budget", () => {
+    const fast = drive(0.5);
+    expect(fast.handed.length).toBe(1);
+    expect(fast.frames).toBe(2 * (PROBE_WARMUP + PROBE_SAMPLES));
+    const slow = drive(3);
+    expect(pictureCost(slow.at) * 3).toBeLessThanOrEqual(FIT_BUDGET_MS);
+    expect(slow.handed.length).toBeLessThanOrEqual(PROBE_ROUNDS);
   });
 
   it("gives up on a machine that only ever stalls, and moves nothing", () => {
     const probe = createVideoProbe();
-    let verdict = null;
-    for (let i = 0; i < PROBE_STALLS && verdict === null; i++) verdict = probe.frame(900, 10);
-    expect(verdict).toBe("medium");
+    let next = null;
+    for (let i = 0; i < PROBE_STALLS && next === null; i++)
+      next = probe.frame(900, 10, DEFAULT_VIDEO);
+    expect(next).toBe(null);
+    expect(probe.done()).toBe(true);
   });
 
-  it("moves only a picture nobody has touched", () => {
+  it("knows a picture nobody has touched", () => {
     expect(videoUntouched(DEFAULT_VIDEO)).toBe(true);
-    expect(applyVerdict(DEFAULT_VIDEO, "high")).toMatchObject(VIDEO_PRESETS.high);
-    expect(applyVerdict(DEFAULT_VIDEO, "low")).toMatchObject(VIDEO_PRESETS.low);
-    const mine = { ...DEFAULT_VIDEO, spray: "low" as const };
-    expect(videoUntouched(mine)).toBe(false);
-    expect(applyVerdict(mine, "high")).toBe(mine);
+    expect(videoUntouched({ ...DEFAULT_VIDEO, spray: "low" })).toBe(false);
+  });
+
+  it("reads a picture off a link, row by row, and writes it back the same", () => {
+    const pic = readPicture("distance:low,shadows:off,nonsense:1,trails:sideways");
+    expect(pic).toEqual({ distance: "low", shadows: "off" });
+    expect(readPicture(writePicture(pic))).toEqual(pic);
+    expect(readPicture(null)).toEqual({});
+  });
+});
+
+describe("PRESET ▸ AUTO as the app runs it (picture-auto.ts)", () => {
+  /** A machine that draws everything in two milliseconds, and the app's
+   * settings as the rig moves them. */
+  const rig = (allowed = true) => {
+    let settings: Settings = freshSettings();
+    const auto = createPictureAuto(allowed, (change) => (settings = change(settings)));
+    const ride = (frames: number, quiet = true): void => {
+      for (let i = 0; i < frames; i++) {
+        if (auto.wants(settings.autoPicture, quiet)) auto.frame(16.7, 2, settings.video);
+      }
+    };
+    return { get: () => settings, set: (s: Settings) => (settings = s), ride };
+  };
+
+  it("fits the picture once a visit, keeping the canvas's antialiasing", () => {
+    const r = rig();
+    r.ride(1000);
+    expect(r.get().video.distance).toBe("max");
+    expect(r.get().video.antialias).toBe(DEFAULT_VIDEO.antialias);
+    expect(r.get().probed).toBe(true);
+  });
+
+  it("times nothing over a race, off AUTO, or where a link holds it off", () => {
+    const racing = rig();
+    racing.ride(1000, false);
+    expect(racing.get().video).toEqual(DEFAULT_VIDEO);
+    const off = rig();
+    off.set({ ...off.get(), autoPicture: false });
+    off.ride(1000);
+    expect(off.get().video).toEqual(DEFAULT_VIDEO);
+    const held = rig(false);
+    held.ride(1000);
+    expect(held.get().video).toEqual(DEFAULT_VIDEO);
+  });
+
+  it("fits again the moment AUTO is pressed, and never over the rider's own picture", () => {
+    const r = rig();
+    r.ride(1000);
+    r.set({ ...r.get(), autoPicture: false, video: { ...DEFAULT_VIDEO, spray: "low" } });
+    r.ride(1000);
+    expect(r.get().video.spray).toBe("low");
+    r.set({ ...r.get(), autoPicture: true });
+    r.ride(1000);
+    expect(r.get().video.spray).toBe("high");
   });
 });

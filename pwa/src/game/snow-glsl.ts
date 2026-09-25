@@ -326,7 +326,12 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
   // grain, both faded out before they alias.
   float nearFade = 1.0 - smoothstep(20.0, 90.0, snowDist);
   float midFade = 1.0 - smoothstep(60.0, 400.0, snowDist);
-  grad += snowNoiseGrad(p * 0.23, 0.35) * 0.23 * 0.35 * midFade * (1.0 - snowPacked);
+  // Every term below is skipped outright where its weight is nought — the
+  // far band, the groomer, off the berm — rather than computed and zeroed:
+  // the answer is the same and most of the screen is far snow.
+  if (midFade > 0.0 && snowPacked < 1.0) {
+    grad += snowNoiseGrad(p * 0.23, 0.35) * 0.23 * 0.35 * midFade * (1.0 - snowPacked);
+  }
   // SASTRUGI: the crust carved into ridges across the wind, a few metres
   // apart and a hand high, broken up along their length.
   if (uSastrugi > 0.0 && snowCrust > 0.01) {
@@ -338,8 +343,10 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
     float k = uSastrugi * snowCrust * sFade * breakUp * (1.0 - snowPress);
     grad += across * cos(ph) * 1.9 * 0.07 * k;
   }
-  grad += snowNoiseGrad(p * 1.7, 0.3) * 1.7 * 0.025 * nearFade;
-  grad += snowNoiseGrad(p * 7.0, 0.3) * 7.0 * 0.004 * nearFade * (1.0 - snowPress);
+  if (nearFade > 0.0) {
+    grad += snowNoiseGrad(p * 1.7, 0.3) * 1.7 * 0.025 * nearFade;
+    grad += snowNoiseGrad(p * 7.0, 0.3) * 7.0 * 0.004 * nearFade * (1.0 - snowPress);
+  }
 
   // THE CORDUROY: the groomer's comb, running along the track.
   vec4 td = texture2D(uTrackDir, guv);
@@ -358,7 +365,7 @@ export const SNOW_FRAGMENT_SAMPLE = /* glsl */ `
 
   // THE PLOUGH'S CLODS on the berm: lumps a hand to a forearm across,
   // faded out before they alias.
-  if (snowBerm > 0.01) {
+  if (snowBerm > 0.01 && snowDist < 140.0) {
     float clodFade = 1.0 - smoothstep(30.0, 140.0, snowDist);
     float b = smoothstep(0.0, 0.3, snowBerm);
     grad += snowNoiseGrad(p * 2.2, 0.15) * 2.2 * 0.09 * b * clodFade;
@@ -393,8 +400,10 @@ export const SNOW_FRAGMENT_COLOUR = /* glsl */ `
   }
   // The berm is snow turned over by the plough: back to fresh white, with
   // the shade of its clods in it.
-  float clod = snowNoise(p * 2.2);
-  alb = mix(alb, fresh * mix(1.0, 0.88, clod), smoothstep(0.0, 0.35, snowBerm));
+  if (snowBerm > 0.0) {
+    float clod = snowNoise(p * 2.2);
+    alb = mix(alb, fresh * mix(1.0, 0.88, clod), smoothstep(0.0, 0.35, snowBerm));
+  }
   // Pressed snow is on its way to ice: a little less comes back.
   alb *= mix(vec3(1.0), vec3(0.9, 0.93, 0.97), snowPress);
   // The walls see less sky; a blue-grey the shading alone would not give.
@@ -404,8 +413,10 @@ export const SNOW_FRAGMENT_COLOUR = /* glsl */ `
   alb = mix(alb, uForestTint, snowForest * 0.55 * smoothstep(160.0, 520.0, snowDist));
   // THE REGION'S OWN SNOW: the wind slab, the river's bare ice, the rock.
   alb = mix(alb, alb * uCrustTone, snowCrust * (1.0 - snowPacked * 0.5));
-  alb = mix(alb, uIceTone * mix(0.9, 1.05, snowNoise(p * 0.05)), snowIce * (1.0 - snowPress * 0.6));
-  alb = mix(alb, uRock.rgb * mix(0.7, 1.2, snowNoise(p * 0.6)), snowRock);
+  if (snowIce > 0.0) {
+    alb = mix(alb, uIceTone * mix(0.9, 1.05, snowNoise(p * 0.05)), snowIce * (1.0 - snowPress * 0.6));
+  }
+  if (snowRock > 0.0) alb = mix(alb, uRock.rgb * mix(0.7, 1.2, snowNoise(p * 0.6)), snowRock);
   diffuseColor.rgb = alb * ${GLARE.toFixed(3)};
 }
 `;
@@ -481,14 +492,22 @@ export const SNOW_FRAGMENT_LIGHT = /* glsl */ `
 
   // THE GLITTER, two sizes of crystal cell: the fine one close in, a
   // sparser, larger one carrying it a little further out.
-  vec3 V = normalize(cameraPosition - vSnowWorld);
-  vec3 H = normalize(uSunDir + V);
-  float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6) * (1.0 - snowIce) * (1.0 - snowRock);
-  float glint = snowGlints(vSnowWorld, 7.0, 600.0, 0.6, snowN, H, 0.0)
-    * (1.0 - smoothstep(15.0, 45.0, snowDist));
-  glint += snowGlints(vSnowWorld, 2.5, 900.0, 0.35, snowN, H, 31.0)
-    * smoothstep(8.0, 25.0, snowDist) * (1.0 - smoothstep(50.0, 140.0, snowDist));
-  reflectedLight.directSpecular += sunLit * glint * loose * 18.0 * uGlitter;
+  // No crystal is drawn past 140 m, nor on a sky that does not glitter.
+  if (snowDist < 140.0 && uGlitter > 0.0) {
+    vec3 V = normalize(cameraPosition - vSnowWorld);
+    vec3 H = normalize(uSunDir + V);
+    float loose = (1.0 - snowPacked * 0.8) * (1.0 - snowPress * 0.6) * (1.0 - snowIce) * (1.0 - snowRock);
+    float glint = 0.0;
+    if (snowDist < 45.0) {
+      glint += snowGlints(vSnowWorld, 7.0, 600.0, 0.6, snowN, H, 0.0)
+        * (1.0 - smoothstep(15.0, 45.0, snowDist));
+    }
+    if (snowDist > 8.0) {
+      glint += snowGlints(vSnowWorld, 2.5, 900.0, 0.35, snowN, H, 31.0)
+        * smoothstep(8.0, 25.0, snowDist) * (1.0 - smoothstep(50.0, 140.0, snowDist));
+    }
+    reflectedLight.directSpecular += sunLit * glint * loose * 18.0 * uGlitter;
+  }
 }
 #endif
 `;
