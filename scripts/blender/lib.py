@@ -32,6 +32,7 @@ RIDES = "body"
 BONES = {"body": dict(head=(0, 0, 0), tail=(0, 0.3, 0), parent=None, deform=True)}
 CLIPS = []
 MORPHS = {}
+WEIGHTS = {}
 
 def rides(name):
     """Every object made from here on rides this bone."""
@@ -39,13 +40,14 @@ def rides(name):
     RIDES = name
     return name
 
-def bone(name, head, tail, parent="body", aim=None, stretch=False, deform=True, extras=None):
+def bone(name, head, tail, parent="body", aim=None, stretch=False, deform=True, extras=None, roll_to=None):
     """A bone of the rig, in the asset's frame. A LINKAGE names the bone it
     AIMS at (its tail laid on that bone's head, which must be where the
     tail stands at rest), and whether it STRETCHES to reach it or only turns.
-    `extras` are written into the glTF on the bone's node."""
+    `extras` are written into the glTF on the bone's node; `roll_to` turns
+    the bone's +z toward a direction."""
     BONES[name] = dict(head=tuple(head), tail=tuple(tail), parent=parent, aim=aim, stretch=stretch,
-                       deform=deform, extras=extras or {})
+                       deform=deform, extras=extras or {}, roll_to=roll_to)
     return name
 
 def marker(name, at, parent):
@@ -54,10 +56,16 @@ def marker(name, at, parent):
 
 def clip(name, seconds, at):
     """A clip: `at(t)` gives, for every driver it moves, a `lift` (m, up the
-    asset's z) and a `turn` (rad, about the bone's own axis), and for a
-    morphed object (`morph(...)`) its weight, keyed as `{object: w}` under
-    "morph"."""
+    asset's z) and a `turn` (rad, about the bone's own axis) — or its whole
+    `matrix` in the armature's frame — and for a morphed object (`morph(...)`)
+    its weight, keyed as `{object: w}` under "morph"."""
     CLIPS.append((name, seconds, at))
+
+def weights(ob, fn):
+    """A part that BENDS: `fn(co)` gives each vertex's `{bone: weight}` —
+    where every other part rides its one bone wholly."""
+    WEIGHTS[ob.name] = fn
+    return ob
 
 def morph(ob, key, coords):
     """A shape key `key` on `ob`, its vertices at `coords` — added after the
@@ -322,11 +330,11 @@ def _select_only(objs):
         o.select_set(True)
     bpy.context.view_layer.objects.active = objs[0]
 
-def _studio(centre, size):
+def _studio(centre, size, floor=0.0):
     """A snow floor, a winter sky, a low sun and a fill, and five cameras
     round `centre`, at distances in proportion to the asset's `size` (m)."""
     snow = mat("snow", (0.86, 0.9, 0.96), rough=0.55)
-    bpy.ops.mesh.primitive_plane_add(size=60, location=(centre[0], centre[1], -0.001))
+    bpy.ops.mesh.primitive_plane_add(size=60, location=(centre[0], centre[1], floor - 0.001))
     bpy.context.active_object.data.materials.append(snow)
     world = bpy.data.worlds.new("sky")
     scene.world = world
@@ -389,9 +397,19 @@ def _cycles(samples):
     scene.view_settings.look = "AgX - Medium High Contrast"
 
 def _weigh(o):
-    """Every vertex of a part to its own bone, wholly: rigid skinning."""
-    vg = o.vertex_groups.new(name=o["bone"])
-    vg.add(range(len(o.data.vertices)), 1.0, "REPLACE")
+    """Every vertex of a part to its own bone, wholly: rigid skinning — or,
+    for a part that bends (`weights`), to the bones its function names."""
+    fn = WEIGHTS.get(o.name)
+    if not fn:
+        vg = o.vertex_groups.new(name=o["bone"])
+        vg.add(range(len(o.data.vertices)), 1.0, "REPLACE")
+        return
+    groups = {}
+    for v in o.data.vertices:
+        for b, w in fn(v.co).items():
+            if b not in groups:
+                groups[b] = o.vertex_groups.get(b) or o.vertex_groups.new(name=b)
+            groups[b].add([v.index], w, "REPLACE")
 
 def _rig(root):
     """The armature from `BONES`, every mesh skinned to it, every linkage
@@ -406,6 +424,8 @@ def _rig(root):
         eb = arm_data.edit_bones.new(n)
         eb.head, eb.tail = b["head"], b["tail"]
         eb.use_deform = b["deform"]
+        if b.get("roll_to") is not None:
+            eb.align_roll(Vector(b["roll_to"]))
     for n, b in BONES.items():
         if b["parent"]:
             arm_data.edit_bones[n].parent = arm_data.edit_bones[b["parent"]]
@@ -462,9 +482,12 @@ def _clips(arm):
                 kb.keyframe_insert("value", frame=f)
             for b_name, d in pose.items():
                 pb = arm.pose.bones[b_name]
-                rest = arm.data.bones[b_name].matrix_local.to_3x3()
-                pb.location = rest.inverted() @ Vector((0, 0, d.get("lift", 0.0)))
-                pb.rotation_quaternion = Quaternion((0, 1, 0), d.get("turn", 0.0))
+                if "matrix" in d:
+                    pb.matrix = d["matrix"]
+                else:
+                    rest = arm.data.bones[b_name].matrix_local.to_3x3()
+                    pb.location = rest.inverted() @ Vector((0, 0, d.get("lift", 0.0)))
+                    pb.rotation_quaternion = Quaternion((0, 1, 0), d.get("turn", 0.0))
                 pb.keyframe_insert("location", frame=f)
                 pb.keyframe_insert("rotation_quaternion", frame=f)
         scene.frame_start, scene.frame_end = 0, n
@@ -492,7 +515,7 @@ def _clips(arm):
     scene.frame_set(0)
     print("CLIPS", ", ".join(names))
 
-def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1)), extras=None):
+def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1)), extras=None, floor=0.0):
     """Everything after the modelling: curves to meshes, the parts under one
     root (carrying `extras`), the rig and its clips, the studio, the renders,
     and — in the game quality — the parts joined into one skinned mesh, LOD0
@@ -541,7 +564,7 @@ def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1)
             v.co = co
     arm = _rig(root)
     _clips(arm)
-    cams = _studio(centre, size)
+    cams = _studio(centre, size, floor)
     _cycles(samples)
     tag = "game" if GAME else "render"
     bpy.ops.wm.save_as_mainfile(filepath=os.path.join(out, f"{name}-{tag}.blend"))

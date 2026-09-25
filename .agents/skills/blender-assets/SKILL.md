@@ -1,6 +1,6 @@
 ---
 name: blender-assets
-description: "Use when a game asset is to be MODELLED IN BLENDER off the game's own data — a sled today; a tree, an animal, the rider or any other drawn thing when its kind is added — for studio renders, a real-time glTF with LODs, or to find out how good an authored version of something the game builds in code could look. Owns `make blender` (`scripts/blender.mjs`, the registry of KINDS and the JSON each is handed), the Blender shelf (`scripts/blender/lib.py`: the helpers, the studio, the game-budget export) and each kind's builder (`scripts/blender/sled.py`), the lab sheet that sets a model beside the game's own (`make sled ARGS=--asset=…`), the frame a model is stated in and turned back from, the triangle budget and its LODs, installing and running Blender headless on macOS, reference photographs (local only, never committed, never named), and adding a new kind. Not the game's own builders (`sled-design`, `nature`, `rider`) — though they are what every model is held against."
+description: "Use when a game asset is to be MODELLED IN BLENDER off the game's own data — the sleds and the rider today; a tree, an animal or any other drawn thing when its kind is added — for studio renders, a real-time glTF with LODs, or to find out how good an authored version of something the game builds in code could look. Owns `make blender` (`scripts/blender.mjs`, the registry of KINDS and the JSON each is handed), the Blender shelf (`scripts/blender/lib.py`: the helpers, the studio, the game-budget export) and each kind's builder (`scripts/blender/sled.py`, `rider.py`), the RIG every model carries and the clips baked into it (the game-side contracts `asset-rig.ts` and `rider-rig.ts`), the lab sheet that sets a model beside the game's own (`make sled ARGS=--asset=…`), the frame a model is stated in and turned back from, the triangle budget and its LODs, installing and running Blender headless on macOS, reference photographs (local only, never committed, never named), and adding a new kind. Not the game's own builders (`sled-design`, `nature`, `rider`) — though they are what every model is held against."
 ---
 
 # Blender assets
@@ -40,8 +40,10 @@ sled) — its judging rules apply to a model too.
 | --- | --- |
 | `scripts/blender.mjs` | THE DRIVER (`make blender`): `KINDS` (per kind: its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`BONES`, `CLIPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error |
 | `scripts/blender/lib.py` | THE SHELF every builder imports: the scene, `mat`, the geometry (`loft`, `superellipse`, `tube`, `cyl`, `box`, `ellipsoid`, `coil`, `catmull`, `resample`, boolean cutters), THE RIG (`rides`, `bone`, `marker`, `clip`, `morph`), and `finish()` — the rig built and skinned, the clips baked, the studio, the Cycles stills, the join into one skinned mesh, LOD0 and the decimated LODs as glTF |
+| `scripts/blender/rider.py` | THE RIDER BUILDER (`KIND=rider`, `ID=rider0…3` a grid slot's kit): one SUIT that bends (the skin modifier over the riding pose's joints, rounded, cut along the hem, yoke and cuff planes before it is coloured, weighted across each joint between the two bones that meet there) and rigid parts on one bone each — the helmet laid on the game's MEASURED shell (`helmetReach` / `helmetPart` sampled on a grid), the boots, the gloves |
+| `pwa/src/tools/rider-rig.ts` | THE RIDER'S CONTRACT: `riderBones(pose)` (every bone's frame off a `RiderPose` — the game's own spans, rolled to face each joint's bend, the head turned as `rider.ts` turns it), `RIDING` (the pose he is bound in), `riderClips()` (every clip SAMPLED off the game's `riderPose` and `stepRiderSpring`), `rigRider` (a loaded model's bones set to a pose, or a clip played) |
 | `scripts/blender/sled.py` | THE SLED BUILDER: the cowl, the lamp pods, the screen, the bars, the seat and what rides behind it, the tunnel, the flap, the boards, the belt and its lugs, the rear suspension, the skis, spindles, A-arms and coil-overs — every dimension off the spec and the trace |
-| `pwa/src/tools/sled-harness.ts` + `scripts/sled-preview.mjs` | THE ASSET SHEETS (`make sled ARGS=--asset=a.glb,b.glb`): `asset` — the builder's machine in the first row, each model below it, every one ridden by the game's rider seated by `riderSeat`; `rig` — builder and models posed at the same engine moments (steer, each end's bump and droop); `clips` — the first model's clips played across their length |
+| `pwa/src/tools/sled-harness.ts` + `scripts/sled-preview.mjs` | THE ASSET SHEETS (`make sled ARGS=--asset=a.glb,b.glb`): `asset` — the builder's machine in the first row, each model below it, every one ridden by the game's rider seated by `riderSeat`; `rig` — builder and models posed at the same engine moments (steer, each end's bump and droop); `clips` — the first model's clips played across their length (and a `--rider=` model's, him alone); `figure` — a modelled rider beside the game's own on the builder's machine in every pose. A `--rider=` model also rides the models on the asset and rig sheets |
 | `pwa/src/tools/asset-rig.ts` | THE GAME'S SIDE OF THE RIG: a modelled sled posed off `SledState` exactly as `sled-gear.ts` / `sled-body.ts` pose the builder's (`gearLift`, `BAR_TURN`), every linkage re-laid to its `aim`, and its clips played |
 | `previews/blender/` | Everything made: `<id>.json` (what Blender was handed), `<id>-render-<view>.png`, `<id>-game-*.png`, `<id>-lod{0,1,2}.glb`, `<id>-{render,game}.blend` |
 
@@ -191,6 +193,42 @@ model (`lib.py`'s header, `sled.py`'s):
 (spikes, a broken stripe). Fine at the range a rival is drawn at; a real
 LOD2 is a hand-built low model (the cage unsubdivided, no coils, the belt a
 band), which is open work.
+
+## The rider
+
+The game's rider has NO clips: `riderPose` places every joint off the
+engine's readings and `rider.ts` lays each part from joint to joint. So a
+modelled rider's BONES are those spans (`riderBones`), bound in the riding
+pose (`RIDING`), and the game's own pose drives him bone for bone — a
+lean, a hang, a landing, a trick pose are the game's arithmetic, not a
+second animation. His clips are that arithmetic SAMPLED in Node (a hang
+each way, the lean, a jump and its fold on the legs' spring, the three
+trick poses blended in and out) and handed to Blender as every bone's
+frame at every frame (`clip()` with a `matrix`). Nothing about how he
+moves is written in Python.
+
+- **The frame.** He is stated as `(-x, z, y)` of the sled's body frame —
+  a turn, not a mirror — so he faces +y like a modelled sled and the lab's
+  one half turn sets him on the game's joints exactly. His sides are the
+  ENGINE's (`_l` is the pose's index 0), unlike a sled model's.
+- **A figure that bends is one mesh weighted across its joints**, where a
+  machine's parts are rigid: `weights(ob, fn)` gives a part per-vertex
+  weights; `rider.py` shares a vertex between the nearest bone and its
+  joint neighbours by how much nearer each is (4 cm apart is half against
+  a third). The helmet, boots and gloves stay rigid.
+- **Colour on a skinned hull stops on a PLANE**: cut the mesh along it
+  (`bmesh.ops.bisect_plane`) before colouring by face, or every colour edge
+  is the stair of the faces it was laid in. Colouring by NEAREST BONE makes
+  a jagged edge wherever two bones' regions meet — the yoke is "above a
+  plane", not "nearest the head".
+- **A skin modifier's hull is a box a section**: a SMOOTH modifier rounds
+  it, and shrinks it — widen the radii to pay for it.
+- **No sheen on anything exported**: Blender's sheen goes into the glTF as
+  a sheen extension three.js draws as a pale bloom (the pants came out
+  grey).
+- **Budget**: LOD0 ≈ 5k triangles (the helmet's grid is every third of the
+  render's sample, single-sided — nothing sees under it), LOD1 1.8k, LOD2
+  0.5k; render quality ~58k.
 
 ## Blender, headless, on macOS
 

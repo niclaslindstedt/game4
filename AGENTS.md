@@ -49,7 +49,7 @@ This project is tuned by measuring and LOOKING, not guessing. Each lab below is 
 | The springs, the sink, the grip, the drive, the steering, the carve, the air, a landing | `ride` (and `ride ARGS=--card`), `sim` | `sled-physics` |
 | The machine's own numbers (`defs/sled.ts`), the field's pace | `ride ARGS=--card`, `ride`, `sim ARGS="--sled all"` | `sled-tuning` |
 | The sled's look, its liveries | `sled` (every sheet), `world`, `screenshots`, `profile` | `sled-design` |
-| A game asset MODELLED in Blender (a sled; later a tree, an animal, the rider) | `blender` (render, then `ARGS=--quality=game`), `sled ARGS=--asset=…` | `blender-assets` |
+| A game asset MODELLED in Blender (a sled, the rider; later a tree, an animal) | `blender` (render, then `ARGS=--quality=game`), `sled ARGS=--asset=…` / `--rider=…` (the `asset`, `rig`, `clips` and `figure` sheets) | `blender-assets` |
 | The rider: his look, his pose | `sled ARGS=--sheet=rider`, `sled ARGS=--sheet=head` (the helmet), `sled ARGS=--sheet=poses`, `sled ARGS=--sheet=landing`, `world`, `screenshots` | `rider` |
 | A tree, a rival, the edge, a checkpoint, a lap, the reset | `ride SCENARIO=tree`, `sim` | `collision` |
 | A wipeout, the trench, damage: what throws the rider, the tumble, the dig and the rocking out, a bent ski | `ride` (`tree`, `tree-glance`, `nose-in`, `rollover`, `stuck`, `stuck-held`), `sim`, `world ARGS=--views=wipeout,wipeout-lie` | `crash` |
@@ -364,7 +364,7 @@ Skills live in `.agents/skills/` (`.claude/skills` and `.gemini/skills` symlink 
 - **`sled-physics`** — the sled's answer to the snow: the probes and springs, the sink and the plough, the grip, the engine, the CVT and the belt, the steering, the carve, the chassis, the rollover, flight and landings; `make ride`.
 - **`sled-tuning`** — the machine's own numbers and the expectations a test holds the physics to; the field's pace; the day a roster lands.
 - **`sled-design`** — how the sled LOOKS: the builder in the body frame, the grid's four styles; `make world`.
-- **`blender-assets`** — a game asset MODELLED in Blender off the game's own data (a sled now; trees, animals, the rider as kinds are added): `make blender`, the render and game-budget passes with LODs, the asset sheet beside the game's own, headless Blender on macOS, references kept local and unnamed, and what shipping a model would take.
+- **`blender-assets`** — a game asset MODELLED in Blender off the game's own data (the sleds and the rider now, rigged and animated; trees and animals as kinds are added): `make blender`, the render and game-budget passes with LODs, the asset sheet beside the game's own, headless Blender on macOS, references kept local and unnamed, and what shipping a model would take.
 - **`rider`** — the man on the sled: the half-standing pose from the engine's readings, the limbs solved to the grips and the boards; judged from behind at chase range.
 - **`collision`** — the sled meeting what is not snow (trunks, rivals, the edge) and the course counting (checkpoints, misses, laps, the flag, the reset); what each event means.
 - **`crash`** — the sled past saving and the rider off it: the wipeout (a trunk, a nose-in landing, a rollover at speed), his body tumbling until the reset, the trench a bogged sled digs and rocking it out, and damage when it is on; `make ride`'s crash scenarios.

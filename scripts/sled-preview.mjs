@@ -41,8 +41,8 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const buildDir = join(root, "previews", ".sled-preview");
 const outDir = join(root, "previews");
 const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing"];
-/** The sheets that draw modelled versions (`--asset`). */
-const ASSET_SHEETS = ["asset", "rig", "clips"];
+/** The sheets that draw modelled versions (`--asset`, `--rider`). */
+const ASSET_SHEETS = ["asset", "rig", "clips", "figure"];
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -69,6 +69,11 @@ const args = parseArgs(
       default: "",
       help: "modelled versions of --sled as .glb files, comma-separated; draws the asset sheet",
     },
+    rider: {
+      kind: "string",
+      default: "",
+      help: "a modelled rider as a .glb (make blender KIND=rider); draws the figure sheet, and rides the models",
+    },
     cell: { kind: "number", default: 300, help: "one cell's width, px" },
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the whole run may take, s" },
@@ -86,10 +91,23 @@ for (const a of assets) {
     process.exit(2);
   }
 }
-const wanted = args.sheet ? args.sheet.split(",") : assets.length ? ASSET_SHEETS : SHEETS;
-if (wanted.some((s) => ASSET_SHEETS.includes(s)) && !assets.length) {
-  console.error(`the ${ASSET_SHEETS.join(", ")} sheets need --asset=<file.glb>[,…]`);
+const rider = args.rider ? resolve(args.rider) : "";
+if (rider && !existsSync(rider)) {
+  console.error(`no such rider: ${rider}`);
   process.exit(2);
+}
+/** What each modelled sheet needs: a machine, a rider, or either. */
+const NEEDS = { asset: [assets], rig: [assets], figure: [rider], clips: [assets, rider] };
+const wanted = args.sheet
+  ? args.sheet.split(",")
+  : assets.length || rider
+    ? ASSET_SHEETS.filter((s) => NEEDS[s].some((n) => n.length))
+    : SHEETS;
+for (const s of wanted) {
+  if (NEEDS[s] && !NEEDS[s].some((n) => n.length)) {
+    console.error(`the ${s} sheet needs ${s === "figure" ? "--rider" : "--asset"}=<file.glb>`);
+    process.exit(2);
+  }
 }
 for (const s of wanted) {
   if (![...SHEETS, ...ASSET_SHEETS].includes(s)) {
@@ -118,6 +136,7 @@ if (!args["skip-build"] || !existsSync(join(buildDir, "sled-preview.html"))) {
 
 // The modelled versions are served beside the page and never built into it.
 assets.forEach((a, i) => copyFileSync(a, join(buildDir, `asset-${i}.glb`)));
+if (rider) copyFileSync(rider, join(buildDir, "rider.glb"));
 
 const found = await findChromium();
 if (!found) process.exit(1);
@@ -151,6 +170,7 @@ for (const sheet of wanted) {
     vy: String(args.vy),
     cell: String(args.cell),
     assets: assets.map((a) => basename(a, ".glb")).join(","),
+    rider: rider ? basename(rider, ".glb") : "",
   }).toString();
   const t0 = Date.now();
   await page.goto(`${server.url}sled-preview.html?${query}`);

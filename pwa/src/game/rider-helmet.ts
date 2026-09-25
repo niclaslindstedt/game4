@@ -256,6 +256,19 @@ const capField: Field = (a, e) => -signedTo(CAP_OUTLINE, ...sideOf(a, e));
 /** The liner: kept only where the port can show it. */
 const linerField: Field = (a) => Math.abs(a) - LINER_REACH;
 
+/** What the shell IS at `a` round and `e` up — cut away for the neck or
+ * the port, the cap laid over it, or the shell — so a model of the helmet
+ * laid on the same measured surface (`make blender KIND=rider`) is cut and
+ * coloured along the same outlines. */
+export function helmetPart(a: number, e: number): "neck" | "port" | "cap" | "shell" {
+  if (neckField(a, e) > 0) return "neck";
+  if (portField(a, e) > 0) return "port";
+  return capField(a, e) < 0 ? "cap" : "shell";
+}
+
+/** How far the helmet sits up on the head, m. */
+export const HELMET_SIT = SIT;
+
 /** The shell's outward normal at `a`, `e`, off the surface itself. */
 function normalAt(a: number, e: number, lift: number): [number, number, number] {
   const h = 1e-4;
