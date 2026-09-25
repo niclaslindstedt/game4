@@ -27,12 +27,18 @@
 //   landing    one machine landing: the rider's body on its legs
 //              (`stepRiderSpring`) kicked by a sled stopped dead from
 //              `vy` m/s, a frame every 60 ms, from the side and the rear
+//   asset      one machine (`sled=`) as the builder draws it, then a row
+//              for every MODELLED version of it handed in as glTF
+//              (`asset-<i>.glb` beside the page, never in the tree — the
+//              `blender-assets` skill makes them), each set down on the
+//              spec by `lookFrame` and ridden by the game's own rider
 //
 // The elevations (side, front, rear) are ORTHOGRAPHIC — a drawing, the
 // scale the traced profiles in `sled-body.ts` are stated at — with a metre
 // grid behind them; the three-quarter and chase views are the lens's.
 
 import * as THREE from "three";
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { freshSled, SLED, SLEDS, sledById, type SledSpec, type SledState } from "@engine";
 
 import { createRider, type RiderFigure } from "../game/rider.ts";
@@ -46,13 +52,15 @@ import {
 import {
   createSledModel,
   REST_SAG,
+  riderSeat,
   SLED_STYLES,
   styleIn,
   type SledModel,
 } from "../game/sled-body.ts";
 import { LIVERIES } from "../game/sled-liveries.ts";
+import { lookFrame } from "../game/sled-looks.ts";
 
-type Sheet = "machines" | "poses" | "landing" | "liveries" | "rider" | "head";
+type Sheet = "machines" | "poses" | "landing" | "liveries" | "rider" | "head" | "asset";
 type View =
   "side" | "front" | "rear" | "three" | "chase" | "top" | "back" | "back3" | "near" | "front3";
 
@@ -69,6 +77,7 @@ const spec = sledById(params.get("sled") ?? SLED.id);
 const slot = Number(params.get("slot") ?? 0) % SLED_STYLES.length;
 const landVy = Number(params.get("vy") ?? 6);
 const onlyViews = (params.get("views") ?? "").split(",").filter(Boolean) as View[];
+const assetNames = (params.get("assets") ?? "").split(",").filter(Boolean);
 
 /** The moments the rider sheet shows him close up in. */
 const RIDER_POSES = ["sat", "on the move", "hung off left", "in the air", "landed, folded"];
@@ -107,6 +116,7 @@ const VIEWS_OF: Record<Sheet, View[]> = {
   liveries: ["three"],
   rider: ["back", "back3", "near", "front3"],
   head: [],
+  asset: ["side", "front", "rear", "three", "chase"],
 };
 
 /** The head sheet's angles round the helmet: the bearing from its front,
@@ -210,7 +220,13 @@ function posed(s: SledSpec, at: Moment, legs: RiderSpring | null, livery = -1): 
   // Pose with dt 0, so the model's own spring holds; then lay the rider by
   // hand at the moment's stand and fold.
   m.pose(c, { x: 0, y: s.cogHeight, z: 0, q: { x: q.x, y: q.y, z: q.z, w: q.w } }, 0, at.trick);
-  m.poseRider({
+  m.poseRider(riderAt(c, at, legs));
+  return m;
+}
+
+/** What the rider is posed by at a moment, the legs at `legs`. */
+function riderAt(c: SledState, at: Moment, legs: RiderSpring | null): RiderInput {
+  return {
     stand: legs ? legs.stand : (at.stand ?? 0.62),
     bump: legs ? legs.bump : (at.bump ?? 0),
     riderRight: c.riderRight,
@@ -220,8 +236,44 @@ function posed(s: SledSpec, at: Moment, legs: RiderSpring | null, livery = -1): 
     airborne: c.airborne,
     landing: c.landing,
     trick: at.trick ?? null,
-  });
-  return m;
+  };
+}
+
+/** THE MODELLED VERSIONS: each glTF is stated in the trace's own frame (z
+ * forward from the tunnel's end, y up from the snow), exported with glTF's
+ * forward on -z — so it is turned about y to face +z and set on the spec
+ * the way `lookFrame` sets a trace. They carry no rider: the game's own
+ * rides each, seated where the builder seats him. */
+const assets: THREE.Group[] = [];
+let assetRider: RiderFigure | null = null;
+async function loadAssets(): Promise<void> {
+  const F = lookFrame(spec);
+  const loader = new GLTFLoader();
+  for (let i = 0; i < assetNames.length; i++) {
+    const gltf = await loader.loadAsync(`asset-${i}.glb`);
+    gltf.scene.rotation.y = Math.PI;
+    const holder = new THREE.Group();
+    holder.add(gltf.scene);
+    holder.position.set(0, 0, F.z(0));
+    holder.scale.z = F.stretch;
+    holder.visible = false;
+    scene.add(holder);
+    assets.push(holder);
+  }
+  assetRider = createRider(SLED_STYLES[slot].rider, (m) => m);
+  assetRider.group.position.copy(riderSeat(spec)).add(new THREE.Vector3(0, spec.cogHeight, 0));
+  assetRider.group.visible = false;
+  scene.add(assetRider.group);
+}
+
+/** Show modelled version `i` (-1: none) with the rider posed at a moment. */
+function showAsset(i: number, at: Moment): void {
+  assets.forEach((a, k) => (a.visible = k === i));
+  if (!assetRider) return;
+  assetRider.group.visible = i >= 0;
+  if (i < 0) return;
+  for (const m of models.values()) m.root.visible = false;
+  assetRider.pose(riderAt(stateAt(spec, at), at, null));
 }
 
 const ortho = new THREE.OrthographicCamera(-2, 2, 1.5, -1.5, 0.1, 50);
@@ -300,6 +352,8 @@ function camera(view: View, s: SledSpec): THREE.Camera {
 }
 
 type Cell = {
+  /** The modelled version drawn instead of the builder's machine. */
+  asset?: number;
   spec: SledSpec;
   at: Moment;
   legs: RiderSpring | null;
@@ -324,6 +378,22 @@ function cells(): { rows: number; cols: number; list: Cell[] } {
       }
     }
     return { rows: SLEDS.length, cols: views.length, list };
+  }
+  if (sheet === "asset") {
+    const rows = ["builder", ...assetNames];
+    rows.forEach((name, r) => {
+      for (const view of views) {
+        list.push({
+          spec,
+          at: POSES[1],
+          legs: null,
+          view,
+          label: `${spec.name} · ${name} · ${view}`,
+          asset: r - 1,
+        });
+      }
+    });
+    return { rows: rows.length, cols: views.length, list };
   }
   if (sheet === "liveries") {
     const cols = Math.max(...SLEDS.map((s) => LIVERIES[s.id].length));
@@ -456,6 +526,7 @@ function draw(): { rows: number; cols: number; note: string } {
     renderer.setScissor(x, y, w, h);
     renderer.setClearColor(row % 2 === col % 2 ? 0x51606f : 0x5b6a79);
     posed(c.spec, c.at, c.legs, c.livery ?? -1);
+    showAsset(c.asset ?? -1, c.at);
     renderer.render(scene, camera(c.view, c.spec));
     const label = document.createElement("div");
     label.className = "label";
@@ -467,4 +538,4 @@ function draw(): { rows: number; cols: number; note: string } {
   return { rows, cols, note: `${sheet}${sheet === "machines" ? "" : ` · ${spec.name}`}` };
 }
 
-window.__sled = { ready: Promise.resolve(), sheet: draw };
+window.__sled = { ready: sheet === "asset" ? loadAssets() : Promise.resolve(), sheet: draw };

@@ -67,6 +67,7 @@ Every dependency resolves from the public npm registry, so `npm install` needs n
 | `VITE_PWA_IGNORE_PATHS`            | Comma-separated absolute paths the built service worker must NOT claim. Only the root slot sets it (`/preview/,/branch/`) so nested slots own their own pages. |
 | `GITHUB_SHA` / `GITHUB_RUN_NUMBER` | Provided by CI; baked into the build label the HUD corner shows.                                                                                               |
 | `CHROMIUM_PATH`                    | The browser the screenshot and profile tools drive. Claude web sessions have one at `/opt/pw-browsers/chromium`.                                               |
+| `BLENDER`                          | The Blender executable `make blender` runs (else the macOS app, else `blender` on the PATH). Only the Blender lab reads it.                                    |
 
 `.env.example` at the root documents the same set; copy it to `.env` (gitignored) to override locally.
 
