@@ -18,10 +18,13 @@ import {
   botInput,
   createGame,
   generateLevel,
+  landingGrade,
   lengthPointsPerMetre,
   placeRun,
   poseOf,
+  nearestTrackPoint,
   step,
+  trackPointAt,
   type GameEvent,
   type GameMode,
   type GameState,
@@ -63,12 +66,13 @@ describe("a staged backflip", () => {
   it("scores: the flip, the air it was turned in, and the combo banked on a clean landing", () => {
     const state = staged();
     const events = ride(state, 4, BACKFLIP);
-    expect(tricksOf(events)).toEqual(["air", "backflip"]);
+    expect(tricksOf(events)).toEqual(["air", "backflip", "landing"]);
     expect(events.some((e) => e.kind === "wipeout")).toBe(false);
     const land = events.find((e) => e.kind === "land");
     expect(land?.kind === "land" && land.harsh).toBe(false);
     const combo = events.find((e) => e.kind === "combo");
-    expect(combo?.kind === "combo" && combo.mult).toBe(3);
+    // The air's rung, the flip's, and the clean landing's beside it.
+    expect(combo?.kind === "combo" && combo.mult).toBe(4);
     expect(combo?.kind === "combo" && combo.sketchy).toBe(false);
     expect(state.tricks.score).toBeGreaterThan(1500);
     expect(state.tricks.score).toBe(combo?.kind === "combo" ? combo.points : -1);
@@ -231,6 +235,96 @@ describe("the air's two halves", () => {
   });
 });
 
+describe("the landing, judged", () => {
+  /** A flight dropped onto the flat from `height` m climbing `vy` m/s, with
+   * nothing turned in it; what it reported and what it won. */
+  function drop(height: number, vy: number) {
+    const state = staged("tricks", { ...LAUNCH, height, vy });
+    const base = () => state.tricks.base;
+    let land: Extract<GameEvent, { kind: "land" }> | null = null;
+    const won: Extract<GameEvent, { kind: "trick" }>[] = [];
+    let before = 0;
+    for (let i = 0; i < 4 * TUNING.physicsHz && !land; i++) {
+      before = base();
+      step(state, { ...NEUTRAL_INPUT, throttle: 1 });
+      for (const e of state.events) {
+        if (e.kind === "land") land = e;
+        if (e.kind === "trick") won.push(e);
+      }
+    }
+    return { state, land, won, paid: base() - before };
+  }
+
+  it("grades a landing by the share of what the suspension takes", () => {
+    const state = staged();
+    const harsh = TUNING.air.harshSpeed;
+    expect(landingGrade(state.sled, 0)).toBe(0);
+    expect(landingGrade(state.sled, harsh)).toBeCloseTo(1, 6);
+  });
+
+  it("pays a clean one by how soft it was, a perfect one as its own tier, a hard one nothing", () => {
+    const T = TUNING.tricks;
+    const tiers = new Set<number>();
+    for (const [height, vy] of [
+      [1.2, 0],
+      [1.4, 1],
+      [2, 0],
+      [3, 0],
+      [1.2, 8.5],
+    ]) {
+      const { state, land, won, paid } = drop(height, vy);
+      expect(land).not.toBeNull();
+      const grade = landingGrade(state.sled, land?.impact ?? 0);
+      const landing = won.find((e) => e.trick === "landing");
+      if (land && land.airTime >= T.airElement && grade <= T.cleanLanding) {
+        expect(landing?.spins).toBe(grade <= T.perfectLanding ? 2 : 1);
+        expect(landing?.points).toBeCloseTo(T.landPoints * (1 - grade / T.cleanLanding), 6);
+        expect(paid).toBeGreaterThanOrEqual((landing?.points ?? Infinity) - 1e-9);
+        // Nothing turned in the flight: the landing multiplies nothing.
+        expect(state.tricks.mult).toBe(1);
+        tiers.add(landing?.spins ?? 0);
+      } else {
+        expect(landing).toBeUndefined();
+        tiers.add(0);
+      }
+    }
+    // The spread covers a landing that is clean and one that is not.
+    expect(tiers.has(0)).toBe(true);
+    expect(tiers.has(1) || tiers.has(2)).toBe(true);
+  });
+
+  it("is what the field's built landings are for: the high lip landed whole at speed", () => {
+    const level = generateLevel(1, { tricks: true });
+    const high = (level.kickers ?? []).find((k) => k.size === "high");
+    expect(high).toBeDefined();
+    const k = high as NonNullable<typeof high>;
+    const fly = (kmh: number) => {
+      const state = createGame({ level, mode: "tricks", countdown: 0, quiet: true });
+      const at = trackPointAt(level, (k.s ?? 0) - k.ramp - 5);
+      placeRun(state, { x: at.x, z: at.z, heading: at.heading, speed: kmh / 3.6 });
+      for (let i = 0; i < 8 * TUNING.physicsHz; i++) {
+        const c = state.sled;
+        const v = c.speed * 3.6;
+        step(state, {
+          ...NEUTRAL_INPUT,
+          throttle: c.airborne ? 0 : v < kmh ? 1 : 0.2,
+          brake: !c.airborne && v > kmh + 4 ? 0.5 : 0,
+        });
+        for (const e of state.events) {
+          const u = (c.x - k.x) * Math.sin(k.heading) + (c.z - k.z) * Math.cos(k.heading);
+          if (e.kind === "land" && u > 0) return e;
+        }
+      }
+      return null;
+    };
+    const ok = fly(90);
+    expect(ok?.airTime).toBeGreaterThan(1.8);
+    expect(ok?.harsh).toBe(false);
+    // Taken far too fast it overshoots the slope onto the run-out.
+    expect(fly(115)?.harsh).toBe(true);
+  });
+});
+
 describe("the trick field (R20)", () => {
   const seed = 3;
   const race = generateLevel(seed);
@@ -247,20 +341,59 @@ describe("the trick field (R20)", () => {
     expect(tricks.checkpoints.map((c) => c.s)).toEqual(race.checkpoints.map((c) => c.s));
   });
 
-  it("is graded, spaced and clear of the start line", () => {
+  it("comes in three sizes, each built to its row, spaced and clear of the start line", () => {
+    expect(new Set(field.map((k) => k.size))).toEqual(new Set(F.order));
     field.forEach((k, i) => {
-      expect(k.height).toBe(F.heights[i % F.heights.length]);
+      const z = F.sizes[k.size ?? "low"];
+      expect(k.height).toBe(z.height);
+      expect(k.shape).toEqual({ deck: z.deck, fall: z.fall, dig: z.dig });
+      expect(k.landing).toBe(z.deck + z.fall + z.runout);
       expect((k.s ?? 0) - k.ramp).toBeGreaterThanOrEqual(F.lead - 1e-6);
       expect((k.s ?? 0) + k.landing).toBeLessThanOrEqual(tricks.track.length - F.lead + 1e-6);
       const next = field[i + 1];
       if (next)
         expect((next.s ?? 0) - next.ramp - ((k.s ?? 0) + k.landing)).toBeGreaterThan(F.gap - 1e-6);
       // Stamped: the lip stands its height over the graded line (less what
-      // the two-metre grid shaves off a kink).
-      const lift = tricks.groundAt(k.x, k.z) - race.groundAt(k.x, k.z);
-      expect(lift).toBeGreaterThan(k.height * 0.85);
-      expect(lift).toBeLessThan(k.height + 0.01);
+      // the two-metre grid shaves off a kink), the deck holds it, and the
+      // landing slope's foot lies dug under the line the race rides.
+      const lift = (u: number): number => {
+        const p = trackPointAt(tricks, (k.s ?? 0) + u);
+        return tricks.groundAt(p.x, p.z) - race.groundAt(p.x, p.z);
+      };
+      expect(lift(0)).toBeGreaterThan(k.height * 0.85);
+      expect(lift(0)).toBeLessThan(k.height + 0.01);
+      if (z.deck > 0) expect(lift(z.deck / 2)).toBeCloseTo(k.height, 1);
+      expect(lift(z.deck + z.fall)).toBeLessThan(-z.dig * 0.85);
+      expect(Math.abs(lift(k.landing + 2))).toBeLessThan(0.05);
     });
+  });
+
+  it("changes the track and nothing else of the country", () => {
+    expect(tricks.spawn).toEqual(race.spawn);
+    expect((tricks.kickers ?? []).filter((k) => !k.trick)).toEqual(race.kickers);
+    // The woods are the race map's, less a few trees on the ground the field
+    // was shaped out of beside the track — and where one stands, it stands
+    // on the ground as it now lies.
+    const key = (t: { x: number; z: number }): string => `${t.x},${t.z}`;
+    const kept = new Set(tricks.trees.map(key));
+    const gone = race.trees.filter((t) => !kept.has(key(t)));
+    expect(tricks.trees.every((t) => race.trees.some((r) => key(r) === key(t)))).toBe(true);
+    expect(gone.length).toBeLessThan(race.trees.length * 0.02);
+    const reach = LEVEL_RULES.track.width.max / 2 + LEVEL_RULES.track.shoulder.flat + 40;
+    for (const t of gone) expect(nearestTrackPoint(race, t.x, t.z).distance).toBeLessThan(reach);
+    for (const t of tricks.trees) expect(t.y).toBeCloseTo(tricks.groundAt(t.x, t.z), 3);
+    // Far from the loop the ground is the race map's to the millimetre.
+    for (const t of race.trees.slice(0, 300)) {
+      if (nearestTrackPoint(race, t.x, t.z).distance > reach) {
+        expect(tricks.groundAt(t.x, t.z)).toBeCloseTo(race.groundAt(t.x, t.z), 3);
+      }
+    }
+  });
+
+  it("stands every map of a spread on the race map's own attempt", () => {
+    for (const s of [1, 2, 4, 6, 7]) {
+      expect(generateLevel(s, { tricks: true }).attempt).toBe(generateLevel(s).attempt);
+    }
   });
 
   it("passes its own analysis", () => {
@@ -287,6 +420,7 @@ describe("the score as read (strings.ts, trick-tile.ts)", () => {
       ]),
     ).toBe("BIG AIR + DOUBLE BACKFLIP + 360 + TWIST + CAN-CAN");
     expect(comboLine([{ kind: "spin", spins: 2, flight: 1 }])).toBe("720");
+    expect(comboLine([{ kind: "landing", spins: 2, flight: 1 }])).toBe("PERFECT LANDING");
   });
 
   it("is up on a tricks run only, with the combo in hand and then what it paid", () => {
@@ -294,8 +428,8 @@ describe("the score as read (strings.ts, trick-tile.ts)", () => {
     const state = staged();
     ride(state, 1.8, BACKFLIP);
     const inAir = comboTile(state);
-    expect(inAir?.combo?.line).toBe("BIG AIR + BACKFLIP");
-    expect(inAir?.combo?.mult).toBe(3);
+    expect(inAir?.combo?.line).toBe("BIG AIR + BACKFLIP + CLEAN LANDING");
+    expect(inAir?.combo?.mult).toBe(4);
     ride(state, 1.6, () => ({}));
     const after = comboTile(state);
     expect(after?.combo).toBeNull();

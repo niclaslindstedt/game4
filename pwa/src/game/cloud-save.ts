@@ -21,8 +21,8 @@
 //             the case this whole file exists for.
 //   settings  THE RIDER'S HALF. The camera, the sled, the sound and its
 //             faders, the keys, the help, damage, the trial's length, the
-//             level card's map, the free ride's card, the HUD switch — a
-//             person's preferences. NOT the picture (`video`, `probed`, `autoPicture`: what
+//             level card's map, the trick map, the free ride's card, the
+//             HUD switch — a person's preferences. NOT the picture (`video`, `probed`, `autoPicture`: what
 //             THIS machine can hold) and NOT the thumbs (`touch`: the travel
 //             of a screen this size) and NOT the developer page (`developer`,
 //             `dev`: a bench let out on one machine is not let out on the

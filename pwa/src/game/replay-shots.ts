@@ -182,7 +182,8 @@ export function createShotCollector(): ShotCollector {
     step: (state, at) => {
       // The tricks first: a revolution the touchdown finished is won on the
       // landing's own step, after its `land`.
-      for (const e of state.events) if (e.kind === "trick" && e.trick !== "air") turned += 1;
+      for (const e of state.events)
+        if (e.kind === "trick" && e.trick !== "air" && e.trick !== "landing") turned += 1;
       for (const e of state.events) {
         switch (e.kind) {
           case "air":

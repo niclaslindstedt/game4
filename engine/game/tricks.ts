@@ -59,6 +59,17 @@
 //    off (`wipeout`, which is also what a nose-in landing is), or put back
 //    on the track (`reset`), banks nothing at all.
 //
+// 7. A CLEAN LANDING IS AN ELEMENT OF ITS OWN, judged off how hard the sled
+//    met the snow as a share of what its suspension takes before it
+//    bottoms (`landingGrade`) — the same measure that makes a landing
+//    sketchy past the whole of it, and that bends the suspension where
+//    damage is on. A flight of `airElement` or more met at `cleanLanding`
+//    of it or less is CLEAN, at `perfectLanding` or less PERFECT, and adds
+//    `landPoints` to the base the softer it came down; beside a trick
+//    turned in the same flight it is a step of multiplier, two for a
+//    perfect one — a flip put down on the landing slope is worth more than
+//    one slammed onto the flat. A landing well sideways is neither.
+//
 // The engine only ever says what happened: `trick`, `combo` and `bail`
 // events carry the beat a presentation pulses on, and `TrickState` carries
 // the numbers and the element list it reads. No word for any of it is here
@@ -66,7 +77,9 @@
 // nothing here is random: a run replays to the same score.
 
 import { TUNING } from "./defs/tuning.ts";
-import type { BailCause, GameEvent, GameState, TrickKind, TrickState } from "./state.ts";
+import { harshShare } from "./damage.ts";
+import { harshSpeedOf } from "./limits.ts";
+import type { BailCause, GameEvent, GameState, SledState, TrickKind, TrickState } from "./state.ts";
 import { hypot } from "../lib/math.ts";
 
 const T = TUNING.tricks;
@@ -229,6 +242,40 @@ function turnsLanded(state: GameState, events: GameEvent[]): void {
   countTurns(state, events, T.landSlack);
 }
 
+/** HOW HARD A LANDING WAS, as the share of what the suspension of the sled
+ * that took it could have taken (`harshSpeedOf`, less what damage has cost
+ * it — `sled.ts` calls a landing harsh past 1 by the same arithmetic): 0
+ * is a touchdown with nothing into the slope, 1 the one that bottoms it. */
+export function landingGrade(c: SledState, impact: number): number {
+  return impact / (harshSpeedOf(c.spec) * harshShare(c));
+}
+
+/** How far the sled is turned from the way it is going over the snow,
+ * rad, 0 … π. */
+function slipOf(c: SledState): number {
+  const v = hypot(c.vx, c.vz);
+  if (v < 1) return 0;
+  const along = (c.vx * Math.sin(c.heading) + c.vz * Math.cos(c.heading)) / v;
+  return Math.acos(Math.max(-1, Math.min(1, along)));
+}
+
+/** A LANDING TAKEN WHOLE, judged (rule 7): a clean or a perfect one is an
+ * element, `spins` 1 or 2 — the tier, which is how the words tell them
+ * apart. */
+function landed(state: GameState, events: GameEvent[], impact: number, tricked: boolean): void {
+  const k = state.tricks;
+  const c = state.sled;
+  const grade = landingGrade(c, impact);
+  if (grade > T.cleanLanding || slipOf(c) > T.landSlip) return;
+  const tier = grade <= T.perfectLanding ? 2 : 1;
+  const points = T.landPoints * (1 - grade / T.cleanLanding);
+  k.base += points;
+  if (tricked) k.mult += tier;
+  k.link = T.linkWindow;
+  k.parts.push({ kind: "landing", spins: tier, flight: k.flight });
+  events.push({ kind: "trick", t: state.t, trick: "landing", spins: tier, points, mult: k.mult });
+}
+
 /** One fixed step of the score, run on the PLAYER's run after it has been
  * stepped and has left this step's `land`, `wipeout`, `reset` and `finish`
  * on the events: the sled says what it did, and this decides what it was
@@ -289,12 +336,14 @@ export function stepTricks(state: GameState, events: GameEvent[]): void {
     }
     const posing = k.pose !== null;
     if (land) turnsLanded(state, events);
+    const tricked = k.parts.some((p) => p.flight === k.flight && p.kind !== "air");
     endFlight(k);
     if (land && posing) {
       bail(state, events, "pose");
       return;
     }
     if (land?.harsh && k.base > 0) bank(state, events, true);
+    else if (land && land.airTime >= T.airElement) landed(state, events, land.impact, tricked);
   } else if (k.base > 0) {
     k.link -= dt;
     if (k.link <= 0) bank(state, events, false);

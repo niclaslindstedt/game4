@@ -7,12 +7,15 @@
 import type { CreateGameOptions, GameMode } from "@engine";
 
 import type { CampaignLevel } from "./campaign.ts";
+import type { TrickMap } from "./trick-maps.ts";
 
 /** The presses the cards make, boxed so a card re-rendering is never a
  * reason to rebuild the loop that owns the race. */
 export type Presses = {
   race: (seed: number, mode: GameMode) => void;
   free: (options: CreateGameOptions) => void;
+  /** A TRICKS run on a trick map (`trick-maps.ts`). */
+  tricks: (map: TrickMap) => void;
   /** A pinned map: a campaign rung (`rung`), or a map off the level card. */
   pinned: (pin: CampaignLevel, mode: CampaignLevel["mode"], rung: boolean) => void;
   restart: () => void;
@@ -28,6 +31,7 @@ export type Presses = {
 export const NO_PRESSES: Presses = {
   race: () => {},
   free: () => {},
+  tricks: () => {},
   pinned: () => {},
   restart: () => {},
   pause: () => {},

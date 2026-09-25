@@ -22,6 +22,7 @@ import {
 } from "./campaign.ts";
 import { createCampaignRig, type CampaignRig } from "./campaign-run.ts";
 import type { Settings } from "./settings.ts";
+import type { TrickMap } from "./trick-maps.ts";
 import type { MenuPage } from "./url-params.ts";
 
 export type CampaignApp = {
@@ -34,6 +35,9 @@ export type CampaignApp = {
   /** A map picked, on to the sled card: a campaign RUNG, or a map off the
    * level card — which is kept as the one the RACE and TIME TRIAL ride. */
   choose: (level: CampaignLevel, rung: boolean) => void;
+  /** A trick map picked on the trick map card, kept as the one the TRICKS
+   * run rides, on to the sled card. */
+  chooseTrick: (map: TrickMap) => void;
   /** A board merged in from the rider's other devices (`use-cloud-sync.ts`)
    * becomes the one this device renders and books into. */
   adopt: (progress: CampaignProgress) => void;
@@ -71,6 +75,11 @@ export function useCampaign(world: {
     choose: (level, isRung) => {
       rung.current = isRung ? level : null;
       if (!isRung) world.setSettings((s) => ({ ...s, level: level.id }));
+      world.setPage("sled");
+    },
+    chooseTrick: (map) => {
+      rung.current = null;
+      world.setSettings((s) => ({ ...s, trickMap: map.id }));
       world.setPage("sled");
     },
     adopt: (next) => setProgress((held.current = next)),

@@ -100,6 +100,8 @@ const SURFACES = {
   // straight off the URL (`?menu=campaign|levels`).
   campaign: { params: { menu: "campaign" }, wait: ".menu-card-campaign", settle: 900 },
   levels: { params: { menu: "levels" }, wait: ".menu-card-levels", settle: 900 },
+  // THE TRICK MAP CARD a TRICKS run picks its map on (`?menu=tricks`).
+  tricks: { params: { menu: "tricks", mode: "tricks" }, wait: ".menu-card-levels", settle: 900 },
   // OPTIONS and its KEYS page, straight off the URL (`?menu=options|keys`).
   options: { params: { menu: "options" }, wait: ".menu-card-options", settle: 900 },
   keys: { params: { menu: "keys" }, wait: ".menu-card-keys", settle: 900 },

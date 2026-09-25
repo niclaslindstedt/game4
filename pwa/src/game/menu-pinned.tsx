@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE TWO CARDS A PINNED MAP IS CHOSEN ON, as the front door's pages see
-// them: the CAMPAIGN card (a rung, ridden for points) and the LEVEL card (a
-// map for a RACE or a TIME TRIAL, ridden for the record book). One component
-// so `App.tsx` routes both pages with one branch: which card is up is the
-// page, and what a pick does is the app's.
+// THE CARDS A PINNED MAP IS CHOSEN ON, as the front door's pages see them:
+// the CAMPAIGN card (a rung, ridden for points), the LEVEL card (a map for a
+// RACE or a TIME TRIAL, ridden for the record book) and the TRICK MAP card
+// (a map for a TRICKS run). One component so `App.tsx` routes the three
+// pages with one branch: which card is up is the page, and what a pick does
+// is the app's.
 
 import { sledById, type GameMode, type SledId } from "@engine";
 
 import { measuredLaps, type CampaignLevel, type CampaignProgress } from "./campaign.ts";
 import { CampaignPage } from "./menu-campaign.tsx";
 import { LevelsPage } from "./menu-levels.tsx";
+import { TrickMapsPage } from "./menu-tricks.tsx";
 import type { RecordKey, RunRecord } from "./records.ts";
 import type { Settings } from "./settings.ts";
 import { STRINGS } from "./strings.ts";
+import type { TrickMap } from "./trick-maps.ts";
 
 export function PinnedCards({
   page,
@@ -23,8 +26,9 @@ export function PinnedCards({
   standing,
   onBack,
   onChoose,
+  onTrick,
 }: {
-  page: "campaign" | "levels";
+  page: "campaign" | "levels" | "tricks";
   /** The mode the level card picks a map for. */
   mode: GameMode;
   /** The trial's length off the front door's chip, and the map the level
@@ -39,7 +43,12 @@ export function PinnedCards({
   /** A map picked, on to the sled card: a campaign RUNG, or a map off the
    * level card. */
   onChoose: (level: CampaignLevel, rung: boolean) => void;
+  /** A trick map picked, on to the sled card. */
+  onTrick: (map: TrickMap) => void;
 }) {
+  if (page === "tricks") {
+    return <TrickMapsPage chosen={settings.trickMap} onBack={onBack} onPick={onTrick} />;
+  }
   if (page === "campaign") {
     return (
       <CampaignPage progress={progress} onBack={onBack} onRide={(level) => onChoose(level, true)} />

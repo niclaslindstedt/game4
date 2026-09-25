@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE CAMPAIGN'S WORDS — the front door's CAMPAIGN tile, the campaign card
 // (`menu-campaign.tsx`), the level card a RACE and a TIME TRIAL pick their
-// map on (`menu-levels.tsx`) and the lines the finish plate adds on a rung
+// map on (`menu-levels.tsx`), the card a TRICKS run picks its map on
+// (`menu-tricks.tsx`) and the lines the finish plate adds on a rung
 // (`campaign-plate.ts`). Stated beside the one table and spread into it
 // (`strings.ts`), so every word the player reads is still one `STRINGS` key
 // and the campaign's block is one file to read. Templates, never
@@ -10,6 +11,24 @@
 import { formatTime, ordinal } from "../lib/util.ts";
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
+
+/** A solar hour as a clock: `13:44`. */
+function clockOf(hour: number): string {
+  const h = Math.floor(hour);
+  const m = Math.round((hour - h) * 60);
+  return `${String(h + Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+const MONTHS = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+const MONTH_DAYS = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+/** A day of the year (1–365) as a date: `24 FEB`. */
+function dateOf(dayOfYear: number): string {
+  let d = Math.min(365, Math.max(1, Math.round(dayOfYear)));
+  let m = 0;
+  while (d > MONTH_DAYS[m]) d -= MONTH_DAYS[m++];
+  return `${d} ${MONTHS[m]}`;
+}
 
 export const CAMPAIGN_STRINGS = {
   /* ── THE FRONT DOOR'S TILE (menu-main.tsx) ─────────────────────────── */
@@ -40,18 +59,15 @@ export const CAMPAIGN_STRINGS = {
   campaignBilling: (trial: boolean, laps: number): string =>
     `${trial ? "TIME TRIAL" : "RACE"} · ${plural(laps, "LAP", "LAPS")}`,
   /** The day a map is ridden in, under its name: the sky and the start hour. */
-  campaignDay: (sky: string, hour: number): string => {
-    const h = Math.floor(hour);
-    const m = Math.round((hour - h) * 60);
-    const clock = `${String(h + Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
-    return `${sky} · ${clock}`;
-  },
+  campaignDay: (sky: string, hour: number): string => `${sky} · ${clockOf(hour)}`,
   campaignSky: {
     clear: "CLEAR",
     fair: "FAIR",
+    flurries: "FLURRIES",
     high: "HIGH CLOUD",
     overcast: "OVERCAST",
     snow: "SNOW",
+    storm: "STORM",
     fog: "FOG",
   } as Record<string, string>,
   campaignMedal: { bronze: "BRONZE", silver: "SILVER", gold: "GOLD" } as Record<string, string>,
@@ -66,6 +82,14 @@ export const CAMPAIGN_STRINGS = {
   levelsNoBest: "NO TIME SET YET",
   levelsBest: (seconds: number, sled: string): string =>
     `BEST ${formatTime(seconds)} · ${sled.toUpperCase()}`,
+
+  /* ── THE TRICK MAP CARD (menu-tricks.tsx) ──────────────────────────── */
+  tricksOn: "TRICKS ON",
+  /** What a trick map's box is: the run and how long the buzzer gives it. */
+  tricksBilling: (seconds: number): string => `TRICKS · ${Math.round(seconds / 60)} MIN`,
+  /** The day a trick map is ridden on: the sky, the hour and the date. */
+  tricksDay: (sky: string, hour: number, dayOfYear: number): string =>
+    `${sky} · ${clockOf(hour)} · ${dateOf(dayOfYear)}`,
 
   /* ── THE FINISH PLATE ON A RUNG (campaign-plate.ts) ────────────────── */
   plateRung: (shelf: string, rung: number, name: string): string =>
