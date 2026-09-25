@@ -357,7 +357,9 @@ describe("which map a run is on", () => {
     expect(sledBack(FIRST.levels[0], "race", null)).toBe("campaign");
     expect(sledBack(null, "race", null)).toBe("levels");
     expect(sledBack(null, "timeTrial", 7)).toBe("root");
-    expect(sledBack(null, "tricks", null)).toBe("root");
+    expect(sledBack(null, "tricks", null)).toBe("tricks");
+    expect(sledBack(null, "tricks", 7)).toBe("root");
+    expect(readParams("?menu=tricks&mode=tricks").page).toBe("tricks");
   });
 });
 

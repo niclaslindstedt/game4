@@ -29,19 +29,55 @@ import { nearestTrackPoint } from "./query.ts";
 import { scaleCount } from "./regions.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import { trackOf, type Loop } from "./track.ts";
-import type { Kicker } from "./types.ts";
+import type { Kicker, KickerShape } from "./types.ts";
 import { jumpsOf, type JumpTraits } from "./versions.ts";
 
+/** The ease a built landing falls along and its run-out climbs back
+ * along, 0 … 1 over 0 … 1: a quadratic round-over for the first `round` of
+ * it, a straight slope through the middle, and a quadratic round-out at the
+ * end — so the knuckle is rounded, the slope a sled lands on is one grade,
+ * and the foot blends into the flat. */
+function ease(x: number, round: number): number {
+  if (x <= 0) return 0;
+  if (x >= 1) return 1;
+  const m = 1 / (1 - round);
+  if (x < round) return (m * x * x) / (2 * round);
+  if (x < 1 - round) return m * (x - round / 2);
+  return 1 - (m * (1 - x) * (1 - x)) / (2 * round);
+}
+
+/** How much of a built landing is rounded over at its knuckle and out at
+ * its foot, and of its run-out at either end. */
+const LANDING_ROUND = 0.25;
+const RUNOUT_ROUND = 0.5;
+
 /** The lift a kicker's profile adds `u` metres past its lip (negative on
- * the ramp), m. */
-export function kickerProfile(height: number, ramp: number, landing: number, u: number): number {
+ * the ramp), m. With no `shape` the landing falls away from the lip as
+ * (1 − u)², steepest at the lip (R4, R9). With one (R20) it is BUILT: a
+ * flat deck at the lip's height, a landing slope falling `height + dig`
+ * over `fall` metres to `dig` under the ground it was shaped on, and a
+ * run-out climbing back over the rest of `landing`. */
+export function kickerProfile(
+  height: number,
+  ramp: number,
+  landing: number,
+  u: number,
+  shape?: KickerShape,
+): number {
   if (u <= -ramp || u >= landing) return 0;
   if (u <= 0) {
     const t = 1 + u / ramp;
     return height * t * t;
   }
-  const t = 1 - u / landing;
-  return height * t * t;
+  if (!shape) {
+    const t = 1 - u / landing;
+    return height * t * t;
+  }
+  if (u <= shape.deck) return height;
+  const v = u - shape.deck;
+  if (v < shape.fall) return height - (height + shape.dig) * ease(v / shape.fall, LANDING_ROUND);
+  const out = landing - shape.deck - shape.fall;
+  return -shape.dig * (1 - ease((v - shape.fall) / out, RUNOUT_ROUND));
 }
 
 /** An on-track kicker before the loop is re-indexed: its lip's station. */

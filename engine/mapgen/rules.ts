@@ -171,19 +171,24 @@
 //       laid on its loop in the direction of travel, from `trick.lead`
 //       metres past the start line to `trick.lead` metres short of it
 //       again: as many as fit, up to `trick.count.max` and never fewer than
-//       `trick.count.min`. They are GRADED: their lips stand
-//       `trick.heights` metres high in turn — small, medium, large and round
-//       again — each with a ramp `trick.ramp` times its lip's height long
-//       and a landing `trick.landing` times it, the profile of R9, steepest
-//       at the lip, at full height across the track, its flat shoulders and
-//       its berms (R8, R18), so the berms ride up and over with it. Each
-//       stands on a stretch that turns no more than
-//       `trick.straight` radians over its footprint and whose line past the
-//       lip climbs no steeper than `trick.landingGrade`, with `trick.gap`
-//       metres of track between one kicker's landing and the next one's
-//       ramp, and as much between any of them and one of R9's. The field
-//       draws nothing from any stream: the country, the loop, the start and
-//       the checkpoints are the seed's own.
+//       `trick.count.min`. They come in three SIZES, laid in `trick.order`
+//       — low, medium, high and round again — each built to its row of
+//       `trick.sizes`: a ramp rising to the lip, steepest at the lip; a
+//       flat deck at the lip's height; a LANDING SLOPE falling the lip's
+//       height and `dig` metres more, to a floor under the track, over
+//       `fall` metres, rounded over at its knuckle and out at its foot; and
+//       a run-out climbing back up to the track. Each is stamped along the
+//       line by arc length at full height across the track, its flat
+//       shoulders and its berms (R8, R18), so the berms ride up, over and
+//       down with it, and fades into the country over `trick.edge` metres
+//       beyond. Each stands on a stretch that turns no more than
+//       `trick.straight` radians from its ramp's foot to its landing
+//       slope's foot and whose line over the lip and the landing slope
+//       climbs no steeper than `trick.landingGrade`, with `trick.gap` metres
+//       of track between one kicker's run-out and the next one's ramp, and
+//       as much between any of them and one of R9's. The field draws
+//       nothing from any stream: the country, the loop, the start and the
+//       checkpoints are the seed's own.
 //   R21 THE REGION. Every map is built in one REGION — a kind of snow
 //       country, never a place — asked for by `GenerateOptions.region` and
 //       published as `Level.region`: the `boreal` forest, the `alpine` high
@@ -224,7 +229,7 @@
 //       frozen river. The cliffs are dealt off a stream of their own;
 //       `Level.cliffs` publishes every one.
 
-import type { SnowingKind, WeatherKind } from "./types.ts";
+import type { SnowingKind, TrickSize, WeatherKind } from "./types.ts";
 
 /** A closed band of numbers, inclusive. */
 export type Band = { readonly min: number; readonly max: number };
@@ -583,24 +588,43 @@ export const LEVEL_RULES = {
   },
   /** R20 — the trick field. */
   trick: {
-    count: { min: 4, max: 12 } as Band,
-    /** The lips, m, laid in this order and round again. */
-    heights: [1.4, 2, 2.6] as readonly number[],
-    /** Ramp and landing, as multiples of the lip's height: 2/ratio is each
-     * one's slope at the lip — a 20° kick off the ramp, where R9's are
-     * 11–14°, and a landing falling away at 7°. */
-    ramp: 5.5,
-    landing: 16,
-    /** Track between one kicker's landing and the next one's ramp, m: the
-     * run-out a sled lands into and the run-up it takes the next lip at. */
-    gap: 60,
+    count: { min: 6, max: 40 } as Band,
+    /** The sizes, laid in this order and round again. */
+    order: ["low", "medium", "high"] as readonly TrickSize[],
+    /** Each size as it is built, m: the lip's `height`; the ramp as a
+     * multiple of it (2/ratio is its slope at the lip — 15°, 18° and 20°);
+     * the flat `deck` past the lip; the landing slope's length `fall`,
+     * falling the lip's height and `dig` more to a floor under the track;
+     * and the `runout` climbing back up from it. Sized by staging a sled
+     * at a held speed before each and reading the landing: the low one
+     * lands under the machine's harsh speed from 40 to 110 km/h, the medium
+     * clean to about 70 and harshly past 100, the high clean to about 80
+     * and harshly past 100 — with two seconds of air at 90
+     * (`docs/riding.md`). */
+    sizes: {
+      low: { height: 1, ramp: 7.5, deck: 0, fall: 22, dig: 1, runout: 20 },
+      medium: { height: 2, ramp: 6.2, deck: 6, fall: 34, dig: 3, runout: 30 },
+      high: { height: 3.2, ramp: 5.5, deck: 10, fall: 56, dig: 6.5, runout: 55 },
+    },
+    /** How much further on than a smaller size the size whose turn it is
+     * may first fit and still be laid, m. */
+    wait: 80,
+    /** Track between one kicker's run-out and the next one's ramp, m: the
+     * run-up he takes the next lip at. */
+    gap: 20,
     /** Clear track after the start line before the first ramp, and before
-     * the line after the last landing, m. */
-    lead: 150,
-    /** Most the line may turn over one kicker's footprint, rad. */
-    straight: 0.12,
-    /** The line past the lip may climb no steeper than this. */
+     * the line after the last run-out, m. */
+    lead: 120,
+    /** Most the line may turn from a ramp's foot to the foot of its landing
+     * slope, rad — the stretch a sled rides straight up and flies straight
+     * over. */
+    straight: 0.2,
+    /** The line from the lip to the foot of the landing slope may climb no
+     * steeper than this. */
     landingGrade: 0.02,
+    /** Over how far past the berm's far toe the field fades into the
+     * country, m. */
+    edge: 12,
   },
 } as const;
 

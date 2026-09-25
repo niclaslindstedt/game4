@@ -76,6 +76,22 @@ export const TRICKS = {
    * it away has turned a flip. Short of it, and he has not; nose-first past
    * it is `crash.ts`'s. */
   landSlack: 0.6,
+  /** THE LANDING, JUDGED — by how hard the sled met the snow, as a share of
+   * what its suspension takes before it bottoms (`harshSpeedOf`, less what
+   * damage has cost it): at no more than `cleanLanding` of it a flight of
+   * `airElement` s or more is landed CLEAN, at no more than `perfectLanding`
+   * PERFECT — met along the slope, the springs taking it a little at a
+   * time. Past the whole of it the landing is sketchy (rule 6), and where
+   * damage is on it is what hurts the suspension. A landing more than
+   * `landSlip` rad sideways to the way the sled is going is neither. */
+  cleanLanding: 0.6,
+  perfectLanding: 0.3,
+  landSlip: 0.35,
+  /** What a clean landing adds to the combo's base at a dead-soft touchdown,
+   * points, falling to nothing at `cleanLanding` — and beside a trick
+   * turned in the same flight, one step of multiplier, two for a perfect
+   * one. Alone it multiplies nothing, as the air's own rung does not. */
+  landPoints: 250,
   /** How long the rider has on the snow, s, to leave the next lip before
    * the combo closes and banks. */
   linkWindow: 1.2,

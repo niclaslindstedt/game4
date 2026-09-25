@@ -22,17 +22,21 @@
 //   5. the kickers off the track (R4), stamped where the corridor is not
 //   5a the cliffs (R22), cut clear of the track and the kickers — off a
 //      stream of their own, and only on a version that has them
-//   6. the start line (R12), the loop re-indexed to begin there, the
-//      checkpoints from it (R11) and the grid behind it on the track (R13)
-//   6a the trick field (R20), stamped onto the finished loop — only on a
-//      map asked for one, and drawing nothing, so every other map is
-//      exactly what it was
+//   6. the start line (R12), and the loop re-indexed to begin there
+//   6a the trick field (R20) chosen on the finished loop — only on a map
+//      asked for one, and drawing nothing
 //   6b the drifts across the finished loop (R17) — off a stream of their
 //      own, so they thin the packed field and move nothing else
 //   7. the forest (R14), which keeps clear of everything above
 //   8. the day (R15)
 //   9. the weather (R19) — off a stream of its own, last, so it moves
 //      nothing above; an evening it deals moves only the day's start hour
+//  10. the trick field stamped into the finished country, the trees on
+//      the ground it reshaped cleared — so a tricks map is its seed's map
+//      with the field on its track, and every other map is exactly what it
+//      was
+//  11. the checkpoints (R11) and the grid (R13), read off the loop as it
+//      finally lies
 //
 // THE REGION (R21) scales the numbers steps 1, 5, 7 and 8 draw with and
 // draws nothing in their place, and adds two steps of its own, each off a
@@ -45,7 +49,7 @@
 //      the packed field clear of the loop (R10 holds)
 
 import { createRng } from "../lib/prng.ts";
-import { sampleField } from "../lib/heightfield.ts";
+import { sampleField, type Heightfield } from "../lib/heightfield.ts";
 import { analyzeLevel } from "../analysis/index.ts";
 import { debug } from "../output.ts";
 import { compileLevel } from "./compile.ts";
@@ -54,7 +58,7 @@ import { layCliffs } from "./cliffs.ts";
 import { growForest } from "./forest.ts";
 import { layOffKickers, layTrackKickers, publishTrackKickers } from "./kickers.ts";
 import { LEVEL_RULES as R } from "./rules.ts";
-import { layTrickField } from "./trick-field.ts";
+import { planTrickField, stampTrickField } from "./trick-field.ts";
 import { chooseStart, gridOnTrack, layCheckpoints } from "./spawn.ts";
 import { dealSun } from "./sun.ts";
 import { bakeCountry, planTerrain } from "./terrain.ts";
@@ -70,7 +74,7 @@ import {
   trackOf,
   type Loop,
 } from "./track.ts";
-import type { GenerateOptions, GeneratedLevel } from "./types.ts";
+import type { GenerateOptions, GeneratedLevel, Kicker, TreeDef } from "./types.ts";
 import { generatorTraits, jumpsOf, type GeneratorVersion } from "./versions.ts";
 
 /** How many loops an attempt draws before it gives up on its country. */
@@ -80,6 +84,22 @@ const DRAWS = 40;
  * attempts far apart in the generator's state space. */
 export function subSeed(seed: number, attempt: number): number {
   return (seed + attempt * 0x9e3779b9) >>> 0;
+}
+
+/** R20 — the trees the trick field's stamp moved the ground under by more
+ * than `TREE_SHIFT` m are cleared, and every other keeps its foot on the
+ * ground as it now lies: the woods are the race map's, less what stood on
+ * the ground the field was shaped out of. */
+const TREE_SHIFT = 0.25;
+function clearField(trees: TreeDef[], ground: Heightfield): TreeDef[] {
+  const kept: TreeDef[] = [];
+  for (const t of trees) {
+    const y = sampleField(ground, t.x, t.z);
+    if (Math.abs(y - t.y) > TREE_SHIFT) continue;
+    t.y = y;
+    kept.push(t);
+  }
+  return kept;
 }
 
 /** One attempt: a level, or the reason this sub-seed could not make one. */
@@ -129,23 +149,23 @@ function attemptLevel(
   // Publish the heights the ground actually carries, so a reader of a track
   // point and a reader of `groundAt` under it read the same number.
   for (const p of loop.points) p.y = sampleField(ground, p.x, p.z);
-  let kickers = publishTrackKickers(loop, trackKickers, start).concat(offKickers);
+  const kickers = publishTrackKickers(loop, trackKickers, start).concat(offKickers);
   for (const k of kickers) k.y = sampleField(ground, k.x, k.z);
+  // R20 — the trick field is chosen here, so the drifts keep off it, and
+  // stamped last, onto the finished country.
+  let field: Kicker[] = [];
   if (tricks) {
-    const field = layTrickField(loop, ground, kickers);
-    if (typeof field === "string") return field;
-    kickers = kickers.concat(field);
-    for (const p of loop.points) p.y = sampleField(ground, p.x, p.z);
+    const planned = planTrickField(loop, kickers);
+    if (typeof planned === "string") return planned;
+    field = planned;
   }
-  const checkpoints = layCheckpoints(trackOf(loop));
-  const { spawn, grid } = gridOnTrack(trackOf(loop));
-  const drifts = dealDrifts(sub, loop.length, kickers);
+  const drifts = dealDrifts(sub, loop.length, kickers.concat(field));
   const n = loop.points.length;
   stampDrifts(packed, near, along, drifts, start, n, loop.length / n);
   const crust = layCrust(sub, region, ground);
   if (crust || ice) foldSurface(packed, dist, region, crust, ice);
 
-  const trees = growForest(
+  let trees = growForest(
     rng,
     plan,
     ground,
@@ -158,6 +178,13 @@ function attemptLevel(
   const day = dealSun(rng, region.sun);
   const { weather, hour } = dealWeather(sub, day, generatorTraits(version));
   const sun = { ...day, hour };
+  if (field.length > 0) {
+    stampTrickField(ground, field, { near, along, dist }, loop, start);
+    trees = clearField(trees, ground);
+    for (const p of loop.points) p.y = sampleField(ground, p.x, p.z);
+  }
+  const checkpoints = layCheckpoints(trackOf(loop));
+  const { spawn, grid } = gridOnTrack(trackOf(loop));
 
   return compileLevel({
     seed,
@@ -170,7 +197,7 @@ function attemptLevel(
     spawn,
     grid,
     trees,
-    kickers,
+    kickers: kickers.concat(field),
     cliffs,
     sun,
     laps,

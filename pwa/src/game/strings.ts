@@ -21,6 +21,7 @@ export const TRICK_WORDS: Readonly<Record<TrickKind, string>> = {
   frontflip: "FRONT FLIP",
   spin: "360",
   twist: "TWIST",
+  landing: "CLEAN LANDING",
   oneFoot: "ONE-FOOTER",
   canCan: "CAN-CAN",
   tuck: "TUCK",
@@ -29,9 +30,11 @@ export const TRICK_WORDS: Readonly<Record<TrickKind, string>> = {
 /** How a revolution's count reads in front of a flip. */
 const TIMES = ["", "", "DOUBLE ", "TRIPLE "];
 
-/** One element as read: a flip by its count, a spin by its degrees. */
+/** One element as read: a flip by its count, a spin by its degrees, a
+ * landing by its tier. */
 function trickWord(kind: TrickKind, spins: number): string {
   if (kind === "spin") return String(360 * spins);
+  if (kind === "landing" && spins > 1) return "PERFECT LANDING";
   if (kind === "backflip" || kind === "frontflip") {
     return `${TIMES[spins] ?? `${spins}× `}${TRICK_WORDS[kind]}`;
   }
@@ -171,8 +174,10 @@ export const STRINGS = {
   menuFreeLine: "THE WHOLE MAP · NO CLOCK TO BEAT",
   /* ── THE TRICKS RUN (menu-main.tsx, hud-combo.tsx, hud-result.tsx) ── */
   menuTricks: "TRICKS",
-  menuTricksLine: (seed: number, seconds: number): string =>
-    `SEED ${seed} · THE TRICK FIELD · ${Math.round(seconds / 60)} MIN`,
+  /** The TRICKS tile, billed with the map it rides (or the link's seed). */
+  menuTricksLine: (map: string, seconds: number): string =>
+    `${map.toUpperCase()} · ${Math.round(seconds / 60)} MIN`,
+  menuTricksSeed: (seed: number): string => `SEED ${seed}`,
   /** The run's banked score, the buzzer, and the combo in hand. */
   score: (points: number): string => points.toLocaleString("en-US"),
   scoreLabel: "SCORE",

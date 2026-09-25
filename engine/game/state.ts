@@ -214,7 +214,7 @@ export type SledDamage = {
  * - `spin` — a revolution about the sled's own up axis (the 360);
  * - `twist` — a flip and a spin both come round in ONE flight;
  * - the three POSES (`TrickPose`), a rider's body held off the sled. */
-export type TrickKind = "air" | "backflip" | "frontflip" | "spin" | "twist" | TrickPose;
+export type TrickKind = "air" | "backflip" | "frontflip" | "spin" | "twist" | "landing" | TrickPose;
 
 /** THE RIDER'S POSES, picked with the trick button held in the air by what
  * the lean and the bars say (`strokes.ts`'s `poseOf`): a foot off to the

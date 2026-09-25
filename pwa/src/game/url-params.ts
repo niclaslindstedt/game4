@@ -102,7 +102,16 @@ export type DevPage = "dev" | "unlocks" | "benchHistory";
 
 /** The cards a link may open on. */
 export type MenuPage =
-  "root" | "sled" | "options" | "keys" | "start" | "campaign" | "levels" | "gallery" | DevPage;
+  | "root"
+  | "sled"
+  | "options"
+  | "keys"
+  | "start"
+  | "campaign"
+  | "levels"
+  | "tricks"
+  | "gallery"
+  | DevPage;
 const MENU_PAGES: readonly MenuPage[] = [
   "root",
   "sled",
@@ -111,6 +120,7 @@ const MENU_PAGES: readonly MenuPage[] = [
   "start",
   "campaign",
   "levels",
+  "tricks",
   "gallery",
   "dev",
   "unlocks",

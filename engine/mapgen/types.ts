@@ -201,6 +201,25 @@ export interface Kicker {
   /** One of the TRICK FIELD's (R20, `T1…`), laid on the track only on a
    * map built for a tricks run. */
   trick?: boolean;
+  /** Which of the trick field's three sizes it is (R20). */
+  size?: TrickSize;
+  /** A BUILT landing (R20): a deck, a landing slope dug under the ground and
+   * a run-out back up to it. Absent, the landing falls away from the lip
+   * (R4, R9). `landing` is then the whole length from the lip to the end of
+   * the run-out. */
+  shape?: KickerShape;
+}
+
+/** The trick field's three sizes of kicker (R20). */
+export type TrickSize = "low" | "medium" | "high";
+
+/** A built landing past a kicker's lip (`kickerProfile`), m: the flat
+ * `deck` at the lip's height, the landing slope's length `fall`, and how
+ * far under the ground it was shaped on the slope bottoms out, `dig`. */
+export interface KickerShape {
+  deck: number;
+  fall: number;
+  dig: number;
 }
 
 /** A cliff a sled is ridden off into the lower ground below (R22). `x, z`

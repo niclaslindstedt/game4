@@ -83,6 +83,8 @@ export function levelDigest(level: Level): string {
     mix(k.landing);
     mix(k.width);
     mix(sampleField(level.ground, k.x, k.z));
+    // R20's size, on a trick field's kickers only: none adds nothing.
+    if (k.size) word(k.size);
   }
   // R22 — the cliffs, where a version cuts any: none adds nothing, which
   // keeps every map pinned before there were cliffs on its own digest.

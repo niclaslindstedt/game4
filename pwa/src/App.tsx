@@ -39,10 +39,10 @@
 // state once per frame; the HUD is refreshed from a snapshot at ~12 Hz. A
 // hidden tab pauses the clock (§37.3) and the HUD says so.
 //
-// THE RENDERER IS FETCHED, NOT BUNDLED: `game/renderer.ts` is the one import
-// that reaches three.js, so it arrives as its own chunk behind the attract
-// card, and everything this file asks of it is `renderer-api.ts`'s — it
-// draws a `GameState` and never writes one.
+// THE RENDERER IS FETCHED, NOT BUNDLED (`use-render-kit.ts`):
+// `game/renderer.ts` is the one import that reaches three.js, so it arrives
+// as its own chunk behind the attract card, and everything this file asks of
+// it is `renderer-api.ts`'s — it draws a `GameState` and never writes one.
 //
 // THE SOUND AND THE MOTOR FOLLOW THE SAME RULE AS THE SNOW: fed every frame
 // the engine steps — the beds ducked under a card, where the bot's race is
@@ -53,7 +53,6 @@
 
 import { useEffect, useRef, useState } from "preact/hooks";
 import {
-  TRICKS_RUN,
   TUNING,
   botInput,
   createGame,
@@ -75,6 +74,7 @@ import { createLoader, raceOrFallback } from "./game/app-load.ts";
 import { NO_PRESSES, type Presses } from "./game/app-presses.ts";
 import { frontDoorPins, pinnedFor, pinnedPress } from "./game/campaign.ts";
 import { useCampaign } from "./game/campaign-app.ts";
+import { trickMapFor, tricksTile } from "./game/trick-maps.ts";
 import { useCloudSync } from "./game/use-cloud-sync.ts";
 import { freeGameOptions } from "./game/free-ride.ts";
 import { DevLayer, useDevApp } from "./game/dev-app.tsx";
@@ -102,6 +102,7 @@ import { PauseMenu } from "./game/menu-pause.tsx";
 import { PinnedCards } from "./game/menu-pinned.tsx";
 import { createPinnedRuns, sledBack } from "./game/pinned-run.ts";
 import type { WorldRenderer } from "./game/renderer-api.ts";
+import { useRenderKit } from "./game/use-render-kit.ts";
 import { createRunActions } from "./game/run-actions.ts";
 import type { LoadPhase } from "./game/run-loader.ts";
 import { createRunClock } from "./game/run-loop.ts";
@@ -239,16 +240,7 @@ export function App() {
   useEffect(() => input?.setBindings(settings.keys), [input, settings.keys]);
 
   // THE RENDER STACK, FETCHED RATHER THAN BUNDLED (see the header).
-  const [renderKit, setRenderKit] = useState<typeof import("./game/renderer.ts") | null>(null);
-  useEffect(() => {
-    let live = true;
-    void import("./game/renderer.ts").then((mod) => {
-      if (live) setRenderKit(mod);
-    });
-    return () => {
-      live = false;
-    };
-  }, []);
+  const renderKit = useRenderKit();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -568,6 +560,7 @@ export function App() {
           done: lift,
         });
       },
+      tricks: pinned.tricks,
       pinned: pinned.press,
       restart,
       pause: () => {
@@ -794,6 +787,10 @@ export function App() {
     // A RUNG off the campaign card, or a PINNED map off the level card.
     const pin = pinnedPress(campaign.rung.current, settings.level, modeRef.current, params.seed);
     if (pin) return pressRef.current.pinned(...pin);
+    // A TRICKS run on the trick map card's map, unless a link pinned a seed.
+    if (modeRef.current === "tricks" && params.seed === null) {
+      return pressRef.current.tricks(trickMapFor(settings.trickMap));
+    }
     // The trial and the tricks run are ridden on the map the menu stands over.
     const trial = modeRef.current === "timeTrial" || modeRef.current === "tricks";
     pressRef.current.race(trial ? trialSeed : nextSeed, modeRef.current);
@@ -899,8 +896,8 @@ export function App() {
           onRace={() => campaign.openCard("race", params.seed === null ? "levels" : "sled")}
           onTrial={() => campaign.openCard("timeTrial", params.seed === null ? "levels" : "sled")}
           onFree={() => campaign.openCard("free", "start")}
-          tricks={{ seed: trialSeed, seconds: TRICKS_RUN.limit }}
-          onTricks={() => campaign.openCard("tricks", "sled")}
+          tricks={tricksTile(settings.trickMap, params.seed)}
+          onTricks={() => campaign.openCard("tricks", params.seed === null ? "tricks" : "sled")}
           onOptions={() => setPage("options")}
           onGallery={() => setPage("gallery")}
           developer={settings.developer}
@@ -910,7 +907,7 @@ export function App() {
       )}
       {shell === "menu" && page !== "root" && (
         <div class="menu">
-          {page === "campaign" || page === "levels" ? (
+          {page === "campaign" || page === "levels" || page === "tricks" ? (
             <PinnedCards
               page={page}
               mode={modeRef.current}
@@ -920,6 +917,7 @@ export function App() {
               standing={(key) => bookRef.current?.standing(key) ?? null}
               onBack={() => setPage("root")}
               onChoose={campaign.choose}
+              onTrick={campaign.chooseTrick}
             />
           ) : page === "sled" ? (
             <SledPage

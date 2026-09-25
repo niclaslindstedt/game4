@@ -154,6 +154,7 @@ export {
 export { stepRun } from "./game/run.ts";
 export {
   airPointsPerSecond,
+  landingGrade,
   freshTricks,
   lengthPointsPerMetre,
   stepTricks,

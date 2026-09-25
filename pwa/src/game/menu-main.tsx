@@ -107,8 +107,8 @@ export function MainMenu({
   onFree: () => void;
   onOptions: () => void;
   onGallery: () => void;
-  /** The TRICKS tile: its seed and how long the run lasts, s. */
-  tricks?: { seed: number; seconds: number };
+  /** The TRICKS tile: the map it rides and how long the run lasts, s. */
+  tricks?: { map: string; seconds: number };
   onTricks?: () => void;
   /** Whether the DEVELOPER chip is out, the press that opens its page, and
    * what a seven-second hold on the title does (let it out). */
@@ -196,7 +196,7 @@ export function MainMenu({
               <span class="menu-tile-words">
                 <span class="menu-tile-name">{STRINGS.menuTricks}</span>
                 <span class="menu-tile-line">
-                  {STRINGS.menuTricksLine(tricks.seed, tricks.seconds)}
+                  {STRINGS.menuTricksLine(tricks.map, tricks.seconds)}
                 </span>
               </span>
             </button>

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// STANDING A RUN UP ON A PINNED MAP — a campaign rung, or a RACE or a TIME
-// TRIAL off the level card — and standing the same one up again.
+// STANDING A RUN UP ON A PINNED MAP — a campaign rung, a RACE or a TIME
+// TRIAL off the level card, or a TRICKS run off the trick map card — and
+// standing the same one up again.
 //
 // A FACTORY over the app's own closures, the shape `app-load.ts` is built
 // in and for the same reason: the loader, the engine state and the campaign
@@ -12,7 +13,10 @@
 // is REUSED when it is the very one pinned (`isPinnedMap` — the same seed on
 // the same generator): building a map is the dearest thing the engine does,
 // and a RACE pressed over the map just ridden is a race on that map. A free
-// ride's map is never reused, because it is the seed's map on another day.
+// ride's map is never reused, because it is the seed's map on another day;
+// a trick map's is, when the run on the snow is a tricks run on its ground
+// (its field and all), and it needs nothing to stand up again — the level
+// it stands on already carries the map's day and sky.
 
 import { createGame, type GameMode, type GameState, type SledSpec } from "@engine";
 
@@ -20,11 +24,14 @@ import type { Loader } from "./app-load.ts";
 import { isPinnedMap, pinnedFor, pinnedRun, type CampaignLevel } from "./campaign.ts";
 import type { CampaignRig } from "./campaign-run.ts";
 import { assistOf, type Settings } from "./settings.ts";
+import { trickGameOptions, type TrickMap } from "./trick-maps.ts";
 import type { MenuPage } from "./url-params.ts";
 
 export type PinnedRuns = {
   /** Stand `pin` up as `mode` — a rung of the campaign when `rung`. */
   press: (pin: CampaignLevel, mode: CampaignLevel["mode"], rung: boolean) => void;
+  /** Stand a TRICKS run up on a trick map (`trick-maps.ts`). */
+  tricks: (map: TrickMap) => void;
   /** The last pinned run stood up, again from the grid; null where the run
    * on the snow is not a pinned one. */
   again: () => GameState | null;
@@ -44,7 +51,7 @@ export function createPinnedRuns(world: {
   /** The machine the player rides (a link's `?sled=` over the stored one). */
   spec: (settings: Settings) => SledSpec;
   /** The app's own note of which mode the player's runs are in. */
-  setMode: (mode: CampaignLevel["mode"]) => void;
+  setMode: (mode: GameMode) => void;
   /** Run on the frame the loading card lifts. */
   done: () => void;
 }): PinnedRuns {
@@ -68,6 +75,23 @@ export function createPinnedRuns(world: {
         done: world.done,
       });
     },
+    tricks: (map) => {
+      world.setMode("tricks");
+      last = null;
+      world.rig.arm(null);
+      const s = world.settings();
+      const rider = { spec: world.spec(s), assist: assistOf(s.assist), damage: s.damage };
+      world.loader.begin({
+        build: () => {
+          const now = world.current();
+          const same =
+            now.rules.tricks && now.level.seed === map.seed && now.level.version === map.version;
+          return createGame(trickGameOptions(map, rider, same ? now.level : undefined));
+        },
+        camera: s.camera,
+        done: world.done,
+      });
+    },
     again: () => {
       if (!last) return null;
       world.rig.arm(world.rig.riding());
@@ -82,8 +106,8 @@ export function createPinnedRuns(world: {
 
 /** Where BACK on the sled card goes: the card that opened it — the free
  * ride's start card, the campaign card for a rung, the level card for a
- * pinned map — or the front door, for a mode that rides no pinned map (a
- * tricks run) or where a link pinned a seed instead. */
+ * pinned map, the trick map card for a tricks run — or the front door,
+ * where a link pinned a seed instead. */
 export function sledBack(
   rung: CampaignLevel | null,
   mode: GameMode,
@@ -91,5 +115,6 @@ export function sledBack(
 ): MenuPage {
   if (mode === "free") return "start";
   if (rung) return "campaign";
+  if (mode === "tricks") return linkSeed === null ? "tricks" : "root";
   return pinnedFor(null, mode, linkSeed) ? "levels" : "root";
 }

@@ -27,6 +27,7 @@ import type { CameraRung } from "./renderer-api.ts";
 import { freshKeys, mergeKeys, type KeyBindings } from "./settings-input.ts";
 import { DEFAULT_VIDEO, mergeVideo, videoUntouched, type VideoSettings } from "./settings-video.ts";
 import { LIVERIES } from "./sled-liveries.ts";
+import { isTrickMap } from "./trick-maps.ts";
 
 /** THE LADDER C WALKS, nearest first. "orbit" is not on it: that is the
  * cards' own slow turn round the sled, and a rung a rider could land on by
@@ -110,6 +111,9 @@ export type Settings = {
    * (`menu-levels.tsx`, `pinnedFor`) — a campaign map's id, or null for the
    * first rung. */
   level: string | null;
+  /** THE TRICK MAP CARD's answer: the map a TRICKS run rides
+   * (`trick-maps.ts`) — its id, or null for the first. */
+  trickMap: string | null;
   /** Whether the readouts are over the snow (H, OPTIONS ▸ HUD). Off keeps
    * the thumbs and the corner presses, and a picture is then the snow
    * alone (`shot-hud.ts`). */
@@ -161,6 +165,7 @@ export function freshSettings(): Settings {
     trialLaps: TIME_TRIAL.laps[0],
     ride: freshRide(),
     level: null,
+    trickMap: null,
     hud: true,
     developer: false,
     dev: { fps: false, cost: false, physics: false, trails: false, log: false, freefly: false },
@@ -236,6 +241,7 @@ export function mergeSettings(parsed: unknown): Settings {
   }
   out.ride = mergeRide(blob.ride);
   if (typeof blob.level === "string" && findLevel(blob.level) !== null) out.level = blob.level;
+  if (isTrickMap(blob.trickMap)) out.trickMap = blob.trickMap;
   if (typeof blob.hud === "boolean") out.hud = blob.hud;
   if (typeof blob.developer === "boolean") out.developer = blob.developer;
   const dev = record(blob.dev);
