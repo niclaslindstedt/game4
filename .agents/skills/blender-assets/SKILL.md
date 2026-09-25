@@ -40,7 +40,7 @@ sled) — its judging rules apply to a model too.
 | --- | --- |
 | `scripts/blender.mjs` | THE DRIVER (`make blender`): `KINDS` (per kind: its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`BONES`, `CLIPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error |
 | `scripts/blender/lib.py` | THE SHELF every builder imports: the scene, `mat`, the geometry (`loft`, `superellipse`, `tube`, `cyl`, `box`, `ellipsoid`, `coil`, `catmull`, `resample`, boolean cutters), THE RIG (`rides`, `bone`, `marker`, `clip`, `morph`), and `finish()` — the rig built and skinned, the clips baked, the studio, the Cycles stills, the join into one skinned mesh, LOD0 and the decimated LODs as glTF |
-| `scripts/blender/rider.py` | THE RIDER BUILDER (`KIND=rider`, `ID=rider0…3` a grid slot's kit): one SUIT that bends (the skin modifier over the riding pose's joints, rounded, cut along the hem, yoke and cuff planes before it is coloured, weighted across each joint between the two bones that meet there) and rigid parts on one bone each — the helmet laid on the game's MEASURED shell (`helmetReach` / `helmetPart` sampled on a grid), the boots, the gloves |
+| `scripts/blender/rider.py` | THE RIDER BUILDER (`KIND=rider`, `ID=rider0…3` a grid slot's kit): one SUIT that bends (a man of the ANSUR II survey's mean measure in a racer's kit, lofted a piece a bone, remeshed into one skin, creased where a joint bends, cut along the hem, yoke, cuff and lap planes before it is coloured, weighted across each joint between the two bones that meet there) and rigid parts on one bone each — the helmet laid on the game's MEASURED shell (`helmetReach` / `helmetPart` sampled on a grid), the boots, the gloves |
 | `pwa/src/tools/rider-rig.ts` | THE RIDER'S CONTRACT: `riderBones(pose)` (every bone's frame off a `RiderPose` — the game's own spans, rolled to face each joint's bend, the head turned as `rider.ts` turns it), `RIDING` (the pose he is bound in), `riderClips()` (every clip SAMPLED off the game's `riderPose` and `stepRiderSpring`), `rigRider` (a loaded model's bones set to a pose, or a clip played) |
 | `scripts/blender/sled.py` | THE SLED BUILDER: the cowl, the lamp pods, the screen, the bars, the seat and what rides behind it, the tunnel, the flap, the boards, the belt and its lugs, the rear suspension, the skis, spindles, A-arms and coil-overs — every dimension off the spec and the trace |
 | `pwa/src/tools/sled-harness.ts` + `scripts/sled-preview.mjs` | THE ASSET SHEETS (`make sled ARGS=--asset=a.glb,b.glb`): `asset` — the builder's machine in the first row, each model below it, every one ridden by the game's rider seated by `riderSeat`; `rig` — builder and models posed at the same engine moments (steer, each end's bump and droop); `clips` — the first model's clips played across their length (and a `--rider=` model's, him alone); `figure` — a modelled rider beside the game's own on the builder's machine in every pose. A `--rider=` model also rides the models on the asset and rig sheets |
@@ -221,14 +221,39 @@ moves is written in Python.
   is the stair of the faces it was laid in. Colouring by NEAREST BONE makes
   a jagged edge wherever two bones' regions meet — the yoke is "above a
   plane", not "nearest the head".
-- **A skin modifier's hull is a box a section**: a SMOOTH modifier rounds
-  it, and shrinks it — widen the radii to pay for it.
+- **The body is MEASURED, the kit is ADDED.** The flesh round the game's
+  bones is the ANSUR II survey's mean man (US Army 2012, 4,082 men: the
+  public male file, read locally — every breadth, depth and circumference,
+  and each trunk level's height between the hip joint and the neck's base
+  laid onto the game's spine); `rider.py`'s `ANSUR` table is those means,
+  cited, and nothing else. The kit is `EASE`, metres a side over the body,
+  after what a snowmobile racer wears (the racing rules' chest protector
+  with shoulder cups, knee and shin guards, leather boots six inches over
+  the ankle, gauntlets): a squared padded trunk, capped shoulders, a
+  jacket bloused over the hips, baggy pants flared over tall buckled boots.
+  Change a garment in `EASE`, never the body.
+- **Loft a piece a bone, then REMESH into one skin** (voxel, 6 mm in the
+  render, 16 mm and a decimation to budget in the game): a shoulder flows
+  into its sleeve and a seat into its thighs, where lofts meeting at a
+  joint crease and a skin modifier's hull is a box a section. The remesh
+  fills VOLUMES — an open tube (a loft left uncapped) vanishes whole, so
+  every piece is capped.
+- **Folds are ridges across a bone on the surface's own normal**, on the
+  side a joint closes (the crook of the elbow, the back of the knee), all
+  round where cloth bunches (a sleeve above the gauntlet, the pants over
+  the boot): `FOLDS`, a few millimetres each, is what makes a padded suit
+  read as cloth and not rubber.
+- **Colour by a plane wherever a bone gives way to another**: the hem,
+  the yoke, the cuffs — and the LAPS, square across each thigh, since a
+  crouched rider's thighs lie above the hem's plane and "nearest bone"
+  leaves a ragged edge in three.js where it looked fine in a still.
 - **No sheen on anything exported**: Blender's sheen goes into the glTF as
   a sheen extension three.js draws as a pale bloom (the pants came out
   grey).
-- **Budget**: LOD0 ≈ 5k triangles (the helmet's grid is every third of the
-  render's sample, single-sided — nothing sees under it), LOD1 1.8k, LOD2
-  0.5k; render quality ~58k.
+- **Budget**: LOD0 ≈ 8.8k triangles (the suit decimated to ~3.2k quads'
+  worth, the helmet's grid every fourth of the render's sample and
+  single-sided — nothing sees under it — boots, guards and gloves the
+  rest), LOD1 3.1k, LOD2 0.9k; render quality ~256k (the 6 mm remesh).
 
 ## Blender, headless, on macOS
 

@@ -13,12 +13,12 @@
 # lab's one half turn about y sets both in the game's frame. His sides are
 # the ENGINE's (`_l` is the body frame's x negative, the pose's index 0).
 #
-# He is one SUIT that bends — a skin laid over the joints of the riding
-# pose (Blender's skin modifier, subdivided: a padded winter suit is what a
-# skinned hull looks like), weighted across each joint between the two
-# bones that meet there — and what does not bend rides one bone wholly: the
-# helmet (the head), the boots (the boot; the shaft the shin), the gloves
-# (the forearm). The bones are the game's spans (`riderBones`), so the
+# He is one SUIT that bends — a man of the survey's measure (ANSUR II,
+# below) in a racer's kit, lofted a piece a bone and remeshed into one
+# skin, weighted across each joint between the two bones that meet there —
+# and what does not bend rides one bone wholly: the helmet (the head), the
+# boots (the boot; the shaft the shin), the knee guards (the shin), the
+# gloves (the forearm). The bones are the game's spans (`riderBones`), so the
 # game's pose drives him bone for bone, and the clips are that pose played.
 
 import json, math, os, sys
@@ -55,6 +55,7 @@ HELMET = mat("helmet", colour(STYLE["helmet"]), rough=0.25, coat=1.0)
 PEAK = mat("peak", colour(STYLE.get("peak", STYLE["helmet"])), rough=0.3, coat=1.0)
 LENS = mat("lens", colour(STYLE["visor"]), metal=0.7, rough=0.08)
 STRAP = mat("strap", colour(0x101114), rough=0.7)
+ALU_BUCKLE = mat("buckle", (0.6, 0.62, 0.65), metal=1.0, rough=0.3)
 
 
 # ---------------------------------------------------------------- the RIG
@@ -99,68 +100,194 @@ def suit_weights(co):
 
 
 # ---------------------------------------------------------------- the SUIT
+# THE BODY UNDER IT is a man of the ANSUR II survey (US Army, 2012: 4,082
+# men, the means below, mm): the game gives his bones (`BODY`), the survey
+# gives the flesh round them — every breadth, depth and circumference, and
+# where on the trunk each level falls (its height between the hip joint,
+# `trochanterion`, and the base of the neck, `cervicale`, laid onto the
+# game's spine). A circumference is a round section's; the trunk's are
+# breadth by depth, a squared ellipse, the back flatter than the chest and
+# the seat bulging behind.
+ANSUR = {
+    "trochanterion": 901, "crotch": 846, "waist_h": 1056, "tenth_rib_h": 1121, "chest_h": 1291,
+    "axilla_h": 1329, "acromion_h": 1441, "cervicale": 1517,
+    "hip_breadth": 346, "buttock_depth": 246, "waist_breadth": 326, "waist_depth": 238,
+    "chest_breadth": 289, "chest_depth": 254, "biacromial": 416, "bideltoid": 510,
+    "neck_base": 435, "thigh": 625, "lower_thigh": 409, "calf": 392, "ankle": 229,
+    "biceps": 358, "forearm": 310, "wrist": 176, "forearm_length": 268,
+}
+MM = 0.001
+
+
+def level(h):
+    """A survey height as a share of the game's spine, hips 0 to neck 1."""
+    return (h - ANSUR["trochanterion"]) / (ANSUR["cervicale"] - ANSUR["trochanterion"])
+
+
+def r_of(circ):
+    return circ * MM / (2 * math.pi)
+
+
+# THE KIT OVER HIM, after a snowmobile racer's (the racing rules'
+# mandatory kit, and what a trail racer wears over it): a chest protector
+# with shoulder cups under an insulated jacket — a squared, padded trunk
+# and broad capped shoulders — the jacket bloused over the hips; baggy
+# insulated pants over knee and shin guards, their cuffs flared over tall
+# buckled leather boots; gauntlet gloves; the helmet and goggles. What the
+# kit ADDS over the body, m a side:
+EASE = {"chest_front": 0.042, "chest_back": 0.036, "trunk_side": 0.032, "bloused": 0.045,
+        "sleeve": 0.03, "pants": 0.03, "cap": 0.03}
+
 P = POSE
 hips, neck, head_c = B(P["hips"]), B(P["neck"]), B(P["head"])
 knees, feet = [B(k) for k in P["knees"]], [B(f) for f in P["feet"]]
 shoulders, elbows, hands = [B(k) for k in P["shoulders"]], [B(k) for k in P["elbows"]], [B(k) for k in P["hands"]]
-
-# The skeleton the skin is laid over: a point, its radii across (m) and
-# what it joins. The torso is broad and a little flatter front to back; the
-# jacket's collar stands up round the helmet's rim; the pants bag at the
-# thigh and flare over the boot; the sleeves bunch at the cuff.
-pts, radii, edges = [], [], []
+SEG = 16 if GAME else 28
 
 
-def pt(p, r):
-    pts.append(p)
-    radii.append(r if isinstance(r, tuple) else (r, r))
-    return len(pts) - 1
+def lofted(name, bone_name, sections, n=2.4):
+    """A garment piece along a bone: rings in its frame at `t` (a share of
+    its length), each `(t, half across, ahead, behind)` — ahead is the way
+    the bone's +z faces (a knee's front, the chest, an elbow's point).
+    Capped, always: the remesh fills VOLUMES, and drops an open tube."""
+    head, x, y, z, length = frame(bone_name)
+    rings = []
+    for t, hx, front, back in sections:
+        c = head + y * (t * length)
+        ring = []
+        for k in range(SEG):
+            a = 2 * math.pi * k / SEG
+            ca, sa = math.cos(a), math.sin(a)
+            u = math.copysign(abs(ca) ** (2 / n), ca) * hx
+            v = math.copysign(abs(sa) ** (2 / n), sa) * (front if sa > 0 else back)
+            ring.append(c + x * u + z * v)
+        rings.append(ring)
+    return loft(name, rings, [JACKET])
 
-
-h = pt(hips, (0.18, 0.14))
-s1 = pt(hips.lerp(neck, 0.35), (0.2, 0.15))
-s2 = pt(hips.lerp(neck, 0.7), (0.22, 0.15))
-n = pt(neck, (0.16, 0.13))
-c = pt(neck.lerp(head_c, 0.42), (0.085, 0.085))
-edges += [(h, s1), (s1, s2), (s2, n), (n, c)]
-for i in range(2):
-    hip = frame(("thigh_l", "thigh_r")[i])[0]
-    j0 = pt(hip, 0.11)
-    j1 = pt(hip.lerp(knees[i], 0.5), 0.1)
-    j2 = pt(knees[i], 0.085)
-    j3 = pt(knees[i].lerp(feet[i], 0.55), 0.075)
-    j4 = pt(knees[i].lerp(feet[i], 0.86), 0.085)
-    edges += [(h, j0), (j0, j1), (j1, j2), (j2, j3), (j3, j4)]
-    a0 = pt(shoulders[i], 0.1)
-    a1 = pt(shoulders[i].lerp(elbows[i], 0.5), 0.078)
-    a2 = pt(elbows[i], 0.072)
-    a3 = pt(elbows[i].lerp(hands[i], 0.45), 0.068)
-    a4 = pt(elbows[i].lerp(hands[i], 0.72), 0.072)
-    edges += [(n, a0), (a0, a1), (a1, a2), (a2, a3), (a3, a4)]
 
 rides("spine")
-me = bpy.data.meshes.new("suit")
-me.from_pydata([tuple(p) for p in pts], edges, [])
-suit = link(bpy.data.objects.new("suit", me))
-skin = suit.modifiers.new("skin", "SKIN")
-skin.use_smooth_shade = True
-for i, r in enumerate(radii):
-    sv = me.skin_vertices[0].data[i]
-    sv.radius = r
-    sv.use_root = i == h
-subd = suit.modifiers.new("smooth", "SUBSURF")
-subd.levels = subd.render_levels = 1 if GAME else 2
-# A skin's hull is a box a section; smoothed, the jacket rounds over the
-# shoulders and the back instead of reading as a crate from behind.
-rounder = suit.modifiers.new("round", "SMOOTH")
-rounder.factor, rounder.iterations = 0.5, 3 if GAME else 6
-bpy.context.view_layer.objects.active = suit
+pieces = []
+# The trunk: the survey's levels, each the body's half breadth, depth
+# ahead of and behind the spine's line, and what the kit adds there.
+bh = ANSUR["hip_breadth"] / 2 * MM
+bd = ANSUR["buttock_depth"] * MM
+wb, wd = ANSUR["waist_breadth"] / 2 * MM, ANSUR["waist_depth"] * MM
+cb, cd = ANSUR["chest_breadth"] / 2 * MM, ANSUR["chest_depth"] * MM
+E = EASE
+TRUNK = [
+    (level(ANSUR["crotch"]) - 0.04, bh * 0.8 + 0.025, bd * 0.3 + 0.025, bd * 0.45 + 0.025),
+    (level(ANSUR["crotch"]) + 0.05, bh + 0.025, bd * 0.4 + 0.025, bd * 0.52 + 0.025),
+    (0.08, bh + E["bloused"], bd * 0.42 + E["bloused"], bd * 0.55 + E["bloused"]),
+    (level(ANSUR["waist_h"]), wb + E["bloused"], wd * 0.55 + E["bloused"], wd * 0.45 + E["bloused"]),
+    (level(ANSUR["tenth_rib_h"]), wb * 0.97 + E["trunk_side"], wd * 0.55 + E["chest_front"],
+     wd * 0.46 + E["chest_back"]),
+    (0.52, cb * 1.05 + E["trunk_side"], cd * 0.51 + E["chest_front"], cd * 0.48 + E["chest_back"]),
+    (level(ANSUR["chest_h"]), cb * 1.12 + E["trunk_side"], cd * 0.5 + E["chest_front"],
+     cd * 0.5 + E["chest_back"]),
+    (level(ANSUR["axilla_h"]), cb * 1.2 + E["trunk_side"], cd * 0.47 + E["chest_front"],
+     cd * 0.5 + E["chest_back"]),
+    (level(ANSUR["acromion_h"]) - 0.05, ANSUR["biacromial"] / 2 * MM * 0.9, cd * 0.4 + E["chest_front"],
+     cd * 0.44 + E["chest_back"]),
+    (0.95, r_of(ANSUR["neck_base"]) * 1.5 + 0.02, 0.1, 0.1),
+    (1.0, r_of(ANSUR["neck_base"]) + 0.03, 0.09, 0.09),
+]
+pieces.append(lofted("trunk", "spine", TRUNK, n=2.7))
+# The collar, stood up round the helmet's rim.
+head_up = frame("head")[2]
+collar = [neck.lerp(head_c, u) for u in (0.0, 0.25, 0.5)]
+pieces.append(loft("collar", [[c + frame("spine")[1] * (0.1 * math.cos(2 * math.pi * k / SEG))
+                               + frame("spine")[3] * (0.095 * math.sin(2 * math.pi * k / SEG)) for k in range(SEG)]
+                              for c in collar], [JACKET]))
+for i, s in enumerate("lr"):
+    # The shoulder: the deltoid (the survey's bideltoid breadth) under the
+    # chest protector's cap — the broad square shoulder of a racer's kit.
+    reach = ANSUR["bideltoid"] / 2 * MM - ANSUR["biacromial"] / 2 * MM
+    sx = frame(f"upperarm_{s}")
+    out = (shoulders[i] - neck.lerp(hips, 0.12)).normalized()
+    pieces.append(ellipsoid("shoulder", shoulders[i] + frame("spine")[2] * 0.015 + out * 0.01,
+                            (reach + E["cap"] + 0.012, reach + E["cap"] + 0.018, reach + E["cap"] + 0.014), JACKET))
+    # The arm: the survey's biceps, forearm and wrist, the sleeve over them
+    # bunched toward the cuff under the gauntlet.
+    b = r_of(ANSUR["biceps"]) * 0.95
+    pieces.append(lofted("sleeve", f"upperarm_{s}", [
+        (-0.05, b * 1.25 + E["sleeve"], b * 1.2 + E["sleeve"], b * 1.2 + E["sleeve"]),
+        (0.35, b + E["sleeve"], b + E["sleeve"], b * 1.05 + E["sleeve"]),
+        (0.7, b * 0.92 + E["sleeve"], b * 0.9 + E["sleeve"], b * 0.95 + E["sleeve"]),
+        (1.05, b * 0.85 + E["sleeve"], b * 0.9 + E["sleeve"], b * 0.8 + E["sleeve"])]))
+    f, w = r_of(ANSUR["forearm"]) * 0.95, r_of(ANSUR["wrist"])
+    wrist_t = ANSUR["forearm_length"] * MM / frame(f"forearm_{s}")[4]
+    pieces.append(lofted("sleeve", f"forearm_{s}", [
+        (-0.08, f * 1.05 + E["sleeve"], f + E["sleeve"], f * 1.1 + E["sleeve"]),
+        (0.3, f + E["sleeve"], f + E["sleeve"], f + E["sleeve"]),
+        (wrist_t - 0.2, (f + w) / 2 + E["sleeve"] * 1.2, (f + w) / 2 + E["sleeve"], (f + w) / 2 + E["sleeve"]),
+        (wrist_t - 0.08, w + E["sleeve"], w + E["sleeve"], w + E["sleeve"])]))
+    pieces.append(ellipsoid("elbow", elbows[i], (b + E["sleeve"],) * 3, JACKET))
+    # The leg: the survey's thigh and lower thigh, calf and ankle, the
+    # pants baggy over them and flared over the boot's top.
+    th, lt = r_of(ANSUR["thigh"]), r_of(ANSUR["lower_thigh"])
+    pieces.append(lofted("pants", f"thigh_{s}", [
+        (-0.12, th * 1.05 + E["pants"], th + E["pants"], th * 1.1 + E["pants"]),
+        (0.2, th + E["pants"], th + E["pants"], th + E["pants"]),
+        (0.6, (th + lt) / 2 + E["pants"], (th + lt) / 2 + E["pants"], (th + lt) / 2 + E["pants"]),
+        (0.95, lt + E["pants"], lt + E["pants"], lt + E["pants"])]))
+    ca, an = r_of(ANSUR["calf"]), r_of(ANSUR["ankle"])
+    pieces.append(lofted("pants", f"shin_{s}", [
+        (-0.05, lt + E["pants"], lt + E["pants"], lt + E["pants"]),
+        (0.3, ca * 0.9 + E["pants"], ca * 0.8 + E["pants"], ca * 1.15 + E["pants"]),
+        (0.5, ca * 0.85 + E["pants"] + 0.012, ca * 0.8 + E["pants"] + 0.012, ca + E["pants"] + 0.012),
+        (0.6, ca * 0.9 + E["pants"] + 0.02, ca * 0.9 + E["pants"] + 0.02, ca + E["pants"] + 0.02)]))
+    pieces.append(ellipsoid("knee", knees[i], (lt + E["pants"] + 0.006,) * 3, PANTS))
+
+# One surface: the pieces joined and REMESHED into a single skin, so a
+# shoulder flows into its sleeve and a seat into its thighs, then eased.
+bpy.context.view_layer.objects.active = pieces[0]
 for o in bpy.context.view_layer.objects:
-    o.select_set(o is suit)
+    o.select_set(o in pieces)
 bpy.ops.object.convert(target="MESH")
+bpy.ops.object.join()
+suit = bpy.context.view_layer.objects.active
+suit.name = suit.data.name = "suit"
+remesh = suit.modifiers.new("one", "REMESH")
+remesh.mode, remesh.voxel_size = "VOXEL", 0.016 if GAME else 0.006
+smooth = suit.modifiers.new("ease", "SMOOTH")
+smooth.factor, smooth.iterations = 0.6, 2 if GAME else 4
+bpy.ops.object.convert(target="MESH")
+if GAME:
+    thin = suit.modifiers.new("budget", "DECIMATE")
+    thin.ratio = 3200 / max(1, len(suit.data.polygons) * 2)
+    bpy.ops.object.convert(target="MESH")
 suit.data.materials.clear()
 for m in (JACKET, ACCENT, PANTS):
     suit.data.materials.append(m)
+
+# THE CLOTH'S FOLDS, where a padded suit gathers as a joint bends: across
+# the crook of each elbow and the back of each knee, over the fold of the
+# hip, the sleeve bunched above the gauntlet, the pants over the boot, the
+# jacket gathered over the belly. Each is ridges across its bone — `amp`
+# m, one every `pitch` m — pressed along the surface's own normal, on the
+# side `face` (along the bone's +z, −z, or all round with 0).
+FOLDS = [  # bone kind, t from, t to, face, amp, pitch
+    ("upperarm", 0.7, 1.0, -1, 0.008, 0.045), ("forearm", 0.0, 0.25, -1, 0.008, 0.045),
+    ("forearm", 0.3, 0.62, 0, 0.004, 0.03),
+    ("thigh", 0.75, 1.0, -1, 0.009, 0.05), ("shin", 0.0, 0.2, -1, 0.009, 0.05),
+    ("thigh", 0.0, 0.18, 1, 0.006, 0.05), ("shin", 0.42, 0.62, 0, 0.005, 0.035),
+    ("spine", 0.1, 0.4, 1, 0.005, 0.05),
+]
+bm = bmesh.new()
+bm.from_mesh(suit.data)
+bm.normal_update()
+for v in bm.verts:
+    b = nearest(v.co)
+    t = along(v.co, SEGMENTS[b])[0]
+    _, _, by, bz, bl = frame(b)
+    for kind, t0, t1, face, amp, pitch in FOLDS:
+        if not b.startswith(kind) or not t0 <= t <= t1:
+            continue
+        side = 1.0 if face == 0 else max(0.0, v.normal.dot(bz) * face)
+        fade = math.sin(math.pi * (t - t0) / (t1 - t0))
+        v.co += v.normal * (amp * side * fade * math.sin(2 * math.pi * t * bl / pitch))
+bm.to_mesh(suit.data)
+bm.free()
 
 # Where one colour meets the next is a PLANE, and the suit is cut along
 # each before it is coloured, so every colour stops on a clean line rather
@@ -168,13 +295,18 @@ for m in (JACKET, ACCENT, PANTS):
 # to the spine over the hips, the yoke under the collar, the cuffs square
 # to each forearm.
 UP = (neck - hips).normalized()
-HEM = (hips + UP * 0.07, UP)
+HEM = (hips - UP * 0.04, UP)
 YOKE = (neck - UP * 0.09, UP)
 CUFFS = [(frame(f"forearm_{s}")[0] + frame(f"forearm_{s}")[2] * frame(f"forearm_{s}")[4] * 0.8,
           frame(f"forearm_{s}")[2]) for s in "lr"]
+# Where the jacket's front meets each thigh: square to the thigh a quarter
+# down it, so a lap is the pants' on a clean line and not wherever the
+# trunk's bone gives way to the thigh's.
+LAPS = [(frame(f"thigh_{s}")[0] + frame(f"thigh_{s}")[2] * frame(f"thigh_{s}")[4] * 0.22,
+         frame(f"thigh_{s}")[2]) for s in "lr"]
 bm = bmesh.new()
 bm.from_mesh(suit.data)
-for co, no in [HEM, YOKE] + CUFFS:
+for co, no in [HEM, YOKE] + CUFFS + LAPS:
     bmesh.ops.bisect_plane(bm, geom=bm.verts[:] + bm.edges[:] + bm.faces[:], plane_co=co, plane_no=no)
 bm.to_mesh(suit.data)
 bm.free()
@@ -188,7 +320,11 @@ def cloth_of(co):
     """What the suit is where: the pants below the jacket's hem, the
     jacket's yoke and collar in the kit's second colour, and its cuffs."""
     b = nearest(co)
-    if b.startswith(("shin", "boot")) or (b.startswith("thigh") or b == "spine") and not above(co, HEM):
+    # A thigh is the pants' past its lap line whatever plane it is over:
+    # crouched, his thighs lie above the hem's.
+    if b.startswith(("shin", "boot")) or not above(co, HEM):
+        return 2
+    if b.startswith("thigh") and above(co, LAPS["lr".index(b[-1])]):
         return 2
     if b in ("head", "spine") or b.startswith("upperarm"):
         return 1 if above(co, YOKE) else 0
@@ -210,7 +346,7 @@ weights(suit, suit_weights)
 # colour and the goggle strap round the back at the port's height.
 hc, hx, hy, hz, _ = frame("head")
 tilt = HELM["tilt"]
-STEP = 3 if GAME else 1
+STEP = 4 if GAME else 1
 NA, NE = HELM["around"] // STEP, HELM["up"] // STEP
 
 
@@ -255,22 +391,56 @@ shell = mesh_obj("helmet", verts, faces, [HELMET, PEAK, STRAP, LENS], fm)
 if not GAME:     # a rim to the neck's opening; the game never sees under it
     shell.modifiers.new("thick", "SOLIDIFY").thickness = -0.012
 
-# ---------------------------------------------------------------- BOOTS and GLOVES
+# ---------------------------------------------------------------- BOOTS, GUARDS and GLOVES
+# The boots: a racer's leather boots (the rules ask six inches of leather
+# above the ankle; his reach a hand's width under the knee), a sole the
+# survey's foot long and a heel, three buckles across the shin; the pants'
+# cuff flared over their tops. The knee guards: a hard shell over the
+# kneecap and down the shin (the rules': from the instep to above the
+# kneecap), the cup proud of the pants in the kit's second colour. The
+# gloves: a fist round the grip and a gauntlet flared over the sleeve.
+FOOT = 0.271 + 0.03
 for i, s in enumerate("lr"):
     f, bx, by, bz, _ = frame(f"boot_{s}")
     turn = Matrix((bx, by, bz)).transposed().to_euler()
     rides(f"boot_{s}")
-    box("sole", f + by * 0.045 + bz * -0.045, (0.13, 0.31, 0.03), SOLE, rot=turn, bevel=0.008)
-    ellipsoid("boot_foot", f + by * 0.055 + bz * -0.005, (0.068, 0.155, 0.058), BOOT, rot=turn)
-    ellipsoid("boot_toe", f + by * 0.16 + bz * -0.02, (0.06, 0.05, 0.04), BOOT, rot=turn)
+    sole = f + bz * -0.06
+    box("sole", sole + by * 0.04 + bz * 0.012, (0.118, FOOT, 0.024), SOLE, rot=turn, bevel=0.006)
+    box("heel", sole + by * -0.075 + bz * -0.008, (0.1, 0.075, 0.02), SOLE, rot=turn, bevel=0.004)
+    foot = [(-0.1, 0.05, 0.045, 0.02), (-0.04, 0.056, 0.07, 0.03), (0.06, 0.058, 0.055, 0.03),
+            (0.15, 0.054, 0.04, 0.02), (0.19, 0.04, 0.025, 0.012)]
+    loft("boot_foot", [[sole + by * yy + bz * (0.024 + hh * (1 + math.sin(a)) / 2 + lo * 0)
+                        + bx * (hw * math.cos(a)) for a in (2 * math.pi * k / 16 for k in range(16))]
+                       for yy, hw, hh, lo in foot], [BOOT])
     rides(f"shin_{s}")
     up_shin = (knees[i] - feet[i]).normalized()
-    cyl("boot_shaft", f + bz * -0.02, f + up_shin * 0.24, 0.072, BOOT, r2=0.08)
+    sh = frame(f"shin_{s}")
+    shaft = [(0.0, 0.058, 0.07, 0.066), (0.1, 0.06, 0.066, 0.062), (0.2, 0.066, 0.068, 0.066),
+             (0.27, 0.074, 0.074, 0.072)]
+    loft("boot_shaft", [[f + bz * -0.035 + up_shin * u + sh[1] * (w * math.cos(a))
+                         + sh[3] * ((fr if math.sin(a) > 0 else bk) * math.sin(a))
+                         for a in (2 * math.pi * k / 16 for k in range(16))] for u, w, fr, bk in shaft], [BOOT])
+    for u in (0.07, 0.14, 0.21):
+        arc = [f + bz * -0.035 + up_shin * u + sh[1] * (0.075 * math.cos(a)) + sh[3] * (0.08 * math.sin(a))
+               for a in (math.pi * (0.1 + 0.8 * k / 8) for k in range(9))]
+        tube("buckle", arc, 0.007, ALU_BUCKLE)
+    # The knee guard's cup and plate, over the pants.
+    k0, kx, ky, kz, kl = sh
+    lt = r_of(ANSUR["lower_thigh"]) + E["pants"] + 0.01
+    guard = []
+    for t in (-0.16, -0.06, 0.04, 0.14, 0.26):
+        swell = 1.0 + 0.25 * math.exp(-((t + 0.04) / 0.08) ** 2)
+        guard.append([k0 + ky * (t * kl) + kx * (lt * 0.8 * swell * math.cos(a)) + kz * (lt * swell * math.sin(a))
+                      for a in (math.pi * (0.18 + 0.64 * j / 8) for j in range(9))])
+    cup = loft("knee_guard", guard, [ACCENT], closed=False, cap=False)
+    cup.modifiers.new("shell", "SOLIDIFY").thickness = 0.01
     rides(f"forearm_{s}")
     e, fx, fy, fz, fl = frame(f"forearm_{s}")
     turn = Matrix((fx, fy, fz)).transposed().to_euler()
-    cyl("gauntlet", e + fy * (fl * 0.6), e + fy * (fl * 0.86), 0.085, GLOVE, r2=0.058)
-    ellipsoid("fist", e + fy * (fl * 0.97), (0.05, 0.062, 0.048), GLOVE, rot=turn)
+    wrist_t = ANSUR["forearm_length"] * MM / fl
+    cyl("gauntlet", e + fy * (fl * (wrist_t - 0.26)), e + fy * (fl * (wrist_t - 0.02)), 0.082, GLOVE, r2=0.045)
+    ellipsoid("fist", e + fy * (fl * 0.97), (0.052, 0.058, 0.046), GLOVE, rot=turn)
+    ellipsoid("knuckles", e + fy * (fl * 0.99) + fz * -0.02, (0.048, 0.03, 0.03), GLOVE, rot=turn)
 
 
 # ---------------------------------------------------------------- the CLIPS
