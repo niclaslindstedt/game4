@@ -200,6 +200,13 @@ const HEAD_LIT = { day: 0.8, night: 3.2, glow: 1.8 };
 /** How far below the body's forward axis the headlamp is aimed, rad. */
 export const HEADLAMP_DIP = 0.1;
 
+/** Where a machine carries its rider in its body frame, m: his own grip
+ * (`MOUNTS.grip`) set onto the traced one, so his hands are on the bars. */
+export function riderSeat(spec: SledSpec): THREE.Vector3 {
+  const grip = lookFrame(spec).point(SLED_LOOKS[spec.id].grip);
+  return new THREE.Vector3(0, grip[1] - MOUNTS.grip.y, grip[0] - MOUNTS.grip.z);
+}
+
 /** A soft round glow, white at the middle — every lamp's sprite. */
 let glowTexture: THREE.DataTexture | null = null;
 function glow(): THREE.DataTexture {
@@ -343,8 +350,7 @@ export function createSledModel(
   const pts = (list: [number, number][]) => list.map((p) => F.point(p));
   const grip = F.point(look.grip);
   const post = F.point(look.post);
-  /** Where the rider is carried to: the traced grip against his own. */
-  const seat = new THREE.Vector3(0, grip[1] - MOUNTS.grip.y, grip[0] - MOUNTS.grip.z);
+  const seat = riderSeat(spec);
   const feetY = MOUNTS.foot.y + seat.y;
 
   // THE COWL: the traced outline, as wide as the class's hood, narrowed to

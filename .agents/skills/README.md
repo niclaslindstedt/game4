@@ -46,6 +46,7 @@ sibling's the day one lands, and add its registry row.
 | `sled-physics` | The sled's answer to the snow: the probes and springs, the sink and the plough, the grip, the drive and the belt, the steering and the carve, the chassis, the rollover, flight; `make ride` |
 | `sled-tuning` | The machine's own numbers (`defs/sled.ts`), the expectations a test holds the physics to, the field's pace, the day a roster lands |
 | `sled-design` | How the sled LOOKS: the builder in the body frame, the four grid styles; `make world` |
+| `blender-assets` | A game asset modelled in Blender off the game's own data: `make blender`, the budget and its LODs, the asset sheet beside the game's own, headless Blender |
 | `rider` | The man on the sled: the half-standing pose from the engine's readings, the limbs solved to the grips and the boards; judged from behind |
 | `collision` | The sled meeting what is not snow — trunks, rivals, the edge — and the course counting: checkpoints, misses, laps, the flag, the reset |
 | `crash` | The sled past saving and the rider off it: the wipeout and his tumble, the trench and rocking it out, damage when it is on (the rally game's `crash`, rewritten for a rider and snow) |

@@ -21,9 +21,12 @@
 //   node scripts/sled-preview.mjs --sheet=rider --slot=1   the rider close up
 //   node scripts/sled-preview.mjs --sheet=head             the helmet alone, every kit
 //   node scripts/sled-preview.mjs --sheet=landing --vy=8 --skip-build
+//   node scripts/sled-preview.mjs --asset=previews/blender/fox-lod0.glb,previews/blender/fox-lod2.glb
+//                                  the builder's machine beside modelled
+//                                  versions of it (the `blender-assets` skill)
 
-import { existsSync, mkdirSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { copyFileSync, existsSync, mkdirSync } from "node:fs";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 
@@ -34,7 +37,7 @@ import { serveDir } from "./lib/serve-dist.mjs";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const buildDir = join(root, "previews", ".sled-preview");
 const outDir = join(root, "previews");
-const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing"];
+const SHEETS = ["machines", "liveries", "poses", "rider", "head", "landing", "asset"];
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -56,14 +59,33 @@ const args = parseArgs(
       help: "only these views (side,front,rear,three,chase; the rider sheet: back,back3,near,front3)",
     },
     vy: { kind: "number", default: 6, help: "the landing sheet's sink rate, m/s" },
+    asset: {
+      kind: "string",
+      default: "",
+      help: "modelled versions of --sled as .glb files, comma-separated; draws the asset sheet",
+    },
     cell: { kind: "number", default: 300, help: "one cell's width, px" },
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the whole run may take, s" },
   },
-  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing] [--sled=id] [--views=a,b] [--skip-build]",
+  "usage: node scripts/sled-preview.mjs [--sheet=machines|liveries|poses|rider|head|landing|asset] [--sled=id] [--views=a,b] [--asset=a.glb,b.glb] [--skip-build]",
 );
 
-const wanted = args.sheet ? [args.sheet] : SHEETS;
+const assets = args.asset
+  .split(",")
+  .filter(Boolean)
+  .map((p) => resolve(p));
+for (const a of assets) {
+  if (!existsSync(a)) {
+    console.error(`no such asset: ${a}`);
+    process.exit(2);
+  }
+}
+const wanted = args.sheet ? [args.sheet] : assets.length ? ["asset"] : SHEETS.slice(0, -1);
+if (wanted.includes("asset") && !assets.length) {
+  console.error("the asset sheet needs --asset=<file.glb>[,…]");
+  process.exit(2);
+}
 for (const s of wanted) {
   if (!SHEETS.includes(s)) {
     console.error(`unknown sheet "${s}" (${SHEETS.join(", ")})`);
@@ -88,6 +110,9 @@ if (!args["skip-build"] || !existsSync(join(buildDir, "sled-preview.html"))) {
     },
   });
 }
+
+// The modelled versions are served beside the page and never built into it.
+assets.forEach((a, i) => copyFileSync(a, join(buildDir, `asset-${i}.glb`)));
 
 const found = await findChromium();
 if (!found) process.exit(1);
@@ -120,6 +145,7 @@ for (const sheet of wanted) {
     views: args.views,
     vy: String(args.vy),
     cell: String(args.cell),
+    assets: assets.map((a) => basename(a, ".glb")).join(","),
   }).toString();
   const t0 = Date.now();
   await page.goto(`${server.url}sled-preview.html?${query}`);

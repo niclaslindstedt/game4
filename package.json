@@ -34,6 +34,7 @@
     "bench": "node scripts/benchmark.mjs",
     "world": "node scripts/world-preview.mjs",
     "sled": "node scripts/sled-preview.mjs",
+    "blender": "node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/blender.mjs",
     "sky": "node scripts/sky-preview.mjs",
     "cloud": "node scripts/cloud-preview.mjs",
     "birds": "node scripts/birds-preview.mjs",

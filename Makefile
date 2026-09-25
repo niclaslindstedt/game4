@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky cloud sled birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky cloud sled blender birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -55,6 +55,15 @@ world:
 # poses and the landing ride; ARGS="--sheet=poses" one sheet.
 sled:
 	npm run sled -- $(if $(SLED),--sled $(SLED),) $(ARGS)
+
+# THE BLENDER LAB: a game asset MODELLED in Blender off the game's own data
+# (a sled: its spec and its class's traced look) — studio renders, the
+# game-budget glTF with two LODs and the .blend files, in previews/blender/.
+# Nothing is committed; `make sled ARGS=--asset=previews/blender/fox-lod0.glb`
+# sets a model beside the builder's. Needs Blender (BLENDER= its executable).
+# KIND=sled, ID=ibex picks the asset; ARGS="--quality=game --views=three".
+blender:
+	npm run blender -- $(if $(KIND),--kind $(KIND),) $(if $(ID),--id $(ID),) $(ARGS)
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact
