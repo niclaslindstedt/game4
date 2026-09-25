@@ -36,7 +36,7 @@
 import { REPO_URL } from "../identity.ts";
 import { formatTime } from "../lib/util.ts";
 import { HudActions } from "./hud-actions.tsx";
-import { ComboTile, TrickPress, TricksChips } from "./hud-combo.tsx";
+import { ComboTile, TricksChips } from "./hud-combo.tsx";
 import { DamageGauge } from "./hud-damage.tsx";
 import { RevBar } from "./hud-dial.tsx";
 import { BarZone, LeverZone, type ZoneSide } from "./hud-touch.tsx";
@@ -315,7 +315,6 @@ export function Hud({
       )}
 
       {thumbs}
-      {touch && snap.tricks && <TrickPress input={input} />}
     </div>
   );
 }

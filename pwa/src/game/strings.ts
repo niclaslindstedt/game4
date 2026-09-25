@@ -182,8 +182,6 @@ export const STRINGS = {
   comboBanked: (points: number): string => `+${points.toLocaleString("en-US")}`,
   comboSketchy: "SKETCHY",
   comboBailed: (points: number): string => `BAILED −${points.toLocaleString("en-US")}`,
-  /** The touch press held for a pose. */
-  trickPress: "TRICK",
   keyTrick: "TRICK",
   newsTricksFinish: (points: number): string => `TIME! ${points.toLocaleString("en-US")} PTS`,
   resultTricksTitle: "TRICKS",

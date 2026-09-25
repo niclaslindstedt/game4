@@ -4271,27 +4271,6 @@ canvas {
   color: var(--hud-bad);
 }
 
-/* THE TRICK PRESS for a thumb: bottom centre over the speed panel, between
-   the two thumbs, where either can reach it without leaving its zone. */
-.hud-trick-press {
-  position: absolute;
-  z-index: 2;
-  left: 50%;
-  bottom: calc(max(1rem, env(safe-area-inset-bottom)) + 5.5rem);
-  transform: translateX(-50%);
-  font: inherit;
-  font-size: clamp(0.8rem, 2.4vmin, 1rem);
-  font-weight: 700;
-  letter-spacing: 0.1em;
-  color: var(--hud-ink);
-  background: rgb(var(--hud-plate) / 70%);
-  border: 2px solid var(--hud-edge);
-  border-radius: 999px;
-  padding: 0.7rem 1.4rem;
-  touch-action: none;
-  user-select: none;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .hud-combo-points {
     animation: none;
