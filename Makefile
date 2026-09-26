@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky cloud sled blender birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky cloud sled blender models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -64,6 +64,15 @@ sled:
 # KIND=sled, ID=ibex picks the asset; ARGS="--quality=game --views=three".
 blender:
 	npm run blender -- $(if $(KIND),--kind $(KIND),) $(if $(ID),--id $(ID),) $(ARGS)
+
+# The models a build draws when it is asked to (VITE_MODEL_SLEDS=1,
+# VITE_MODEL_RIDERS=1 — the environment or the root .env): every sled and
+# the rider, game quality, into the gitignored previews/blender/, where the
+# build packs them from. Needs Blender; a switched-on build without them
+# fails and says so.
+models:
+	npm run blender -- --id all --quality=game --views=chase
+	npm run blender -- --kind rider --id rider0 --quality=game --views=chase
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact

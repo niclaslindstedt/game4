@@ -35,7 +35,7 @@ import {
   type RiderInput,
   type RiderPose,
   type V3,
-} from "../game/rider-pose.ts";
+} from "./rider-pose.ts";
 
 export const RIDER_BONES = [
   "spine",

@@ -3,7 +3,9 @@
 // module that reaches three.js, so it arrives as its own chunk behind the
 // attract card (`App.tsx`'s header says why). This hook is the fetch: null
 // until the chunk has landed, the module after — and nothing set on a
-// component that has gone away in between.
+// component that has gone away in between. A build that draws modelled
+// machines or riders (`sled-models.ts`) has them fetched before the kit is
+// handed out, so every builder finds them waiting.
 
 import { useEffect, useState } from "preact/hooks";
 
@@ -13,7 +15,8 @@ export function useRenderKit(): RenderKit | null {
   const [kit, setKit] = useState<RenderKit | null>(null);
   useEffect(() => {
     let live = true;
-    void import("./renderer.ts").then((mod) => {
+    void import("./renderer.ts").then(async (mod) => {
+      await mod.loadModels();
       if (live) setKit(mod);
     });
     return () => {

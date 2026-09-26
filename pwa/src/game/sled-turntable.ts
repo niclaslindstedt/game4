@@ -24,6 +24,8 @@ import { freshSled, type SledSpec } from "@engine";
 import { createSledModel, REST_SAG, SLED_STYLES, styleIn, type SledModel } from "./sled-body.ts";
 import { liveryOf } from "./sled-liveries.ts";
 
+export { loadModels } from "./sled-models.ts";
+
 /** WHERE THE VIEWER STANDS, as a direction: the eye is this high for every
  * metre it is back. How FAR back is worked out from the machine and the
  * canvas's shape (`frame`), so a phone's tall pane and a laptop's wide one

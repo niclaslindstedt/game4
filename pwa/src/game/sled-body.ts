@@ -34,11 +34,13 @@ import {
   MOUNTS,
   createRiderSpring,
   ragdollPose,
+  riderPose,
   stepRiderSpring,
   type BodyFrame,
   type RiderInput,
 } from "./rider-pose.ts";
 import { SLED_BODY } from "./sled-colours.ts";
+import { attachModels } from "./sled-models.ts";
 import { BAR_TURN, buildGear, profile, strip } from "./sled-gear.ts";
 import { LIVERIES, PATTERNS, type Livery, type PatternId } from "./sled-liveries.ts";
 import { SLED_LOOKS, lookFrame } from "./sled-looks.ts";
@@ -205,6 +207,12 @@ export const HEADLAMP_DIP = 0.1;
 export function riderSeat(spec: SledSpec): THREE.Vector3 {
   const grip = lookFrame(spec).point(SLED_LOOKS[spec.id].grip);
   return new THREE.Vector3(0, grip[1] - MOUNTS.grip.y, grip[0] - MOUNTS.grip.z);
+}
+
+/** Whether `o` hangs anywhere under `group`. */
+function isUnder(o: THREE.Object3D, group: THREE.Object3D): boolean {
+  for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === group) return true;
+  return false;
 }
 
 /** A soft round glow, white at the middle — every lamp's sprite. */
@@ -642,6 +650,28 @@ export function createSledModel(
   );
   const mounts = lampMounts(spec);
 
+  // THE MODELLED MACHINE AND RIDER, where this build draws them
+  // (`sled-models.ts`): the code's drawn parts collapsed out of the merged
+  // draw — the figure by hiding its group, the machine by hiding every
+  // other part and its own lenses — and the models posed beside them.
+  const models = attachModels({
+    spec,
+    root,
+    machine: style,
+    rider: style.rider,
+    shared: { lamp, tail: tailLens, glass },
+    wrap,
+  });
+  if (models?.machine) {
+    root.traverse((o) => {
+      if (o instanceof THREE.Mesh && !isUnder(o, figure.group) && !models.meshes.includes(o)) {
+        o.visible = false;
+      }
+    });
+  }
+  if (models?.rider) figure.group.visible = false;
+  merged.update();
+
   // THE LAMPS' GLOW, drawn over the merged machine: additive sprites that
   // come up as the light goes, so a rival reads as two lights in the dark.
   const glowOf = (colour: number, size: number, at: [number, number, number]) => {
@@ -699,7 +729,11 @@ export function createSledModel(
 
   return {
     root,
-    casters: screen ? [merged.mesh, screen] : [merged.mesh],
+    casters: [
+      ...(models?.machine ? [] : screen ? [screen] : []),
+      merged.mesh,
+      ...(models?.meshes ?? []),
+    ],
     bound(out) {
       out.center.copy(bound.center);
       root.localToWorld(out.center);
@@ -729,6 +763,7 @@ export function createSledModel(
         thrown.setFromRotationMatrix(trunk);
         figure.group.quaternion.copy(toRoot).multiply(thrown);
         figure.sprawl(p);
+        models?.poseRider(p, figure.group);
         bound.radius = BOUND + figure.group.position.length();
       } else {
         if (bound.radius !== BOUND) {
@@ -737,7 +772,7 @@ export function createSledModel(
           bound.radius = BOUND;
         }
         stepRiderSpring(legs, sled.vy, sled.speed, sled.airborne, dt);
-        figure.pose({
+        const input: RiderInput = {
           stand: legs.stand,
           bump: legs.bump,
           riderRight: sled.riderRight,
@@ -747,10 +782,13 @@ export function createSledModel(
           airborne: sled.airborne,
           landing: sled.landing,
           trick,
-        });
+        };
+        figure.pose(input);
+        models?.poseRider(riderPose(input), figure.group);
       }
       bars.rotation.y = sled.steer * BAR_TURN;
       braking = sled.brake;
+      models?.pose(sled, sink, dt);
       merged.update();
     },
     setLamps(level, facing) {
@@ -773,10 +811,12 @@ export function createSledModel(
     },
     poseRider(input) {
       figure.pose(input);
+      models?.poseRider(riderPose(input), figure.group);
       merged.update();
     },
     setRiderVisible(v) {
-      if (figure.group.visible === v) return;
+      models?.setRiderVisible(v);
+      if (models?.rider || figure.group.visible === v) return;
       figure.group.visible = v;
       merged.update();
     },
@@ -785,6 +825,7 @@ export function createSledModel(
       for (const m of mats) m.dispose();
       merged.dispose();
       figure.dispose();
+      models?.dispose();
     },
   };
 }
