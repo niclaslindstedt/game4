@@ -102,6 +102,29 @@ describe("the race's order", () => {
     expect(bearing.index).toBe(1);
   });
 
+  it("flags a checkpoint the moment it is ridden past beside it, not at the next one", () => {
+    const state = freshRace();
+    const cps = state.level.checkpoints;
+    crossAt(state, cps[0]);
+    const beside = crossAt(state, cps[1], cps[1].width / 2 + TUNING.course.grace + 3);
+    expect(beside.some((e) => e.kind === "missed" && e.index === 1)).toBe(true);
+    expect(state.progress.missed).toBe(1);
+    expect(state.progress.nextCheckpoint).toBe(1);
+    // ...and the order still stands: the next one is not credited until it is taken.
+    expect(crossAt(state, cps[2]).some((e) => e.kind === "checkpoint")).toBe(false);
+    expect(crossAt(state, cps[1]).some((e) => e.kind === "checkpoint" && e.index === 1)).toBe(true);
+    expect(state.progress.missed).toBeNull();
+  });
+
+  it("does not take a crossing of the line's far extension for a checkpoint ridden past", () => {
+    const state = freshRace();
+    const cps = state.level.checkpoints;
+    crossAt(state, cps[0]);
+    const far = cps[1].width / 2 + TUNING.course.grace + TUNING.course.missReach + 5;
+    expect(crossAt(state, cps[1], far).some((e) => e.kind === "missed")).toBe(false);
+    expect(state.progress.missed).toBeNull();
+  });
+
   it("does not count a crossing outside the checkpoint's width", () => {
     const state = freshRace();
     const cps = state.level.checkpoints;

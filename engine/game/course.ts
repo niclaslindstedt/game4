@@ -7,8 +7,9 @@
 // at gate range, "did I clip that?" is answered in the rider's favour).
 // ONE IS LIVE AT A TIME — the one the run owes — and nothing else counts:
 // a rider who skips a checkpoint is not disqualified, the next one is simply
-// not credited until the skipped one is taken, and the HUD's arrow points him
-// back at it (`Progress.missed`, `bearingToNext`).
+// not credited until the skipped one is taken. The moment he rides past it —
+// across its line beside it — it is flagged, and the HUD's arrow points him
+// back at it and lights the reset (`Progress.missed`, `bearingToNext`).
 //
 // THE LAPS: the grid stands on the track behind the start line and the run
 // owes the START LINE (checkpoint 0) first — crossing it opens lap one. Then 1, 2, …
@@ -133,12 +134,36 @@ export function stepCourse(state: GameState, x0: number, z0: number, events: Gam
     }
     return;
   }
-  // THE ARROW: crossing the NEXT checkpoint's line while this one is still
-  // owed is a checkpoint gone past. Nothing is charged; the HUD points back.
-  if (p.missed !== owed && crossedCheckpoint(cps[(owed + 1) % n], x0, z0, c.x, c.z) !== null) {
+  // THE ARROW: riding past the owed checkpoint's line OUTSIDE it — within
+  // `missReach` of its edge, so a far leg of the loop across the line's
+  // extension is not taken for it — or crossing the NEXT checkpoint's line
+  // while this one is still owed, is a checkpoint gone past. Nothing is
+  // charged; the HUD points back and lights the reset.
+  if (
+    p.missed !== owed &&
+    (rodePast(cps[owed], x0, z0, c.x, c.z, extra) ||
+      crossedCheckpoint(cps[(owed + 1) % n], x0, z0, c.x, c.z) !== null)
+  ) {
     p.missed = owed;
     events.push({ kind: "missed", t: state.t, index: owed });
   }
+}
+
+/** Whether the move crossed the checkpoint's line in its facing direction
+ * beside it — past its width and grace (and `extra`), but within
+ * `course.missReach` of that edge. */
+function rodePast(
+  cp: Checkpoint,
+  x0: number,
+  z0: number,
+  x1: number,
+  z1: number,
+  extra: number,
+): boolean {
+  const lateral = crossedLine(cp, x0, z0, x1, z1);
+  if (lateral === null) return false;
+  const edge = cp.width / 2 + K.grace + extra;
+  return Math.abs(lateral) > edge && Math.abs(lateral) <= edge + K.missReach;
 }
 
 /** Where a run that has just finished stands: one more than the rivals

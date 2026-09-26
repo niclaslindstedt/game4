@@ -403,6 +403,12 @@ export const TUNING = {
      * on a hand-built map, has still started the race if it swings wide.
      * Every later crossing of the line is judged like any other checkpoint. */
     startGrace: 10,
+    /** A crossing of the owed checkpoint's line this far past its edge
+     * (beyond the grace), m, is that checkpoint ridden past, and flagged at
+     * once. Well inside the loop's own separation (R5: 60 m centreline to
+     * centreline), so another leg of the loop running across the line's
+     * extension is never taken for it. */
+    missReach: 25,
     /** A reset stands the sled this far PAST the last checkpoint it took,
      * m (or this far short of the start line before it has taken one). */
     resetAhead: 3,
