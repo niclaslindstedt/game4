@@ -400,7 +400,7 @@ export const STRINGS = {
   /** ...over a free ride, where there is no lap to count. */
   pauseSubFree: (seed: number): string => `SEED ${seed} · FREE RIDE`,
   pauseResume: "RESUME",
-  pauseRestart: "RESTART RACE",
+  pauseRestart: "RESTART",
   pauseRestartFree: "START AGAIN",
   pauseOptions: "OPTIONS",
   pauseMainMenu: "MAIN MENU",

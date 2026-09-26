@@ -8,7 +8,8 @@
 // padlock on what it has not opened, the flag on RACE, the stopwatch on the
 // TIME TRIAL, the kicker on FREE RIDE, the flip on TRICKS, the shutter on the
 // GALLERY chip, the sliders on the front door's OPTIONS chip,
-// the three the pause card is read by — carry on, start again, leave — the
+// the four the pause card is read by — carry on, start again, watch it
+// back, leave — the
 // sliders again on the pause card's OPTIONS, and the three more its groups are headed with
 // (the keys, the dial, the screen; SOUND takes the speaker). Each group mark
 // is chosen for what it is NOT: a wide box with a spacebar in it is not a
@@ -33,6 +34,7 @@ export const GLYPH_NAMES = [
   "lock",
   "camera",
   "flip",
+  "replay",
 ] as const;
 
 export type GlyphName = (typeof GLYPH_NAMES)[number];
@@ -177,6 +179,15 @@ const GLYPHS: Record<GlyphName, JSX.Element> = {
       <rect x="2.6" y="7.4" width="18.8" height="12.4" rx="2.4" />
       <path d="M8.4 7.4 9.9 5h4.2l1.5 2.4" />
       <circle cx="12" cy="13.6" r="3.6" />
+    </>
+  ),
+  // AN ARROW COME ROUND ON ITSELF WITH A PLAY WEDGE INSIDE: the run watched
+  // again — not RESUME's bare wedge, which sits two rows above it.
+  replay: (
+    <>
+      <path d="M4.6 9.2A8 8 0 1 1 4 12" />
+      <path d="M4.2 4.8v4.6h4.6" />
+      <path d="M10.2 8.8 15.4 12l-5.2 3.2Z" fill="currentColor" stroke="none" />
     </>
   ),
 };
