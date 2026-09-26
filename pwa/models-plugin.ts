@@ -1,17 +1,18 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE MODELS A BUILD PACKS, when it is asked to (`VITE_MODEL_SLEDS=1`,
-// `VITE_MODEL_RIDERS=1` — in the environment or the root `.env`): every
-// machine's game-quality glTF as `models/<id>.glb` and the rider's as
-// `models/rider.glb`, emitted into the bundle (so the service worker
-// precaches them with everything else) and served the same way by the dev
-// server. They are made by `make models` into the gitignored
-// `previews/blender/` and are never committed; a build that asks for one
-// that has not been made FAILS, naming the make target, rather than
-// shipping a game that quietly draws the code's machine.
+// THE MODELS EVERY BUILD PACKS: every machine's game-quality glTF as
+// `models/<id>.glb` and the rider's as `models/rider.glb`, emitted into the
+// bundle (so the service worker precaches them with everything else) and
+// served the same way by the dev server. They are COMMITTED, in
+// `pwa/models/`, made there by `make models` (Blender, off the game's own
+// data — the `blender-assets` skill), with a stamp of the sources they were
+// made from (`sources.json`), which `tests/models_test.ts` holds to the
+// sources as they stand: a model older than its sources fails the suite.
 //
-// Off (the default), this plugin does nothing and the build is the one the
-// game always had: no asset files at all.
+// A build switched back to the code-built machines or rider
+// (`VITE_MODEL_SLEDS=0`, `VITE_MODEL_RIDERS=0` — `src/game/model-switch.ts`)
+// packs none of that side's files.
 
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -21,30 +22,57 @@ import { SLEDS } from "../engine/game/defs/sled.ts";
 
 export type ModelSwitches = { sleds: boolean; riders: boolean };
 
-/** Every file a build with these switches packs: its published name and
- * where `make models` leaves it. */
-export function modelFiles(on: ModelSwitches, from: string): { name: string; path: string }[] {
-  const files: { name: string; path: string }[] = [];
-  if (on.sleds) {
-    for (const s of SLEDS)
-      files.push({ name: `${s.id}.glb`, path: join(from, `${s.id}-lod0.glb`) });
-  }
-  if (on.riders) files.push({ name: "rider.glb", path: join(from, "rider0-lod0.glb") });
-  return files;
+/** Where the committed models are, from the repository's root. */
+export const MODELS_DIR = "pwa/models";
+
+/** Every file a build with these switches packs, by its published name. */
+export function modelFiles(on: ModelSwitches): string[] {
+  return [
+    ...(on.sleds ? SLEDS.map((s) => `${s.id}.glb`) : []),
+    ...(on.riders ? ["rider.glb"] : []),
+  ];
 }
 
-export function sledModels(on: ModelSwitches, from: string): Plugin {
-  const files = modelFiles(on, from);
-  const missing = () => files.filter((f) => !existsSync(f.path));
+/** WHAT A MODEL IS MADE FROM: the Blender builders and their driver, and
+ * the game's own data they read — the spec, the traced looks, the drawn
+ * travel, the rider's pose, bones and clips, the helmet's measured shell.
+ * A change to any of these can move a model; the stamp is their hash. */
+export const MODEL_SOURCES = [
+  "scripts/blender.mjs",
+  "scripts/blender/lib.py",
+  "scripts/blender/sled.py",
+  "scripts/blender/rider.py",
+  "engine/game/defs/sled.ts",
+  "pwa/src/game/sled-looks.ts",
+  "pwa/src/game/sled-gear.ts",
+  "pwa/src/game/rider-pose.ts",
+  "pwa/src/game/rider-helmet.ts",
+  "pwa/src/game/rider-rig.ts",
+];
+
+/** The sources' hash, from the repository's `root` (line endings as
+ * committed: `\r` dropped, so a checkout's conversion moves nothing). */
+export function sourcesHash(root: string): string {
+  const h = createHash("sha256");
+  for (const f of MODEL_SOURCES) {
+    h.update(`${f}\n`);
+    h.update(readFileSync(join(root, f), "utf8").replaceAll("\r", ""));
+  }
+  return h.digest("hex");
+}
+
+export function sledModels(on: ModelSwitches, root: string): Plugin {
+  const dir = join(root, MODELS_DIR);
+  const files = modelFiles(on);
   return {
     name: "sled-models",
     buildStart() {
-      const gone = missing();
+      const gone = files.filter((f) => !existsSync(join(dir, f)));
       if (gone.length) {
         this.error(
-          `${gone.map((f) => f.path).join(", ")} has not been made, and this build is asked to ` +
-            "draw it (VITE_MODEL_SLEDS / VITE_MODEL_RIDERS) — run `make models` (it needs Blender), " +
-            "or turn the switch off",
+          `${gone.map((f) => `${MODELS_DIR}/${f}`).join(", ")} is missing — run \`make models\` ` +
+            "(it needs Blender), or switch the build back to the code-built ones " +
+            "(VITE_MODEL_SLEDS=0 / VITE_MODEL_RIDERS=0)",
         );
       }
     },
@@ -52,18 +80,17 @@ export function sledModels(on: ModelSwitches, from: string): Plugin {
       for (const f of files) {
         this.emitFile({
           type: "asset",
-          fileName: `models/${f.name}`,
-          source: readFileSync(f.path),
+          fileName: `models/${f}`,
+          source: readFileSync(join(dir, f)),
         });
       }
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         const name = /\/models\/([\w-]+\.glb)$/.exec(req.url ?? "")?.[1];
-        const f = name && files.find((x) => x.name === name);
-        if (!f || !existsSync(f.path)) return next();
+        if (!name || !files.includes(name) || !existsSync(join(dir, name))) return next();
         res.setHeader("Content-Type", "model/gltf-binary");
-        res.end(readFileSync(f.path));
+        res.end(readFileSync(join(dir, name)));
       });
     },
   };

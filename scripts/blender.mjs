@@ -123,7 +123,7 @@ const args = parseArgs(
     views: {
       kind: "string",
       default: "",
-      help: "only these cameras (side,three,rear3,chase,detail); every one when left out",
+      help: "only these cameras (side,three,rear3,chase,detail), or none; every one when left out",
     },
     samples: { kind: "number", default: 64, help: "Cycles samples a still" },
     out: { kind: "string", default: "previews/blender", help: "where everything is written" },

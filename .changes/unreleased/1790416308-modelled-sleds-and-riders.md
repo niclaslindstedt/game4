@@ -1,6 +1,6 @@
 ---
 type: Added
-title: Modelled sleds and riders, on a switch
+title: Modelled sleds and riders
 ---
 
-A build can draw the sleds and riders modelled in Blender in place of the code-built ones: `VITE_MODEL_SLEDS=1` and `VITE_MODEL_RIDERS=1` (in the environment or the root `.env`), with `make models` making them. The machines take their livery's colours and the riders their grid slot's kit; both stay off by default.
+The sleds and their rider are now drawn from models made in Blender off the game's own numbers — every machine in its livery's colours, every rider in his grid slot's kit, posed by the same physics and body as before. The code-built machines and rider are one switch away: `VITE_MODEL_SLEDS=0` and `VITE_MODEL_RIDERS=0`, or `make ci-models MODELS=off` for every CI build.

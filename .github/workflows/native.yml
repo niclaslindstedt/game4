@@ -66,6 +66,12 @@ jobs:
       - name: Bundle the website into the app
         working-directory: native
         run: npm run bundle
+        env:
+          # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
+          # drawn unless a repository variable switches one back — `make
+          # ci-models MODELS=off`, no commit needed; unset is on.
+          VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
+          VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
 
       - name: EAS build
         working-directory: native

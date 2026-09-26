@@ -158,6 +158,11 @@ jobs:
           # worker scope; it must disown their navigations (pwa-plugin.ts
           # `ignorePaths`) so each channel's own worker serves its pages.
           VITE_PWA_IGNORE_PATHS: ${{ matrix.slot == 'root' && '/preview/,/branch/' || '' }}
+          # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
+          # drawn unless a repository variable switches one back — `make
+          # ci-models MODELS=off`, no commit needed; unset is on.
+          VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
+          VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
 
       - name: Upload the ${{ matrix.slot }} slot
         uses: actions/upload-artifact@v7
