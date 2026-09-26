@@ -34,6 +34,10 @@ export const REST_SAG = 0.08;
  * reports. A modelled machine's clips run the same travel (`make blender`). */
 export const TRAVEL = { ski: [-0.12, 0.2], tread: [-0.12, 0.25] } as const;
 
+/** How much of the drawn furrow's extra depth each end is drawn sunk into
+ * it: the skis most of it, the tread nearly all. */
+export const SINK_SHARE = { ski: 0.7, tread: 0.8 } as const;
+
 /** The bars' turn about the post at full steer, rad. */
 export const BAR_TURN = 0.42;
 
@@ -301,7 +305,7 @@ export function buildGear(
       for (let i = 0; i < 2; i++) {
         const s = skis[i];
         const lift = lifts.ski[i];
-        s.group.position.y = ground + lift + sink * 0.7;
+        s.group.position.y = ground + lift + sink * SINK_SHARE.ski;
         // Clockwise from above is a positive turn about +y in the engine's
         // frame, which is three's too (`lib/quat.ts`).
         s.group.rotation.y = sled.skiAngle;
@@ -333,7 +337,7 @@ export function buildGear(
         );
       }
       const rearLift = lifts.tread;
-      tread.position.y = rearLift + sink * 0.8;
+      tread.position.y = rearLift + sink * SINK_SHARE.tread;
       const ty = tread.position.y;
       for (let i = 0; i < 2; i++) {
         const side = i === 0 ? -1 : 1;

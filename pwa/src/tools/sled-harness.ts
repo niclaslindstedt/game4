@@ -35,7 +35,7 @@
 //   rig        the builder's machine and every modelled one side by side,
 //              posed at the same engine moments — the bars turned, each end
 //              of the suspension at its bump and its droop — the models by
-//              their rigs (`asset-rig.ts`), as the game would pose one
+//              their rigs (`sled-rig.ts`), as the game would pose one
 //   clips      every clip the first model carries, played across its
 //              length a frame a column (the rider left off: a clip turns
 //              the bars without him) — and every clip of a modelled RIDER
@@ -55,8 +55,8 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { TRAVEL } from "../game/sled-gear.ts";
-import { rigAsset, type AssetRig } from "./asset-rig.ts";
-import { rigRider, type RiderRig } from "./rider-rig.ts";
+import { rigAsset, type AssetRig } from "../game/sled-rig.ts";
+import { rigRider, type RiderRig } from "../game/rider-rig.ts";
 import { freshSled, SLED, SLEDS, sledById, type SledSpec, type SledState } from "@engine";
 
 import { createRider, type RiderFigure } from "../game/rider.ts";

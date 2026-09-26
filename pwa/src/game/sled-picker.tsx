@@ -39,7 +39,10 @@ export function SledPicker({
     const canvas = canvasRef.current;
     if (!canvas) return;
     let disposed = false;
-    void import("./sled-turntable.ts").then(({ createSledTurntable }) => {
+    // The modelled machines, when this build draws them, are fetched before
+    // the stand is built, so it turns the same machine the race will draw.
+    void import("./sled-turntable.ts").then(async ({ createSledTurntable, loadModels }) => {
+      await loadModels();
       if (disposed) return;
       standRef.current = createSledTurntable(canvas);
       standRef.current.setSled(

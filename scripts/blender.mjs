@@ -65,7 +65,7 @@ const KINDS = {
       const { SLED_STYLES } = await import("../pwa/src/game/sled-body.ts");
       const { BODY, riderPose } = await import("../pwa/src/game/rider-pose.ts");
       const helmet = await import("../pwa/src/game/rider-helmet.ts");
-      const { RIDING, riderBones, riderClips } = await import("../pwa/src/tools/rider-rig.ts");
+      const { RIDING, riderBones, riderClips } = await import("../pwa/src/game/rider-rig.ts");
       const rest = riderPose(RIDING);
       // Fine enough that the port's and the cap's edges read clean in a
       // still; the game quality takes every other point.

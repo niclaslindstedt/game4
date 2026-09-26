@@ -119,6 +119,10 @@ import {
   type TrailPen,
 } from "./trail-stamp.ts";
 
+// The modelled machines and riders, fetched before the kit is handed out
+// (`use-render-kit.ts`), when this build draws them.
+export { loadModels } from "./sled-models.ts";
+
 export type RendererOptions = {
   /** The picture to open on (`settings-video.ts`); `setVideo` moves it. Its
    * ANTIALIAS row is read here and only here — a canvas's multisampling is

@@ -44,6 +44,7 @@ export default [
       "pwa/vite.config.ts",
       "vitest.config.ts",
       "pwa/pwa-plugin.ts",
+      "pwa/models-plugin.ts",
     ],
     languageOptions: {
       parser: tsparser,

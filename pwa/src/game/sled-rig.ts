@@ -3,7 +3,7 @@
 // `make blender` is one skinned mesh on a rig (`scripts/blender/lib.py`):
 // DRIVERS the game sets off the engine's readings, LINKAGES that follow,
 // and the lugs' belt-run morph. This is the game's side of that contract,
-// written once for the sled lab (and for the day a model is shipped):
+// written once for the game (`sled-models.ts`) and the sled lab alike:
 //
 //   bars           turned about its own axis (the post) by `steer × BAR_TURN`
 //   ski_l, ski_r   lifted by their compression (`gearLift`), turned about
@@ -16,12 +16,13 @@
 //                  `stretch` is set — the game's struts re-laid (`sled-gear.ts`)
 //
 // And the CLIPS the model carries, played at a moment. Three only: the
-// asset's frame is the loader's business (`sled-harness.ts` turns it).
+// asset's frame is the loader's business (`sled-models.ts` and the lab's
+// `sled-harness.ts` turn it).
 
 import * as THREE from "three";
 import type { SledState } from "@engine";
 
-import { BAR_TURN, gearLift } from "../game/sled-gear.ts";
+import { BAR_TURN, gearLift, SINK_SHARE } from "./sled-gear.ts";
 
 type Rest = { p: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3 };
 type Aim = {
@@ -37,17 +38,21 @@ export type AssetRig = {
   clips: { name: string; seconds: number }[];
   /** Back to the rest pose, every clip stopped. */
   rest(): void;
-  /** Posed off the engine's state; `run` is how far the belt has run, m. */
-  pose(sled: SledState, run?: number): void;
+  /** Posed off the engine's state; `run` is how far the belt has run, m,
+   * and `sink` how much deeper the drawn furrow is than the physics' sink. */
+  pose(sled: SledState, run?: number, sink?: number): void;
   /** Clip `name` at `t` s. */
   play(name: string, t: number): void;
 };
 
-const UP = new THREE.Vector3(0, 1, 0);
 const Y = new THREE.Vector3(0, 1, 0);
 
+/** `root` is the loaded scene; its PARENT stands in the machine's body
+ * frame (the loader's turn between them), and "up" and "side" are that
+ * frame's — a machine in the game pitches and rolls. */
 export function rigAsset(root: THREE.Object3D, animations: THREE.AnimationClip[]): AssetRig {
-  root.updateMatrixWorld(true);
+  const body = root.parent ?? root;
+  body.updateMatrixWorld(true);
   const rest = new Map<THREE.Object3D, Rest>();
   const named = new Map<string, THREE.Object3D>();
   const morphs: THREE.Mesh[] = [];
@@ -77,7 +82,20 @@ export function rigAsset(root: THREE.Object3D, animations: THREE.AnimationClip[]
     });
   }
   const wheels = [...named.values()].filter((o) => /^wheel_\d+$/.test(o.name));
-  const skis = ["ski_l", "ski_r"].map((n) => named.get(n)).filter((o): o is THREE.Object3D => !!o);
+  // The engine's ski 0 stands at x negative in the body frame: the model's
+  // skis matched to the engine's by side, never by name (a model's own
+  // left is its frame's, which the loader's turn may have put either way).
+  const sideOf = (o: THREE.Object3D) =>
+    body.worldToLocal(o.getWorldPosition(new THREE.Vector3())).x;
+  const skis = ["ski_l", "ski_r"]
+    .map((n) => named.get(n))
+    .filter((o): o is THREE.Object3D => !!o)
+    .sort((a, b) => sideOf(a) - sideOf(b));
+  let beltRun = 0;
+  root.traverse((o) => {
+    if (typeof o.userData.beltRunMetres === "number") beltRun = o.userData.beltRunMetres;
+  });
+  const up = new THREE.Vector3();
   const bars = named.get("bars");
   const track = named.get("track");
 
@@ -97,36 +115,34 @@ export function rigAsset(root: THREE.Object3D, animations: THREE.AnimationClip[]
   const w = new THREE.Vector3();
   const pq = new THREE.Quaternion();
   const q = new THREE.Quaternion();
-  /** Move `o` by `lift` up the world and turn it by `angle` about the world's up. */
+  /** Move `o` by `lift` up the machine and turn it by `angle` about its up. */
   function drive(o: THREE.Object3D, lift: number, angle = 0): void {
     const parent = o.parent!;
     o.getWorldPosition(w);
-    const at = parent.worldToLocal(w.clone().addScaledVector(UP, lift));
+    const at = parent.worldToLocal(w.clone().addScaledVector(up, lift));
     o.position.copy(at);
     if (angle) {
       parent.getWorldQuaternion(pq);
-      q.setFromAxisAngle(UP, angle);
+      q.setFromAxisAngle(up, angle);
       o.quaternion.premultiply(pq.clone().invert().multiply(q).multiply(pq));
     }
   }
-  /** Turn `o` about its own axis by `angle`, in the sense a turn about the world's up has. */
+  /** Turn `o` about its own axis by `angle`, in the sense a turn about the machine's up has. */
   function spin(o: THREE.Object3D, angle: number): void {
     const axis = Y.clone().applyQuaternion(o.getWorldQuaternion(pq));
-    o.quaternion.multiply(q.setFromAxisAngle(Y, angle * Math.sign(axis.dot(UP) || 1)));
+    o.quaternion.multiply(q.setFromAxisAngle(Y, angle * Math.sign(axis.dot(up) || 1)));
   }
 
   return {
     clips: animations.map((c) => ({ name: c.name, seconds: c.duration })),
     rest: reset,
-    pose(sled, run = 0) {
+    pose(sled, run = 0, sink = 0) {
       reset();
+      up.copy(Y).applyQuaternion(body.getWorldQuaternion(pq));
       const lift = gearLift(sled);
-      // The engine's ski 0 stands at x negative in the body frame.
-      const bySide = [...skis].sort((a, b) => a.getWorldPosition(w).x - b.getWorldPosition(tmp).x);
-      bySide.forEach((o, i) => drive(o, lift.ski[i], sled.skiAngle));
-      if (track) drive(track, lift.tread);
+      skis.forEach((o, i) => drive(o, lift.ski[i] + sink * SINK_SHARE.ski, sled.skiAngle));
+      if (track) drive(track, lift.tread + sink * SINK_SHARE.tread);
       if (bars) spin(bars, sled.steer * BAR_TURN);
-      const beltRun = (root.userData.beltRunMetres as number | undefined) ?? 0;
       if (run && beltRun) {
         for (const m of morphs) m.morphTargetInfluences![0] = (run / beltRun) % 1;
         for (const o of wheels) {
