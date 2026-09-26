@@ -8,11 +8,11 @@
 //   OPTIONS       the handful of settings a rider actually stops mid-race
 //                 for, ON A PANEL OF THEIR OWN rather than inline under
 //                 RESUME.
-//   RESTART RACE  the race again from the grid, on the same map — the B
+//   RESTART       the race again from the grid, on the same map — the B
 //                 key's own line. Over a free ride, START AGAIN: the same
 //                 ride from where it started.
 //   WATCH REPLAY  the race so far, from the outside (`replay-run.ts`) —
-//                 which ENDS it, and the row says so.
+//                 which ENDS it, and the press says so.
 //   MAIN MENU     out of the race and back to the front door. Nothing is
 //                 torn down: the same sled carries on under the bot.
 //
@@ -30,14 +30,20 @@
 // front of you and reads perfectly well held still: where the eye rides, and
 // the sound.
 //
+// THE PRESSES THAT END THE RACE ARE THE QUIET ONES. RESUME and OPTIONS are
+// rows; RESTART, WATCH REPLAY and MAIN MENU share ONE strip at the foot, a
+// mark over a short word each, with no fill of their own. A phone on its
+// side has 390 px of height for this whole card, and three full rows for the
+// presses a rider seldom wants cost it the fold — and they are the ones a
+// stray thumb should find hardest.
+//
 // EACH PANEL OWNS ITS OWN WAY OUT, one press deep at all times. On the card
 // that is RESUME (`data-nav-back`, and where the cursor lands —
 // `data-nav-focus`): a card opened by a thumb aiming for the reset beside the
 // pause mark must cost one press to leave. On the panel it is the head's ‹
 // back to the card. The BACKDROP follows whichever is up, so Escape, the
-// backdrop and the cursor's own way out are always the same step. RESTART and
-// MAIN MENU both END the race, so they stand below OPTIONS, never one row's
-// travel from RESUME.
+// backdrop and the cursor's own way out are always the same step. The strip
+// stands below OPTIONS, never one row's travel from RESUME.
 //
 // It wears the front door's own chrome (`.menu` / `.menu-card`): it is the
 // same game asking the same kind of question, and `menu-nav.ts` already
@@ -191,22 +197,27 @@ export function PauseMenu({
               <Glyph name="sliders" />
               <span class="menu-item-name">{STRINGS.pauseOptions}</span>
             </button>
-            <button type="button" class="menu-item" onClick={onRestart}>
+          </div>
+          {/* THE THREE THAT END THE RACE, side by side in one quiet strip:
+              a mark over a word, no fill until a finger or the cursor is on
+              one. */}
+          <div class="pause-foot">
+            <button type="button" class="pause-foot-item" onClick={onRestart}>
               <Glyph name="restart" />
-              <span class="menu-item-name">
+              <span class="pause-foot-name">
                 {snap.free ? STRINGS.pauseRestartFree : STRINGS.pauseRestart}
               </span>
             </button>
             {onReplay && (
-              <button type="button" class="menu-item" onClick={onReplay}>
-                <Glyph name="play" />
-                <span class="menu-item-name">{STRINGS.replayWatch}</span>
-                <span class="menu-item-note">{STRINGS.replayWatchNote}</span>
+              <button type="button" class="pause-foot-item" onClick={onReplay}>
+                <Glyph name="replay" />
+                <span class="pause-foot-name">{STRINGS.replayLabel}</span>
+                <span class="pause-foot-note">{STRINGS.replayWatchNote}</span>
               </button>
             )}
-            <button type="button" class="menu-item menu-item-leave" onClick={onMainMenu}>
+            <button type="button" class="pause-foot-item" onClick={onMainMenu}>
               <Glyph name="exit" />
-              <span class="menu-item-name">{STRINGS.pauseMainMenu}</span>
+              <span class="pause-foot-name">{STRINGS.pauseMainMenu}</span>
             </button>
           </div>
         </div>

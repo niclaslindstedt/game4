@@ -1996,10 +1996,10 @@ canvas {
    and the eye lands on the way back to the snow.
 
    IT IS THE TIGHTEST HEIGHT BUDGET IN THE GAME. A phone held SIDEWAYS is 390
-   px tall and this card has to carry a head, a strip of figures and four
-   presses inside it — which is the whole reason the rows below are a LINE
-   apiece with a mark at the head of each, rather than the word-only slabs
-   they were. Measure it (`.menu-card-*`'s `scrollHeight` against its
+   px tall and this card has to carry a head, a strip of figures and five
+   presses inside it — which is the whole reason RESUME and OPTIONS are a
+   LINE apiece with a mark at the head of each, and the three that end the
+   race share one quiet strip at the foot (`.pause-foot`). Measure it (`.menu-card-*`'s `scrollHeight` against its
    `clientHeight`, both viewports) before adding anything to it: a card a row
    too tall does not clip, does not wrap and does not show in any screenshot
    — its last press simply sits below the fold. */
@@ -2007,6 +2007,10 @@ canvas {
   align-items: stretch;
   text-align: center;
   width: min(24rem, 100%);
+  /* The card's own air between its blocks, scaled on the short axis like
+     every other vertical measure on it: the 0.9rem every card keeps is four
+     gaps' worth of the phone on its side. */
+  gap: clamp(0.45rem, 2.2vmin, 0.9rem);
 }
 
 .menu-pause-head {
@@ -2085,8 +2089,8 @@ canvas {
 /* THE ROWS, ON THIS CARD ONLY. `.menu-item` is the pause card's RESUME and the
    developer page's whole column as well, so the mark-and-a-line layout is
    scoped here rather than pushed onto all of them: the pause card is the one
-   surface where four presses have to share a phone's short side with a head
-   and a strip of figures. */
+   surface where its presses have to share a phone's short side with a head,
+   a strip of figures and a foot. */
 .menu-card-pause .menu-item {
   display: flex;
   align-items: center;
@@ -2094,11 +2098,8 @@ canvas {
   padding: clamp(0.44rem, 1.6vmin, 0.62rem) clamp(0.6rem, 2.2vmin, 0.85rem);
   text-align: left;
   font-size: 0.92rem;
-  /* Looser than body text and tighter than the front door's tiles. The
-     front door's 0.16em is a tile's worth of spacing and this is a row's:
-     at 0.16em the one row that carries a second phrase (WATCH REPLAY and
-     its price) runs out of line and folds in two, which costs the card a
-     row of height on the viewport with none to give. */
+  /* Looser than body text and tighter than the front door's tiles: the
+     front door's 0.16em is a tile's worth of spacing and this is a row's. */
   letter-spacing: 0.1em;
   text-indent: 0.1em;
 }
@@ -2116,28 +2117,81 @@ canvas {
   opacity: 0.9;
 }
 
-/* The name takes the slack, so anything after it (the replay's price) is
-   pushed out to the far end of the same line rather than onto a second one. */
-.menu-card-pause .menu-item-name {
-  flex: 1 1 auto;
+/* THE FOOT STRIP: RESTART, WATCH REPLAY and MAIN MENU — the three presses
+   that END the race — side by side, a mark over a short word each, in the
+   card's quietest ink and with no fill until a finger or the cursor is on
+   one. Three columns of `1fr` for the reason the figures above are: a strip
+   that could wrap would buy back the very row it exists to save. The rule
+   over it is the figures' own, so the card reads head / figures / presses /
+   foot rather than as a fifth and sixth row of the same weight as RESUME. */
+.pause-foot {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 0.3rem;
+  padding-top: clamp(0.3rem, 1.2vmin, 0.5rem);
+  border-top: 2px solid rgb(242 247 248 / 14%);
 }
 
-.menu-card-pause .menu-item-name:has(+ .menu-item-note) {
+.pause-foot-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* From the top, so the three marks and their words stand on one line and
+     the replay's price hangs under its own word rather than lifting it. */
+  justify-content: flex-start;
+  gap: 0.18rem;
+  min-width: 0;
+  /* A thumb's worth of target, whatever the words inside it come to. */
+  min-height: 2.75rem;
+  padding: 0.35rem 0.2rem 0.3rem;
+  border: 2px solid transparent;
+  border-radius: 0.5rem;
+  background: none;
+  color: var(--hud-info);
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pause-foot-item:hover,
+.pause-foot-item:focus-visible,
+.pause-foot-item.nav-cursor {
+  border-color: var(--flag);
+  background: rgb(44 92 140 / 55%);
+  color: var(--hud-ink);
+  outline: none;
+}
+
+.pause-foot-item:active {
+  transform: translateY(1px);
+}
+
+.pause-foot-item .menu-glyph {
+  width: 1.15rem;
+  height: 1.15rem;
+  opacity: 0.85;
+}
+
+.pause-foot-name,
+.pause-foot-note {
+  max-width: 100%;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.1;
 }
 
-.menu-card-pause .menu-item-note {
-  font-size: 0.7rem;
+/* WATCH REPLAY's price, under its word: taken mid-race, the race is over. */
+.pause-foot-note {
+  font-size: 0.52rem;
+  font-weight: 600;
   letter-spacing: 0.06em;
   opacity: 0.7;
-  white-space: nowrap;
-}
-
-/* The way out of the run, held apart from the three above it and given the
-   least of the card's weight — the front door's foot strip, as a row. */
-.menu-card-pause .menu-item-leave {
-  margin-top: clamp(0.15rem, 1vmin, 0.35rem);
-  font-size: 0.82rem;
 }
 
 /* THE PAUSE CARD'S OPTIONS PANEL (menu-pause.tsx): the same groups the front
