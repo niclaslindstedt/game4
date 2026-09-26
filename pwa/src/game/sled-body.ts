@@ -170,20 +170,32 @@ export type SledModel = {
   dispose(): void;
 };
 
+/** How far under the tunnel's top at its tail the rear lens sits, and how
+ * far the glow round it stands behind the rearmost of the tail, m. */
+const TAIL_LENS = { drop: 0.014, glowBack: 0.04 };
+
 /** Where a machine's lamps are in its body frame, m: the headlamps where
- * its traced nose carries them and the taillight on its traced tail. The
+ * its traced nose carries them, and the taillight as the lens across the
+ * tunnel's tail at its top — the one lens that faces astern (the traced
+ * taillight runs along the flank, edge-on from behind and hidden by the
+ * flap). `glow` is where the tail's glow is hung: behind the flap and
+ * everything else at the tail, or the machine's own flap buries it. The
  * headlamp's beam points along the body's forward axis, dipped by
  * `HEADLAMP_DIP`. */
 export function lampMounts(spec: SledSpec): {
   head: [number, number, number];
   tail: [number, number, number];
+  glow: [number, number, number];
 } {
   const look = SLED_LOOKS[spec.id];
   const F = lookFrame(spec, look);
-  const [t0, t1] = look.taillight;
+  const [end, top] = look.tunnelTop[0];
+  const y = F.y(top - TAIL_LENS.drop);
+  const back = Math.min(end, ...(look.flap ?? []).map((p) => p[0]));
   return {
     head: [0, F.y(look.lamps.y), F.z(look.lamps.z)],
-    tail: [0, F.y((t0[1] + t1[1]) / 2), F.z(Math.min(t0[0], t1[0]))],
+    tail: [0, y, F.z(end)],
+    glow: [0, y, F.z(back) - TAIL_LENS.glowBack],
   };
 }
 
@@ -231,6 +243,9 @@ function glow(): THREE.DataTexture {
     }
   }
   glowTexture = new THREE.DataTexture(data, n, n);
+  // A DataTexture samples NEAREST unless told otherwise: stretched over a
+  // metre and a half, every texel was a square.
+  glowTexture.magFilter = glowTexture.minFilter = THREE.LinearFilter;
   glowTexture.needsUpdate = true;
   return glowTexture;
 }
@@ -501,16 +516,12 @@ export function createSledModel(
   }
   // THE FLAP off the tail, and the TAILLIGHT.
   if (look.flap) add(profile(strip(pts(look.flap), 0.015), look.tunnelWidth, 0), black);
-  const [t0, t1] = pts(look.taillight);
-  const tail = add(
-    new THREE.BoxGeometry(
-      look.tunnelWidth * 0.5,
-      Math.abs(t0[1] - t1[1]) + 0.02,
-      Math.abs(t0[0] - t1[0]),
-    ),
-    tailLens,
-  );
-  tail.position.set(0, (t0[1] + t1[1]) / 2 + 0.01, (t0[0] + t1[0]) / 2);
+  // The lens across the tunnel's tail, as the modelled machine carries it
+  // (`scripts/blender/sled.py`'s `taillight_rear`), tipped back a little.
+  const lens = lampMounts(spec).tail;
+  const tail = add(new THREE.BoxGeometry(look.tunnelWidth * 0.475, 0.03, 0.012), tailLens);
+  tail.position.set(lens[0], lens[1], lens[2] - 0.005);
+  tail.rotation.x = 0.21;
   // The grab loop over the tail's tip.
   const grab = add(new THREE.TorusGeometry(look.tunnelWidth * 0.42, 0.015, 5, 10, Math.PI), alloy);
   grab.rotation.set(Math.PI / 2 - 0.25, 0, 0);
@@ -700,11 +711,7 @@ export function createSledModel(
       mounts.head[2] + 0.05,
     ]),
   );
-  const tailGlow = glowOf(0xff2a1a, TAIL_LIT.glow, [
-    mounts.tail[0],
-    mounts.tail[1],
-    mounts.tail[2] - 0.04,
-  ]);
+  const tailGlow = glowOf(0xff2a1a, TAIL_LIT.glow, mounts.glow);
   // Over the snow cloud (drawn at 6): a sled's own tail hangs round its
   // lamps, and a glow drawn under it was buried there — the red the cloud
   // took from the lamp then had no lamp to come from.
