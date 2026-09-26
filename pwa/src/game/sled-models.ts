@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE MODELLED MACHINES AND RIDERS, when a build asks for them. The game
-// builds every sled and rider in code (`sled-body.ts`, `rider.ts`); a
-// build made with `VITE_MODEL_SLEDS=1` and/or `VITE_MODEL_RIDERS=1` draws
-// the Blender models instead (`make models` makes them, `make blender`'s
-// game quality; the build packs them — `pwa/models-plugin.ts`). Nothing
-// else changes: the code machine is still built, still posed, still the
-// one the lamps, the bound, the thrown rider and every reader of a
-// `SledModel` know; its drawn parts are only collapsed out of the merged
-// draw, and the model — skinned on the rig `make blender` gave it — is
-// posed off the same readings beside it:
+// THE MODELLED MACHINES AND RIDERS the game draws: glTFs made in Blender off
+// the game's own data (`make models`, committed in `pwa/models/` and held
+// fresh against their sources by `tests/models_test.ts`) and packed by
+// every build (`pwa/models-plugin.ts`) — unless a build is switched back to
+// the code-built ones (`VITE_MODEL_SLEDS=0`, `VITE_MODEL_RIDERS=0`;
+// `model-switch.ts`). Nothing else changes: the code machine is still
+// built, still posed, still the one the lamps, the bound, the thrown rider
+// and every reader of a `SledModel` know; its drawn parts are only
+// collapsed out of the merged draw, and the model — skinned on the rig
+// `make blender` gave it — is posed off the same readings beside it:
 //
 //   a machine   its rig (`sled-rig.ts`) posed off the engine's state, the
 //               drawn furrow's sink and the belt's run; dressed in the
@@ -31,6 +31,7 @@ import { SLEDS, type SledId, type SledSpec, type SledState } from "@engine";
 import { rigRider } from "./rider-rig.ts";
 import type { RiderPose } from "./rider-pose.ts";
 import type { RiderStyle } from "./rider.ts";
+import { modelSwitch } from "./model-switch.ts";
 import { lookFrame } from "./sled-looks.ts";
 import { rigAsset } from "./sled-rig.ts";
 
@@ -38,10 +39,11 @@ import { rigAsset } from "./sled-rig.ts";
  * where the suite reads the module (the root program knows no Vite). */
 const ENV = (import.meta as { env?: Record<string, string | boolean | undefined> }).env ?? {};
 
-/** Which models this build draws (build-time switches, off by default). */
+/** Which models this build draws (build-time switches, ON unless turned
+ * off — `model-switch.ts`). */
 export const MODELS = {
-  sleds: ENV.VITE_MODEL_SLEDS === "1",
-  riders: ENV.VITE_MODEL_RIDERS === "1",
+  sleds: modelSwitch(ENV.VITE_MODEL_SLEDS),
+  riders: modelSwitch(ENV.VITE_MODEL_RIDERS),
 };
 
 const loaded: { sleds: Map<SledId, GLTF>; rider: GLTF | null } = {

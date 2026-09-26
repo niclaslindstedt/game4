@@ -178,6 +178,12 @@ jobs:
 
       - name: make build
         run: make build
+        env:
+          # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
+          # drawn unless a repository variable switches one back — `make
+          # ci-models MODELS=off`, no commit needed; unset is on.
+          VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
+          VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
       - name: make test
         run: make test
 
@@ -241,6 +247,11 @@ jobs:
       # The release commit is on the tag, so the build is made from exactly
       # what was tagged rather than from whatever main looks like by now.
       TAG: ${{ needs.release.outputs.tag }}
+      # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
+      # drawn unless a repository variable switches one back — `make
+      # ci-models MODELS=off`, no commit needed; unset is on.
+      VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
+      VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
       # NOTARIZATION. The bundler acts on these three only once the app is
       # signed with a real Developer ID (the `Apple signing` step below), and
       # ignores them otherwise — so an unconfigured repo still packages, it

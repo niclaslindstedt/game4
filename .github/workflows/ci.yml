@@ -99,6 +99,12 @@ jobs:
   # The production build (`tsc --noEmit` across both projects, then vite).
   build:
     runs-on: ubuntu-latest
+    env:
+      # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
+      # drawn unless a repository variable switches one back — `make
+      # ci-models MODELS=off`, no commit needed; unset is on.
+      VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
+      VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup

@@ -9,6 +9,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { defineConfig, loadEnv } from "vite";
 
 import { sledModels } from "./models-plugin.ts";
+import { modelSwitch } from "./src/game/model-switch.ts";
 import { appPwa } from "./pwa-plugin.ts";
 
 const here = (p: string) => fileURLToPath(new URL(p, import.meta.url));
@@ -51,11 +52,12 @@ const envDir = here("..");
 
 export default defineConfig(({ mode }) => {
   // The MODEL switches (`pwa/models-plugin.ts`, `src/game/sled-models.ts`):
-  // off unless the environment or the root `.env` turns them on.
+  // on unless the environment or the root `.env` switches one back
+  // (`src/game/model-switch.ts`).
   const env = { ...loadEnv(mode, envDir, "VITE_"), ...process.env };
   const models = {
-    sleds: env.VITE_MODEL_SLEDS === "1",
-    riders: env.VITE_MODEL_RIDERS === "1",
+    sleds: modelSwitch(env.VITE_MODEL_SLEDS),
+    riders: modelSwitch(env.VITE_MODEL_RIDERS),
   };
   return {
     base,
@@ -89,7 +91,7 @@ export default defineConfig(({ mode }) => {
     plugins: [
       preact(),
       tailwindcss(),
-      sledModels(models, here("../previews/blender")),
+      sledModels(models, here("..")),
       appPwa({ base, version, ignorePaths }),
     ],
   };

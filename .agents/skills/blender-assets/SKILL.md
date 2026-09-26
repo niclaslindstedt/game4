@@ -5,10 +5,10 @@ description: "Use when a game asset is to be MODELLED IN BLENDER off the game's 
 
 # Blender assets
 
-The game ships **no asset files** by default: every sled, tree, animal and
-the rider is built in code — and a build that asks (`VITE_MODEL_SLEDS=1`,
-`VITE_MODEL_RIDERS=1`) draws the machines and the rider modelled here
-instead (§ "The models in the game"). This skill is the other road, kept open on purpose — the same
+The game draws its **sleds and rider from the models made here** —
+committed in `pwa/models/` by `make models` — and builds everything else
+(and, one switch away, the sleds and the rider too) in code (§ "The models
+in the game"). This skill is the other road, kept open on purpose — the same
 things MODELLED in Blender, off the same numbers, so that the question "how
 good could it look, and what would it cost?" is answered with a render, a
 triangle count and a picture in the game's own lab rather than a guess, and
@@ -23,9 +23,10 @@ Three rules make that possible, and every step below serves one of them:
    therefore stands on the physics' ski line and belt run to the
    centimetre, and when a trace moves, the model moves with it on the next
    run. A hand-typed dimension in a builder is the drift this rules out.
-2. **Nothing it makes is committed.** Every output lands in the gitignored
-   `previews/blender/`; a build that draws the models packs them from
-   there (`make models`, then the switches — below).
+2. **The lab's outputs are not committed; the game's models are.** Every
+   render, `.blend` and LOD lands in the gitignored `previews/blender/`;
+   only `make models` publishes — the LOD0 of every sled and the rider,
+   with their sources' stamp, into `pwa/models/` — and those are committed.
 3. **A model is judged beside the game's own**, in the game's renderer, with
    the game's rider on it — not only in a Blender studio, which flatters
    everything.
@@ -304,19 +305,28 @@ moves is written in Python.
 
 ## The models in the game
 
-A build draws them when it is ASKED to: `VITE_MODEL_SLEDS=1` (every
-machine) and/or `VITE_MODEL_RIDERS=1` (the rider), in the environment or
-the root `.env` — both OFF by default, and off the game is exactly the one
-that ships no asset files. The loop: `make models` (every sled and
-`rider0`, game quality, into `previews/blender/`), then
-`VITE_MODEL_SLEDS=1 VITE_MODEL_RIDERS=1 make build` and `make screenshots`
-(a race, `--camera far`, and `--surface sled` for the turntable).
+Every build draws them — local, CI, the site's slots, a release, the
+desktop and store apps — unless SWITCHED BACK: `VITE_MODEL_SLEDS=0` (the
+code-built machines) and/or `VITE_MODEL_RIDERS=0` (the code-built rider),
+in the environment or the root `.env`; unset, empty or anything else is on
+(`model-switch.ts`). Every workflow's build step hands on the repository
+variables of the same names, so `make ci-models MODELS=off` switches every
+CI build back with no commit (`MODELS=on` returns them).
 
-- **Packed by the build, never committed.** `pwa/models-plugin.ts` emits
-  `models/<id>.glb` and `models/rider.glb` from `previews/blender/*-lod0.glb`
-  into the bundle (before `appPwa`, so the worker precaches them) and
-  serves them the same way in dev; a switched-on build whose model has not
-  been made FAILS, naming `make models`. `envDir` is the repository root.
+- **Committed, stamped, drift-tested.** `make models` makes every sled and
+  `rider0` at game quality (no stills, ~2 min) and `scripts/models.mjs`
+  publishes their LOD0s into `pwa/models/<id>.glb` / `rider.glb` with
+  `sources.json`: the hash of `MODEL_SOURCES` (`pwa/models-plugin.ts` — the
+  builders, the driver, and the game data they read). `tests/models_test.ts`
+  recomputes it: a change to any source FAILS the suite until `make models`
+  is run and `pwa/models/` committed with it. CI therefore needs no Blender.
+  Add a file a builder reads to `MODEL_SOURCES`, or its changes go unseen.
+- **Packed by the build.** `pwa/models-plugin.ts` emits them as
+  `models/<id>.glb` and `models/rider.glb` into the bundle (before
+  `appPwa`, so the worker precaches them) and serves them the same way in
+  dev; a build whose model is missing FAILS, naming `make models`. `envDir`
+  is the repository root. About 7 MB in all (a machine ~1.1 MB, the rider
+  0.5 MB), ~1.6 MB in git a regeneration.
 - **Fetched before anything is built.** `loadModels()` runs where the
   renderer's chunk lands (`use-render-kit.ts`) and where the sled card's
   turntable chunk lands (`sled-picker.tsx`) — a builder that ran first drew

@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky cloud sled blender models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky cloud sled blender models ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -65,14 +65,28 @@ sled:
 blender:
 	npm run blender -- $(if $(KIND),--kind $(KIND),) $(if $(ID),--id $(ID),) $(ARGS)
 
-# The models a build draws when it is asked to (VITE_MODEL_SLEDS=1,
-# VITE_MODEL_RIDERS=1 — the environment or the root .env): every sled and
-# the rider, game quality, into the gitignored previews/blender/, where the
-# build packs them from. Needs Blender; a switched-on build without them
-# fails and says so.
+# The models the game ships: every sled and the rider, game quality (no
+# stills), made by Blender and published into the COMMITTED pwa/models/
+# with a stamp of their sources — tests/models_test.ts fails when a model
+# is older than what it is made from. Needs Blender. A build draws them
+# unless switched back (VITE_MODEL_SLEDS=0, VITE_MODEL_RIDERS=0).
 models:
-	npm run blender -- --id all --quality=game --views=chase
-	npm run blender -- --kind rider --id rider0 --quality=game --views=chase
+	npm run blender -- --id all --quality=game --views=none
+	npm run blender -- --kind rider --id rider0 --quality=game --views=none
+	node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/models.mjs
+
+# Switch the models on or off for every CI build — the repository
+# VARIABLES the workflows hand the build (needs gh, and the right to set
+# them): `make ci-models MODELS=off` draws the code-built machines and
+# rider on the next deploy with no commit; MODELS=on (or deleting the
+# variables) puts the models back.
+ci-models:
+	@case "$(MODELS)" in \
+	  off) gh variable set VITE_MODEL_SLEDS --body 0 && gh variable set VITE_MODEL_RIDERS --body 0 ;; \
+	  on) gh variable set VITE_MODEL_SLEDS --body 1 && gh variable set VITE_MODEL_RIDERS --body 1 ;; \
+	  *) echo "usage: make ci-models MODELS=on|off" >&2; exit 2 ;; \
+	esac
+	@gh variable list | grep VITE_MODEL || true
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact

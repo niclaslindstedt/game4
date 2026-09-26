@@ -134,6 +134,11 @@ jobs:
             target: linux
     runs-on: ${{ matrix.os }}
     env:
+      # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
+      # drawn unless a repository variable switches one back — `make
+      # ci-models MODELS=off`, no commit needed; unset is on.
+      VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
+      VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
       # macOS notarization, exactly as release.yml passes it — so a dispatch
       # here is a real rehearsal of the release's macOS half, which is the
       # only way to find out that a certificate or an app-specific password

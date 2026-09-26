@@ -11,7 +11,8 @@
 #   QUALITY=render   studio stills: subdivided, bevelled, holes cut
 #   QUALITY=game     the real-time budget: GAME is true, and every helper
 #                    spends fewer segments
-#   VIEWS=a,b        only these cameras
+#   VIEWS=a,b        only these cameras (`none`: no stills at all — `make models`,
+#                    and CI, which only wants the glTFs)
 #
 # THE RIG. An asset is exported SKINNED: every part rides one bone, rigidly
 # (every vertex weighted 1 to its part's bone), so the game poses it the way
@@ -601,6 +602,6 @@ def finish(name, out, samples, centre, size, lods=(("lod1", 0.35), ("lod2", 0.1)
             o.modifiers.move(len(o.modifiers) - 1, 0)   # before the skin, which the export leaves live
         print("TRIANGLES", tag, lod, _tri_count(parts))
         export(os.path.join(out, f"{name}-{lod}.glb"))
-        render(["chase", "three"], "-" + lod)
+        render([v for v in ("chase", "three") if not only or v in only], "-" + lod)
         for o in thinned:
             o.modifiers.remove(o.modifiers["lod"])
