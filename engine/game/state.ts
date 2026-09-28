@@ -266,6 +266,16 @@ export type TrickState = {
   flipCrossed: number;
   spinCrossed: number;
   tricking: boolean;
+  /** THE THROW BEING PAID OUT (`strokes.ts`): on each axis the rate a
+   * stroke has bought and the sled has not been given yet, rad/s, signed
+   * the way the stroke went, and how fast it is being paid now, rad/s²;
+   * and the side the bars were last thrown to while they are still held
+   * there (0 once let go) — a 360 held is a 360 still carried. */
+  flipWind: number;
+  spinWind: number;
+  flipPay: number;
+  spinPay: number;
+  spinSide: number;
   /** The sled was in the air at the last step this module saw. */
   inAir: boolean;
   /** The combo's elements, and which flight of it this is. */

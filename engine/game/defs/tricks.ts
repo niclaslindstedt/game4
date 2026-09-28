@@ -112,7 +112,8 @@ export const TRICKS = {
    * axis (the lean, and the gyro of the throttle behind it) and about the
    * up axis (the bars thrown over): divided by the sled's own inertia, so a
    * heavier machine turns less for the same throw. About 2.6 rad/s of pitch
-   * and 4.1 of yaw on the crossover. */
+   * and 4.1 of yaw on the crossover, reached over the wind-up below rather
+   * than in one step. */
   flip: 800,
   spin: 1250,
   /** ...and the most a FLIGHT's strokes may add up to, rad/s on each axis:
@@ -120,6 +121,25 @@ export const TRICKS = {
    * and not a triple. */
   flipCeiling: 6.5,
   spinCeiling: 8,
+  /** HOW A STROKE IS PAID OUT, 1/s: not as one step's snap but as a
+   * rider's throw — his body winds the sled up, it gathers, and it settles
+   * at the rate the stroke bought. The rate follows a critically damped
+   * rise, `1 − (1 + ωt)·e^(−ωt)`, at this ω: half of it in 1.68/ω s, nine
+   * tenths in 3.89/ω — about 0.17 s and 0.39 s for the flip, 0.21 s and
+   * 0.49 s for the 360, whose heavier yaw gathers slower. What the delay
+   * costs the turn is 2/ω s of the stroke's rate, which a rider holding
+   * his throw is given back (the lean's torque, the 360's carry below). */
+  flipWindUp: 10,
+  spinWindUp: 8,
+  /** THE 360 CARRIED: the bars held across their gate on the side a
+   * stroke threw them to keep winding the spin up at this much rad/s², out
+   * of the same flight's budget — so a held 360 accelerates until the rider
+   * lets go or the budget is spent, and a let-go one coasts down under the
+   * air's damping. The flip needs no such dial: a held lean is already its
+   * carry, the lean's own torque (`air.leanTorque`) gathering the flip the
+   * whole time it is held, where the bars' yaw (`air.steerTorque`) is too
+   * light to hold a spin against the air at all. */
+  spinCarry: 3,
   /** A flight a stroke may be thrown in: one that LEFT the snow climbing at
    * least this fast, m/s, and has been up `air.counts` — a sled dropping off
    * a crest is not a launch. */

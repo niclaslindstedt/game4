@@ -8,12 +8,23 @@
 //
 // Both are bookkeeping on an input rather than a force, which is why they
 // live here and not in `flight.ts`: a stroke is EARNED by carrying the input
-// across a gate near the top of its axis, and SPENT as one angular impulse
-// the same step, on a sled that is flying. Below the gate the lean and the
-// bars are the ordinary air control — the lean's torque and the throttle's
-// gyro behind it — and a rider trimming his pitch for the landing never
-// turns a trick by accident. Tap, it turns faster; tap, faster again; tap,
-// and nothing more happens, because the flight's budget is spent.
+// across a gate near the top of its axis, on a sled that is flying, and
+// bought whole out of the flight's budget that step. Below the gate the lean
+// and the bars are the ordinary air control — the lean's torque and the
+// throttle's gyro behind it — and a rider trimming his pitch for the landing
+// never turns a trick by accident. Tap, it turns faster; tap, faster again;
+// tap, and nothing more happens, because the flight's budget is spent.
+//
+// A STROKE IS A THROW, NOT A SNAP. What one buys is WOUND UP rather than
+// handed over in a step (`TrickState.flipWind` / `.spinWind`): it is paid
+// out along a critically damped rise (`flipWindUp`, `spinWindUp`), so the
+// sled gathers, surges and settles at the rate the stroke bought, the way a
+// body thrown round takes a machine with it. And a throw HELD is a throw
+// still carried: the lean's own torque keeps gathering a held flip, and the
+// bars held over on the side they were thrown to keep winding a 360 out of
+// the same budget (`spinCarry`) — either builds until the rider lets go, and
+// then coasts down under the air's damping. A throw the snow comes back
+// under dies with the flight — whatever was still wound is not paid.
 //
 // YOU CANNOT START A TRICK ON THE WAY DOWN. The first stroke of a flight is
 // only spent by a sled still going UP — a rider leaning back as he falls is
@@ -121,6 +132,11 @@ export function stepStrokes(state: GameState, input: SledInput): void {
     k.pumped = 0;
     k.twirled = 0;
     k.tricking = false;
+    k.flipWind = 0;
+    k.spinWind = 0;
+    k.flipPay = 0;
+    k.spinPay = 0;
+    k.spinSide = 0;
     if (!c.airborne) {
       // ARMED on the snow: across the gate up a kicker's ramp is a stroke
       // waiting for the lip; anywhere else it is a crossing already made.
@@ -132,41 +148,75 @@ export function stepStrokes(state: GameState, input: SledInput): void {
   }
   if (k.pose !== null) {
     // Posing: the body is busy, and whatever the axes are doing is the
-    // pose's. Let go, they must be thrown afresh.
+    // pose's — nothing is thrown and nothing carried, though a throw
+    // already wound is still paid out below. Let go, they must be thrown
+    // afresh.
     k.flipCrossed = flip;
     k.spinCrossed = spin;
-    return;
+    k.spinSide = 0;
+  } else {
+    throwStrokes(state, flip, spin);
   }
+
+  // THE THROW PAID OUT, a critically damped rise on each axis toward what
+  // the strokes have wound: the rate paid grows from nothing, peaks and
+  // dies away as the wind runs out. Nose up is a negative `wx` (`state.ts`),
+  // so a backflip's wind takes rate off it; a positive `wy` turns the nose
+  // clockwise, the way positive bars steer.
+  const dt = TUNING.dt;
+  const fw = T.flipWindUp;
+  k.flipPay += (fw * fw * k.flipWind - 2 * fw * k.flipPay) * dt;
+  const pitch = k.flipPay * dt;
+  k.flipWind -= pitch;
+  c.wx -= pitch;
+  const sw = T.spinWindUp;
+  k.spinPay += (sw * sw * k.spinWind - 2 * sw * k.spinPay) * dt;
+  const yaw = k.spinPay * dt;
+  k.spinWind -= yaw;
+  c.wy += yaw;
+}
+
+/** The strokes a flying, unposed rider throws this step, and the 360 he is
+ * still carrying — wound onto each axis out of the flight's budget. */
+function throwStrokes(state: GameState, flip: number, spin: number): void {
+  const k = state.tricks;
+  const c = state.sled;
   const may = k.tricking || c.vy > 0;
   let I: { x: number; y: number; z: number } | null = null;
 
-  // THE PUMP. Nose up is a negative `wx` (`state.ts`), so a backflip's
-  // stroke takes rate off it and a front flip's adds it.
+  // THE PUMP, wound the way the lean went: back (+1) is the backflip.
   if (flip === 0) k.flipCrossed = 0;
   else if (flip !== k.flipCrossed && may) {
     I = inertiaOf(c.spec);
     const rate = Math.min(T.flip / I.x, Math.max(T.flipCeiling - k.pumped, 0));
     if (rate > 0) {
-      c.wx -= flip * rate;
+      k.flipWind += flip * rate;
       k.pumped += rate;
       k.tricking = true;
     }
     k.flipCrossed = flip;
   }
 
-  // THE TWIRL, about the up axis: a positive `wy` turns the nose clockwise,
-  // the way positive bars steer. A throw to the other side crosses the
+  // THE TWIRL, about the up axis. A throw to the other side crosses the
   // centre and is a fresh stroke — the brake on a spin, or the start of one
   // the other way, out of the same budget.
-  if (spin === 0) k.spinCrossed = 0;
-  else if (spin !== k.spinCrossed && may) {
+  if (spin === 0) {
+    k.spinCrossed = 0;
+    k.spinSide = 0;
+  } else if (spin !== k.spinCrossed && may) {
     I ??= inertiaOf(c.spec);
     const rate = Math.min(T.spin / I.y, Math.max(T.spinCeiling - k.twirled, 0));
     if (rate > 0) {
-      c.wy += spin * rate;
+      k.spinWind += spin * rate;
       k.twirled += rate;
       k.tricking = true;
     }
     k.spinCrossed = spin;
+    k.spinSide = spin;
+  } else if (spin === k.spinSide) {
+    // HELD where it was thrown: the 360 is still being carried.
+    const rate = Math.min(T.spinCarry * TUNING.dt, Math.max(T.spinCeiling - k.twirled, 0));
+    k.spinWind += spin * rate;
+    k.twirled += rate;
   }
 }
