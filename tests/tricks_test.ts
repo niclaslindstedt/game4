@@ -12,12 +12,14 @@ import { describe, expect, it } from "vitest";
 import {
   LEVEL_RULES,
   NEUTRAL_INPUT,
+  SLED,
   TUNING,
   airPointsPerSecond,
   analyzeLevel,
   botInput,
   createGame,
   generateLevel,
+  inertiaOf,
   landingGrade,
   lengthPointsPerMetre,
   placeRun,
@@ -112,6 +114,38 @@ describe("a staged backflip", () => {
     });
     ride(state, 1, tap);
     expect(state.tricks.pumped).toBeCloseTo(TUNING.tricks.flipCeiling, 6);
+  });
+});
+
+describe("a stroke is a throw, not a snap", () => {
+  const yawRate = (seconds: number, at: (t: number) => Partial<SledInput>): number[] => {
+    const state = staged();
+    const rates: number[] = [];
+    for (let i = 0; i < Math.round(seconds * TUNING.physicsHz); i++) {
+      step(state, { ...NEUTRAL_INPUT, throttle: 1, ...at(i * TUNING.dt) });
+      rates.push(state.sled.wy);
+    }
+    return rates;
+  };
+  const at = (rates: number[], t: number): number => rates[Math.round(t * TUNING.physicsHz) - 1];
+  const bought = TUNING.tricks.spin / inertiaOf(SLED).y;
+
+  it("gathers the rate it bought over the wind-up rather than in the step", () => {
+    const rates = yawRate(0.6, (t) => ({ steer: t < 0.1 ? 1 : 0 }));
+    expect(rates[0]).toBeLessThan(bought * 0.1);
+    expect(at(rates, 0.1)).toBeLessThan(bought * 0.5);
+    // Still rising past the throw itself...
+    expect(at(rates, 0.3)).toBeGreaterThan(at(rates, 0.15));
+    // ...and at the rate the stroke bought once it has settled.
+    expect(at(rates, 0.6)).toBeGreaterThan(bought * 0.85);
+  });
+
+  it("a 360 held keeps winding up; let go, it coasts down", () => {
+    const held = yawRate(1.2, () => ({ steer: 1 }));
+    expect(at(held, 1.2)).toBeGreaterThan(at(held, 0.6) + 1);
+    expect(at(held, 1.2)).toBeGreaterThan(bought * 1.4);
+    const loose = yawRate(1.2, (t) => ({ steer: t < 0.2 ? 1 : 0 }));
+    expect(at(loose, 1.2)).toBeLessThan(at(loose, 0.6));
   });
 });
 
