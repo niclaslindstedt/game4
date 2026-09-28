@@ -5,9 +5,12 @@
 // (`tree-variants.ts` — the dense spire, the self-pruned stand tree, the
 // snow ghost, the pine's umbrella, the mountain birch's three stems…),
 // chosen by a hash of where it stands, scaled to its own height and crown,
-// and turned and tinted by another. The shapes are built once per map by
-// `tree-shapes.ts`, painted by the region (`region-look.ts`); only the
-// kinds and variants a map grows are built.
+// and turned and tinted by another. The shapes are the MODELLED trees
+// (`tree-models.ts`: every variant made in Blender off the same rows) and,
+// for a kind with no model loaded or a build switched back to them
+// (`VITE_MODEL_TREES=0`), the code's own (`tree-shapes.ts`) — built once per
+// map either way, painted by the region (`region-look.ts`); only the kinds
+// and variants a map grows are built.
 //
 // TENS OF THOUSANDS OF THEM, so they are instanced — one instanced mesh a
 // variant, each sized to the trees it draws — and in two bands of distance:
@@ -32,6 +35,7 @@ import { hazeMaterial, type HazeUniforms } from "./haze.ts";
 import type { ForestLook, TreeCasters } from "./settings-video.ts";
 import { castsInto, shadowLength, type ShadowBox } from "./shadow-box.ts";
 import { regionLookOf } from "./region-look.ts";
+import { treeModel } from "./tree-models.ts";
 import { buildTree, treePaint } from "./tree-shapes.ts";
 import { VARIANTS, crownAt, leadVariant, treeVariant, type TreeVariant } from "./tree-variants.ts";
 
@@ -214,9 +218,11 @@ export function createForest(level: Level, haze: HazeUniforms, initial: ForestOp
       fullShape[i] = indexOf(v, fullRows, fullCount);
       farShape[i] = indexOf(leadVariant(kind), farRows, farCount);
     }
-    const detailed = fullRows.map((v) => buildTree(v, paint));
-    const leads = farRows.map((v) => buildTree(v, paint));
-    const sketch = farRows.map((v) => buildTree(v, paint, true));
+    const shape = (v: TreeVariant, far = false) =>
+      treeModel(v, paint, far) ?? buildTree(v, paint, far);
+    const detailed = fullRows.map((v) => shape(v));
+    const leads = farRows.map((v) => shape(v));
+    const sketch = farRows.map((v) => shape(v, true));
     const insetSketch = sketch.map((g) => g.clone().scale(SKETCH_INSET, 1, SKETCH_INSET));
     const makeBand = (geos: THREE.BufferGeometry[], shape: Uint8Array, room: number[]): Band => {
       const meshes = geos.map((g, k) => {

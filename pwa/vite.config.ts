@@ -51,13 +51,15 @@ const version = process.env.GITHUB_SHA ? buildLabel : `${buildLabel}+${new Date(
 const envDir = here("..");
 
 export default defineConfig(({ mode }) => {
-  // The MODEL switches (`pwa/models-plugin.ts`, `src/game/sled-models.ts`):
+  // The MODEL switches (`pwa/models-plugin.ts`, `src/game/sled-models.ts`,
+  // `src/game/tree-models.ts`):
   // on unless the environment or the root `.env` switches one back
   // (`src/game/model-switch.ts`).
   const env = { ...loadEnv(mode, envDir, "VITE_"), ...process.env };
   const models = {
     sleds: modelSwitch(env.VITE_MODEL_SLEDS),
     riders: modelSwitch(env.VITE_MODEL_RIDERS),
+    trees: modelSwitch(env.VITE_MODEL_TREES),
   };
   return {
     base,

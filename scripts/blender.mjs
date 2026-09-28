@@ -100,6 +100,44 @@ const KINDS = {
     builder: "rider.py",
     fallback: "rider0",
   },
+  // A KIND of tree: its ten variant rows (`tree-variants.ts`, the numbers
+  // the code's builder reads) with each one's silhouette sampled off
+  // `crownAt`, the reference size a model is made at, and — for the stills
+  // alone — the kind's colours under the boreal paint (linear RGB). The
+  // game dresses a model by its materials' names, so the glTF carries none.
+  tree: {
+    ids: async () => [...(await import("../engine/index.ts")).TREE_KINDS],
+    data: async (id) => {
+      const { TREE_VARIANTS, TREE_REFERENCE, crownAt } =
+        await import("../pwa/src/game/tree-variants.ts");
+      const { kindPaint, treePaint, SNOW, SNOW_SHADE } =
+        await import("../pwa/src/game/tree-shapes.ts");
+      const { regionLookOf } = await import("../pwa/src/game/region-look.ts");
+      const p = kindPaint(treePaint(regionLookOf("boreal")), id);
+      const rgb = (c) => [c.r, c.g, c.b];
+      return {
+        kind: id,
+        reference: TREE_REFERENCE,
+        variants: TREE_VARIANTS[id].map((v) => ({
+          ...v,
+          profile: Array.from({ length: 41 }, (_, i) => crownAt(v, i / 40)),
+        })),
+        paint: {
+          needle: rgb(p.needle),
+          dark: rgb(p.dark),
+          bark: rgb(p.bark),
+          upper: rgb(p.upper),
+          twigs: rgb(p.twigs),
+          accent: rgb(p.accent),
+          marks: rgb(p.marks),
+          snow: rgb(SNOW),
+          snowShade: rgb(SNOW_SHADE),
+        },
+      };
+    },
+    builder: "tree.py",
+    fallback: "spruce",
+  },
 };
 
 const args = parseArgs(
@@ -195,16 +233,24 @@ async function model(id, data, quality) {
     });
     // Blender is loud; what is worth a line is what the builder prints,
     // what was saved, and anything that went wrong.
-    const echo = (buf) => {
-      for (const line of buf.toString().split("\n")) {
+    // A line can straddle two chunks, so each stream keeps its unfinished
+    // tail until the rest arrives.
+    const tails = new Map();
+    const echo = (buf, from) => {
+      const lines = ((tails.get(from) ?? "") + buf.toString()).split("\n");
+      tails.set(from, lines.pop());
+      for (const line of lines) {
         if (/^(BONES|CLIPS|TRIANGLES)|Saved: '|Error|Traceback|File "/.test(line)) {
           console.log(line.replace(/^.*Saved: '(.*)'.*$/, "saved $1").replace(`${root}/`, ""));
         }
       }
     };
-    child.stdout.on("data", echo);
-    child.stderr.on("data", echo);
-    child.on("close", done);
+    child.stdout.on("data", (b) => echo(b, "out"));
+    child.stderr.on("data", (b) => echo(b, "err"));
+    child.on("close", (code) => {
+      for (const from of ["out", "err"]) echo("\n", from);
+      done(code);
+    });
   });
   if (code !== 0) {
     console.error(`blender exited ${code} on the ${quality} pass`);

@@ -27,8 +27,10 @@ import type { TreeKind } from "@engine";
 import type { RegionLook } from "./region-look.ts";
 import type { BirchForm, ConiferForm, LarchForm, PineForm, TreeVariant } from "./tree-variants.ts";
 
-const SNOW = new THREE.Color(0xeef4fb);
-const SNOW_SHADE = new THREE.Color(0xc4d6ea);
+/** The snow on the boughs, lit and in shade — the modelled trees' too
+ * (`tree-models.ts`). */
+export const SNOW = new THREE.Color(0xeef4fb);
+export const SNOW_SHADE = new THREE.Color(0xc4d6ea);
 const BARK = new THREE.Color(0x3a2c22);
 
 /** What a region paints its trees with: the needles lit and in shade, a
@@ -94,7 +96,7 @@ const KIND_TONES: Readonly<Record<TreeKind, KindTone>> = {
 };
 
 /** The colours one kind is built in, off the region's paint. */
-type KindPaint = {
+export type KindPaint = {
   readonly needle: THREE.Color;
   readonly dark: THREE.Color;
   readonly bark: THREE.Color;
@@ -106,7 +108,7 @@ type KindPaint = {
   readonly load: number;
 };
 
-function kindPaint(paint: TreePaint, kind: TreeKind): KindPaint {
+export function kindPaint(paint: TreePaint, kind: TreeKind): KindPaint {
   const t = KIND_TONES[kind];
   const needle = paint.needle.clone();
   const dark = paint.needleDark.clone();

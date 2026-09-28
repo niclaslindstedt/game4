@@ -1,14 +1,14 @@
 ---
 name: blender-assets
-description: "Use when a game asset is to be MODELLED IN BLENDER off the game's own data — the sleds and the rider today; a tree, an animal or any other drawn thing when its kind is added — for studio renders, a real-time glTF with LODs, or to find out how good an authored version of something the game builds in code could look. Owns `make blender` (`scripts/blender.mjs`, the registry of KINDS and the JSON each is handed), the Blender shelf (`scripts/blender/lib.py`: the helpers, the studio, the game-budget export) and each kind's builder (`scripts/blender/sled.py`, `rider.py`), the RIG every model carries and the clips baked into it (the game-side contracts `sled-rig.ts` and `rider-rig.ts`), the lab sheet that sets a model beside the game's own (`make sled ARGS=--asset=…`), THE MODELS IN THE GAME (the `VITE_MODEL_SLEDS` / `VITE_MODEL_RIDERS` build switches, `make models`, `pwa/models-plugin.ts`, `sled-models.ts`: packed, loaded, dressed, posed in place of the code's drawn parts), the frame a model is stated in and turned back from, the triangle budget and its LODs, installing and running Blender headless on macOS, reference photographs (local only, never committed, never named), and adding a new kind. Not the game's own builders (`sled-design`, `nature`, `rider`) — though they are what every model is held against."
+description: "Use when a game asset is to be MODELLED IN BLENDER off the game's own data — the sleds, the rider and every kind of tree today; an animal or any other drawn thing when its kind is added — for studio renders, a real-time glTF with LODs, or to find out how good an authored version of something the game builds in code could look. Owns `make blender` (`scripts/blender.mjs`, the registry of KINDS and the JSON each is handed), the Blender shelf (`scripts/blender/lib.py`: the helpers, the studio, the game-budget export) and each kind's builder (`scripts/blender/sled.py`, `rider.py`, `tree.py`), the RIG every model carries and the clips baked into it (the game-side contracts `sled-rig.ts` and `rider-rig.ts`), the lab sheet that sets a model beside the game's own (`make sled ARGS=--asset=…`), THE MODELS IN THE GAME (the `VITE_MODEL_SLEDS` / `VITE_MODEL_RIDERS` / `VITE_MODEL_TREES` build switches, `make models`, `pwa/models-plugin.ts`, `sled-models.ts`, `tree-models.ts`, the meshopt packer `scripts/lib/glb-pack.mjs`: packed, loaded, dressed, posed in place of the code's drawn parts), the frame a model is stated in and turned back from, the triangle budget and its LODs, installing and running Blender headless on macOS and Linux, reference photographs (local only, never committed, never named), and adding a new kind. Not the game's own builders (`sled-design`, `nature`, `rider`, `tree-shapes.ts`) — though they are what every model is held against."
 ---
 
 # Blender assets
 
-The game draws its **sleds and rider from the models made here** —
+The game draws its **sleds, rider and trees from the models made here** —
 committed in `pwa/models/` by `make models` — and builds everything else
-(and, one switch away, the sleds and the rider too) in code (§ "The models
-in the game"). This skill is the other road, kept open on purpose — the same
+(and, one switch away, the sleds, the rider and the trees too) in code
+(§ "The models in the game"). This skill is the other road, kept open on purpose — the same
 things MODELLED in Blender, off the same numbers, so that the question "how
 good could it look, and what would it cost?" is answered with a render, a
 triangle count and a picture in the game's own lab rather than a guess, and
@@ -19,14 +19,16 @@ Three rules make that possible, and every step below serves one of them:
 
 1. **A model is built off the game's data, never off numbers of its own.**
    The driver hands Blender the very tables the game's builder reads (a
-   sled: `SLEDS` and `SLED_LOOKS`) as one JSON file. A modelled sled
+   sled: `SLEDS` and `SLED_LOOKS`; a tree: its kind's ten rows of
+   `TREE_VARIANTS` and each one's `crownAt`) as one JSON file. A modelled sled
    therefore stands on the physics' ski line and belt run to the
    centimetre, and when a trace moves, the model moves with it on the next
    run. A hand-typed dimension in a builder is the drift this rules out.
 2. **The lab's outputs are not committed; the game's models are.** Every
    render, `.blend` and LOD lands in the gitignored `previews/blender/`;
-   only `make models` publishes — the LOD0 of every sled and the rider,
-   with their sources' stamp, into `pwa/models/` — and those are committed.
+   only `make models` publishes — the LOD0 of every sled and the rider and
+   every kind of tree (packed), with their sources' stamps, into
+   `pwa/models/` — and those are committed.
 3. **A model is judged beside the game's own**, in the game's renderer, with
    the game's rider on it — not only in a Blender studio, which flatters
    everything.
@@ -44,6 +46,8 @@ sled) — its judging rules apply to a model too.
 | `scripts/blender.mjs` | THE DRIVER (`make blender`): `KINDS` (per kind: its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`BONES`, `CLIPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error |
 | `scripts/blender/lib.py` | THE SHELF every builder imports: the scene, `mat`, the geometry (`loft`, `superellipse`, `tube`, `cyl`, `box`, `ellipsoid`, `coil`, `catmull`, `resample`, boolean cutters), THE RIG (`rides`, `bone`, `marker`, `clip`, `morph`), and `finish()` — the rig built and skinned, the clips baked, the studio, the Cycles stills, the join into one skinned mesh, LOD0 and the decimated LODs as glTF |
 | `scripts/blender/rider.py` | THE RIDER BUILDER (`KIND=rider`, `ID=rider0…3` a grid slot's kit): one SUIT that bends (a man of the ANSUR II survey's mean measure in a racer's kit, lofted a piece a bone, remeshed into one skin, creased where a joint bends, cut along the hem, yoke, cuff and lap planes before it is coloured, weighted across each joint between the two bones that meet there) and rigid parts on one bone each — the helmet laid on the game's MEASURED shell (`helmetReach` / `helmetPart` sampled on a grid), the boots, the gloves |
+| `scripts/blender/tree.py` | THE TREE BUILDER (`KIND=tree`, `ID=<kind>` or `all`): a kind's ten variants off their own rows, each a full tree and a far sketch, one glTF a kind; no rig — the forest instances them (§ "The trees") |
+| `pwa/src/game/tree-models.ts`, `scripts/lib/glb-pack.mjs` | THE TREES IN THE GAME: a kind's model read into the unit frame and dressed per map in the region's paint (`treeModel`), and the packer every published tree goes through (quantized, meshopt) |
 | `pwa/src/game/rider-rig.ts` | THE RIDER'S CONTRACT: `riderBones(pose)` (every bone's frame off a `RiderPose` — the game's own spans, rolled to face each joint's bend, the head turned as `rider.ts` turns it), `RIDING` (the pose he is bound in), `riderClips()` (every clip SAMPLED off the game's `riderPose` and `stepRiderSpring`), `rigRider` (a loaded model's bones set to a pose, or a clip played) |
 | `scripts/blender/sled.py` | THE SLED BUILDER: the cowl, the lamp pods, the screen, the bars, the seat and what rides behind it, the tunnel, the flap, the boards, the belt and its lugs, the rear suspension, the skis, spindles, A-arms and coil-overs — every dimension off the spec and the trace |
 | `pwa/src/tools/sled-harness.ts` + `scripts/sled-preview.mjs` | THE ASSET SHEETS (`make sled ARGS=--asset=a.glb,b.glb`): `asset` — the builder's machine in the first row, each model below it, every one ridden by the game's rider seated by `riderSeat`; `rig` — builder and models posed at the same engine moments (steer, each end's bump and droop); `clips` — the first model's clips played across their length (and a `--rider=` model's, him alone); `figure` — a modelled rider beside the game's own on the builder's machine in every pose. A `--rider=` model also rides the models on the asset and rig sheets |
@@ -258,6 +262,46 @@ moves is written in Python.
   single-sided — nothing sees under it — boots, guards and gloves the
   rest), LOD1 3.1k, LOD2 0.9k; render quality ~256k (the 6 mm remesh).
 
+## The trees
+
+`KIND=tree`, `ID=<kind>` (or `all`): ONE glTF a kind, every variant twice —
+`v<i>` (the full band) and `v<i>_far`, a HAND-BUILT sketch (three skirts, a
+few pads, four whorls, sixteen twigs; a decimation shreds a crown of separate
+pieces). `tree.py` reads each form's numbers as `tree-shapes.ts` does and
+MODELS them; ~2 s a kind at game quality.
+
+- **The frame.** Metres at `TREE_REFERENCE` (12 m, a 2.88 m crown), z up,
+  the lean and the flag to +x. `tree-models.ts` divides crown and height back
+  out into the forest's unit frame, the normals through the same squeeze's
+  inverse transpose.
+- **No colour in the file.** A face is a ROLE (its material's name); a
+  vertex's `tone` is a SHADE, a BLEND between the role's two colours and, on
+  snow, the LOAD it needs. `treeModel` dresses it per map through
+  `kindPaint` and drops the snow the region's load does not reach.
+- **Volume normals** on needles and snow (custom normals, out and up); a
+  twig's BOTH faces lean out and up — a downward underside turned every bare
+  crown black from the saddle.
+- **The conifer** is a dark CORE cone (a wood reads solid between the boughs)
+  with blunt-tipped, drooping, ridged boughs lofted out of it; pointed tips
+  read as a star of shards.
+- **Winding.** Blender is z up, so a ring by `(cos a, sin a)` in x, y runs
+  anticlockwise from above — the mirror of the code's in x, z. A face order
+  ported unchanged faces DOWN: the game culls it (the Cycles still does not),
+  so judge in the game's lab.
+- **Budget**: full 170–1,670 triangles (`BOUGHS` 48 a conifer, `ARMS` 56 a
+  larch), sketches 50–205. In the race: +9% of the frame's triangles boreal,
+  +12% alpine, +15% birch (`make profile`, seed 38), draws unchanged.
+- **Packed.** `make models` runs each through `scripts/lib/glb-pack.mjs`
+  (reordered; positions to 4 mm on the node's scale, normals and tone to 8
+  bits; one meshopt view a stream — the JSON was a third of the file at one
+  a primitive): ~0.6 MB → 60–180 KB a kind, 2.9 MB the forest.
+- **Judged** on `make trees ARGS="--models --from=previews/blender
+  --compare --kinds=…"` (the code's row over the model's, triangles under
+  each; the whole forest is too tall for one screenshot), then `make build`
+  + `screenshots` against a `VITE_MODEL_TREES=0` build.
+- **Stamped apart** (`TREE_SOURCES`, `sources.json`'s `trees`; `make models
+  SET=trees`) — but `blender.mjs` and `lib.py` are in both lists.
+
 ## Blender, headless, on macOS
 
 - **Installing.** The Homebrew cask can crawl (tens of KB/s); ranged
@@ -283,14 +327,18 @@ moves is written in Python.
   takes `radius1`/`radius2`; curve objects must be converted to meshes
   before a join or an export.
 
-## Adding a kind (trees, animals, the rider, …)
+**On Linux**: the release tarball (SHA-256 checked), on the PATH or
+`BLENDER=`; Cycles falls back to the CPU itself. Models made there differ
+from macOS ones only in their floats' last bits.
+
+## Adding a kind (animals, …)
 
 1. **The data.** A row in `KINDS` in `scripts/blender.mjs`: `ids()`, and
    `data(id)` returning the game's OWN tables for one (a tree: its kind's
    variant rows and `crownAt` from `tree-variants.ts`; an animal: its row
-   and shape from `beast-defs.ts` / `beast-shapes.ts`; the rider: `BODY`
-   and `MOUNTS` from `rider-pose.ts`) — imported through `aliasEngine`,
-   never restated.
+   and shape from `beast-defs.ts` / `beast-shapes.ts`) — imported through
+   `aliasEngine`, never restated. The rider and the trees are the worked
+   examples.
 2. **The builder**, `scripts/blender/<kind>.py`: `from lib import *`, its
    frame stated in its header, `rides()` / `bone()` for the rig, `clip()`
    for what it plays, `finish(name, OUT, SAMPLES, centre, size)` at the end. A helper two

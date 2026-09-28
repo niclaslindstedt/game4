@@ -65,25 +65,30 @@ sled:
 blender:
 	npm run blender -- $(if $(KIND),--kind $(KIND),) $(if $(ID),--id $(ID),) $(ARGS)
 
-# The models the game ships: every sled and the rider, game quality (no
-# stills), made by Blender and published into the COMMITTED pwa/models/
-# with a stamp of their sources — tests/models_test.ts fails when a model
-# is older than what it is made from. Needs Blender. A build draws them
-# unless switched back (VITE_MODEL_SLEDS=0, VITE_MODEL_RIDERS=0).
+# The models the game ships: every sled, the rider and every kind of tree,
+# game quality (no stills), made by Blender and published into the
+# COMMITTED pwa/models/ with a stamp of their sources — tests/models_test.ts
+# fails when a model is older than what it is made from. Needs Blender.
+# SET=machines (the sleds and the rider) or SET=trees makes one half only.
+# A build draws them unless switched back (VITE_MODEL_SLEDS=0,
+# VITE_MODEL_RIDERS=0, VITE_MODEL_TREES=0).
 models:
-	npm run blender -- --id all --quality=game --views=none
-	npm run blender -- --kind rider --id rider0 --quality=game --views=none
-	node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/models.mjs
+	@if [ "$(SET)" != "trees" ]; then \
+	  npm run blender -- --id all --quality=game --views=none && \
+	  npm run blender -- --kind rider --id rider0 --quality=game --views=none; fi
+	@if [ "$(SET)" != "machines" ]; then \
+	  npm run blender -- --kind tree --id all --quality=game --views=none; fi
+	node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/models.mjs $(if $(SET),--set $(SET),)
 
 # Switch the models on or off for every CI build — the repository
 # VARIABLES the workflows hand the build (needs gh, and the right to set
-# them): `make ci-models MODELS=off` draws the code-built machines and
-# rider on the next deploy with no commit; MODELS=on (or deleting the
+# them): `make ci-models MODELS=off` draws the code-built machines, rider
+# and trees on the next deploy with no commit; MODELS=on (or deleting the
 # variables) puts the models back.
 ci-models:
 	@case "$(MODELS)" in \
-	  off) gh variable set VITE_MODEL_SLEDS --body 0 && gh variable set VITE_MODEL_RIDERS --body 0 ;; \
-	  on) gh variable set VITE_MODEL_SLEDS --body 1 && gh variable set VITE_MODEL_RIDERS --body 1 ;; \
+	  off) gh variable set VITE_MODEL_SLEDS --body 0 && gh variable set VITE_MODEL_RIDERS --body 0 && gh variable set VITE_MODEL_TREES --body 0 ;; \
+	  on) gh variable set VITE_MODEL_SLEDS --body 1 && gh variable set VITE_MODEL_RIDERS --body 1 && gh variable set VITE_MODEL_TREES --body 1 ;; \
 	  *) echo "usage: make ci-models MODELS=on|off" >&2; exit 2 ;; \
 	esac
 	@gh variable list | grep VITE_MODEL || true

@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE MODELS THE GAME SHIPS, published: the last step of `make models`
-// (which first runs `make blender`'s game quality for every sled and the
-// rider). Copies each LOD0 glTF out of the gitignored `previews/blender/`
-// into the committed `pwa/models/` under the name the build packs it by
-// (`<id>.glb`, `rider.glb`), and writes `pwa/models/sources.json` — the
-// hash of every source a model is made from (`MODEL_SOURCES` in
-// `pwa/models-plugin.ts`), which `tests/models_test.ts` holds to the tree.
+// (which first runs `make blender`'s game quality for every sled, the rider
+// and every kind of tree). Copies each machine's and the rider's LOD0 glTF
+// out of the gitignored `previews/blender/` into the committed `pwa/models/`
+// under the name the build packs it by (`<id>.glb`, `rider.glb`), PACKS
+// every kind of tree's (`scripts/lib/glb-pack.mjs`: quantized and
+// meshopt-compressed) into `pwa/models/trees/<kind>.glb`, and writes
+// `pwa/models/sources.json` — the hash of every source each half is made
+// from (`MODEL_SOURCES` and `TREE_SOURCES` in `pwa/models-plugin.ts`), which
+// `tests/models_test.ts` holds to the tree. A half not published keeps its
+// stamp: it was not remade.
 //
-//   node scripts/models.mjs            publish what `make blender` made
-//   node scripts/models.mjs --check    only say whether the stamp is fresh
+//   node scripts/models.mjs                  publish what `make blender` made
+//   node scripts/models.mjs --set=trees      the trees only (machines: the sleds and the rider)
+//   node scripts/models.mjs --check          only say whether the stamps are fresh
 
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -17,40 +22,61 @@ import { fileURLToPath } from "node:url";
 import process from "node:process";
 
 import { parseArgs } from "./lib/cli.mjs";
-import { MODELS_DIR, modelFiles, sourcesHash } from "../pwa/models-plugin.ts";
+import { packGlb } from "./lib/glb-pack.mjs";
+import { MODELS_DIR, TREE_SOURCES, modelFiles, sourcesHash } from "../pwa/models-plugin.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = parseArgs(
   process.argv.slice(2),
   {
     check: { kind: "flag", help: "only report whether pwa/models/ is fresh against its sources" },
+    set: {
+      kind: "string",
+      default: "all",
+      help: "which half to publish: machines (the sleds and the rider), trees, or all",
+    },
     from: {
       kind: "string",
       default: "previews/blender",
       help: "where make blender left the glTFs",
     },
   },
-  "usage: node scripts/models.mjs [--check] [--from=previews/blender]",
+  "usage: node scripts/models.mjs [--check] [--set=all|machines|trees] [--from=previews/blender]",
 );
-
-const out = join(root, MODELS_DIR);
-const stamp = join(out, "sources.json");
-const hash = sourcesHash(root);
-
-if (args.check) {
-  const had = existsSync(stamp) ? JSON.parse(readFileSync(stamp, "utf8")).sources : "";
-  console.log(had === hash ? "pwa/models/ is fresh" : "pwa/models/ is STALE — run `make models`");
-  process.exit(had === hash ? 0 : 1);
+if (!["all", "machines", "trees"].includes(args.set)) {
+  console.error(`unknown set "${args.set}" (all, machines, trees)`);
+  process.exit(2);
 }
 
+const out = join(root, MODELS_DIR);
+const stampAt = join(out, "sources.json");
+const hashes = { sources: sourcesHash(root), trees: sourcesHash(root, TREE_SOURCES) };
+const had = existsSync(stampAt) ? JSON.parse(readFileSync(stampAt, "utf8")) : {};
+
+if (args.check) {
+  const stale = Object.keys(hashes).filter((k) => had[k] !== hashes[k]);
+  console.log(
+    stale.length === 0
+      ? "pwa/models/ is fresh"
+      : `pwa/models/ is STALE (${stale.join(", ")}) — run \`make models\``,
+  );
+  process.exit(stale.length === 0 ? 0 : 1);
+}
+
+const machines = args.set !== "trees";
+const trees = args.set !== "machines";
 /** Each published name and the file `make blender` wrote it as. */
 const made = (name) =>
   join(
     root,
     args.from,
-    name === "rider.glb" ? "rider0-lod0.glb" : name.replace(".glb", "-lod0.glb"),
+    name === "rider.glb"
+      ? "rider0-lod0.glb"
+      : name.startsWith("trees/")
+        ? name.slice("trees/".length)
+        : name.replace(".glb", "-lod0.glb"),
   );
-const names = modelFiles({ sleds: true, riders: true });
+const names = modelFiles({ sleds: machines, riders: machines, trees });
 const missing = names.filter((n) => !existsSync(made(n)));
 if (missing.length) {
   console.error(
@@ -58,12 +84,23 @@ if (missing.length) {
   );
   process.exit(1);
 }
-mkdirSync(out, { recursive: true });
+mkdirSync(join(out, "trees"), { recursive: true });
 for (const n of names) {
-  copyFileSync(made(n), join(out, n));
+  if (n.startsWith("trees/")) {
+    writeFileSync(join(out, n), await packGlb(readFileSync(made(n))));
+  } else {
+    copyFileSync(made(n), join(out, n));
+  }
   console.log(
     `${MODELS_DIR}/${n}  ${(readFileSync(join(out, n)).byteLength / 1024).toFixed(0)} KiB`,
   );
 }
-writeFileSync(stamp, `${JSON.stringify({ sources: hash, blender: "5.2.2" }, null, 2)}\n`);
-console.log(`${MODELS_DIR}/sources.json  ${hash.slice(0, 12)}`);
+const stamp = {
+  sources: machines ? hashes.sources : had.sources,
+  trees: trees ? hashes.trees : had.trees,
+  blender: "5.2.2",
+};
+writeFileSync(stampAt, `${JSON.stringify(stamp, null, 2)}\n`);
+console.log(
+  `${MODELS_DIR}/sources.json  ${stamp.sources?.slice(0, 12)} · trees ${stamp.trees?.slice(0, 12)}`,
+);
