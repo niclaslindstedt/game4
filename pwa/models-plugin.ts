@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE MODELS EVERY BUILD PACKS: every machine's game-quality glTF as
-// `models/<id>.glb` and the rider's as `models/rider.glb`, emitted into the
+// `models/<id>.glb`, the rider's as `models/rider.glb` and every kind of
+// tree's as `models/trees/<kind>.glb`, emitted into the
 // bundle (so the service worker precaches them with everything else) and
 // served the same way by the dev server. They are COMMITTED, in
 // `pwa/models/`, made there by `make models` (Blender, off the game's own
 // data — the `blender-assets` skill), with a stamp of the sources they were
 // made from (`sources.json`), which `tests/models_test.ts` holds to the
 // sources as they stand: a model older than its sources fails the suite.
+// The trees are stamped apart (`TREE_SOURCES`), so a tree remade never asks
+// for the machines to be, nor the other way round.
 //
-// A build switched back to the code-built machines or rider
-// (`VITE_MODEL_SLEDS=0`, `VITE_MODEL_RIDERS=0` — `src/game/model-switch.ts`)
-// packs none of that side's files.
+// A build switched back to the code-built machines, rider or trees
+// (`VITE_MODEL_SLEDS=0`, `VITE_MODEL_RIDERS=0`, `VITE_MODEL_TREES=0` —
+// `src/game/model-switch.ts`) packs none of that side's files.
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -19,8 +22,9 @@ import { join } from "node:path";
 import type { Plugin } from "vite";
 
 import { SLEDS } from "../engine/game/defs/sled.ts";
+import { TREE_KINDS } from "../engine/mapgen/regions.ts";
 
-export type ModelSwitches = { sleds: boolean; riders: boolean };
+export type ModelSwitches = { sleds: boolean; riders: boolean; trees: boolean };
 
 /** Where the committed models are, from the repository's root. */
 export const MODELS_DIR = "pwa/models";
@@ -30,6 +34,7 @@ export function modelFiles(on: ModelSwitches): string[] {
   return [
     ...(on.sleds ? SLEDS.map((s) => `${s.id}.glb`) : []),
     ...(on.riders ? ["rider.glb"] : []),
+    ...(on.trees ? TREE_KINDS.map((k) => `trees/${k}.glb`) : []),
   ];
 }
 
@@ -50,11 +55,22 @@ export const MODEL_SOURCES = [
   "pwa/src/game/rider-rig.ts",
 ];
 
+/** WHAT A TREE IS MADE FROM: the builder, the shelf and the driver, the
+ * variant rows it models, and the packer the published files go through. */
+export const TREE_SOURCES = [
+  "scripts/blender.mjs",
+  "scripts/blender/lib.py",
+  "scripts/blender/tree.py",
+  "scripts/lib/glb-pack.mjs",
+  "pwa/src/game/tree-variants.ts",
+];
+
 /** The sources' hash, from the repository's `root` (line endings as
- * committed: `\r` dropped, so a checkout's conversion moves nothing). */
-export function sourcesHash(root: string): string {
+ * committed: `\r` dropped, so a checkout's conversion moves nothing) — the
+ * machines' and the rider's, or the trees' (`TREE_SOURCES`). */
+export function sourcesHash(root: string, sources: readonly string[] = MODEL_SOURCES): string {
   const h = createHash("sha256");
-  for (const f of MODEL_SOURCES) {
+  for (const f of sources) {
     h.update(`${f}\n`);
     h.update(readFileSync(join(root, f), "utf8").replaceAll("\r", ""));
   }
@@ -72,7 +88,7 @@ export function sledModels(on: ModelSwitches, root: string): Plugin {
         this.error(
           `${gone.map((f) => `${MODELS_DIR}/${f}`).join(", ")} is missing — run \`make models\` ` +
             "(it needs Blender), or switch the build back to the code-built ones " +
-            "(VITE_MODEL_SLEDS=0 / VITE_MODEL_RIDERS=0)",
+            "(VITE_MODEL_SLEDS=0 / VITE_MODEL_RIDERS=0 / VITE_MODEL_TREES=0)",
         );
       }
     },
@@ -87,7 +103,7 @@ export function sledModels(on: ModelSwitches, root: string): Plugin {
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const name = /\/models\/([\w-]+\.glb)$/.exec(req.url ?? "")?.[1];
+        const name = /\/models\/((?:trees\/)?[\w-]+\.glb)$/.exec(req.url ?? "")?.[1];
         if (!name || !files.includes(name) || !existsSync(join(dir, name))) return next();
         res.setHeader("Content-Type", "model/gltf-binary");
         res.end(readFileSync(join(dir, name)));

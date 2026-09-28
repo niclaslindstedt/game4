@@ -15,7 +15,10 @@
 // the one the forest lab's sightlines ride at) standing `STAND` metres off
 // and looking up the tree — so what the sheet shows under a crown is what a
 // rider sees under it — with a metre rule along the snow at the foot. `?sketch=1` draws the far band's sketches
-// instead; `?region=<id>` the region's paint; `?kinds=pine,larch` a subset.
+// instead; `?region=<id>` the region's paint; `?kinds=pine,larch` a subset;
+// `?models=1` the MODELLED trees (`tree-models.ts`, the glTFs the lab copied
+// beside the page) as the forest draws them, and `?models=compare` each
+// kind's code-built row with its modelled row under it.
 //
 // Sets `window.__done` when the sheet is on screen.
 
@@ -25,6 +28,7 @@ import { TREE_KINDS, isRegionId, type RegionId, type TreeKind } from "@engine";
 
 import { createHazeUniforms, hazeMaterial } from "../game/haze.ts";
 import { regionLookOf } from "../game/region-look.ts";
+import { loadTreeModels, treeModel } from "../game/tree-models.ts";
 import { buildTree, treePaint } from "../game/tree-shapes.ts";
 import { TREE_VARIANTS } from "../game/tree-variants.ts";
 
@@ -44,6 +48,7 @@ const query = new URLSearchParams(location.search);
 const asked = query.get("region") ?? "boreal";
 const region: RegionId = isRegionId(asked) ? asked : "boreal";
 const sketch = query.get("sketch") === "1";
+const models = query.get("models");
 const want = query.get("kinds");
 const kinds: readonly TreeKind[] = want
   ? TREE_KINDS.filter((k) => want.split(",").includes(k))
@@ -59,11 +64,22 @@ function lights(scene: THREE.Scene): void {
   scene.add(key);
 }
 
-function main(): void {
+/** Each row: a kind, and whether it is drawn off its models. */
+const rows: readonly { kind: TreeKind; model: boolean }[] = kinds.flatMap((kind) =>
+  models === "compare"
+    ? [
+        { kind, model: false },
+        { kind, model: true },
+      ]
+    : [{ kind, model: models === "1" }],
+);
+
+async function main(): Promise<void> {
+  if (models) await loadTreeModels("./");
   const cols = Math.max(...kinds.map((k) => TREE_VARIANTS[k].length));
   const sheetCanvas = document.getElementById("stage") as HTMLCanvasElement;
   sheetCanvas.width = CELL_W * cols;
-  sheetCanvas.height = CELL_H * kinds.length;
+  sheetCanvas.height = CELL_H * rows.length;
   const sheet = sheetCanvas.getContext("2d") as CanvasRenderingContext2D;
 
   const cell = document.createElement("canvas");
@@ -93,14 +109,16 @@ function main(): void {
     labels.appendChild(div);
   };
 
-  kinds.forEach((kind, row) => {
+  rows.forEach(({ kind, model }, row) => {
     TREE_VARIANTS[kind].forEach((v, col) => {
       const scene = new THREE.Scene();
       lights(scene);
       const snow = new THREE.Mesh(new THREE.PlaneGeometry(600, 600), snowMaterial);
       snow.rotation.x = -Math.PI / 2;
       scene.add(snow);
-      const tree = new THREE.Mesh(buildTree(v, paint, sketch), material);
+      const modelled = model ? treeModel(v, paint, sketch) : null;
+      const geometry = modelled ?? buildTree(v, paint, sketch);
+      const tree = new THREE.Mesh(geometry, material);
       tree.scale.set(CROWN * 0.95, HEIGHT, CROWN * 0.95);
       tree.rotation.y = 0.6;
       scene.add(tree);
@@ -118,8 +136,10 @@ function main(): void {
       camera.lookAt(0, EYE + Math.tan(tilt) * STAND, 0);
       renderer.render(scene, camera);
       sheet.drawImage(cell, col * CELL_W, row * CELL_H);
-      addLabel(`${kind} ${col}`, col, row, 4);
-      addLabel(v.name, col, row, CELL_H - 24, "foot");
+      const tag = model ? (modelled ? " · model" : " · NO MODEL") : "";
+      addLabel(`${kind} ${col}${tag}`, col, row, 4);
+      const tris = (geometry.index?.count ?? geometry.getAttribute("position").count) / 3;
+      addLabel(`${v.name} · ${tris}`, col, row, CELL_H - 24, "foot");
       tree.geometry.dispose();
     });
   });
@@ -129,4 +149,4 @@ function main(): void {
   (window as unknown as { __done: boolean }).__done = true;
 }
 
-main();
+void main();

@@ -110,6 +110,8 @@ import { createTerrain, type Terrain } from "./terrain.ts";
 import { createTrailMap, type TrailMap } from "./trail-map.ts";
 import { createTrailOverlay } from "./trail-overlay.ts";
 import { createWildlife, type Wildlife } from "./wildlife.ts";
+import { loadModels as loadSledModels } from "./sled-models.ts";
+import { loadTreeModels } from "./tree-models.ts";
 import {
   bodyStampOf,
   createPen,
@@ -119,9 +121,11 @@ import {
   type TrailPen,
 } from "./trail-stamp.ts";
 
-// The modelled machines and riders, fetched before the kit is handed out
-// (`use-render-kit.ts`), when this build draws them.
-export { loadModels } from "./sled-models.ts";
+// The modelled machines, riders and trees, fetched before the kit is handed
+// out (`use-render-kit.ts`), when this build draws them.
+export async function loadModels(): Promise<void> {
+  await Promise.all([loadSledModels(), loadTreeModels()]);
+}
 
 export type RendererOptions = {
   /** The picture to open on (`settings-video.ts`); `setVideo` moves it. Its

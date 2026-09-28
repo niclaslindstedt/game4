@@ -18,8 +18,11 @@
 //   node scripts/trees-preview.mjs --kinds=pine,larch --region=alpine
 //   node scripts/trees-preview.mjs --sketch           # the far band's sketches
 //   node scripts/trees-preview.mjs --skip-build       # reuse the last bundle
+//   node scripts/trees-preview.mjs --models           # the MODELLED trees (pwa/models/trees/)
+//   node scripts/trees-preview.mjs --models --from=previews/blender --compare
+//                                   # a lab run's models, each kind's code row above them
 
-import { existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -42,11 +45,18 @@ const args = parseArgs(
       help: "whose paint: boreal, alpine, tundra, birch",
     },
     sketch: { kind: "flag", help: "draw the far band's sketches instead" },
+    models: { kind: "flag", help: "draw the MODELLED trees (every <kind>.glb in --from)" },
+    from: {
+      kind: "string",
+      default: "pwa/models/trees",
+      help: "where --models finds them (previews/blender: a make blender run's)",
+    },
+    compare: { kind: "flag", help: "with --models: each kind's code-built row above its models" },
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the sheet may take to draw, s" },
     out: { kind: "string", default: "", help: "where the sheet is written" },
   },
-  "usage: node scripts/trees-preview.mjs [--kinds=a,b] [--region=id] [--sketch] [--skip-build] [--out=path]",
+  "usage: node scripts/trees-preview.mjs [--kinds=a,b] [--region=id] [--sketch] [--models] [--from=dir] [--compare] [--skip-build] [--out=path]",
 );
 
 mkdirSync(outDir, { recursive: true });
@@ -66,6 +76,16 @@ if (!args["skip-build"] || !existsSync(join(buildDir, "trees-preview.html"))) {
       rollupOptions: { input: join(root, "pwa", "trees-preview.html") },
     },
   });
+}
+
+// The models go beside the page, where the harness fetches them from.
+const models = args.models ? args.from : "";
+if (models) {
+  const into = join(buildDir, "models", "trees");
+  mkdirSync(into, { recursive: true });
+  for (const f of readdirSync(join(root, models))) {
+    if (/^[a-z]+\.glb$/.test(f)) copyFileSync(join(root, models, f), join(into, f));
+  }
 }
 
 const found = await findChromium();
@@ -93,15 +113,16 @@ page.on("console", (msg) => {
 const params = new URLSearchParams({ region: args.region });
 if (args.kinds) params.set("kinds", args.kinds);
 if (args.sketch) params.set("sketch", "1");
+if (models) params.set("models", args.compare ? "compare" : "1");
 const query = `?${params}`;
 const out =
   args.out ||
   join(
     outDir,
-    `trees${args.sketch ? "-sketch" : ""}${args.region === "boreal" ? "" : `-${args.region}`}.png`,
+    `trees${models ? (args.compare ? "-compare" : "-models") : ""}${args.sketch ? "-sketch" : ""}${args.region === "boreal" ? "" : `-${args.region}`}.png`,
   );
 console.log(
-  `trees — ${args.kinds || "every kind"}, ${args.region}${args.sketch ? ", sketches" : ""}`,
+  `trees — ${args.kinds || "every kind"}, ${args.region}${args.sketch ? ", sketches" : ""}${models ? `, models from ${models}` : ""}`,
 );
 await page.goto(`${server.url}trees-preview.html${query}`);
 await Promise.race([

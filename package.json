@@ -2,7 +2,7 @@
   "name": "game4",
   "version": "0.1.0",
   "private": true,
-  "description": "Powder Run \u2014 a snowmobile racing game for the browser: generated snowy hills and forests, a packed-snow race loop, playable on phone and desktop as an installable PWA.",
+  "description": "Powder Run — a snowmobile racing game for the browser: generated snowy hills and forests, a packed-snow race loop, playable on phone and desktop as an installable PWA.",
   "license": "PolyForm-Noncommercial-1.0.0",
   "author": "Niclas Lindstedt <niclas@agilator.se>",
   "type": "module",
@@ -63,6 +63,7 @@
     "eslint": "^10.5.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.6.0",
+    "meshoptimizer": "^1.3.0",
     "prettier": "^3.4.2",
     "typescript": "^6.0.3",
     "vitest": "^4.1.9"

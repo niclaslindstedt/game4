@@ -163,6 +163,7 @@ jobs:
           # ci-models MODELS=off`, no commit needed; unset is on.
           VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
           VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
+          VITE_MODEL_TREES: ${{ vars.VITE_MODEL_TREES }}
 
       - name: Upload the ${{ matrix.slot }} slot
         uses: actions/upload-artifact@v7
