@@ -6,7 +6,7 @@
 // pitch as a tick) or the PLAN (the path from above, with the sled's nose
 // ticked every half second). What `ride-lab.mjs` records is all it reads.
 
-import { createDrawing } from "./draw.mjs";
+import { createDrawing } from "@niclaslindstedt/oss-game-framework/tooling/draw";
 
 export const INK = {
   bg: [246, 249, 252],

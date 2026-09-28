@@ -40,8 +40,8 @@
 // axis pinned at 1 or 0 for most of a sweep is measuring nothing.
 
 import { treesNear } from "../game/collision.ts";
-import { angleDiff, clamp, hypot } from "../lib/math.ts";
-import { sunAt } from "../lib/solar.ts";
+import { angleDiff, clamp, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
+import { sunAt } from "@niclaslindstedt/oss-game-framework/core/solar";
 import { LEVEL_RULES } from "../mapgen/rules.ts";
 import { declinationOf } from "../mapgen/sun.ts";
 import { weatherOf, withSky } from "../mapgen/weather.ts";

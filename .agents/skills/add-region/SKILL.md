@@ -18,7 +18,7 @@ Load **`write-code`** beside all of them and **`skill-reflection`** at both
 ends.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs add-region --list`.
+`npx ogf-skill-lessons add-region --list`.
 
 ## The one promise
 

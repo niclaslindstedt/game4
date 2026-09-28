@@ -1,6 +1,6 @@
 ---
 name: lab-tooling
-description: "Use when writing or changing a LAB, a PREVIEW or any script under `scripts/` — a new Make target, a new flag on an existing one, a picture drawn in pure Node, a harness page drawn in a browser, a scratch probe over the built site, a meter. Owns the shelf every tool is built from (`scripts/lib/`: the flag parser, the raster and the PNG encoder, the `@engine` alias, the static server, the Chromium finder, the level and ride painters), the harness-page pattern (`make world`), the rule that a lab reads the game's own modules and never restates one, the URL contract the built app answers to (`url-params.ts`), and where a new tool is registered (the Makefile, `package.json`, the README's Usage table, the router's labs table). Load it BEFORE writing a one-off script: what you need is usually on the shelf."
+description: "Use when writing or changing a LAB, a PREVIEW or any script under `scripts/` — a new Make target, a new flag on an existing one, a picture drawn in pure Node, a harness page drawn in a browser, a scratch probe over the built site, a meter. Owns the shelf every tool is built from (the framework's `tooling/*`: the flag parser, the raster and the PNG encoder, the `@engine` alias, the static server, the Chromium finder; and `scripts/lib/`: the level and ride painters, the ride scenarios, the glTF packer), the harness-page pattern (`make world`), the rule that a lab reads the game's own modules and never restates one, the URL contract the built app answers to (`url-params.ts`), and where a new tool is registered (the Makefile, `package.json`, the README's Usage table, the router's labs table). Load it BEFORE writing a one-off script: what you need is usually on the shelf."
 ---
 
 # Lab tooling — how a measurement is built here
@@ -19,7 +19,7 @@ sheets, schematic labs, a sky sheet, a craft elevation sheet, tape record and
 replay, a debug-shot repro. Read their answer first and adapt it; never import
 from them.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 lab-tooling --list`. Load **`skill-reflection`** at both ends and
 **`write-code`** beside this one (its rules on `--experimental-strip-types`
 and `aliasEngine` are the ones a script trips on first).
@@ -28,7 +28,7 @@ and `aliasEngine` are the ones a script trips on first).
 
 | Kind | Runs in | Costs | Answers |
 | --- | --- | --- | --- |
-| **Pure Node** — loads the engine (and, through the alias, an app module), draws with `scripts/lib/draw.mjs` / `png.mjs`, writes a PNG and a table | `node --experimental-strip-types`, no build, no browser | seconds | NUMBERS and GEOMETRY: a map from above (`level`), a scorecard (`analyze`), a ride in profile (`ride`), a balance table (`sim`) |
+| **Pure Node** — loads the engine (and, through the alias, an app module), draws with the framework's `tooling/draw` / `tooling/png`, writes a PNG and a table | `node --experimental-strip-types`, no build, no browser | seconds | NUMBERS and GEOMETRY: a map from above (`level`), a scorecard (`analyze`), a ride in profile (`ride`), a balance table (`sim`) |
 | **Browser-driven** — serves a page in headless Chromium and photographs or meters it | `playwright-core` over Chromium (`CHROMIUM_PATH`) | tens of seconds to minutes | LIGHT and COST: the snow, the sky, the HUD, what a frame costs, what a mix measures |
 
 **Build the pure-Node lab whenever the question can be asked of the engine.**
@@ -58,19 +58,21 @@ cannot photograph a stale build. The browser lab has two shapes:
   `audition.mjs` is the third shape — a page WRITTEN by the script, played
   by a person or metered headlessly.
 
-## The shelf: `scripts/lib/`
+## The shelf: the framework's `tooling/*`, then `scripts/lib/`
+
+The generic half is `@niclaslindstedt/oss-game-framework/tooling/<name>` (shared with the sibling games — a bug in it is fixed THERE); the rest is this game's own, in `scripts/lib/`.
 
 | Module | Gives every tool |
 | --- | --- |
-| `cli.mjs` | THE COMMAND LINE, once: `parseArgs(argv, spec, usage)` from one table of flags — `--help` printing every flag with its default, a non-zero exit on an unknown flag (a measurement tool that ignores a mistyped flag reports a confident wrong number), `--name=value` and `--name value`, positionals |
-| `draw.mjs` | A SMALL RASTER: boxes, lines, circles, polylines, a 5×7 bitmap font (`FONT_5X7`, upper case), alpha blending |
-| `png.mjs` | The PNG encoder (`encodePng`, `encodeRgbaPng`, `createCanvas`) — zlib only; the icon generator uses it too |
-| `engine-alias.mjs` | `aliasEngine(root)` — a resolve hook handing `@engine` to `engine/index.ts`, so a plain-Node script can `import()` an APP module (`rider-pose.ts`, `trail-stamp.ts`, `sky.ts`) instead of restating its table. Call it BEFORE the dynamic import |
-| `serve-dist.mjs` | `serveDir(dir)` — a directory on a real origin on a free port, as deployed, because the service worker, the manifest and `localStorage` behave differently off `file://` |
-| `chromium.mjs` | `findChromium()` — where a Chromium and a driver are looked for; `CHROMIUM_PATH` wins |
-| `level-draw.mjs` | The map from above: `renderLevelMap({ level, scale, title, lines })`, the marks and labels every map lab shares |
-| `ride-draw.mjs` | The sled in profile over the ground it crossed: `drawRun` |
-| `ride-scenarios.mjs` | The ride lab's staged moments — a `RunMoment` and a scripted input each, on the SYNTHETIC maps (`SCENARIOS`, `SCENARIO_IDS`) |
+| `tooling/cli` | THE COMMAND LINE, once: `parseArgs(argv, spec, usage)` from one table of flags — `--help` printing every flag with its default, a non-zero exit on an unknown flag (a measurement tool that ignores a mistyped flag reports a confident wrong number), `--name=value` and `--name value`, positionals |
+| `tooling/draw` | A SMALL RASTER: boxes, lines, circles, polylines, a 5×7 bitmap font (`FONT_5X7`, upper case), alpha blending |
+| `tooling/png` | The PNG encoder (`encodePng`, `encodeRgbaPng`, `createCanvas`) — zlib only; the icon generator uses it too |
+| `tooling/alias` | `aliasEngine(root)` (and `aliasModules` for any other alias) — a resolve hook handing `@engine` to `engine/index.ts`, so a plain-Node script can `import()` an APP module (`rider-pose.ts`, `trail-stamp.ts`, `sky.ts`) instead of restating its table. Call it BEFORE the dynamic import |
+| `tooling/serve-dist` | `serveDir(dir)` — a directory on a real origin on a free port, as deployed, because the service worker, the manifest and `localStorage` behave differently off `file://` |
+| `tooling/chromium` | `findChromium()` — where a Chromium and a driver are looked for; `CHROMIUM_PATH` wins |
+| `scripts/lib/level-draw.mjs` | The map from above: `renderLevelMap({ level, scale, title, lines })`, the marks and labels every map lab shares |
+| `scripts/lib/ride-draw.mjs` | The sled in profile over the ground it crossed: `drawRun` |
+| `scripts/lib/ride-scenarios.mjs` | The ride lab's staged moments — a `RunMoment` and a scripted input each, on the SYNTHETIC maps (`SCENARIOS`, `SCENARIO_IDS`) |
 
 The `scripts/` entries are the worked examples: `level-map.mjs` for a picture
 plus a table plus `--json`, `analyze-level.mjs` for a scorecard that exits
@@ -104,7 +106,7 @@ holds a key before it reads a clean zero and calls the feature broken.
 - **A lab prints its inputs beside its outputs** — the seed, the scenario,
   the flags in force — on the picture's title and in the table, so a PR's
   before/after can be checked to be the same measurement.
-- **Every tool parses through `cli.mjs`.** A hand-rolled `process.argv` scan
+- **Every tool parses through `tooling/cli`.** A hand-rolled `process.argv` scan
   has no `--help` and no unknown-flag exit.
 - **`--experimental-strip-types` refuses anything that emits code**: no enums,
   no parameter properties, no namespaces in anything a script imports. The
@@ -133,7 +135,7 @@ all of these:
 
 1. `scripts/<name>.mjs` with a header saying what question it answers and the
    commands to run it; `#!/usr/bin/env node`, the SPDX line; flags through
-   `cli.mjs`.
+   the framework's `tooling/cli`.
 2. `package.json`: `"<name>": "node --experimental-strip-types
    --disable-warning=ExperimentalWarning scripts/<name>.mjs"` for a pure-Node
    lab; plain `node scripts/<name>.mjs` for a browser one.

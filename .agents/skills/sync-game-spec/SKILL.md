@@ -67,7 +67,7 @@ because the game half leans on the baseline half:
 | §12 | Every tool reachable by one command, `--help`, non-zero on an unknown flag, prints its inputs and outputs |
 | §13.1 | Examples are runnable and CI-exercised, not restatements of the README |
 | §13.2 | `prompts/` versioning format — no `prompts/` tree exists; record it N/A until one does |
-| §19.4 | The central output module — engine code prints through `engine/output.ts`, never bare `console.*` |
+| §19.4 | The central output module — engine code prints through the framework's `core/output`, never bare `console.*` |
 | §19.5 | Nothing logs per entity per frame; diagnostics never change the simulation; the in-build developer surface |
 | §20 | Test layout: root `tests/`, `_test.ts` suffix, no inline tests; §20.3's rule/content split; §20.5's cap (`tests/file_size_test.ts`) |
 | §21 | Every `update-*` in the `maintenance` registry, each with `SKILL.md` + `.last-updated`; `.claude/skills` and `.gemini/skills` symlinks; §21.9 subject skills with a loop, a bar, traps and obligations each (`tests/skills_test.ts`) |
@@ -76,7 +76,7 @@ because the game half leans on the baseline half:
 
 | Chapter | Checks |
 | --- | --- |
-| §23 | Core framework-free and headless; one entry surface (`engine/index.ts`); dependency direction (`tests/imports_test.ts`, §23.7); sequel test (`engine/lib/` and `pwa/src/lib/` carry nothing of THIS game) |
+| §23 | Core framework-free and headless; one entry surface (`engine/index.ts`); dependency direction (`tests/imports_test.ts`, §23.7); sequel test (the framework's modules and `pwa/src/lib/` carry nothing of THIS game) |
 | §23.9 | The bundle budget — read the ledger's row; check that `App.tsx` still reaches the three.js renderer through a dynamic import, or three.js is on the first-render path |
 | §24 | Catalogs authored as data, schema-validated, generated output gitignored, drift guards, one ordered pipeline — the sled spec and the rule book are TypeScript consts, a recorded deviation |
 | §25 | Seeded run-owned randomness, fixed step, deterministic iteration, no presentation draw, replay/digest guard (`tests/determinism_test.ts`) |
@@ -89,7 +89,7 @@ because the game half leans on the baseline half:
 | §34 | Session service — N/A, single-player |
 | §35 | Reference device and viewport (1280×720, 390×844, 844×390); perception rules; accessibility; the mature gate; one identity manifest |
 | §36 | Save versioning, migration fixtures, namespaced storage identity — `settings.ts` keeps two fields (`mergeSettings`), nothing else is saved |
-| §37 | Input sampled and consumed without loss; the clamped accumulator (`run-loop.ts`); focus loss; the wall clock is not a rule |
+| §37 | Input sampled and consumed without loss; the clamped accumulator (the framework's `loop/run-clock`); focus loss; the wall clock is not a rule |
 | §38 | A contained rule error; the crash report carries the repro (the `seed`/`t` URL, `output-bridge.ts`'s buffer); the running build says what it is |
 | §39 | No user-visible string literal in source; layout survives the longest string; templates, not concatenation |
 | §40 | Asset and dependency provenance; telemetry opt-in and personal-data-free; a claim is never shown as a fact |

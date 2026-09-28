@@ -37,8 +37,11 @@
 // Nothing here draws from a stream: the stations are the loop's own, taken
 // in order, so asking for the field moves nothing the seed drew.
 
-import { sampleField, type Heightfield } from "../lib/heightfield.ts";
-import { angleDiff, smoothstep } from "../lib/math.ts";
+import {
+  sampleField,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import { angleDiff, smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
 import { kickerProfile } from "./kickers.ts";
 import { LEVEL_RULES as R } from "./rules.ts";
 import type { Loop } from "./track.ts";

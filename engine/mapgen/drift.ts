@@ -14,9 +14,9 @@
 // own nearest-segment index, so a drift covers the track's full width and
 // its shoulders, and eases in and out along the loop rather than across it.
 
-import type { Heightfield } from "../lib/heightfield.ts";
-import { createRng } from "../lib/prng.ts";
-import { smoothstep } from "../lib/math.ts";
+import type { Heightfield } from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import { createRng } from "@niclaslindstedt/oss-game-framework/core/prng";
+import { smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
 import { LEVEL_RULES, inBand } from "./rules.ts";
 import type { Drift, Kicker } from "./types.ts";
 

@@ -23,7 +23,7 @@ seat the trace drew. Designing the sled means editing a trace, the builder or
 a livery and LOOKING, never guessing from numbers.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs sled-design --list`. Load `skill-reflection`
+`npx ogf-skill-lessons sled-design --list`. Load `skill-reflection`
 at both ends, and `write-code` beside this skill for any code change.
 
 ## Where everything lives

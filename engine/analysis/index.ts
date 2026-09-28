@@ -15,8 +15,8 @@
 // one paragraph of `mapgen/rules.ts`. `ok` is "no errors": a warn is a
 // smell the loop reads and nobody has to fix.
 
-import { angleDiff, hypot } from "../lib/math.ts";
-import { sunAt } from "../lib/solar.ts";
+import { angleDiff, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
+import { sunAt } from "@niclaslindstedt/oss-game-framework/core/solar";
 import { nearestTrackPoint, nearestWithin, trackPointAt } from "../mapgen/query.ts";
 import { LEVEL_RULES as R, withinBand, type Band } from "../mapgen/rules.ts";
 import { regionOf, scaleCount } from "../mapgen/regions.ts";

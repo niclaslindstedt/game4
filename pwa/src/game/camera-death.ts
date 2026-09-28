@@ -32,7 +32,7 @@
 
 import { TUNING, type Thrown } from "@engine";
 
-import { clamp } from "../lib/util.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import type { LensPose, LineClear, Vec3 } from "./camera-rigs.ts";
 
 /** The whole cam, as numbers. Metres, seconds (wall), degrees, radians. */

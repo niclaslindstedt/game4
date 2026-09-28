@@ -34,7 +34,7 @@ import {
   type EngineVoice,
 } from "../pwa/src/game/audio/engine-voice.ts";
 import { LISTENERS, listenerFor } from "../pwa/src/game/audio/listener.ts";
-import { DEFAULT_VOLUME, playDef } from "../pwa/src/game/audio/play.ts";
+import { DEFAULT_VOLUME, playDef } from "@niclaslindstedt/oss-game-framework/audio/play";
 import { createRideBed } from "../pwa/src/game/audio/ride-bed.ts";
 import { heardFrom, soundForEvent, soundsForStep } from "../pwa/src/game/audio/route.ts";
 import {
@@ -51,7 +51,7 @@ import {
   type NoiseOptions,
   type Synth,
   type ToneOptions,
-} from "../pwa/src/lib/voice.ts";
+} from "@niclaslindstedt/oss-game-framework/audio/voice";
 import { syntheticLevel } from "./support/synthetic.ts";
 
 /** One layer the recorder built: what it was made of, every target it was
@@ -72,6 +72,7 @@ function recorder(): Synth & {
     layers: [] as RecordedLayer[],
     locked: false,
     unlock: () => {},
+    autostart: () => {},
     resume: () => {},
     now: () => (rec.locked ? null : 0),
     tone: (o: ToneOptions) => void rec.tones.push(o),

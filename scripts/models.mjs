@@ -21,7 +21,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 
-import { parseArgs } from "./lib/cli.mjs";
+import { parseArgs } from "@niclaslindstedt/oss-game-framework/tooling/cli";
 import { packGlb } from "./lib/glb-pack.mjs";
 import { MODELS_DIR, TREE_SOURCES, modelFiles, sourcesHash } from "../pwa/models-plugin.ts";
 

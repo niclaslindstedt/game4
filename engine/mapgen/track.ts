@@ -34,10 +34,14 @@
 // bench past it, the plough's berm along each edge on that bench (R18), a
 // bank back into the country behind it, and the packed field of R10.
 
-import { hypot, smoothstep, TAU } from "../lib/math.ts";
-import { sampleField, createHeightfield, type Heightfield } from "../lib/heightfield.ts";
-import { valueNoise } from "../lib/noise.ts";
-import type { Rng } from "../lib/prng.ts";
+import { hypot, smoothstep, TAU } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  sampleField,
+  createHeightfield,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import { valueNoise } from "@niclaslindstedt/oss-game-framework/core/noise";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { LEVEL_RULES as R, bermCrest, bermProfile, inBand } from "./rules.ts";
 import { rimAt, type TerrainPlan } from "./terrain.ts";
 import type { TrackPoint } from "./types.ts";

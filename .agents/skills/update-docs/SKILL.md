@@ -46,7 +46,7 @@ The `docs/` pages describe the engine, the sled and snow model, the generator's 
 | `pwa/src/game/renderer.ts` and the modules it names, `camera*.ts`, `sky.ts`, `snow-glsl.ts`, `trail-*.ts` | `docs/architecture.md` (the app layer) |
 | `pwa/src/App.tsx`, `shell.ts`, `menu-*.tsx`, `splash*.ts*`, `loading-screen.tsx`, `run-loader.ts`, `url-params.ts`, `settings*.ts` | `docs/getting-started.md`, `docs/configuration.md` (the URL readers, what is stored) |
 | `pwa/src/game/input.ts`, `input-model.ts`, `settings-input.ts`, `hud*.tsx` | `docs/getting-started.md` (the controls) |
-| `pwa/src/game/audio/*`, `pwa/src/lib/synth.ts`, `voice.ts`, `scripts/audition.mjs` | `docs/audio.md` |
+| `pwa/src/game/audio/*`, `scripts/audition.mjs`, a framework tag moved | `docs/audio.md` |
 | `scripts/*.mjs`, `Makefile` (a lab added or changed) | README Usage, `docs/troubleshooting.md` if it has a failure mode |
 | `.github/workflows/pages.yml`, `release.yml`, `pwa/pwa-plugin.ts` | `docs/configuration.md`, `docs/platforms.md` |
 | `pwa/src/identity.ts`, `pwa/public/*` | `docs/configuration.md` |

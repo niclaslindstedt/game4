@@ -45,14 +45,28 @@ import {
   type SledInput,
 } from "@engine";
 
-import { clamp } from "../lib/util.ts";
+import {
+  createFingerprint,
+  createTapeRecorder,
+  isControlTape,
+  readTape,
+  snapAxis,
+  type ControlTape as Tape,
+  type TapeSchema,
+} from "@niclaslindstedt/oss-game-framework/racing/tape";
+
 import { recordId, type RecordKey } from "./records.ts";
 
-/** Steering and lean positions each side of centre. */
-const STEER_STEPS = 127;
-
-/** The lever positions: the throttle and the brake. */
-const LEVER_STEPS = 255;
+/** THE TAPE'S LAYOUT: the axes one step is written down as, each a byte —
+ * the reset's edge and the trick button packed into `flags`. The names are
+ * the stored tape's keys, so renaming one is a format change. */
+const TAPE: TapeSchema<"steer" | "lean" | "throttle" | "brake" | "flags"> = {
+  steer: "signed",
+  lean: "signed",
+  throttle: "lever",
+  brake: "lever",
+  flags: "flags",
+};
 
 /** Bump when the tape's LAYOUT changes, or when what the engine DOES with
  * one changes — the same controls under a retuned sled put it somewhere
@@ -66,35 +80,19 @@ export const GHOST_FORMAT = 1;
  * settings; a tape over the cap is dropped rather than risking the store. */
 export const GHOST_CAP = 400_000;
 
-/** Snap an axis onto a recorded grid. Centre comes back as a POSITIVE zero:
- * rounding a hair below it yields -0, which the tape cannot write down. */
-function snap(v: number, steps: number): number {
-  const index = Math.round(v * steps);
-  return index === 0 ? 0 : index / steps;
-}
-
 /** ONE STEP'S CONTROLS, ON THE GRID THE TAPE WRITES — in place, and
  * returned. Applying it twice is free: a value on the grid snaps to itself. */
 export function snapInput(input: SledInput): SledInput {
-  input.steer = snap(clamp(input.steer, -1, 1), STEER_STEPS);
-  input.lean = snap(clamp(input.lean, -1, 1), STEER_STEPS);
-  input.throttle = snap(clamp(input.throttle, 0, 1), LEVER_STEPS);
-  input.brake = snap(clamp(input.brake, 0, 1), LEVER_STEPS);
+  input.steer = snapAxis(input.steer, TAPE.steer);
+  input.lean = snapAxis(input.lean, TAPE.lean);
+  input.throttle = snapAxis(input.throttle, TAPE.throttle);
+  input.brake = snapAxis(input.brake, TAPE.brake);
   return input;
 }
 
 /** ONE RUN'S CONTROLS AND NOTHING ELSE: how many steps it runs for, and one
  * RLE'd, base64'd byte per step per axis — the reset's edge in `flags`. */
-export type ControlTape = {
-  steps: number;
-  steer: string;
-  lean: string;
-  throttle: string;
-  brake: string;
-  flags: string;
-};
-
-const STREAMS = ["steer", "lean", "throttle", "brake", "flags"] as const;
+export type ControlTape = Tape<keyof typeof TAPE>;
 
 /** WHAT NAMES THE SNOW a tape was cut on — see this file's header. */
 export type GhostStage = {
@@ -108,21 +106,9 @@ export type GhostStage = {
  * every checkpoint's place. Cheap, and enough to tell a map the generator
  * has moved from the one a tape was ridden on. */
 export function mapPrint(level: Level): string {
-  let hash = 0x811c9dc5;
-  const mix = (v: number): void => {
-    const n = Math.round(v * 100) | 0;
-    for (let s = 0; s < 32; s += 8) {
-      hash ^= (n >>> s) & 0xff;
-      hash = Math.imul(hash, 0x01000193) >>> 0;
-    }
-  };
-  mix(level.seed);
-  mix(level.track.length);
-  for (const cp of level.checkpoints) {
-    mix(cp.x);
-    mix(cp.z);
-  }
-  return hash.toString(16).padStart(8, "0");
+  const print = createFingerprint().mix(level.seed).mix(level.track.length);
+  for (const cp of level.checkpoints) print.mix(cp.x).mix(cp.z);
+  return print.digest();
 }
 
 /** THE MODES A TAPE IS KEPT FOR: the one ridden ALONE. A race has a field
@@ -154,61 +140,6 @@ const FLAG_RESET = 1;
 /** ...and the trick button held (a tricks run's poses, `strokes.ts`). */
 const FLAG_TRICK = 2;
 
-/** `String.fromCharCode` takes its bytes as arguments, and a whole run's
- * worth at once overflows the call stack. */
-const BASE64_CHUNK = 0x8000;
-
-function toBase64(bytes: number[]): string {
-  let raw = "";
-  for (let i = 0; i < bytes.length; i += BASE64_CHUNK) {
-    raw += String.fromCharCode(...bytes.slice(i, i + BASE64_CHUNK));
-  }
-  return btoa(raw);
-}
-
-function fromBase64(text: string): Uint8Array {
-  const raw = atob(text);
-  const bytes = new Uint8Array(raw.length);
-  for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-  return bytes;
-}
-
-/** Run-length encode a byte per step, then base64 it: (run, value) pairs,
- * a run capped at 255 steps and simply continued in the next pair. A
- * throttle buried down a straight is two bytes for two seconds. */
-export function encodeStream(values: readonly number[]): string {
-  const out: number[] = [];
-  let i = 0;
-  while (i < values.length) {
-    const value = values[i];
-    let run = 1;
-    while (run < 255 && i + run < values.length && values[i + run] === value) run++;
-    out.push(run, value);
-    i += run;
-  }
-  return toBase64(out);
-}
-
-/** Decode `steps` bytes back out. A short or damaged tape leaves its tail at
- * zero rather than throwing: a ghost is a picture, and half a picture beats
- * a crash on the first frame of a run. */
-export function decodeStream(text: string, steps: number): Uint8Array {
-  const out = new Uint8Array(steps);
-  let bytes: Uint8Array;
-  try {
-    bytes = fromBase64(text);
-  } catch {
-    return out;
-  }
-  let at = 0;
-  for (let i = 0; i + 1 < bytes.length && at < steps; i += 2) {
-    const run = Math.min(bytes[i], steps - at);
-    out.fill(bytes[i + 1], at, at + run);
-    at += run;
-  }
-  return out;
-}
-
 export type ControlRecorder = {
   /** Write down the controls a step was ridden on — the input the engine
    * ACTUALLY received. */
@@ -219,28 +150,18 @@ export type ControlRecorder = {
 };
 
 export function createControlRecorder(): ControlRecorder {
-  const steer: number[] = [];
-  const lean: number[] = [];
-  const throttle: number[] = [];
-  const brake: number[] = [];
-  const flags: number[] = [];
+  const tape = createTapeRecorder(TAPE);
   return {
-    record: (input) => {
-      steer.push(Math.round(clamp(input.steer, -1, 1) * STEER_STEPS) + STEER_STEPS);
-      lean.push(Math.round(clamp(input.lean, -1, 1) * STEER_STEPS) + STEER_STEPS);
-      throttle.push(Math.round(clamp(input.throttle, 0, 1) * LEVER_STEPS));
-      brake.push(Math.round(clamp(input.brake, 0, 1) * LEVER_STEPS));
-      flags.push((input.reset ? FLAG_RESET : 0) | (input.trick ? FLAG_TRICK : 0));
-    },
-    steps: () => steer.length,
-    seal: () => ({
-      steps: steer.length,
-      steer: encodeStream(steer),
-      lean: encodeStream(lean),
-      throttle: encodeStream(throttle),
-      brake: encodeStream(brake),
-      flags: encodeStream(flags),
-    }),
+    record: (input) =>
+      tape.record({
+        steer: input.steer,
+        lean: input.lean,
+        throttle: input.throttle,
+        brake: input.brake,
+        flags: (input.reset ? FLAG_RESET : 0) | (input.trick ? FLAG_TRICK : 0),
+      }),
+    steps: tape.steps,
+    seal: tape.seal,
   };
 }
 
@@ -254,24 +175,20 @@ export type GhostTape = {
 
 /** Put a tape back on the snow. */
 export function readControls(tape: ControlTape): GhostTape {
-  const steps = tape.steps;
-  const steer = decodeStream(tape.steer, steps);
-  const lean = decodeStream(tape.lean, steps);
-  const throttle = decodeStream(tape.throttle, steps);
-  const brake = decodeStream(tape.brake, steps);
-  const flags = decodeStream(tape.flags, steps);
+  const reader = readTape(tape, TAPE);
+  const axes = { steer: 0, lean: 0, throttle: 0, brake: 0, flags: 0 };
   const input: SledInput = { ...NEUTRAL_INPUT };
   return {
-    steps,
+    steps: reader.steps,
     at: (step) => {
-      if (step < 0 || step >= steps) return Object.assign(input, NEUTRAL_INPUT);
-      input.steer = (steer[step] - STEER_STEPS) / STEER_STEPS;
-      input.lean = (lean[step] - STEER_STEPS) / STEER_STEPS;
-      input.throttle = throttle[step] / LEVER_STEPS;
-      input.brake = brake[step] / LEVER_STEPS;
-      input.reset = (flags[step] & FLAG_RESET) !== 0;
+      if (reader.at(step, axes) === null) return Object.assign(input, NEUTRAL_INPUT);
+      input.steer = axes.steer;
+      input.lean = axes.lean;
+      input.throttle = axes.throttle;
+      input.brake = axes.brake;
+      input.reset = (axes.flags & FLAG_RESET) !== 0;
       // Left off when it is not held, so a tape reads back as the input it was.
-      input.trick = (flags[step] & FLAG_TRICK) !== 0 ? true : undefined;
+      input.trick = (axes.flags & FLAG_TRICK) !== 0 ? true : undefined;
       return input;
     },
   };
@@ -321,8 +238,7 @@ export function readsAsGhost(parsed: unknown): parsed is GhostRun {
   }
   if (!run.assist || !share(run.assist.yaw) || !share(run.assist.air)) return false;
   if (typeof run.value !== "number" || !Number.isFinite(run.value) || run.value <= 0) return false;
-  if (!Number.isInteger(run.steps) || (run.steps as number) <= 0) return false;
-  return STREAMS.every((key) => typeof run[key] === "string");
+  return isControlTape(parsed, TAPE);
 }
 
 /* ── STORAGE ──────────────────────────────────────────────────────────── */

@@ -23,7 +23,7 @@ subject halves were rewritten for snow.
 | `commit` | Gates by cost, the commit, the push and the PR as one step, the sim-table obligation |
 | `changelog` | The fragment-or-`no-changelog` call every PR owes |
 | `conflict` | Moving a branch onto another: the backup branch, always fetch, resolve honestly |
-| `skill-reflection` | Read each loaded skill's lessons first; record, prune, merge, promote at the end; the size bars; `scripts/skill-lessons.mjs` |
+| `skill-reflection` | Read each loaded skill's lessons first; record, prune, merge, promote at the end; the size bars; `ogf-skill-lessons` (the framework's bin) |
 
 ## Maintenance (§21.5, §21.6)
 
@@ -59,7 +59,7 @@ sibling's the day one lands, and add its registry row.
 | `visual-effects` | What the sled throws and leaves and what the rider feels: the spray, the trails' stamping, the vibration table |
 | `platform-shells` | The desktop app (`tauri/`) and the store app (`native/`): the two-crate split, the WebView and its server, the `__SH_SHELL__` seam, the haptics bridge, the names stated twice |
 | `picture-pricing` | Every PICTURE stop's measured cost and argued benefit, the price list lab (`make bench --costs`), and what PRESET ▸ AUTO keeps because of them |
-| `lab-tooling` | How a lab or a script is built: the `scripts/lib/` shelf, pure-Node versus browser-driven, the harness page, the URL contract, registering a tool |
+| `lab-tooling` | How a lab or a script is built: the framework's `tooling/*` shelf and `scripts/lib/`, pure-Node versus browser-driven, the harness page, the URL contract, registering a tool |
 | `hud-and-menus` | The HUD's readouts, the three presses, the handlebar and the lever, the keys — what is drawn over a RACE |
 | `menu-system` | The shell around a race: the attract card, the front door, the loading card, the pause card, the settings |
 | `ui-review` | The fit-and-finish sweep at the reference viewports |

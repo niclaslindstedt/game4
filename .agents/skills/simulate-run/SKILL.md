@@ -14,7 +14,7 @@ and out of the reset — not tuning an economy. The regression surface is the
 table.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs simulate-run --list`. Load
+`npx ogf-skill-lessons simulate-run --list`. Load
 **`skill-reflection`** at both ends of the session.
 
 ## The tools

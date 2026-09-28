@@ -22,8 +22,8 @@
 // line before it has taken one. It is the rider's (the key) and the
 // engine's (`run.ts`: on its back, or held at full throttle going nowhere).
 
-import { angleDiff, hypot } from "../lib/math.ts";
-import { fromEuler } from "../lib/quat.ts";
+import { angleDiff, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
+import { fromEuler } from "@niclaslindstedt/oss-game-framework/core/quat";
 import { nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Checkpoint, Level, Spawn } from "../mapgen/types.ts";
 import { TUNING } from "./defs/tuning.ts";

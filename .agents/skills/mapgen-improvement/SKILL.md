@@ -13,7 +13,7 @@ on the other several thousand.
 Which is why the centre of this skill is not the rules. It is the LOOP.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs mapgen-improvement --list`, then the ones
+`npx ogf-skill-lessons mapgen-improvement --list`, then the ones
 this task touches (`--scope=…`, `--concepts=…`). Load **`skill-reflection`**
 at both ends of the session, and **`write-code`** beside this one.
 
@@ -110,7 +110,7 @@ inventing a proxy nobody believes.
 | `spawn.ts` | **Where the race starts (R11–R13):** the start line searched for on the loop, the loop re-indexed so checkpoint 0 is arc 0, the grid on the track behind it, the checkpoints down it. |
 | `forest.ts` | **The forest (R14):** one candidate per cell, jittered, kept by the forest noise, refused by rule — never within `forest.gap` of another trunk, so a sled rides between any two — and sized by where it stands. |
 | `drift.ts` | **The drifts (R17):** stretches of the finished loop dealt off their own stream and stamped into the packed field. |
-| `sun.ts` | **The day (R15):** latitude, day of the year, a solar hour with the sun over its floor — the arithmetic is `lib/solar.ts`'s. |
+| `sun.ts` | **The day (R15):** latitude, day of the year, a solar hour with the sun over its floor — the arithmetic is the framework's `core/solar`. |
 | `compile.ts` | **The geometry:** the baked grids bound into the `Level` and its three queries (`groundAt`, `normalAt`, `packedAt`) as bilinear samples. Nothing downstream regenerates any of it. |
 | `query.ts` | **The track, asked:** `nearestTrackPoint` (off a lazily built spatial hash), `trackPointAt`, `arcAhead`, `arcBetween` — for the generator, the analysis, the physics, the bot and the renderer alike. |
 | `generate.ts` | **The search:** `generateLevel(seed, opts?)`. Each ATTEMPT draws everything from `subSeed(seed, attempt)`, in dependency order, compiles, and asks `analyzeLevel` whether it is clean; a refused attempt re-rolls the next sub-seed, bounded. |

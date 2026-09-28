@@ -181,8 +181,11 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version-file: .nvmrc
+      # The gate is the framework's (`ogf-check-changeset`), so it needs the
+      # dependency installed.
+      - run: npm ci
       - name: Check for changelog fragment
         env:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
-        run: node scripts/release/check-changeset.mjs
+        run: npx ogf-check-changeset

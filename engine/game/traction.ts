@@ -28,7 +28,7 @@
 // — wheelspin, in powder or off the line — and in the air it spins up free.
 // It never runs backwards: the drive is one-way.
 
-import { clamp } from "../lib/math.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import type { SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { footprintOf } from "./footprint.ts";

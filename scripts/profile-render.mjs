@@ -24,7 +24,7 @@
 // change structurally (a new pass? a new material? or only an instance
 // count?) before reading a small movement as a regression.
 //
-// Needs a built pwa/dist, a Chromium and a driver (scripts/lib/chromium.mjs
+// Needs a built pwa/dist, a Chromium and a driver (the framework's tooling/chromium.mjs
 // says where both are looked for). WITHOUT THEM IT IS A STUB: it prints what
 // it would measure and exits 0, so `make profile` never fails a machine for
 // lacking a browser.
@@ -34,9 +34,9 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 
-import { findChromium } from "./lib/chromium.mjs";
-import { parseArgs } from "./lib/cli.mjs";
-import { serveDir } from "./lib/serve-dist.mjs";
+import { findChromium } from "@niclaslindstedt/oss-game-framework/tooling/chromium";
+import { parseArgs } from "@niclaslindstedt/oss-game-framework/tooling/cli";
+import { serveDir } from "@niclaslindstedt/oss-game-framework/tooling/serve-dist";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const dist = join(root, "pwa", "dist");
@@ -139,7 +139,7 @@ function stub(reason) {
 
 if (!existsSync(join(dist, "index.html"))) stub(`no built site at ${dist} (run \`npm run build\`)`);
 const found = await findChromium();
-if (!found) stub("no browser driver or no Chromium (see scripts/lib/chromium.mjs)");
+if (!found) stub("no browser driver or no Chromium (see the framework's tooling/chromium.mjs)");
 
 const site = await serveDir(dist);
 const browser = await found.chromium.launch({

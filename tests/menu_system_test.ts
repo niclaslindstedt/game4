@@ -1,16 +1,14 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE SHELL AROUND A RACE — every rule the cards and the loop stand on that
 // can be read without a browser: which surface steps the engine and who
-// rides it (`shell.ts`), the §37 clock (`run-loop.ts`), a load cut into
-// phases (`run-loader.ts`), the URL (`url-params.ts`), the attract card's
-// timing (`splash.ts`), what is remembered (`settings.ts`), the game's own
-// buttons (`run-actions.ts`) and the cursor's walk (`menu-cursor.ts`).
+// rides it (`shell.ts`), a load cut into phases (`run-loader.ts`), the URL
+// (`url-params.ts`), the attract card's timing (`splash.ts`), what is
+// remembered (`settings.ts`) and the game's own buttons (`run-actions.ts`).
+// The §37 clock and the cursor's walk are the framework's (`loop/run-clock`,
+// `input/menu-cursor`), held by its own suite.
 
 import { describe, expect, it } from "vitest";
 
-import { TUNING } from "@engine";
-
-import { pickNeighbour, type NavRect } from "../pwa/src/game/menu-cursor.ts";
 import {
   PAUSE_STATS,
   pauseStats,
@@ -26,7 +24,6 @@ import {
   loadTimes,
   type LoadStep,
 } from "../pwa/src/game/run-loader.ts";
-import { MAX_FRAME_SECONDS, createRunClock } from "../pwa/src/game/run-loop.ts";
 import {
   DEFAULT_CAMERA,
   RUN_CAMERAS,
@@ -94,32 +91,6 @@ describe("the seven surfaces (shell.ts)", () => {
     }
     // The benchmark states its own view rather than inheriting one.
     expect(cameraFor("bench", "hood")).toBe(BENCHMARK.camera);
-  });
-});
-
-describe("the §37 clock (run-loop.ts)", () => {
-  it("steps whole steps and carries the fraction", () => {
-    const clock = createRunClock(TUNING.physicsHz);
-    let steps = 0;
-    for (let i = 0; i < 60; i++) steps += clock.frame(1 / 60);
-    expect(steps).toBe(TUNING.physicsHz);
-    expect(clock.alpha()).toBeGreaterThanOrEqual(0);
-    expect(clock.alpha()).toBeLessThan(1);
-  });
-
-  it("drops a stall rather than paying it down", () => {
-    const clock = createRunClock(TUNING.physicsHz);
-    const steps = clock.frame(5);
-    expect(steps).toBe(Math.floor(MAX_FRAME_SECONDS * TUNING.physicsHz + 1e-9));
-    expect(clock.dropped()).toBeCloseTo(5 - MAX_FRAME_SECONDS);
-  });
-
-  it("takes no steps while away, and the first frame back is one frame long", () => {
-    const clock = createRunClock(TUNING.physicsHz);
-    clock.pause();
-    expect(clock.frame(1 / 60)).toBe(0);
-    clock.resume();
-    expect(clock.frame(1 / 60)).toBe(2);
   });
 });
 
@@ -434,25 +405,6 @@ describe("the game's own buttons (run-actions.ts)", () => {
     for (const command of SHELL_COMMANDS) act(command as RunPress);
     act("reset");
     expect(did.sort()).toEqual(["camera", "leave", "shot"]);
-  });
-});
-
-describe("the cursor's walk (menu-cursor.ts)", () => {
-  const card: NavRect[] = [
-    { x: 0, y: 0, w: 200, h: 40 },
-    { x: 0, y: 50, w: 95, h: 40 },
-    { x: 105, y: 50, w: 95, h: 40 },
-    { x: 0, y: 100, w: 200, h: 40 },
-  ];
-
-  it("goes down to the row underneath and right to the button beside", () => {
-    expect(pickNeighbour(card, 0, "down")).toBe(1);
-    expect(pickNeighbour(card, 1, "right")).toBe(2);
-    expect(pickNeighbour(card, 2, "down")).toBe(3);
-  });
-
-  it("wraps off the bottom to the top", () => {
-    expect(pickNeighbour(card, 3, "down")).toBe(0);
   });
 });
 

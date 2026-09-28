@@ -25,10 +25,14 @@
 // shoulders are the groomer's alone, and a drift across it (R17) is fresh
 // snow over the groomer, never over a crust.
 
-import { hypot, smoothstep } from "../lib/math.ts";
-import { createHeightfield, sampleField, type Heightfield } from "../lib/heightfield.ts";
-import { valueNoise } from "../lib/noise.ts";
-import { createRng } from "../lib/prng.ts";
+import { hypot, smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  createHeightfield,
+  sampleField,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import { valueNoise } from "@niclaslindstedt/oss-game-framework/core/noise";
+import { createRng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import type { Region } from "./regions.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import type { TerrainPlan } from "./terrain.ts";

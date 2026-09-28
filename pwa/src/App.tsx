@@ -33,7 +33,7 @@
 // A URL that names a race (`start`, `shot`, `paused`) boots into one;
 // anything else opens on the attract card or the front door.
 //
-// THE LOOP: `requestAnimationFrame` hands the clock (run-loop.ts) the wall
+// THE LOOP: `requestAnimationFrame` hands the clock (the framework's `loop/run-clock`) the wall
 // time; the clock says how many fixed steps to take; each step samples the
 // input (§37.1, once per step) and calls `step`. The renderer draws the
 // state once per frame; the HUD is refreshed from a snapshot at ~12 Hz. A
@@ -105,7 +105,7 @@ import type { WorldRenderer } from "./game/renderer-api.ts";
 import { useRenderKit } from "./game/use-render-kit.ts";
 import { createRunActions } from "./game/run-actions.ts";
 import type { LoadPhase } from "./game/run-loader.ts";
-import { createRunClock } from "./game/run-loop.ts";
+import { createRunClock } from "@niclaslindstedt/oss-game-framework/loop/run-clock";
 import { newsFor, shotLabel } from "./game/run-news.ts";
 import {
   assistOf,
@@ -129,13 +129,13 @@ import {
 } from "./game/shell.ts";
 import { SplashScreen } from "./game/splash-screen.tsx";
 import { splashSkipped } from "./game/splash.ts";
-import { readHudLayer } from "./game/shot-hud.ts";
+import { readHudLayer } from "@niclaslindstedt/oss-game-framework/shots/shot-hud";
 import { createShotRequest } from "./game/shot-request.ts";
 import { takeSnapshot, type HudSnapshot } from "./game/snapshot.ts";
 import { dealSeed, linkWorld, overLink, readParams, type MenuPage } from "./game/url-params.ts";
 import { createPictureAuto } from "./game/picture-auto.ts";
 import { UpdateButton } from "./game/update-button.tsx";
-import { clamp } from "./lib/util.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 
 /** How often the HUD's readouts are refreshed, s. */
 const HUD_TICK = 1 / 12;

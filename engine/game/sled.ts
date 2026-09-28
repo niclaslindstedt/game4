@@ -28,8 +28,21 @@
 //   - GRAVITY.
 // The trees and the map's edge are `collision.ts`'s and are applied after.
 
-import { angleDiff, approach, clamp, hypot, hypot3 } from "../lib/math.ts";
-import { fromEuler, integrate, rotate, toEuler, unrotate, type Vec3 } from "../lib/quat.ts";
+import {
+  angleDiff,
+  approach,
+  clamp,
+  hypot,
+  hypot3,
+} from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  fromEuler,
+  integrate,
+  rotate,
+  toEuler,
+  unrotate,
+  type Vec3,
+} from "@niclaslindstedt/oss-game-framework/core/quat";
 import { SLED, inertiaOf, totalMass, type SledSpec } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import { airTorque, landingAhead, landingLoss } from "./flight.ts";

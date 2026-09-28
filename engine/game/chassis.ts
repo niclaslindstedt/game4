@@ -20,7 +20,7 @@
 // The snow under a chassis point is the powder's FLOOR (`snow.ts`): deep
 // powder does not hold a belly up, it is pushed aside by it.
 
-import { rotate, unrotate, type Vec3 } from "../lib/quat.ts";
+import { rotate, unrotate, type Vec3 } from "@niclaslindstedt/oss-game-framework/core/quat";
 import type { Level } from "../mapgen/types.ts";
 import { inertiaOf, totalMass } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
@@ -28,7 +28,7 @@ import { footprintOf } from "./footprint.ts";
 import { packedUnder, powderFloor } from "./snow.ts";
 import { hullOf } from "./suspension.ts";
 import type { SledState } from "./state.ts";
-import { hypot3 } from "../lib/math.ts";
+import { hypot3 } from "@niclaslindstedt/oss-game-framework/core/math";
 
 const H = TUNING.hull;
 const n: Vec3 = { x: 0, y: 1, z: 0 };

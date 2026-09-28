@@ -24,15 +24,15 @@ frame-time probe quantizes and never moves, so a live loop reads as a dead
 one. Take two screenshots of the same patch of snow half a second apart and
 compare the bytes.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 menu-system --list`. Load **`skill-reflection`** at both ends,
 **`write-code`** beside this one, **`hud-and-menus`** for anything drawn over
 a RACE, and **`ui-review`** for the sweep at the reference viewports.
 
 **Not built:** a developer page (and the hold that lets it out), a campaign,
 other modes beyond RACE and FREE RIDE, a replay, a benchmark. **The
-GALLERY is built** (`menu-gallery.tsx` over `lib/shot-store.ts`, the policy
-in `lib/shot-roll.ts`; `?menu=gallery`), reached from a CHIP on the front
+GALLERY is built** (`menu-gallery.tsx` over the framework's `shots/shot-store`, the
+policy in its `shots/shot-roll`; `?menu=gallery`), reached from a CHIP on the front
 door's foot — it is not a way onto the snow, so it does not wear a tile's
 shape. The shutter is ENTER, or the phone's own screenshot in the store app
 — never a menu row, as in game3. The roll
@@ -73,8 +73,8 @@ all.
 | Every parameter the app reads off its URL | `pwa/src/game/url-params.ts` — DOM-free |
 | ONE handler for a press, from a key, a HUD thumb or a desktop menu-bar row | `pwa/src/game/run-actions.ts` |
 | Standing a race up: the steps and what they are | `pwa/src/game/run-loader.ts` (the sequencing, a frame budget, DOM-free) + `app-load.ts` (the steps, a factory over `App.tsx`'s closures) |
-| The fixed-step clock under all of it | `pwa/src/game/run-loop.ts` (§37: the accumulator, the clamp, a hidden tab) |
-| Walking a card on the keys | `pwa/src/game/menu-nav.ts` (the DOM half) over `menu-cursor.ts` (the geometry, DOM-free) |
+| The fixed-step clock under all of it | the framework's `loop/run-clock` (§37: the accumulator, the clamp, a hidden tab) |
+| Walking a card on the keys | `pwa/src/game/menu-nav.ts` (the DOM half) over the framework's `input/menu-cursor` (the geometry, DOM-free) |
 | The marks the cards are read by | `pwa/src/game/menu-glyphs.tsx` — the flag on RACE, the speaker, the pause card's three, the sliders on OPTIONS and its groups' keyboard, dial and screen |
 | The new-build button | `pwa/src/game/update-button.tsx` over `pwa/src/lib/pwa-update.ts` |
 | Every word | `pwa/src/game/strings.ts` (§39.1) — no card carries a literal |
@@ -83,8 +83,8 @@ all.
 ## The rules that are easy to undo by accident
 
 - **The DOM-free payload split.** The decision is a pure module the root
-  suite reads (`shell.ts`, `splash.ts`, `menu-cursor.ts`, `run-loader.ts`,
-  `run-loop.ts`, `url-params.ts`, `mergeSettings`); the `.tsx` only renders
+  suite reads (`shell.ts`, `splash.ts`, `run-loader.ts`, `url-params.ts`,
+  `mergeSettings`); the `.tsx` only renders
   it. A rule moved into a component stops being checked.
 - **THE PAUSE CARD FREEZES; NOTHING ELSE DOES** — and the absence is never
   paid down. Hold a race three seconds, resume, and the clock moves one frame,

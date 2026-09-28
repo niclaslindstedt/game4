@@ -14,8 +14,8 @@
 // numbers, so the sky, the falling snow, the fog and the wind the spindrift
 // rides all read one source.
 
-import { createRng } from "../lib/prng.ts";
-import { daylightWindow } from "../lib/solar.ts";
+import { createRng } from "@niclaslindstedt/oss-game-framework/core/prng";
+import { daylightWindow } from "@niclaslindstedt/oss-game-framework/core/solar";
 import { LEVEL_RULES, inBand } from "./rules.ts";
 import { declinationOf } from "./sun.ts";
 import type { Level, SkyOverride, SnowingKind, Weather, WeatherKind } from "./types.ts";

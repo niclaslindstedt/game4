@@ -15,10 +15,18 @@
 // out by `basin.rim.warp` of slow noise so it does not read as drawn with a
 // compass.
 
-import { smoothstep } from "../lib/math.ts";
-import { createHeightfield, type Heightfield } from "../lib/heightfield.ts";
-import { noiseField, sampleNoise, valueNoise, type NoiseField } from "../lib/noise.ts";
-import type { Rng } from "../lib/prng.ts";
+import { smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  createHeightfield,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import {
+  noiseField,
+  sampleNoise,
+  valueNoise,
+  type NoiseField,
+} from "@niclaslindstedt/oss-game-framework/core/noise";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { REGIONS, scaleBand, scaleCount, type Region } from "./regions.ts";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 

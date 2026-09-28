@@ -18,7 +18,7 @@ export {
   recentLogs,
   type OutputLevel,
   type OutputSink,
-} from "./output.ts";
+} from "@niclaslindstedt/oss-game-framework/core/output";
 
 // The generic pool the app and the tools reach for.
 export {
@@ -28,8 +28,8 @@ export {
   sampleFieldGradient,
   fieldGradient,
   type Heightfield,
-} from "./lib/heightfield.ts";
-export { createRng, type Rng } from "./lib/prng.ts";
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+export { createRng, type Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
 export {
   fromEuler,
   toEuler,
@@ -39,10 +39,29 @@ export {
   normalize,
   identity,
   type Quat,
-} from "./lib/quat.ts";
-export { angleDiff, clamp, hypot, hypot3, hypot4, lerp, TAU } from "./lib/math.ts";
-export { hash2, noiseField, sampleNoise, valueNoise } from "./lib/noise.ts";
-export { moonAt, sunAt, SOUTH, type MoonPlace, type SunPlace } from "./lib/solar.ts";
+} from "@niclaslindstedt/oss-game-framework/core/quat";
+export {
+  angleDiff,
+  clamp,
+  hypot,
+  hypot3,
+  hypot4,
+  lerp,
+  TAU,
+} from "@niclaslindstedt/oss-game-framework/core/math";
+export {
+  hash2,
+  noiseField,
+  sampleNoise,
+  valueNoise,
+} from "@niclaslindstedt/oss-game-framework/core/noise";
+export {
+  moonAt,
+  sunAt,
+  SOUTH,
+  type MoonPlace,
+  type SunPlace,
+} from "@niclaslindstedt/oss-game-framework/core/solar";
 
 // THE WORLD (engine/mapgen/): the generator, the Level contract, the track
 // queries.

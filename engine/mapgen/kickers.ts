@@ -21,9 +21,13 @@
 // a hilltop the search climbs to, across a width that blends into the snow
 // at its sides — something a rider leaves the loop to find.
 
-import { angleDiff, hypot, smoothstep } from "../lib/math.ts";
-import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
-import type { Rng } from "../lib/prng.ts";
+import { angleDiff, hypot, smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  sampleField,
+  fieldGradient,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { nearestTrackPoint } from "./query.ts";
 import { scaleCount } from "./regions.ts";

@@ -31,7 +31,13 @@ import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledState } from ".
 import { stepRun } from "./run.ts";
 import { freshSled } from "./sled.ts";
 import { freshTricks } from "./tricks.ts";
-import { hypot } from "../lib/math.ts";
+import { hypot } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  fieldOrder as orderField,
+  legProgress,
+  placeAmong,
+  type Standing,
+} from "@niclaslindstedt/oss-game-framework/racing/standings";
 
 /** How far behind the level's grid an extra row stands, m. */
 const ROW_BACK = 8;
@@ -161,26 +167,20 @@ export function clipRiders(state: GameState, events: GameEvent[]): void {
 }
 
 /** HOW FAR ROUND THE RACE A RUN IS: crossings credited, plus a share of the
- * way to the next checkpoint. The share is NOT floored at zero, so a rider
- * further back on the approach reads behind one nearer it. */
+ * way to the next checkpoint (`legProgress`). The share is NOT floored at
+ * zero, so a rider further back on the approach reads behind one nearer it. */
 export function raceProgress(run: GameState): number {
   const p = run.progress;
   const cps = run.level.checkpoints;
-  const next = cps[p.nextCheckpoint];
   const from = p.lastCheckpoint >= 0 ? cps[p.lastCheckpoint] : run.level.spawn;
-  const leg = hypot(next.x - from.x, next.z - from.z) || 1;
-  const left = hypot(next.x - run.sled.x, next.z - run.sled.z);
-  return p.passed + Math.min(0.999, 1 - left / leg);
+  return legProgress(p.passed, from, cps[p.nextCheckpoint], run.sled.x, run.sled.z);
 }
 
-/** Whether run `a` stands ahead of run `b`: home first, by the clock; then
- * further round. */
-function ahead(a: GameState, b: GameState): boolean {
-  if (a.progress.finished || b.progress.finished) {
-    if (a.progress.finished && b.progress.finished) return a.progress.time < b.progress.time;
-    return a.progress.finished;
-  }
-  return raceProgress(a) > raceProgress(b);
+/** A run reduced to where it stands: home first, by the clock; then further
+ * round. A run home is never asked how far round it is. */
+function standing(run: GameState): Standing {
+  const p = run.progress;
+  return { finished: p.finished, time: p.time, progress: p.finished ? 0 : raceProgress(run) };
 }
 
 /** THE WHOLE FIELD IN ORDER, best first: every rival's id, and `null`
@@ -190,13 +190,13 @@ export function fieldOrder(state: GameState): (number | null)[] {
     { id: null, run: state },
     ...state.rivals.map((r) => ({ id: r.id, run: r.run })),
   ];
-  runs.sort((a, b) => (ahead(a.run, b.run) ? -1 : ahead(b.run, a.run) ? 1 : 0));
-  return runs.map((r) => r.id);
+  return orderField(runs, (r) => standing(r.run)).map((r) => r.id);
 }
 
 /** THE PLAYER'S PLACE, 1-based: one more than the rivals ahead of him. */
 export function racePlace(state: GameState): number {
-  let place = 1;
-  for (const r of state.rivals) if (ahead(r.run, state)) place += 1;
-  return place;
+  return placeAmong(
+    standing(state),
+    state.rivals.map((r) => standing(r.run)),
+  );
 }

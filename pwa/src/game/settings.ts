@@ -116,7 +116,7 @@ export type Settings = {
   trickMap: string | null;
   /** Whether the readouts are over the snow (H, OPTIONS ▸ HUD). Off keeps
    * the thumbs and the corner presses, and a picture is then the snow
-   * alone (`shot-hud.ts`). */
+   * alone (the framework's `shots/shot-hud`). */
   hud: boolean;
   /** Whether the DEVELOPER chip is on the front door — let out by holding
    * the title for `DEV_HOLD_MS` (`menu-hold.ts`), shut by its LOCK press. */

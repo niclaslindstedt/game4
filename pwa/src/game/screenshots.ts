@@ -3,13 +3,13 @@
 // desktop menu bar's row, the phone's own shutter in the
 // store app) actually does, and the one place the frame, the roll and the gallery meet. What is
 // DECIDED about a picture — its size, its name, where the mark goes — is
-// next door in shot-plan.ts; this module is the canvas work.
+// in the framework's `shots/shot-plan`; this module is the canvas work.
 //
 // WHAT IS IN THE PICTURE is the screen: the snow, the sled, the sky, the
 // woods — everything the renderer drew — and the HUD over it, with the
 // app's mark stamped into the corner. The instruments are DOM rather than
 // pixels the renderer put down, so they are rasterized in on the way past
-// (shot-hud.ts); the picture is what the rider was LOOKING at, which
+// (the framework's `shots/shot-hud`); the picture is what the rider was LOOKING at, which
 // includes the clock they were chasing and the lap they were counting. A
 // frame with none of that on it is one switch away: H (or OPTIONS ▸ HUD)
 // takes the instruments down, and a picture taken then is the snow alone.
@@ -35,8 +35,12 @@
 // news column when it does.
 
 import { APP_NAME, APP_SHORT_NAME } from "../identity.ts";
-import { configureShotStore, putShot, type ShotMeta } from "../lib/shot-store.ts";
-import { drawHudLayer, type HudLayer } from "./shot-hud.ts";
+import {
+  configureShotStore,
+  putShot,
+  type ShotMeta,
+} from "@niclaslindstedt/oss-game-framework/shots/shot-store";
+import { drawHudLayer, type HudLayer } from "@niclaslindstedt/oss-game-framework/shots/shot-hud";
 import {
   STAMP_FONT_STACK,
   shotFileName as planFileName,
@@ -45,7 +49,7 @@ import {
   stampLayout,
   stampLift,
   type HudCover,
-} from "./shot-plan.ts";
+} from "@niclaslindstedt/oss-game-framework/shots/shot-plan";
 // The app mark, read from the same SVG the icons are generated from
 // (pwa/public/icons/icon.svg) rather than restated here: the mark (the two
 // trails over the hill, the flag) has three homes already (§ the router's
@@ -180,7 +184,7 @@ export function captureFrame(
   return frame ? keepShot(frame, label, hud) : Promise.resolve(null);
 }
 
-/** Stamp the mark and the app's name into the corner shot-plan.ts chose.
+/** Stamp the mark and the app's name into the corner `shots/shot-plan` chose.
  * A null mark draws the name alone, which is what a browser that would not
  * decode the icon gets rather than an unsigned picture. */
 function drawStamp(

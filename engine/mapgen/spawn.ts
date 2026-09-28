@@ -11,8 +11,8 @@
 // line the race is timed across, and the grid is laid behind it in rows
 // straddling the centreline, facing along the loop.
 
-import type { Rng } from "../lib/prng.ts";
-import { angleDiff } from "../lib/math.ts";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
+import { angleDiff } from "@niclaslindstedt/oss-game-framework/core/math";
 import { LEVEL_RULES as R } from "./rules.ts";
 import type { TrackKicker } from "./kickers.ts";
 import { trackPointAt, type HasTrack } from "./query.ts";

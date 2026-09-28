@@ -66,7 +66,7 @@ export type RigPose = {
   airborne: boolean;
   /** The packed share under the sled, 0 powder .. 1 groomed. */
   packed: number;
-  /** Body → world (`lib/quat.ts`'s convention). */
+  /** Body → world (the framework's `core/quat` convention). */
   q: Quat;
 };
 

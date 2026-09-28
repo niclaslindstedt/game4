@@ -48,10 +48,13 @@
 //   6c the wind crust, laid on the finished country, and both folded into
 //      the packed field clear of the loop (R10 holds)
 
-import { createRng } from "../lib/prng.ts";
-import { sampleField, type Heightfield } from "../lib/heightfield.ts";
+import { createRng } from "@niclaslindstedt/oss-game-framework/core/prng";
+import {
+  sampleField,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
 import { analyzeLevel } from "../analysis/index.ts";
-import { debug } from "../output.ts";
+import { debug } from "@niclaslindstedt/oss-game-framework/core/output";
 import { compileLevel } from "./compile.ts";
 import { dealDrifts, stampDrifts } from "./drift.ts";
 import { layCliffs } from "./cliffs.ts";

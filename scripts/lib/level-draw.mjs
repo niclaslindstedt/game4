@@ -14,7 +14,7 @@
 // green arrow at the grid's slots. Every id is the one `level-map.mjs`
 // prints in its table.
 
-import { createDrawing } from "./draw.mjs";
+import { createDrawing } from "@niclaslindstedt/oss-game-framework/tooling/draw";
 
 export const TITLE_H = 48;
 export const LEGEND_W = 250;

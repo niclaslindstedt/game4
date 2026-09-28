@@ -35,7 +35,7 @@
 
 import { isSledId, sledById } from "@engine";
 
-import { formatTime } from "../lib/util.ts";
+import { formatTime } from "@niclaslindstedt/oss-game-framework/hud/format";
 import type { CampaignLevel } from "./campaign.ts";
 import type { CampaignPlate } from "./campaign-run.ts";
 import type { HudSnapshot } from "./snapshot.ts";

@@ -5,7 +5,7 @@ import "./styles.css";
 import "./campaign.css";
 import "./dev.css";
 import { App } from "./App.tsx";
-import { watchVisibleViewport } from "./lib/visible-viewport.ts";
+import { watchVisibleViewport } from "@niclaslindstedt/oss-game-framework/display/visible-viewport";
 
 // In dev no worker registers (`usePwaUpdate` runs disabled), but a worker
 // installed by a previous `vite preview` on this origin would keep serving

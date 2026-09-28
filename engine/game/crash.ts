@@ -40,8 +40,8 @@
 // reset, reported `auto`. The still beat is the one the app's death cam
 // (`camera-death.ts`) rises into the sky over him on.
 
-import { clamp, hypot, hypot3 } from "../lib/math.ts";
-import { rotate, type Vec3 } from "../lib/quat.ts";
+import { clamp, hypot, hypot3 } from "@niclaslindstedt/oss-game-framework/core/math";
+import { rotate, type Vec3 } from "@niclaslindstedt/oss-game-framework/core/quat";
 import { TUNING } from "./defs/tuning.ts";
 import { centreOf, stepRagdoll, throwBody } from "./ragdoll.ts";
 import type { CrashCause, GameEvent, GameState, SledState, Thrown } from "./state.ts";

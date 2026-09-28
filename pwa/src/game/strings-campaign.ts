@@ -8,7 +8,7 @@
 // and the campaign's block is one file to read. Templates, never
 // concatenations at the call site (§39.2).
 
-import { formatTime, ordinal } from "../lib/util.ts";
+import { formatTime, ordinal } from "@niclaslindstedt/oss-game-framework/hud/format";
 
 const plural = (n: number, one: string, many: string): string => `${n} ${n === 1 ? one : many}`;
 

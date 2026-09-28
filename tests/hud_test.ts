@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE HUD'S PAYLOAD — what the readouts over a race are worked out FROM,
 // read without a browser: the snapshot the HUD draws (`snapshot.ts`), the
-// line each event earns in the news column (`run-news.ts`), the press a
-// second finger makes (`hud-press.ts`) and the grip a thumb zone holds a
-// finger by (`thumb-guard.ts`). Plus the strings table's own coverage: a
-// word nobody reads is a word nobody fixes.
+// line each event earns in the news column (`run-news.ts`). Plus the strings
+// table's own coverage: a word nobody reads is a word nobody fixes. (The
+// press a second finger makes and the grip a thumb zone holds a finger by
+// are the framework's `input/`, held by its own suite.)
 
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -13,11 +13,9 @@ import { describe, expect, it } from "vitest";
 
 import { TUNING, botInput, createGame, step, type GameEvent, type GameState } from "@engine";
 
-import { createHudPress } from "../pwa/src/game/hud-press.ts";
 import { newsFor } from "../pwa/src/game/run-news.ts";
 import { lapOf, standingsOf, takeSnapshot, takenThisLap } from "../pwa/src/game/snapshot.ts";
 import { STRINGS } from "../pwa/src/game/strings.ts";
-import { createThumbGuard, type GuardWindow } from "../pwa/src/game/thumb-guard.ts";
 import { syntheticLevel } from "./support/synthetic.ts";
 
 /** A race on the stadium, three rivals on the grid and the lights on. */
@@ -168,70 +166,6 @@ describe("the news column (run-news.ts)", () => {
     expect(line({ ...land, harsh: true })?.tone).toBe("bad");
     expect(line({ ...land, harsh: false, lost: 0 })).toBe(null);
     expect(line({ kind: "count", t: 1, left: 3 })).toBe(null);
-  });
-});
-
-describe("a press made with a thumb already down (hud-press.ts)", () => {
-  const box = { left: 0, top: 0, right: 40, bottom: 40 };
-
-  it("fires on the release of the pointer it was holding, inside its own edges", () => {
-    const press = createHudPress();
-    press.down({ pointerId: 2, pointerType: "touch", clientX: 10, clientY: 10 });
-    expect(press.up({ pointerId: 2, clientX: 12, clientY: 12 }, box, 1000)).toBe(true);
-    // ...and swallows the click that echoes it.
-    expect(press.click(1100)).toBe(false);
-    expect(press.click(5000)).toBe(true);
-  });
-
-  it("abandons a press the finger slid off, and leaves a mouse to its own click", () => {
-    const press = createHudPress();
-    press.down({ pointerId: 3, pointerType: "touch", clientX: 10, clientY: 10 });
-    expect(press.up({ pointerId: 3, clientX: 90, clientY: 10 }, box, 0)).toBe(false);
-    press.down({ pointerId: 1, pointerType: "mouse", clientX: 10, clientY: 10 });
-    expect(press.up({ pointerId: 1, clientX: 10, clientY: 10 }, box, 0)).toBe(false);
-  });
-});
-
-describe("a thumb zone's grip (thumb-guard.ts)", () => {
-  function fakeWindow(): GuardWindow & { fire: (type: string, pointerId?: number) => void } {
-    const listeners = new Map<string, ((e: { pointerId?: number }) => void)[]>();
-    return {
-      addEventListener: (type, l) => listeners.set(type, [...(listeners.get(type) ?? []), l]),
-      removeEventListener: (type, l) =>
-        listeners.set(
-          type,
-          (listeners.get(type) ?? []).filter((x) => x !== l),
-        ),
-      fire: (type, pointerId) => {
-        for (const l of listeners.get(type) ?? []) l({ pointerId });
-      },
-    };
-  }
-
-  it("lets go on the pointer's end anywhere, on blur, and on the watchdog", () => {
-    let released = 0;
-    const win = fakeWindow();
-    const guard = createThumbGuard(() => released++, win);
-    expect(guard.claim(5, () => false)).toBe(true);
-    win.fire("pointerup", 5);
-    expect(released).toBe(1);
-    guard.claim(6, () => false);
-    win.fire("blur");
-    expect(released).toBe(2);
-    let down = true;
-    guard.claim(7, () => down);
-    down = false;
-    guard.poll();
-    expect(released).toBe(3);
-    guard.dispose();
-  });
-
-  it("refuses a second finger while the first is demonstrably still down", () => {
-    const guard = createThumbGuard(() => {}, fakeWindow());
-    expect(guard.claim(1, () => true)).toBe(true);
-    expect(guard.claim(2, () => true)).toBe(false);
-    expect(guard.owns(1)).toBe(true);
-    guard.dispose();
   });
 });
 

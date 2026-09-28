@@ -22,7 +22,7 @@ shelves the campaign has opened, so two times in the record book are two
 times round the same loop. A seed of one's own is the free ride's, and a
 link's `?seed=` (`pinnedFor`).
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 campaign --list`. Load **`skill-reflection`** at both ends, **`write-code`**
 beside this one for any code change, **`level-rating`** whenever a map is
 being chosen or judged, **`mapgen-improvement`** when a generator change is

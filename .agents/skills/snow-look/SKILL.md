@@ -14,7 +14,7 @@ moves the ground the physics rides.** A vertex is the generator's own height,
 lowered only by the trail map, and everything else this skill does happens to
 the LIGHT.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 snow-look --list`. Load **`skill-reflection`** at both ends of the session
 and **`write-code`** beside this one.
 

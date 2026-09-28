@@ -18,7 +18,7 @@
 
 import type { SledInput } from "@engine";
 
-import { clamp } from "../lib/util.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import { snapInput } from "./ghost.ts";
 
 export const SCREEN_TO_ENGINE = -1;

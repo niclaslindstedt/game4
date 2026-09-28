@@ -14,7 +14,7 @@ import type { GameEvent } from "../game/state.ts";
 import type { RegionId } from "../mapgen/regions.ts";
 import type { Level } from "../mapgen/types.ts";
 import { botInput, RIDER_BOT, type BotProfile } from "./bot.ts";
-import { hypot } from "../lib/math.ts";
+import { hypot } from "@niclaslindstedt/oss-game-framework/core/math";
 
 export type SimOptions = {
   /** A map to ride instead of the seed's own. */
