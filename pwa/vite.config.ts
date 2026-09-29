@@ -60,6 +60,9 @@ export default defineConfig(({ mode }) => {
     sleds: modelSwitch(env.VITE_MODEL_SLEDS),
     riders: modelSwitch(env.VITE_MODEL_RIDERS),
     trees: modelSwitch(env.VITE_MODEL_TREES),
+    birds: modelSwitch(env.VITE_MODEL_BIRDS),
+    beasts: modelSwitch(env.VITE_MODEL_BEASTS),
+    gates: modelSwitch(env.VITE_MODEL_GATES),
   };
   return {
     base,

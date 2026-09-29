@@ -17,11 +17,16 @@
 // instances every tree in.
 
 import * as THREE from "three";
-import { GLTFLoader, type GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { MeshoptDecoder } from "three/examples/jsm/libs/meshopt_decoder.module.js";
+import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { TREE_KINDS, type TreeKind } from "@engine";
 
 import { modelSwitch } from "./model-switch.ts";
+import {
+  fetchStaticModels,
+  readStaticModel,
+  type ModelPart,
+  type StaticModel,
+} from "./model-parts.ts";
 import { SNOW, SNOW_SHADE, kindPaint, type KindPaint, type TreePaint } from "./tree-shapes.ts";
 import { TREE_REFERENCE, type TreeVariant } from "./tree-variants.ts";
 
@@ -55,67 +60,19 @@ export function roleColours(role: string, p: KindPaint): [THREE.Color, THREE.Col
   }
 }
 
-/** One primitive of a variant's mesh, read out of its glTF into the
- * reference tree's metres (through its node, which carries the packed
- * file's quantization step): three numbers a vertex each. */
-export type TreePart = {
-  role: string;
-  position: Float32Array;
-  normal: Float32Array;
-  tone: Float32Array;
-  index: Uint32Array;
-};
+/** One primitive of a variant's mesh, in the reference tree's metres
+ * (`model-parts.ts` reads it). */
+export type TreePart = ModelPart;
 
 /** Every kind's variants, by mesh name (`v3`, `v3_far`). */
 const loaded = new Map<TreeKind, Map<string, TreePart[]>>();
 let loading: Promise<void> | null = null;
 
+const VARIANT_MESH = /^v\d+(_far)?$/;
+
 /** The parts of a loaded glTF scene, by variant mesh. */
 export function partsOf(gltf: Pick<GLTF, "scene">): Map<string, TreePart[]> {
-  const out = new Map<string, TreePart[]>();
-  gltf.scene.updateMatrixWorld(true);
-  gltf.scene.traverse((o) => {
-    if (!/^v\d+(_far)?$/.test(o.name)) return;
-    const meshes: THREE.Mesh[] = [];
-    if (o instanceof THREE.Mesh) meshes.push(o);
-    else o.traverse((c) => c instanceof THREE.Mesh && meshes.push(c));
-    const parts: TreePart[] = [];
-    for (const m of meshes) {
-      const g = m.geometry as THREE.BufferGeometry;
-      const pos = g.getAttribute("position");
-      const nrm = g.getAttribute("normal");
-      const tone = g.getAttribute("color");
-      if (!pos || !nrm || !tone || !g.index) continue;
-      const mat = Array.isArray(m.material) ? m.material[0] : m.material;
-      const n = pos.count;
-      const position = new Float32Array(n * 3);
-      const normal = new Float32Array(n * 3);
-      const tones = new Float32Array(n * 3);
-      const turn = new THREE.Matrix3().getNormalMatrix(m.matrixWorld);
-      const v = new THREE.Vector3();
-      for (let i = 0; i < n; i++) {
-        v.fromBufferAttribute(pos, i)
-          .applyMatrix4(m.matrixWorld)
-          .toArray(position, i * 3);
-        v.fromBufferAttribute(nrm, i)
-          .applyMatrix3(turn)
-          .normalize()
-          .toArray(normal, i * 3);
-        tones[i * 3] = tone.getX(i);
-        tones[i * 3 + 1] = tone.getY(i);
-        tones[i * 3 + 2] = tone.getZ(i);
-      }
-      parts.push({
-        role: mat.name,
-        position,
-        normal,
-        tone: tones,
-        index: Uint32Array.from(g.index.array),
-      });
-    }
-    out.set(o.name, parts);
-  });
-  return out;
+  return readStaticModel(gltf, (name) => VARIANT_MESH.test(name)).parts;
 }
 
 /** Fetch every kind's model, once (`base` where the site's `models/` is —
@@ -124,16 +81,15 @@ export function partsOf(gltf: Pick<GLTF, "scene">): Map<string, TreePart[]> {
 export function loadTreeModels(base = String(ENV.BASE_URL ?? "/")): Promise<void> {
   if (loading) return loading;
   if (!TREE_MODELS) return (loading = Promise.resolve());
-  // The committed models are meshopt-packed (`scripts/lib/glb-pack.mjs`).
-  const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
-  loading = Promise.all(
-    TREE_KINDS.map((kind) =>
-      loader.loadAsync(`${base}models/trees/${kind}.glb`).then(
-        (g) => void loaded.set(kind, partsOf(g)),
-        () => undefined,
-      ),
-    ),
-  ).then(() => undefined);
+  const models = new Map<TreeKind, StaticModel>();
+  loading = fetchStaticModels(
+    TREE_KINDS,
+    (kind) => `${base}models/trees/${kind}.glb`,
+    (name) => VARIANT_MESH.test(name),
+    models,
+  ).then(() => {
+    for (const [kind, m] of models) loaded.set(kind, m.parts);
+  });
   return loading;
 }
 

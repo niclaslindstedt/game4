@@ -112,6 +112,9 @@ import { createTrailOverlay } from "./trail-overlay.ts";
 import { createWildlife, type Wildlife } from "./wildlife.ts";
 import { loadModels as loadSledModels } from "./sled-models.ts";
 import { loadTreeModels } from "./tree-models.ts";
+import { loadBirdModels } from "./bird-models.ts";
+import { loadBeastModels } from "./beast-models.ts";
+import { loadGateModels } from "./gate-models.ts";
 import {
   bodyStampOf,
   createPen,
@@ -124,7 +127,13 @@ import {
 // The modelled machines, riders and trees, fetched before the kit is handed
 // out (`use-render-kit.ts`), when this build draws them.
 export async function loadModels(): Promise<void> {
-  await Promise.all([loadSledModels(), loadTreeModels()]);
+  await Promise.all([
+    loadSledModels(),
+    loadTreeModels(),
+    loadBirdModels(),
+    loadBeastModels(),
+    loadGateModels(),
+  ]);
 }
 
 export type RendererOptions = {

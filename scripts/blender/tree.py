@@ -43,6 +43,7 @@ import json, math, os, random, sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import lib
 from lib import *
+from static import frame, norm, smoothstep
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 DATA = json.load(open(argv[0]))
@@ -94,10 +95,6 @@ MATS = [
 ]
 
 # ---------------------------------------------------------------- the MESH being built
-def norm(v):
-    l = math.sqrt(v[0] * v[0] + v[1] * v[1] + v[2] * v[2]) or 1.0
-    return (v[0] / l, v[1] / l, v[2] / l)
-
 class Tree:
     """A mesh under construction: every vertex with its tone (shade, blend,
     load) and — for foliage and snow — its own normal; every face its role.
@@ -140,13 +137,6 @@ class Tree:
         ob = bpy.data.objects.new(name, me)
         COL.objects.link(ob)
         return ob
-
-def frame(d):
-    """Two unit vectors across a direction `d`."""
-    d = Vector(d).normalized()
-    a = Vector((0, 0, 1)) if abs(d.z) < 0.9 else Vector((1, 0, 0))
-    u = d.cross(a).normalized()
-    return u, d.cross(u).normalized()
 
 def tube(t, pts, radii, sides, role, tone=lambda k: (1.0, 0.0), cap=False, mark=None):
     """A tapering tube through `pts` (Vectors), `radii` at each; `tone(k)`
@@ -210,10 +200,6 @@ def blob(t, at, r, role, blend=0.0, load=0.0):
     for a, b in ((0, 2), (2, 1), (1, 3), (3, 0)):
         t.f((ix[a], ix[b], ix[4]), role)
         t.f((ix[b], ix[a], ix[5]), role)
-
-def smoothstep(a, b, x):
-    u = max(0.0, min(1.0, (x - a) / (b - a)))
-    return u * u * (3 - 2 * u)
 
 def trunk_points(z0, z1, n, at=lambda z: (0.0, 0.0)):
     return [Vector((*at(z0 + (z1 - z0) * k / n), z0 + (z1 - z0) * k / n)) for k in range(n + 1)]

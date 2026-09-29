@@ -30,7 +30,7 @@
 // most in the air, from the snow under it) and prints (last night's prints
 // on a fox's round, the player stood off it so the fine trail map is over it).
 
-import { existsSync, mkdirSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import { execSync } from "node:child_process";
 import { dirname, join } from "node:path";
@@ -135,6 +135,9 @@ if (!args["skip-build"] || !existsSync(join(buildDir, "world-preview.html"))) {
     },
   });
 }
+// The committed models go beside the page, where the renderer fetches
+// them from (`loadModels`), so the lab draws what the game draws.
+cpSync(join(root, "pwa", "models"), join(buildDir, "models"), { recursive: true });
 
 /** playwright-core from this tree, or else from the global install the
  * web sessions carry. */

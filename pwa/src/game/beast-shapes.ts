@@ -512,8 +512,11 @@ export function beastMaterial(
   spec: BeastSpec,
   pivot: { y: number; z: number },
   haze: HazeUniforms,
+  flat = true,
 ): THREE.MeshLambertMaterial {
-  const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  // The code's animal is a pile of facets; a modelled one
+  // (`beast-models.ts`) carries its own normals and is lit smooth.
+  const material = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: flat });
   return hazeMaterial(material, haze, "beast", gaitGraft(spec, pivot));
 }
 

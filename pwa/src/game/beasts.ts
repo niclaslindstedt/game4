@@ -31,6 +31,7 @@ import {
   type BeastPlan,
   type Spook,
 } from "./beast-plan.ts";
+import { beastModel } from "./beast-models.ts";
 import { BEAST_STYLES, beastDepthMaterial, beastMaterial, buildBeast } from "./beast-shapes.ts";
 import { TRACKED, footfall, footfallSpacing, priorPrints } from "./beast-tracks.ts";
 import type { HazeUniforms } from "./haze.ts";
@@ -89,7 +90,10 @@ export function createBeasts(level: Level, haze: HazeUniforms, snow?: PrintSnow)
   for (const spec of BEASTS) {
     const capacity = beastCount(plan, spec.id);
     if (capacity === 0) continue;
-    const { geometry, pivot } = buildBeast(spec, BEAST_STYLES[spec.id]);
+    // The species' model where one is loaded (`beast-models.ts`), else
+    // the code's own animal, flat-shaded as it is built to be.
+    const modelled = beastModel(spec, BEAST_STYLES[spec.id]);
+    const { geometry, pivot } = modelled ?? buildBeast(spec, BEAST_STYLES[spec.id]);
     const attr = (): THREE.InstancedBufferAttribute => {
       const a = new THREE.InstancedBufferAttribute(new Float32Array(capacity), 1);
       a.setUsage(THREE.DynamicDrawUsage);
@@ -101,7 +105,11 @@ export function createBeasts(level: Level, haze: HazeUniforms, snow?: PrintSnow)
     geometry.setAttribute("aGait", gait);
     geometry.setAttribute("aStride", stride);
     geometry.setAttribute("aGraze", graze);
-    const mesh = new THREE.InstancedMesh(geometry, beastMaterial(spec, pivot, haze), capacity);
+    const mesh = new THREE.InstancedMesh(
+      geometry,
+      beastMaterial(spec, pivot, haze, !modelled),
+      capacity,
+    );
     mesh.customDepthMaterial = beastDepthMaterial(spec, pivot);
     mesh.castShadow = true;
     mesh.receiveShadow = true;

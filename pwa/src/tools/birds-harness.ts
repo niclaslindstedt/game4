@@ -17,15 +17,20 @@
 // a bird gliding, mid-downstroke and folded at rest, seen from below and
 // ahead, where the snow sees a bird from; an animal stood, in full stride
 // and with its head down, seen from the side a little above, over snow.
-// A metre rule runs across every cell.
+// A metre rule runs across every cell. `?models=1` draws the MODELLED
+// roster (`bird-models.ts`, `beast-models.ts` — the glTFs the lab copied
+// beside the page) as the game draws it, and `?models=compare` each
+// species twice, the code's cell then its model's.
 //
 // Sets `window.__done` when the sheet is on screen.
 
 import * as THREE from "three";
 
 import { BEASTS, beastRarity, type BeastSpec } from "../game/beast-defs.ts";
+import { beastModel, loadBeastModels } from "../game/beast-models.ts";
 import { BEAST_STYLES, beastMaterial, buildBeast } from "../game/beast-shapes.ts";
 import { BIRDS, birdRarity, type BirdSpec } from "../game/bird-defs.ts";
+import { birdModel, loadBirdModels } from "../game/bird-models.ts";
 import { BIRD_STYLES, birdMaterial, buildBird } from "../game/bird-shapes.ts";
 import { createHazeUniforms } from "../game/haze.ts";
 
@@ -35,6 +40,9 @@ const CELL_H = 280;
 const COLS = 4;
 
 type Cell = { name: string; foot: string; draw: (scene: THREE.Scene) => THREE.Camera };
+
+const query = new URLSearchParams(location.search);
+const models = query.get("models");
 
 const haze = createHazeUniforms();
 // No haze at a few metres, and a winter noon's light to judge the paint by.
@@ -68,21 +76,22 @@ function lights(scene: THREE.Scene): void {
   scene.add(key);
 }
 
-function birdCell(spec: BirdSpec): Cell {
+function birdCell(spec: BirdSpec, model: boolean): Cell {
   const poses = [
     { flap: spec.dihedral, fold: 0 },
     { flap: -spec.stroke * 0.8, fold: 0 },
     { flap: -0.3, fold: 1 },
   ];
   return {
-    name: `${spec.name} — ${spec.regions.join(" · ")}`,
+    name: `${spec.name}${model ? " (model)" : ""} — ${spec.regions.join(" · ")}`,
     foot:
       `span ${spec.span} m · ${spec.beatHz} Hz · glide ${spec.glide} · ` +
       (spec.home ? `${spec.home} · ${birdRarity(spec)}` : `crosses day ${spec.passage?.days.min}+`),
     draw(scene) {
       const gap = Math.max(spec.span * 0.62, 0.45);
       poses.forEach((p, k) => {
-        const geometry = buildBird(spec, BIRD_STYLES[spec.id]);
+        const modelled = model ? birdModel(spec, BIRD_STYLES[spec.id]) : null;
+        const geometry = modelled ?? buildBird(spec, BIRD_STYLES[spec.id]);
         geometry.setAttribute(
           "aFlap",
           new THREE.InstancedBufferAttribute(new Float32Array([p.flap]), 1),
@@ -91,7 +100,7 @@ function birdCell(spec: BirdSpec): Cell {
           "aFold",
           new THREE.InstancedBufferAttribute(new Float32Array([p.fold]), 1),
         );
-        const mesh = new THREE.InstancedMesh(geometry, birdMaterial(spec, haze), 1);
+        const mesh = new THREE.InstancedMesh(geometry, birdMaterial(spec, haze, !modelled), 1);
         mesh.setMatrixAt(0, new THREE.Matrix4());
         mesh.position.set((k - 1) * gap, k === 2 ? spec.length * 0.16 : spec.span * 0.55, 0);
         mesh.rotation.y = -0.55;
@@ -116,14 +125,14 @@ function birdCell(spec: BirdSpec): Cell {
   };
 }
 
-function beastCell(spec: BeastSpec): Cell {
+function beastCell(spec: BeastSpec, model: boolean): Cell {
   const poses = [
     { gait: 0, stride: 0, graze: 0 },
     { gait: 1.2, stride: 1, graze: 0 },
     { gait: 0, stride: 0, graze: 1 },
   ];
   return {
-    name: `${spec.name} — ${spec.regions.join(" · ")}`,
+    name: `${spec.name}${model ? " (model)" : ""} — ${spec.regions.join(" · ")}`,
     foot:
       `${spec.length} m · ${spec.height} m at the shoulder · ${spec.gait} · ` +
       `${spec.home} · ${beastRarity(spec)}`,
@@ -136,12 +145,17 @@ function beastCell(spec: BeastSpec): Cell {
       snow.rotation.x = -Math.PI / 2;
       scene.add(snow);
       poses.forEach((p, k) => {
-        const { geometry, pivot } = buildBeast(spec, BEAST_STYLES[spec.id]);
+        const modelled = model ? beastModel(spec, BEAST_STYLES[spec.id]) : null;
+        const { geometry, pivot } = modelled ?? buildBeast(spec, BEAST_STYLES[spec.id]);
         const attr = (v: number) => new THREE.InstancedBufferAttribute(new Float32Array([v]), 1);
         geometry.setAttribute("aGait", attr(p.gait));
         geometry.setAttribute("aStride", attr(p.stride));
         geometry.setAttribute("aGraze", attr(p.graze));
-        const mesh = new THREE.InstancedMesh(geometry, beastMaterial(spec, pivot, haze), 1);
+        const mesh = new THREE.InstancedMesh(
+          geometry,
+          beastMaterial(spec, pivot, haze, !modelled),
+          1,
+        );
         mesh.setMatrixAt(0, new THREE.Matrix4());
         mesh.position.set((k - 1) * gap, 0, 0);
         // Side on, a little toward the lens: the silhouette and the face.
@@ -167,8 +181,14 @@ function beastCell(spec: BeastSpec): Cell {
   };
 }
 
-function main(): void {
-  const cells: Cell[] = [...chosen(BIRDS).map(birdCell), ...chosen(BEASTS).map(beastCell)];
+async function main(): Promise<void> {
+  if (models) await Promise.all([loadBirdModels("./"), loadBeastModels("./")]);
+  /** Each species once, or twice under `compare`: the code's, then the model's. */
+  const twice = <T>(rows: readonly T[], cell: (r: T, model: boolean) => Cell): Cell[] =>
+    rows.flatMap((r) =>
+      models === "compare" ? [cell(r, false), cell(r, true)] : [cell(r, models === "1")],
+    );
+  const cells: Cell[] = [...twice(chosen(BIRDS), birdCell), ...twice(chosen(BEASTS), beastCell)];
   const rows = Math.ceil(cells.length / COLS);
   const sheetCanvas = document.getElementById("stage") as HTMLCanvasElement;
   sheetCanvas.width = CELL_W * Math.min(COLS, cells.length);
@@ -210,4 +230,4 @@ function main(): void {
   (window as unknown as { __done: boolean }).__done = true;
 }
 
-main();
+void main();

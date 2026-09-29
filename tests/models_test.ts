@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE MODELLED MACHINES, RIDERS AND TREES the game ships (`pwa/models/`,
-// made by `make models`, packed by `pwa/models-plugin.ts`, drawn by
-// `sled-models.ts` and `tree-models.ts`): every one committed, none older
-// than the sources it is made from, each within its budget; the switches on
-// unless a build turns one back; and every material the Blender builders
-// name dressed as the builder's own machine, or the region's tree, would
-// be. The names are stated twice — in `scripts/blender/*.py`, which cannot
-// import a module of the game, and in `dressOf` / `roleColours` — so the
-// builders are read here as TEXT, the way `tauri_test.ts` reads the Rust.
+// THE MODELLED MACHINES, RIDERS, TREES, WILDLIFE AND MARKS the game ships
+// (`pwa/models/`, made by `make models`, packed by `pwa/models-plugin.ts`,
+// drawn by `sled-models.ts`, `tree-models.ts`, `bird-models.ts`,
+// `beast-models.ts` and `gate-models.ts`): every one committed, none older
+// than the sources it is made from, each within its budget; the switches
+// on unless a build turns one back; and every material the Blender
+// builders name dressed as the builder's own machine, or the region's
+// tree, would be. The names are stated twice — in `scripts/blender/*.py`,
+// which cannot import a module of the game, and in `dressOf` /
+// `roleColours` and the wildlife's — so the builders are read here as
+// TEXT, the way `tauri_test.ts` reads the Rust.
 
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
@@ -15,7 +17,16 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { SLEDS, TREE_KINDS } from "@engine";
 
-import { MODELS_DIR, TREE_SOURCES, modelFiles, sourcesHash } from "../pwa/models-plugin.ts";
+import {
+  ALL_MODELS,
+  MODELS_DIR,
+  MODEL_HALVES,
+  modelFiles,
+  sourcesHash,
+} from "../pwa/models-plugin.ts";
+import { BEAST_IDS } from "../pwa/src/game/beast-defs.ts";
+import { BIRD_IDS } from "../pwa/src/game/bird-defs.ts";
+import { GATE_IDS } from "../pwa/src/game/gate-ids.ts";
 import { modelSwitch } from "../pwa/src/game/model-switch.ts";
 import { dressOf } from "../pwa/src/game/sled-models.ts";
 import { SLED_STYLES } from "../pwa/src/game/sled-body.ts";
@@ -27,18 +38,33 @@ const matNames = (file: string): string[] =>
   ].map((m) => m[1]);
 
 describe("the models the game ships", () => {
-  const all = modelFiles({ sleds: true, riders: true, trees: true });
+  const all = modelFiles(ALL_MODELS);
+  const none = {
+    sleds: false,
+    riders: false,
+    trees: false,
+    birds: false,
+    beasts: false,
+    gates: false,
+  };
 
-  it("are every machine under its id, one rider and every kind of tree", () => {
+  it("are every machine under its id, one rider, every tree, bird, animal and mark", () => {
     expect([...all].sort()).toEqual(
       [
         ...SLEDS.map((s) => `${s.id}.glb`),
         "rider.glb",
         ...TREE_KINDS.map((k) => `trees/${k}.glb`),
+        ...BIRD_IDS.map((k) => `birds/${k}.glb`),
+        ...BEAST_IDS.map((k) => `beasts/${k}.glb`),
+        ...GATE_IDS.map((k) => `gates/${k}.glb`),
       ].sort(),
     );
-    expect(modelFiles({ sleds: false, riders: true, trees: false })).toEqual(["rider.glb"]);
-    expect(modelFiles({ sleds: false, riders: false, trees: false })).toEqual([]);
+    expect(modelFiles({ ...none, riders: true })).toEqual(["rider.glb"]);
+    expect(modelFiles({ ...none, gates: true })).toEqual([
+      "gates/checkpoint.glb",
+      "gates/start-arch.glb",
+    ]);
+    expect(modelFiles(none)).toEqual([]);
   });
 
   it("are all committed, each within its budget", () => {
@@ -46,26 +72,34 @@ describe("the models the game ships", () => {
       const at = join(root, MODELS_DIR, f);
       expect(existsSync(at), `${MODELS_DIR}/${f} — run \`make models\``).toBe(true);
       // A machine's LOD0 is ~1.1 MB, the rider's ~0.5 MB, a kind of tree's
-      // ten variants (packed) ~0.15 MB: a model grown past this is a
-      // builder that lost its game budget.
-      const budget = f.startsWith("trees/") ? 320_000 : f === "rider.glb" ? 900_000 : 1_600_000;
+      // ten variants (packed) ~0.15 MB, a bird or an animal (packed) a few
+      // KB, the arch ~40 KB: a model grown past this is a builder that lost
+      // its game budget.
+      const budget = f.startsWith("trees/")
+        ? 320_000
+        : f.startsWith("birds/") || f.startsWith("beasts/")
+          ? 40_000
+          : f.startsWith("gates/")
+            ? 120_000
+            : f === "rider.glb"
+              ? 900_000
+              : 1_600_000;
       expect(statSync(at).size, f).toBeLessThan(budget);
     }
   });
 
   it("are no older than the sources they are made from", () => {
-    const stamp = JSON.parse(readFileSync(join(root, MODELS_DIR, "sources.json"), "utf8")) as {
-      sources: string;
-      trees: string;
-    };
-    expect(
-      stamp.sources,
-      "a source of the machines moved since they were made — run `make models` and commit pwa/models/",
-    ).toBe(sourcesHash(root));
-    expect(
-      stamp.trees,
-      "a source of the trees moved since they were made — run `make models SET=trees` and commit pwa/models/",
-    ).toBe(sourcesHash(root, TREE_SOURCES));
+    const stamp = JSON.parse(
+      readFileSync(join(root, MODELS_DIR, "sources.json"), "utf8"),
+    ) as Record<string, string>;
+    for (const [half, sources] of Object.entries(MODEL_HALVES)) {
+      const set = half === "sources" ? "machines" : half;
+      expect(
+        stamp[half],
+        `a source of the ${set} moved since they were made — run \`make models SET=${set}\` and commit pwa/models/`,
+      ).toBe(sourcesHash(root, sources));
+    }
+    expect(sourcesHash(root)).toBe(sourcesHash(root, MODEL_HALVES.sources));
   });
 });
 

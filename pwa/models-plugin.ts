@@ -1,19 +1,23 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE MODELS EVERY BUILD PACKS: every machine's game-quality glTF as
-// `models/<id>.glb`, the rider's as `models/rider.glb` and every kind of
-// tree's as `models/trees/<kind>.glb`, emitted into the
-// bundle (so the service worker precaches them with everything else) and
-// served the same way by the dev server. They are COMMITTED, in
+// `models/<id>.glb`, the rider's as `models/rider.glb`, every kind of
+// tree's as `models/trees/<kind>.glb`, every bird's and animal's as
+// `models/birds/<id>.glb` and `models/beasts/<id>.glb`, and the course's
+// marks as `models/gates/<id>.glb`, emitted into the bundle (so the
+// service worker precaches them with everything else) and served the same
+// way by the dev server. They are COMMITTED, in
 // `pwa/models/`, made there by `make models` (Blender, off the game's own
 // data — the `blender-assets` skill), with a stamp of the sources they were
 // made from (`sources.json`), which `tests/models_test.ts` holds to the
 // sources as they stand: a model older than its sources fails the suite.
-// The trees are stamped apart (`TREE_SOURCES`), so a tree remade never asks
-// for the machines to be, nor the other way round.
+// Each half is stamped apart (`TREE_SOURCES`, `BIRD_SOURCES`,
+// `BEAST_SOURCES`, `GATE_SOURCES`), so a tree remade never asks for the
+// machines to be, nor the other way round.
 //
-// A build switched back to the code-built machines, rider or trees
-// (`VITE_MODEL_SLEDS=0`, `VITE_MODEL_RIDERS=0`, `VITE_MODEL_TREES=0` —
-// `src/game/model-switch.ts`) packs none of that side's files.
+// A build switched back to a code-built half (`VITE_MODEL_SLEDS=0`,
+// `VITE_MODEL_RIDERS=0`, `VITE_MODEL_TREES=0`, `VITE_MODEL_BIRDS=0`,
+// `VITE_MODEL_BEASTS=0`, `VITE_MODEL_GATES=0` — `src/game/model-switch.ts`)
+// packs none of that side's files.
 
 import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
@@ -23,8 +27,28 @@ import type { Plugin } from "vite";
 
 import { SLEDS } from "../engine/game/defs/sled.ts";
 import { TREE_KINDS } from "../engine/mapgen/regions.ts";
+import { BEAST_IDS } from "./src/game/beast-defs.ts";
+import { BIRD_IDS } from "./src/game/bird-defs.ts";
+import { GATE_IDS } from "./src/game/gate-ids.ts";
 
-export type ModelSwitches = { sleds: boolean; riders: boolean; trees: boolean };
+export type ModelSwitches = {
+  sleds: boolean;
+  riders: boolean;
+  trees: boolean;
+  birds: boolean;
+  beasts: boolean;
+  gates: boolean;
+};
+
+/** Every switch on — what a build draws unless told otherwise. */
+export const ALL_MODELS: ModelSwitches = {
+  sleds: true,
+  riders: true,
+  trees: true,
+  birds: true,
+  beasts: true,
+  gates: true,
+};
 
 /** Where the committed models are, from the repository's root. */
 export const MODELS_DIR = "pwa/models";
@@ -35,6 +59,9 @@ export function modelFiles(on: ModelSwitches): string[] {
     ...(on.sleds ? SLEDS.map((s) => `${s.id}.glb`) : []),
     ...(on.riders ? ["rider.glb"] : []),
     ...(on.trees ? TREE_KINDS.map((k) => `trees/${k}.glb`) : []),
+    ...(on.birds ? BIRD_IDS.map((k) => `birds/${k}.glb`) : []),
+    ...(on.beasts ? BEAST_IDS.map((k) => `beasts/${k}.glb`) : []),
+    ...(on.gates ? GATE_IDS.map((k) => `gates/${k}.glb`) : []),
   ];
 }
 
@@ -44,6 +71,8 @@ export function modelFiles(on: ModelSwitches): string[] {
  * A change to any of these can move a model; the stamp is their hash. */
 export const MODEL_SOURCES = [
   "scripts/blender.mjs",
+  "scripts/blender/kinds/sled.mjs",
+  "scripts/blender/kinds/rider.mjs",
   "scripts/blender/lib.py",
   "scripts/blender/sled.py",
   "scripts/blender/rider.py",
@@ -59,11 +88,58 @@ export const MODEL_SOURCES = [
  * variant rows it models, and the packer the published files go through. */
 export const TREE_SOURCES = [
   "scripts/blender.mjs",
+  "scripts/blender/kinds/tree.mjs",
   "scripts/blender/lib.py",
+  "scripts/blender/static.py",
   "scripts/blender/tree.py",
   "scripts/lib/glb-pack.mjs",
   "pwa/src/game/tree-variants.ts",
 ];
+
+/** The static shelf every wildlife and gate model stands on, and the
+ * packer it ships through. */
+const STATIC_SOURCES = [
+  "scripts/blender.mjs",
+  "scripts/blender/lib.py",
+  "scripts/blender/static.py",
+  "scripts/lib/glb-pack.mjs",
+];
+
+/** WHAT A BIRD IS MADE FROM: its builder and the roster's rows. */
+export const BIRD_SOURCES = [
+  ...STATIC_SOURCES,
+  "scripts/blender/kinds/bird.mjs",
+  "scripts/blender/bird.py",
+  "pwa/src/game/bird-defs.ts",
+];
+
+/** WHAT AN ANIMAL IS MADE FROM: its builder, the roster's rows and the
+ * styles that proportion it. */
+export const BEAST_SOURCES = [
+  ...STATIC_SOURCES,
+  "scripts/blender/kinds/beast.mjs",
+  "scripts/blender/beast.py",
+  "pwa/src/game/beast-defs.ts",
+  "pwa/src/game/beast-shapes.ts",
+];
+
+/** WHAT THE COURSE'S MARKS ARE MADE FROM: the builder and the plan. */
+export const GATE_SOURCES = [
+  ...STATIC_SOURCES,
+  "scripts/blender/kinds/gate.mjs",
+  "scripts/blender/gate.py",
+  "pwa/src/game/start-arch.ts",
+];
+
+/** Every half's stamp in `sources.json`, and the sources it hashes. */
+export const MODEL_HALVES = {
+  sources: MODEL_SOURCES,
+  trees: TREE_SOURCES,
+  birds: BIRD_SOURCES,
+  beasts: BEAST_SOURCES,
+  gates: GATE_SOURCES,
+} as const;
+export type ModelHalf = keyof typeof MODEL_HALVES;
 
 /** The sources' hash, from the repository's `root` (line endings as
  * committed: `\r` dropped, so a checkout's conversion moves nothing) — the
@@ -103,7 +179,9 @@ export function sledModels(on: ModelSwitches, root: string): Plugin {
     },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        const name = /\/models\/((?:trees\/)?[\w-]+\.glb)$/.exec(req.url ?? "")?.[1];
+        const name = /\/models\/((?:trees\/|birds\/|beasts\/|gates\/)?[\w-]+\.glb)$/.exec(
+          req.url ?? "",
+        )?.[1];
         if (!name || !files.includes(name) || !existsSync(join(dir, name))) return next();
         res.setHeader("Content-Type", "model/gltf-binary");
         res.end(readFileSync(join(dir, name)));

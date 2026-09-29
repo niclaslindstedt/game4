@@ -17,9 +17,12 @@
 //
 //   node scripts/birds-preview.mjs
 //   node scripts/birds-preview.mjs --rows=raven,ptarmigan,reindeer
+//   node scripts/birds-preview.mjs --models          # the MODELLED roster (pwa/models/birds, beasts)
+//   node scripts/birds-preview.mjs --models --from=previews/blender --compare
+//                                   # a lab run's models, each species' code cell beside its model's
 //   node scripts/birds-preview.mjs --skip-build      # reuse the last bundle
 
-import { existsSync, mkdirSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -40,11 +43,28 @@ const args = parseArgs(
       default: "",
       help: "only these species, birds or animals (e.g. raven,ptarmigan,reindeer)",
     },
+    models: {
+      kind: "flag",
+      help: "draw the MODELLED birds and animals (every <id>.glb in --from)",
+    },
+    from: {
+      kind: "string",
+      default: "pwa/models",
+      help: "where --models finds them, in birds/ and beasts/ (previews/blender: a make blender run's, flat)",
+    },
+    compare: {
+      kind: "flag",
+      help: "with --models: each species' code-built cell beside its model's",
+    },
     "skip-build": { kind: "flag", help: "reuse the bundle from the last run" },
     timeout: { kind: "number", default: 600, help: "how long the sheet may take to draw, s" },
-    out: { kind: "string", default: join(outDir, "birds.png"), help: "where the sheet is written" },
+    out: {
+      kind: "string",
+      default: "",
+      help: "where the sheet is written (previews/birds[-models|-compare].png)",
+    },
   },
-  "usage: node scripts/birds-preview.mjs [--rows=a,b] [--skip-build] [--out=path]",
+  "usage: node scripts/birds-preview.mjs [--rows=a,b] [--models] [--from=dir] [--compare] [--skip-build] [--out=path]",
 );
 
 mkdirSync(outDir, { recursive: true });
@@ -64,6 +84,20 @@ if (!args["skip-build"] || !existsSync(join(buildDir, "birds-preview.html"))) {
       rollupOptions: { input: join(root, "pwa", "birds-preview.html") },
     },
   });
+}
+
+// The models go beside the page, where the harness fetches them from: a
+// published tree keeps its birds/ and beasts/; a lab run's are flat.
+const models = args.models ? args.from : "";
+if (models) {
+  for (const dir of ["birds", "beasts"]) {
+    const into = join(buildDir, "models", dir);
+    mkdirSync(into, { recursive: true });
+    const from = existsSync(join(root, models, dir)) ? join(root, models, dir) : join(root, models);
+    for (const f of readdirSync(from)) {
+      if (/^[a-z]+\.glb$/.test(f)) copyFileSync(join(from, f), join(into, f));
+    }
+  }
 }
 
 const found = await findChromium();
@@ -88,8 +122,15 @@ page.on("console", (msg) => {
   if (msg.type() === "error") console.error(`[console] ${msg.text()}`);
 });
 
-const query = args.rows ? `?rows=${encodeURIComponent(args.rows)}` : "";
-console.log(`birds — ${args.rows || "every bird and every animal"}`);
+const params = new URLSearchParams();
+if (args.rows) params.set("rows", args.rows);
+if (models) params.set("models", args.compare ? "compare" : "1");
+const query = params.size ? `?${params}` : "";
+const out =
+  args.out || join(outDir, `birds${models ? (args.compare ? "-compare" : "-models") : ""}.png`);
+console.log(
+  `birds — ${args.rows || "every bird and every animal"}${models ? `, models from ${models}` : ""}`,
+);
 await page.goto(`${server.url}birds-preview.html${query}`);
 await Promise.race([
   page.waitForFunction("window.__done === true", undefined, { timeout: args.timeout * 1000 }),
@@ -107,8 +148,8 @@ await Promise.race([
 const stage = await page.$("canvas#stage");
 const box = await stage.boundingBox();
 await page.setViewportSize({ width: Math.ceil(box.width), height: Math.ceil(box.height) });
-await page.screenshot({ path: args.out, fullPage: true });
-console.log(args.out.replace(`${root}/`, ""));
+await page.screenshot({ path: out, fullPage: true });
+console.log(out.replace(`${root}/`, ""));
 
 await browser.close();
 await server.close();

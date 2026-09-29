@@ -26,7 +26,7 @@ import { beastById } from "../game/beast-defs.ts";
 import { beastPlanFor, beastPose, freshBeastPose, roundAt } from "../game/beast-plan.ts";
 import { birdPlanFor, birdPose, flightShare, freshBirdPose } from "../game/bird-plan.ts";
 import type { LensPose } from "../game/camera-rigs.ts";
-import { createWorldRenderer } from "../game/renderer.ts";
+import { createWorldRenderer, loadModels } from "../game/renderer.ts";
 import {
   DEFAULT_VIDEO,
   SHADOW_LEVELS,
@@ -69,6 +69,8 @@ canvas.style.width = `${width}px`;
 canvas.style.height = `${height}px`;
 const label = document.getElementById("label") as HTMLDivElement;
 
+// The models the game draws (the lab copied them beside the page).
+await loadModels();
 const renderer = createWorldRenderer(canvas, {
   video: { ...withPreset(DEFAULT_VIDEO, tier), ...(shadows ? { shadows } : {}) },
   preserveDrawingBuffer: true,
