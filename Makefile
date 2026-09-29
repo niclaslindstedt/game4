@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky cloud sled blender models ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky cloud sled blender models model-registry ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
 
 build:
 	npm run build
@@ -257,6 +257,12 @@ difficulty:
 # `make routes` · `make routes ARGS=--check`
 routes:
 	npm run routes -- $(ARGS)
+
+# THE MODEL REGISTRY: which assets are Blender models and which the code
+# generates, written into docs/models.md from pwa/src/game/model-registry.ts.
+# `make model-registry` · `make model-registry ARGS=--check`
+model-registry:
+	npm run model-registry -- $(ARGS)
 
 # THE RIDE LAB — the sled on the snow, drawn in profile over the ground it
 # crossed, with the numbers that decide the next step beside each cell. One
