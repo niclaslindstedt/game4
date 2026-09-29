@@ -47,7 +47,7 @@ export const GALLERY_STRINGS = {
   galleryEmpty:
     "Nothing here yet. Press ENTER during a race — or take a screenshot on a phone — and the picture lands here.",
   /** The three ways a picture leaves the game, offered only where the
-   * browser will actually do them (lib/share-image.ts), and the two-step
+   * browser will actually do them (the framework's `shots/share-image`), and the two-step
    * delete beside them — a stray press must not destroy a picture that
    * cannot be taken again. */
   galleryShare: "SHARE",

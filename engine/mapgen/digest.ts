@@ -21,7 +21,7 @@
 // determinism digest is built (`sim/simulate.ts`), printed as eight hex
 // digits so it reads as one word in a campaign map's row.
 
-import { sampleField } from "../lib/heightfield.ts";
+import { sampleField } from "@niclaslindstedt/oss-game-framework/core/heightfield";
 import { DEFAULT_REGION, regionOf } from "./regions.ts";
 import { weatherOf } from "./weather.ts";
 import type { Level } from "./types.ts";

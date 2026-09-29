@@ -307,7 +307,7 @@ export function buildGear(
         const lift = lifts.ski[i];
         s.group.position.y = ground + lift + sink * SINK_SHARE.ski;
         // Clockwise from above is a positive turn about +y in the engine's
-        // frame, which is three's too (`lib/quat.ts`).
+        // frame, which is three's too (the framework's `core/quat`).
         s.group.rotation.y = sled.skiAngle;
         const side = i === 0 ? -1 : 1;
         const x = (side * spec.skiStance) / 2;

@@ -24,9 +24,13 @@
 // drifts: the cliffs move the ground the forest then grows on and nothing
 // else the map draws.
 
-import { hypot, smoothstep } from "../lib/math.ts";
-import { fieldGradient, sampleField, type Heightfield } from "../lib/heightfield.ts";
-import { createRng } from "../lib/prng.ts";
+import { hypot, smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  fieldGradient,
+  sampleField,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import { createRng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { nearIce, onKicker } from "./kickers.ts";
 import { nearestTrackPoint, type HasTrack } from "./query.ts";

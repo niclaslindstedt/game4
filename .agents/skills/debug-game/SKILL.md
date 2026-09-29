@@ -20,7 +20,7 @@ whole developer overlay built on this (a REPRO line copied off the screen, a
 `game2`'s `debug-tools` skill is the model when it is.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs debug-game --list`. Load
+`npx ogf-skill-lessons debug-game --list`. Load
 **`skill-reflection`** at both ends of the session.
 
 ## Instruments
@@ -33,7 +33,7 @@ whole developer overlay built on this (a REPRO line copied off the screen, a
 | The sled over time | `make ride SCENARIO=` — the sled in profile over the snow it crossed, with the numbers per cell; the first thing to run on any "the sled does X" report |
 | The snow at a point | `level.groundAt`, `level.packedAt`, `sinkTarget(packed, speed, scale)` called directly — four numbers, no sled needed |
 | Map geometry | `make level SEED=` — the plan with every checkpoint, kicker and the spawn labelled; `make analyze SEED=` — every rule the map breaks |
-| Engine log | `engine/output.ts` — the semantic output module (`status/info/warn/error/debug`) with a pluggable sink; in the browser `pwa/src/output-bridge.ts` keeps it in a buffer and lifts it to the console in dev. Engine code prints through it, never bare `console.*` |
+| Engine log | the framework's `core/output` — the semantic output module (`status/info/warn/error/debug`) with a pluggable sink; in the browser `pwa/src/output-bridge.ts` keeps it in a buffer and lifts it to the console in dev. Engine code prints through it, never bare `console.*` |
 | The real renderer | `make world SEED=` (one run, named views, no dist needed), `make screenshots` (the built app), or `npm run dev` headed |
 
 ## Process
@@ -96,5 +96,5 @@ fragment here is the diagnosed root-cause _class_ (a layer-classifying tell, a
 repro technique), never the one-off bug.
 
 ```sh
-node scripts/skill-lessons.mjs debug-game --list
+npx ogf-skill-lessons debug-game --list
 ```

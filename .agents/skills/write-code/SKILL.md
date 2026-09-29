@@ -11,7 +11,7 @@ that owns the subject (`engine-system`, `sled-physics`, `snow-look`,
 building; this one knows how code is written here.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs write-code --list`, then the ones your task
+`npx ogf-skill-lessons write-code --list`, then the ones your task
 touches (`--scope=…`, `--concepts=…`). Reflecting them back before the commit
 is the `skill-reflection` skill's job; load it at both ends of the session.
 
@@ -88,7 +88,7 @@ Three gates before anything leaves a comment and becomes a fragment:
    _different_ file would need and would not find.
 3. **Does something already say it?** Check `AGENTS.md`, the doc named in its
    sync table, and the owning skill's `SKILL.md` and lessons
-   (`node scripts/skill-lessons.mjs --scope=<path>`). A rule in two places
+   (`npx ogf-skill-lessons --scope=<path>`). A rule in two places
    drifts, and then neither is trustworthy.
 
 Then write it where it belongs — the doc if `AGENTS.md`'s sync table names one,
@@ -259,10 +259,11 @@ Make targets are the definition of green CI enforces).
 
 - **Keep generic game code separate.** Anything not specific to THIS game
   (math, PRNG, value noise, the heightfield engine-side; general UI utilities
-  app-side) goes in `engine/lib/` or `pwa/src/lib/` — never tangled into a
-  game-specific module. Those pools are what a sequel keeps as-is. The powder's
+  app-side) goes in the shared framework (`@niclaslindstedt/oss-game-framework`:
+  `core/` for the engine, the rest for the app — fixed there, never copied
+  back) or `pwa/src/lib/` — never tangled into a game-specific module. The powder's
   sink law is THIS game's (`engine/game/snow.ts`); the noise under the hills
-  is not (`engine/lib/noise.ts`).
+  is not (the framework's `core/noise`).
 - **The engine's only public surface is `engine/index.ts`.** Export new
   types/constants the app or the tests need from there; the app and tests
   import `@engine`, nothing deeper.
@@ -280,8 +281,8 @@ Make targets are the definition of green CI enforces).
   `ERR_UNSUPPORTED_TYPESCRIPT_SYNTAX` on an import three files from the
   change. Declare the field and assign it in the constructor body; use a
   union of string literals instead of an enum. A script that needs an app
-  module (`rider-pose.ts`, `strings.ts`) goes through `aliasEngine` in
-  `scripts/lib/engine-alias.mjs` before the `import()` — never a Vite build
+  module (`rider-pose.ts`, `strings.ts`) goes through `aliasEngine` from
+  the framework's `tooling/alias` before the `import()` — never a Vite build
   to read a table.
 - **Every dependency comes from the public npm registry.** The repo commits
   no `.npmrc` and `npm install` needs no token.

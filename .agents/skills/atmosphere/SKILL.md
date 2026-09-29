@@ -18,7 +18,7 @@ sun does not move over a run; what changes is the fall, in squalls, and the
 new snow it lays. A
 season's cast is NOT BUILT — `game3`'s `SEASON_LOOKS` is where it starts.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 atmosphere --list`. Load **`skill-reflection`** at both ends and
 **`write-code`** beside this one for any code change.
 
@@ -31,11 +31,11 @@ engine has an opinion about colour.
 | --- | --- |
 | The map's day: a latitude (46–64°N), a day of the year (mid-January to mid-March) and a starting solar hour (9–16 h) at which the sun is at least `sun.minElevation` up (R15) | `engine/mapgen/sun.ts` (`dealSun`, `declinationOf`), `LEVEL_RULES.sun` |
 | Where the sun stands over a run — at the map's hour, STILL from the green to the flag | `sunAtRun(level)` in `engine/game/clock.ts` |
-| The moon: its place and its phase off the map's day (a nominal year, so R15's two months carry two lunations) | `moonAtRun(level)`, `moonAgeOn` in `clock.ts` over `lib/solar.ts`'s `moonAt` |
+| The moon: its place and its phase off the map's day (a nominal year, so R15's two months carry two lunations) | `moonAtRun(level)`, `moonAgeOn` in `clock.ts` over the framework's `core/solar` `moonAt` |
 | THE WEATHER (R19): the sky, the fall, the fog, the mean wind and its bearing, the evening — dealt last off its own stream so it moves nothing the map builds | `engine/mapgen/weather.ts` (`dealWeather`, `weatherOf`, `weatherFor`, `withSky`), `LEVEL_RULES.weather` |
 | The wind at a moment: the mean breathing in gusts, veering — a PURE function of (level, t), drawing nothing from `state.rng`, read by nothing in the physics | `windAt` in `engine/game/wind.ts` |
 | The fall at a moment (the squalls, a storm's blown snow) and the view it leaves — pure the same way — and the NEW SNOW it lays at a real fall's rate (`GameState.fresh`), the one thing a sky does to the physics | `snowAt`, `visibilityIn`, `freshRate` in `engine/game/snowfall.ts`; `packedUnder` / `depthUnder` in `snow.ts` |
-| The astronomy: the sun's elevation and bearing at an hour, a latitude and a declination | `engine/lib/solar.ts` (`sunAt`) — the generic pool |
+| The astronomy: the sun's elevation and bearing at an hour, a latitude and a declination | the framework's `core/solar` (`sunAt`) — the generic pool |
 
 ## The files, one direction of flow
 

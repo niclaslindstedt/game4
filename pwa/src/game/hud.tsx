@@ -26,7 +26,7 @@
 // WITH THE READOUTS OFF (H, OPTIONS ▸ HUD) it is `data-bare`: the thumbs and
 // the corner presses stay — a rider still has to steer and still has to get
 // out — and everything that READS goes, so the snow is clear for a look or
-// a picture (`shot-hud.ts` then leaves the chrome out of the frame).
+// a picture (the framework's `shots/shot-hud` then leaves the chrome out of the frame).
 //
 // The thumb zones it hangs under all that are next door in hud-touch.tsx:
 // they are the one part of this screen that does NOT run off the snapshot
@@ -34,7 +34,7 @@
 // from strings.ts (§39.1).
 
 import { REPO_URL } from "../identity.ts";
-import { formatTime } from "../lib/util.ts";
+import { formatTime } from "@niclaslindstedt/oss-game-framework/hud/format";
 import { HudActions } from "./hud-actions.tsx";
 import { ComboTile, TricksChips } from "./hud-combo.tsx";
 import { DamageGauge } from "./hud-damage.tsx";

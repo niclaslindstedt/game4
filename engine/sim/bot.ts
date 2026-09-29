@@ -15,8 +15,8 @@
 // rider — human capability, never a superhuman one: it sees the track ahead
 // the way a rider does and brakes with the grip a rider has.
 
-import { angleDiff, clamp, hypot } from "../lib/math.ts";
-import { rotate } from "../lib/quat.ts";
+import { angleDiff, clamp, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
+import { rotate } from "@niclaslindstedt/oss-game-framework/core/quat";
 import { arcAhead, nearestTrackPoint, trackPointAt } from "../mapgen/index.ts";
 import type { Kicker, Level, TrackHit, TrackPoint } from "../mapgen/types.ts";
 import { treesNear } from "../game/collision.ts";

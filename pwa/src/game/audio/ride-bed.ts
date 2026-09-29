@@ -14,7 +14,7 @@
 
 import { maxRpm, topSpeedOf, type GameState } from "@engine";
 
-import type { Synth } from "../../lib/voice.ts";
+import type { Synth } from "@niclaslindstedt/oss-game-framework/audio/voice";
 
 import {
   ENGINE_GLIDE,
@@ -24,7 +24,7 @@ import {
   type EngineLayer,
 } from "./engine-voice.ts";
 import { listenerFor, type Listener } from "./listener.ts";
-import { createRack, type Rack } from "./rack.ts";
+import { createRack, type Rack } from "@niclaslindstedt/oss-game-framework/audio/rack";
 import { SNOW_GLIDE, SNOW_LAYERS, snowTargets, type SnowLayer } from "./snow-voice.ts";
 
 /** How quickly the wind follows the speed, s — a time constant rather than a

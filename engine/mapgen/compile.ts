@@ -9,7 +9,11 @@
 // octaves, and one answer the physics, the renderer and the analysis all
 // read. Nothing downstream regenerates any of it.
 
-import { sampleField, sampleFieldGradient, type Heightfield } from "../lib/heightfield.ts";
+import {
+  sampleField,
+  sampleFieldGradient,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
 import type {
   Checkpoint,
   Cliff,

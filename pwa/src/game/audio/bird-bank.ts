@@ -11,7 +11,7 @@
 // smallest landing — the wood is heard BETWEEN things, and snow swallows
 // sound, so nothing here rings long except what crosses high overhead.
 
-import type { SoundBank } from "./types.ts";
+import type { SoundBank } from "@niclaslindstedt/oss-game-framework/audio/types";
 
 export const BIRD_BANK: SoundBank = {
   raven_croak: {

@@ -3,15 +3,15 @@
 // read this shape; only sled.ts, collision.ts, course.ts and step.ts write it
 // during a run, and place.ts stands one at a moment before it starts.
 //
-// Sign conventions (`lib/quat.ts` owns the flips): heading 0 points along +z
+// Sign conventions (the framework's `core/quat` owns the flips): heading 0 points along +z
 // and grows clockwise seen from above (positive steer turns the nose
 // clockwise in map view); pitch is nose-up positive; roll is right-side-down
 // positive; body-frame angular velocities are right-handed about the sled's
 // right (x), up (y) and forward (z) axes, so a nose-up pitch rate is a
 // NEGATIVE `wx` and a right-side-down roll rate a negative `wz`.
 
-import type { Rng } from "../lib/prng.ts";
-import type { Quat } from "../lib/quat.ts";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
+import type { Quat } from "@niclaslindstedt/oss-game-framework/core/quat";
 import type { Level } from "../mapgen/types.ts";
 import type { SledSpec } from "./defs/sled.ts";
 import type { Assist, RunRules } from "./defs/modes.ts";

@@ -46,7 +46,7 @@
 
 import { angleDiff, nearestTrackPoint, type Level } from "@engine";
 
-import { clamp } from "../lib/util.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import type { LensPose, LineClear, Vec3 } from "./camera-rigs.ts";
 import type { ReplayShot } from "./replay-shots.ts";
 

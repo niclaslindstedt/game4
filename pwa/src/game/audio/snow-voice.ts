@@ -21,7 +21,7 @@
 // A pure function of the state, like the engine: `snowTargets` says where
 // every layer should be, the scheduler (`ride-bed.ts`) steers them there.
 
-import type { LayerSpec, LayerTarget } from "../../lib/voice.ts";
+import type { LayerSpec, LayerTarget } from "@niclaslindstedt/oss-game-framework/audio/voice";
 
 /** The apparent wind at which the wind layer is as loud as it gets, m/s:
  * the sled flat out, a little past its top speed. */

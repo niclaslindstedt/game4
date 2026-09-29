@@ -37,10 +37,14 @@
 // river's ice. The boreal's row is all ones, so its wood is the one the
 // rules grew before there were regions.
 
-import { cellKey, hypot, smoothstep } from "../lib/math.ts";
-import { sampleField, fieldGradient, type Heightfield } from "../lib/heightfield.ts";
-import { hash2, valueNoise } from "../lib/noise.ts";
-import type { Rng } from "../lib/prng.ts";
+import { cellKey, hypot, smoothstep } from "@niclaslindstedt/oss-game-framework/core/math";
+import {
+  sampleField,
+  fieldGradient,
+  type Heightfield,
+} from "@niclaslindstedt/oss-game-framework/core/heightfield";
+import { hash2, valueNoise } from "@niclaslindstedt/oss-game-framework/core/noise";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { LEVEL_RULES as R, inBand } from "./rules.ts";
 import { onCliff } from "./cliffs.ts";
 import { onKicker } from "./kickers.ts";

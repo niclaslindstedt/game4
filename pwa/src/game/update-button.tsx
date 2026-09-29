@@ -20,7 +20,7 @@
 // it and the mark becomes the word; the second reloads. It disarms itself
 // after a few seconds, so a mis-tap decays back to a corner mark.
 //
-// The state it renders comes from `lib/pwa-update.ts`; only the look, the
+// The state it renders comes from `lib/pwa-update.ts` (the framework's watch); only the look, the
 // arming and the words are ours.
 
 import { useEffect, useMemo, useState } from "preact/hooks";
@@ -28,7 +28,7 @@ import { useEffect, useMemo, useState } from "preact/hooks";
 import { cacheIdForBase } from "../app-pwa.ts";
 import { usePwaUpdate } from "../lib/pwa-update.ts";
 import { shellHost } from "../shell-host.ts";
-import { createHudPress, pressHandlers } from "./hud-press.ts";
+import { createHudPress, pressHandlers } from "@niclaslindstedt/oss-game-framework/input/hud-press";
 import { STRINGS } from "./strings.ts";
 
 /** How long an armed button waits for its second press before going quiet, ms. */
@@ -69,7 +69,7 @@ export function UpdateButton() {
   const [armed, setArmed] = useState(false);
   // This mark stands inside the lever's glass, so it is the press most
   // likely to be reached for with the other thumb still down — and a
-  // non-primary finger is handed no `click` at all (`hud-press.ts`).
+  // non-primary finger is handed no `click` at all (the framework's `input/hud-press`).
   const press = useMemo(createHudPress, []);
 
   useEffect(() => {

@@ -49,7 +49,7 @@
 //     (`bellyPlough`, applied by `sled.ts` off the belly's own depth under
 //     the untouched surface).
 
-import { clamp } from "../lib/math.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import { TUNING } from "./defs/tuning.ts";
 
 const S = TUNING.snow;

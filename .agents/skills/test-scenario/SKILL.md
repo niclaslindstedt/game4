@@ -135,5 +135,5 @@ When a staging need doesn't fit the current engine surface (a `RunMoment`
 field that does not exist, a map the builders can't express), grow
 `place.ts` / `tests/support/synthetic.ts` plus their tests, then document the
 option here. Recurring stagings and gotchas are lesson fragments — load
-**`skill-reflection`** at both ends (`node scripts/skill-lessons.mjs
+**`skill-reflection`** at both ends (`npx ogf-skill-lessons
 test-scenario --list`).

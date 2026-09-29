@@ -44,7 +44,7 @@ number and what the ride lab measured at this tuning. Read it before the
 first edit; update it with the last.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs sled-physics --list`.
+`npx ogf-skill-lessons sled-physics --list`.
 
 | Load beside this one | For |
 | --- | --- |
@@ -127,7 +127,7 @@ rewrites that row. No build, no browser, seconds.
   hills and a lone tree. A figure taken on a generated map is a figure about
   whatever hill, bank or trunk the run happened to meet.
 - **A plain-Node bench CAN use the synthetic map.** `aliasEngine('<repo>')`
-  from `scripts/lib/engine-alias.mjs` before the dynamic `import()` resolves
+  from the framework's `tooling/alias` before the dynamic `import()` resolves
   `@engine`, and vitest is a devDependency so the support file's imports
   resolve. Import `syntheticLevel` / `flatLevel` directly.
 - **NEVER MEASURE AN ATTITUDE OFF `pitch` OR `heading`.** Both are Euler

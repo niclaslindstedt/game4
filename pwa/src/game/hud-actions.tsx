@@ -22,7 +22,7 @@
 import type { ComponentChildren } from "preact";
 import { useMemo } from "preact/hooks";
 
-import { createHudPress, pressHandlers } from "./hud-press.ts";
+import { createHudPress, pressHandlers } from "@niclaslindstedt/oss-game-framework/input/hud-press";
 import { STRINGS } from "./strings.ts";
 
 /** The pause mark: two bars, the one every player already knows. */
@@ -67,7 +67,7 @@ function CameraGlyph() {
 
 /** One press. It lets go of the focus on mouse-up, so the next Space — the
  * brake — is not a second press of the button the mouse last touched. And
- * it is pressed through the POINTER events (`hud-press.ts`), because a
+ * it is pressed through the POINTER events (the framework's `input/hud-press`), because a
  * moving sled is a sled with a thumb already on the glass and a second
  * finger is handed no `click` at all. */
 function Press({

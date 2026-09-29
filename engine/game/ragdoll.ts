@@ -30,8 +30,8 @@
 // pure function of the moment it left the sled, so a run replays crash for
 // crash and a ghost falls where the rider did.
 
-import { clamp, hypot, hypot3 } from "../lib/math.ts";
-import { rotate, type Quat, type Vec3 } from "../lib/quat.ts";
+import { clamp, hypot, hypot3 } from "@niclaslindstedt/oss-game-framework/core/math";
+import { rotate, type Quat, type Vec3 } from "@niclaslindstedt/oss-game-framework/core/quat";
 import { TUNING } from "./defs/tuning.ts";
 import { treesNear } from "./collision.ts";
 import { depthUnder, packedUnder } from "./snow.ts";

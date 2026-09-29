@@ -44,7 +44,7 @@
 // there. Being a pure function is what makes it testable and what lets the
 // audition page drive it from sliders.
 
-import type { LayerSpec, LayerTarget } from "../../lib/voice.ts";
+import type { LayerSpec, LayerTarget } from "@niclaslindstedt/oss-game-framework/audio/voice";
 
 /**
  * FIRINGS PER REVOLUTION — how the crank becomes a pitch. The sled is a

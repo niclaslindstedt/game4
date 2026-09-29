@@ -11,8 +11,8 @@
 // the next steps and fires `land` the way every landing fires. Nothing random
 // is drawn, so a placed moment reproduces from its description exactly.
 
-import { clamp } from "../lib/math.ts";
-import { fromEuler } from "../lib/quat.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
+import { fromEuler } from "@niclaslindstedt/oss-game-framework/core/quat";
 import { standSled } from "./course.ts";
 import { derive } from "./sled.ts";
 import { bottomlessOf, depthUnder, packedUnder, sinkTarget } from "./snow.ts";

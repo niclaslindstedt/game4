@@ -2,15 +2,15 @@
 // R15 — THE DAY THE RACE IS RIDDEN ON: a latitude, a winter's day and a
 // solar hour at which the sun is well up in a clear sky.
 //
-// The sun's arithmetic is the generic pool's (`lib/solar.ts`); what is this
+// The sun's arithmetic is the generic pool's (the framework's `core/solar`); what is this
 // game's is only which day and which hours count. The declination is the
 // textbook cosine of the day of the year, so a February map at 62°N is
 // dealt the low, long-shadowed sun it would really have — and a draw whose
 // latitude and day leave no hour of the band with the sun over the floor is
 // simply drawn again.
 
-import { daylightWindow } from "../lib/solar.ts";
-import type { Rng } from "../lib/prng.ts";
+import { daylightWindow } from "@niclaslindstedt/oss-game-framework/core/solar";
+import type { Rng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { LEVEL_RULES as R, inBand, type Band } from "./rules.ts";
 
 /** The sun's declination on a day of the year, degrees. */

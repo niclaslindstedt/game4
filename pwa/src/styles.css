@@ -50,7 +50,7 @@
      and stays a UNIT — only a unit can reach past the layout viewport to the
      physical bottom of an iOS screen (the block below). The other two are how
      far the visible window has been pushed off the viewport's top and bottom
-     edges, which no unit can say: `lib/visible-viewport.ts` measures them and
+     edges, which no unit can say: the framework's `display/visible-viewport` measures them and
      writes them here in px. Both are 0 whenever the browser is showing the
      whole page, which is nearly always — so `--shell-visible` is then the
      viewport's own height and every box below is laid out exactly as it would
@@ -408,7 +408,7 @@ canvas {
   text-shadow: none;
   /* No double-tap wait on a press a rider makes mid-race, and the browser
      never claims the touch for a gesture of its own halfway through one
-     (`hud-press.ts`). */
+     (the framework's `input/hud-press`). */
   touch-action: manipulation;
   /* A button that squashes turns its glyph into a smear. */
   flex: none;
@@ -3494,7 +3494,7 @@ canvas {
 }
 
 /* The bar TRAVELS to its new length over the figures' own count
-   (`lib/count.ts`), so the whole sheet moves as one thing. */
+   (the framework's `hud/count`), so the whole sheet moves as one thing. */
 .sled-bar-fill {
   display: block;
   height: 100%;

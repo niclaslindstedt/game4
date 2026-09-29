@@ -8,7 +8,7 @@
 
 import type { TrickKind, TrickPart } from "@engine";
 
-import { formatTime, ordinal } from "../lib/util.ts";
+import { formatTime, ordinal } from "@niclaslindstedt/oss-game-framework/hud/format";
 import { CAMPAIGN_STRINGS } from "./strings-campaign.ts";
 import { DEV_STRINGS } from "./strings-dev.ts";
 import { GALLERY_STRINGS } from "./strings-gallery.ts";

@@ -2,7 +2,7 @@
 // The shape of a generated map — the contract between the generator and
 // everything that rides, draws or measures one. Extend it; never rename a
 // field without moving every reader with it.
-import type { Heightfield } from "../lib/heightfield.ts";
+import type { Heightfield } from "@niclaslindstedt/oss-game-framework/core/heightfield";
 import type { RegionId, TreeKind } from "./regions.ts";
 import type { GeneratorVersion } from "./versions.ts";
 

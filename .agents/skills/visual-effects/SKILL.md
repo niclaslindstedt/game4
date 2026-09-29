@@ -11,7 +11,7 @@ short-lived drawn thing, a furrow in the snow or a pulse in the hands. An
 effect never changes what happens, only how it reads. The renderer reads
 `GameState`; it never mutates state and never steps physics.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 visual-effects --list`. Load **`skill-reflection`** at both ends of the
 session and **`write-code`** beside this one. For the snow the trail is drawn
 in, `snow-look`; for the sound the same moment makes, `sound-effects` — the

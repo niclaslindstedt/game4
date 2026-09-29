@@ -49,7 +49,7 @@
 // Nothing here is random and nothing reads a clock: a run replays to the
 // same rotation.
 
-import { clamp } from "../lib/math.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import { inertiaOf } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";
 import type { GameState, SledInput, TrickPose } from "./state.ts";

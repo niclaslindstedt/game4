@@ -27,7 +27,7 @@
 // the rider has the time to rock it out before the engine does it for him.
 // Nothing here draws from the stream.
 
-import { clamp } from "../lib/math.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import { TUNING } from "./defs/tuning.ts";
 import type { GameEvent, GameState } from "./state.ts";
 

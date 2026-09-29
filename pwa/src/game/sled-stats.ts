@@ -113,7 +113,7 @@ export type SledFact = {
   key: string;
   label: string;
   /** The figure ITSELF, not a rendered string: the card counts to it when
-   * the machine changes (`lib/count.ts`), and a counter cannot interpolate
+   * the machine changes (the framework's `hud/count`), and a counter cannot interpolate
    * "160 KM/H". */
   value: number;
   /** How many decimals it is read to. */

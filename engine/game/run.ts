@@ -22,7 +22,7 @@ import { crashOver, quietClocks, stepThrown, throwRider, wipeoutCause } from "./
 import { takeDamage } from "./damage.ts";
 import { poseInput, stepStrokes } from "./strokes.ts";
 import { NEUTRAL_INPUT, type GameEvent, type GameState, type SledInput } from "./state.ts";
-import { hypot } from "../lib/math.ts";
+import { hypot } from "@niclaslindstedt/oss-game-framework/core/math";
 
 /** What the rider holds under the lights: the brake, and nothing else. */
 const HOLD: SledInput = { ...NEUTRAL_INPUT, brake: 1 };

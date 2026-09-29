@@ -9,7 +9,7 @@
 // cracking, the chassis bottoming out, two machines meeting, the flags'
 // chimes.
 //
-// Every voice is the synth's own vocabulary (`lib/voice.ts`); the id is what
+// Every voice is the synth's own vocabulary (the framework's `audio/voice`); the id is what
 // `route.ts` names, and the description is what the next retune is checked
 // against — a def without one fails the test.
 //
@@ -19,7 +19,7 @@
 // clean sine is a bell.
 
 import { BIRD_BANK } from "./bird-bank.ts";
-import type { SoundBank } from "./types.ts";
+import type { SoundBank } from "@niclaslindstedt/oss-game-framework/audio/types";
 
 export const RUN_BANK: SoundBank = {
   land_soft: {

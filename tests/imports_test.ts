@@ -6,9 +6,11 @@
 // in, and held to the four rules:
 //
 //   1. the core (engine/) imports nothing from any shell or any tool — and
-//      nothing from any package at all: it is framework-free, so a `three`
-//      or a `preact` or a `node:` under it is the browser bundle or the
-//      headless sim losing a host;
+//      nothing from any package but the shared framework's ENGINE-SAFE
+//      half (`@niclaslindstedt/oss-game-framework/core/*` and `/racing/*`,
+//      THE ENGINE LINE): it is framework-free, so a `three` or a `preact`
+//      or a `node:` under it — or the framework's audio, shots or DOM
+//      plumbing — is the browser bundle or the headless sim losing a host;
 //   2. a shell (pwa/) imports the core through its ONE entry surface,
 //      `@engine`, never a deep path, and never another shell or a tool;
 //   3. tooling (scripts/) may import anything; nothing imports it;
@@ -20,7 +22,11 @@
 // each browser's own) and no console in the engine's code
 // (the analyzer's report timer is the one recorded exception — dev-time,
 // never stepping a run — and it is named here rather than waved through;
-// the engine prints only through `engine/output.ts`'s sink).
+// the engine prints only through the framework's `core/output` sink). The
+// same hygiene is held over the framework's `core/` and `racing/` source the
+// engine line lets in, because a draw or a clock read there is one in the
+// engine; its `core/clock.ts` is the wall clock itself, and the engine may
+// not import it.
 // `tests/determinism_test.ts` proves a run replays; this file is why it
 // keeps doing so after the next merge.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
@@ -116,6 +122,28 @@ const PWA = filesUnder("pwa/src");
 const TESTS = filesUnder("tests");
 const SCRIPTS = filesUnder("scripts");
 
+/** The shared framework's package name. */
+const FRAMEWORK = "@niclaslindstedt/oss-game-framework";
+
+/** THE ENGINE LINE: the framework's engine-safe modules, as a file subpath
+ * (`/core/prng`) or the module itself (`/racing`) — and nothing else of it. */
+const ENGINE_LINE = /^@niclaslindstedt\/oss-game-framework\/(core|racing)(\/[\w-]+)?$/;
+
+/** The one engine-line module the engine may still not import: the wall
+ * clock (`wallClock`, `preciseClock`). */
+const WALL_CLOCK = `${FRAMEWORK}/core/clock`;
+
+/** The framework's shipped source for the engine line, read as the engine's
+ * own for the hygiene below (the package ships `src/` beside `dist/`). */
+const FRAMEWORK_SRC = join(ROOT, "node_modules", ...FRAMEWORK.split("/"), "src");
+const ENGINE_LINE_SRC = [join(FRAMEWORK_SRC, "core"), join(FRAMEWORK_SRC, "racing")].flatMap(
+  (dir) => {
+    const out: string[] = [];
+    walk(dir, out);
+    return out;
+  },
+);
+
 /**
  * THE SEAM THE SUITE IS ALLOWED TO HOLD — the only files in a shell a root
  * test may import, and the exception to "nothing reaches into a shell".
@@ -149,13 +177,17 @@ describe("the dependency direction (§23.7)", () => {
     expect(SCRIPTS.length).toBeGreaterThan(0);
   });
 
-  it("the core imports nothing from a shell, a tool, the suite, or any package", () => {
+  it("the core imports nothing from a shell, a tool, the suite, or any package but the engine line", () => {
     for (const file of ENGINE) {
       for (const e of edgesOf(file)) {
-        expect(
-          e.bare,
-          `${e.from} imports the package "${e.spec}" — the engine is framework-free`,
-        ).toBe(false);
+        if (e.bare) {
+          expect(
+            ENGINE_LINE.test(e.spec),
+            `${e.from} imports the package "${e.spec}" — the engine may import only ${FRAMEWORK}/core/* and /racing/*`,
+          ).toBe(true);
+          expect(e.spec, `${e.from} imports the wall clock`).not.toBe(WALL_CLOCK);
+          continue;
+        }
         const role = roleOf(e.to ?? "");
         expect(role, `${e.from} imports ${e.spec}, which is ${role}`).toBe("engine");
       }
@@ -229,14 +261,17 @@ describe("the dependency direction (§23.7)", () => {
     }
   });
 
-  it("engine/index.ts is the one surface, and it re-exports only its own modules", () => {
+  it("engine/index.ts is the one surface, and it re-exports only its own modules and the engine line", () => {
     const index = join(ROOT, "engine", "index.ts");
     // The surface is written with the engine; before it exists there is
     // nothing a host could reach, so there is nothing to hold.
     if (!existsSync(index)) return;
     const edges = edgesOf(index);
     expect(edges.length).toBeGreaterThan(0);
-    for (const e of edges) expect(e.to, e.spec).toMatch(/^engine\//);
+    for (const e of edges) {
+      if (e.bare) expect(ENGINE_LINE.test(e.spec), e.spec).toBe(true);
+      else expect(e.to, e.spec).toMatch(/^engine\//);
+    }
   });
 });
 
@@ -245,10 +280,16 @@ describe("the engine's hygiene (§25)", () => {
    * report with how long it took. Dev-time only — `analyzeLevel` never
    * steps a run and the timing never feeds a decision. Anything else is a
    * §25.1 violation and lands here by name. */
-  const CLOCK_ALLOWED = new Set(["engine/analysis/index.ts"]);
+  const CLOCK_ALLOWED = new Set(["engine/analysis/index.ts", "framework/core/clock.ts"]);
 
-  for (const file of ENGINE) {
-    const rel = relative(ROOT, file).split(sep).join("/");
+  it("has the framework's engine line to read", () => {
+    expect(ENGINE_LINE_SRC.length).toBeGreaterThan(0);
+  });
+
+  for (const file of [...ENGINE, ...ENGINE_LINE_SRC]) {
+    const rel = file.startsWith(FRAMEWORK_SRC)
+      ? `framework/${relative(FRAMEWORK_SRC, file).split(sep).join("/")}`
+      : relative(ROOT, file).split(sep).join("/");
     const src = code(readFileSync(file, "utf8"));
     it(`${rel} draws no global randomness, reads no clock, prints nothing`, () => {
       expect(src, "Math.random").not.toMatch(/Math\.random/);
@@ -257,7 +298,7 @@ describe("the engine's hygiene (§25)", () => {
       }
       expect(src, "console").not.toMatch(/\bconsole\./);
       // The builtin's algorithm is each browser's own and it is dear on a
-      // hot path; `hypot` in `lib/math.ts` is V8's recipe in plain IEEE
+      // hot path; the framework's `core/math` `hypot` is V8's recipe in plain IEEE
       // arithmetic, the same bits everywhere (`determinism_test.ts`).
       expect(src, "Math.hypot").not.toMatch(/Math\.hypot/);
       // Member access on the DOM's globals, not the bare words: `window` is

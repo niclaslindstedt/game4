@@ -11,7 +11,7 @@ the engine never knows a renderer exists. This is what makes every rule
 unit-testable in plain Node, and every race reproducible from a seed.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs engine-system --list`, then the ones this
+`npx ogf-skill-lessons engine-system --list`, then the ones this
 task touches (`--scope=…`, `--concepts=…`). Load **`skill-reflection`** at
 both ends of the session, and **`write-code`** beside this one on every
 system change.
@@ -35,7 +35,7 @@ system change.
 | What a sled CAN do | `engine/game/limits.ts` — read by the physics AND `sim/bot.ts`; never restate a ceiling |
 | The map | `engine/mapgen/` — the `mapgen-improvement` skill |
 | Bot behaviour | `engine/sim/bot.ts` — the `bot-improvement` skill |
-| Generic helpers | `engine/lib/` — the pool a later game keeps as-is |
+| Generic helpers | the framework's `core/` (and `racing/`) — fixed THERE, pulled in by moving the tag |
 | Public surface | `engine/index.ts` — export what the app or the tests need |
 | Tests | `tests/<topic>_test.ts` (vitest, `@engine`, synthetic maps — the `test-scenario` skill) |
 | Anything drawn | `pwa/src/game/` (`renderer.ts` and the modules it names) |
@@ -101,7 +101,7 @@ bites harder.
   the engine's `contacts`, not state the engine keeps.
 - The engine imports nothing from `pwa/`, three.js or Preact; the app imports
   `@engine` and nothing deeper. `tests/imports_test.ts` holds it.
-- The timestep is fixed (`TUNING.physicsHz`, 120). `pwa/src/game/run-loop.ts`
+- The timestep is fixed (`TUNING.physicsHz`, 120). the framework's `loop/run-clock`
   accumulates real time into fixed steps, clamped — never make a rule depend
   on frame rate.
 - Docs move with the code per `AGENTS.md`'s sync table.

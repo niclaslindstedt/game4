@@ -6,7 +6,7 @@
 // worker cuts the schematic here without a document, and the suite reads it
 // (`tests/free_ride_card_test.ts`).
 //
-// THE CHART IS NORTH-UP. The engine's +z is north and +x east (`lib/solar.ts`
+// THE CHART IS NORTH-UP. The engine's +z is north and +x east (the framework's `core/solar`
 // puts the noon sun at heading π, due −z), so the chart's x is the world's x
 // and its y is the world's z turned upside down — a map, not a mirror. The
 // ground is the minimap's own bake (`minimap-bake.ts`, whose rows run along

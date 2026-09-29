@@ -4,15 +4,16 @@
 // as pwa/public/icons/icon.svg — a sled's two trails curving over a hill: a
 // snowfield under a clear sky with a shadowed ridge behind it, the two
 // parallel trails climbing from the lower left over the crest and down into
-// the dip, and a red checkpoint flag on the hill. Pure Node (the shared
-// lib/png.mjs encoder), so the pipeline needs no native image dependencies.
+// the dip, and a red checkpoint flag on the hill. Pure Node (the
+// framework's shared tooling/png.mjs encoder), so the pipeline needs no native
+// image dependencies.
 // Rerun with `npm run icons` / `make icons` after changing the mark, and keep
 // icon.svg and pwa/src/game/app-mark.ts in lockstep.
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { encodePng } from "./lib/png.mjs";
+import { encodePng } from "@niclaslindstedt/oss-game-framework/tooling/png";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const iconsDir = join(root, "pwa", "public", "icons");

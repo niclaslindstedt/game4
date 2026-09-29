@@ -20,7 +20,7 @@ that shows to save nothing, or keep something invisible at a real price.
 
 ## Read the lessons first
 
-`node scripts/skill-lessons.mjs picture-pricing` — and `debug-tools`'
+`npx ogf-skill-lessons picture-pricing` — and `debug-tools`'
 lesson on reading the GPU's slices, which is where the measuring traps
 live.
 

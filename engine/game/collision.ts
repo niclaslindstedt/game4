@@ -19,7 +19,7 @@
 // THE EDGE is a soft push back toward the middle over the last `bounds.soft`
 // metres and a hard wall `bounds.margin` inside the map's own edge.
 
-import { cellKey, hypot } from "../lib/math.ts";
+import { cellKey, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
 import type { Level, TreeDef } from "../mapgen/types.ts";
 import { inertiaOf, totalMass } from "./defs/sled.ts";
 import { TUNING } from "./defs/tuning.ts";

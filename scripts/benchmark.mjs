@@ -25,9 +25,9 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { findChromium } from "./lib/chromium.mjs";
-import { parseArgs } from "./lib/cli.mjs";
-import { serveDir } from "./lib/serve-dist.mjs";
+import { findChromium } from "@niclaslindstedt/oss-game-framework/tooling/chromium";
+import { parseArgs } from "@niclaslindstedt/oss-game-framework/tooling/cli";
+import { serveDir } from "@niclaslindstedt/oss-game-framework/tooling/serve-dist";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = parseArgs(
@@ -119,7 +119,7 @@ async function run(hide, picture = args.picture, extra = {}) {
  * in `settings-video.ts`, which a script on plain Node reads through the
  * alias rather than restating. */
 async function ladders() {
-  const { aliasEngine } = await import("./lib/engine-alias.mjs");
+  const { aliasEngine } = await import("@niclaslindstedt/oss-game-framework/tooling/alias");
   aliasEngine(root);
   return (await import("../pwa/src/game/settings-video.ts")).PICTURE_LADDERS;
 }

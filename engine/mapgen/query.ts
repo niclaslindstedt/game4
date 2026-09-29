@@ -12,7 +12,7 @@
 // the points array it was built from (a WeakMap, so a dropped level takes
 // its index with it). Everything here is read-only over the loop.
 
-import { angleDiff, cellKey, hypot } from "../lib/math.ts";
+import { angleDiff, cellKey, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
 import type { TrackHit, TrackPoint } from "./types.ts";
 
 /** Anything carrying a closed loop: a finished `Level`, or the generator's

@@ -32,7 +32,7 @@ would move a pinned campaign map's digest (`tests/generator_version_test.ts`)
 — and `tests/birds_test.ts` holds that it does not.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs nature --list`. Load **`skill-reflection`**
+`npx ogf-skill-lessons nature --list`. Load **`skill-reflection`**
 at both ends of the session, and **`write-code`** beside this one for any
 code change.
 

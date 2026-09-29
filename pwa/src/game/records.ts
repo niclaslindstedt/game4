@@ -28,6 +28,13 @@
 // A TIE IS NOT A RECORD. The row stands until it is beaten outright.
 
 import { isGameMode, isSledId, type GameMode, type SledId } from "@engine";
+import {
+  beats as beatsRow,
+  bestIn,
+  noteRecord as noteRow,
+  readBook,
+  splitGap as gapAt,
+} from "@niclaslindstedt/oss-game-framework/racing/records";
 
 /** What names a row. */
 export type RecordKey = {
@@ -66,15 +73,14 @@ export function keepsRecords(mode: GameMode): boolean {
 }
 
 /** Whether `value` beats the row standing — outright, never on a tie — or
- * stands where there is none. A figure that is not a figure beats nothing. */
+ * stands where there is none. A figure that is not a figure beats nothing,
+ * and neither does any figure in a mode that keeps no book. */
 export function beats(mode: GameMode, value: number, standing: RunRecord | null): boolean {
-  if (!keepsRecords(mode)) return false;
-  if (!Number.isFinite(value) || value <= 0) return false;
-  return standing === null || value < standing.value;
+  return keepsRecords(mode) && beatsRow(value, standing);
 }
 
 export function bestFor(book: RecordBook, key: RecordKey): RunRecord | null {
-  return book[recordId(key)] ?? null;
+  return bestIn(book, recordId(key));
 }
 
 /** The book with this run in it, if it earned a row — and whether it did.
@@ -84,19 +90,15 @@ export function noteRecord(
   key: RecordKey,
   run: RunRecord,
 ): { book: RecordBook; record: boolean } {
-  const standing = bestFor(book, key);
-  if (!beats(key.mode, run.value, standing)) return { book, record: false };
-  const row: RunRecord = { ...run, splits: [...run.splits] };
-  return { book: { ...book, [recordId(key)]: row }, record: true };
+  if (!keepsRecords(key.mode)) return { book, record: false };
+  return noteRow(book, recordId(key), run);
 }
 
 /** THE GAP AT A CROSSING: the clock at crossing `index` of this run less
  * the record's at the same crossing, s — negative is ahead. Null where the
  * record has no such crossing or either clock is not a number. */
 export function splitGap(record: RunRecord | null, index: number, time: number): number | null {
-  if (record === null || index < 0 || index >= record.splits.length) return null;
-  const then = record.splits[index];
-  return Number.isFinite(then) && Number.isFinite(time) ? time - then : null;
+  return gapAt(record, index, time);
 }
 
 /** A stored blob as a book, one row at a time — every row checked, and any
@@ -104,20 +106,14 @@ export function splitGap(record: RunRecord | null, index: number, time: number):
  * positive and finite, a sled the catalog no longer has. The same rule
  * `mergeSettings` applies, for the same reason. */
 export function mergeRecords(parsed: unknown): RecordBook {
-  const book: Record<string, RunRecord> = {};
-  if (!parsed || typeof parsed !== "object") return book;
-  for (const [id, row] of Object.entries(parsed as Record<string, unknown>)) {
-    if (!row || typeof row !== "object") continue;
-    const r = row as Partial<Record<keyof RunRecord, unknown>>;
-    if (typeof r.value !== "number" || !Number.isFinite(r.value) || r.value <= 0) continue;
-    if (typeof r.sled !== "string" || !isSledId(r.sled)) continue;
-    const at = typeof r.at === "number" && Number.isFinite(r.at) ? r.at : 0;
-    const splits = Array.isArray(r.splits)
-      ? r.splits.filter((s): s is number => typeof s === "number" && Number.isFinite(s))
-      : [];
-    book[id] = { value: r.value, sled: r.sled, at, splits };
-  }
-  return book;
+  return readBook<RunRecord>(
+    parsed,
+    (raw, row) =>
+      typeof raw.sled === "string" && isSledId(raw.sled)
+        ? { value: row.value, sled: raw.sled, at: row.at, splits: row.splits ?? [] }
+        : null,
+    { splits: true },
+  );
 }
 
 /* ── STORAGE ──────────────────────────────────────────────────────────── */

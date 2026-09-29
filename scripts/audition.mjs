@@ -38,8 +38,8 @@ import process from "node:process";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { findChromium } from "./lib/chromium.mjs";
-import { parseArgs } from "./lib/cli.mjs";
+import { findChromium } from "@niclaslindstedt/oss-game-framework/tooling/chromium";
+import { parseArgs } from "@niclaslindstedt/oss-game-framework/tooling/cli";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -72,11 +72,18 @@ const out = join(root, args.out);
 // import, the page builds clean, and the first button anyone presses throws.
 // `ride-bed.ts` is NOT here: it reads a `GameState`, and the page has none —
 // the sliders stand in for it, which is the point of the page.
+//
+// The instrument itself — the vocabulary, the synth, `playDef`, the rack — is
+// the shared framework's, read from the SOURCE it ships beside its build
+// (`node_modules/@niclaslindstedt/oss-game-framework/src/audio/`). Its
+// relative imports are extensionless; the import lines are dropped below
+// either way, so the concatenation links them the same.
+const FRAMEWORK_AUDIO = "node_modules/@niclaslindstedt/oss-game-framework/src/audio";
 const RUNTIME = [
-  "pwa/src/lib/voice.ts",
-  "pwa/src/lib/synth.ts",
-  "pwa/src/game/audio/play.ts",
-  "pwa/src/game/audio/rack.ts",
+  `${FRAMEWORK_AUDIO}/voice.ts`,
+  `${FRAMEWORK_AUDIO}/synth.ts`,
+  `${FRAMEWORK_AUDIO}/play.ts`,
+  `${FRAMEWORK_AUDIO}/rack.ts`,
   "pwa/src/game/audio/listener.ts",
   "pwa/src/game/audio/engine-voice.ts",
   "pwa/src/game/audio/snow-voice.ts",
@@ -113,6 +120,10 @@ function compileRuntime() {
           // without the repo's tsconfig, and they are erased from the emit.
           "--noCheck",
           "--skipLibCheck",
+          // The framework may be a symlink into a checkout beside this one;
+          // keep its files under `node_modules/` so they stay under rootDir
+          // and land in the outDir where the reader below looks for them.
+          "--preserveSymlinks",
         ],
         { cwd: dir, stdio: ["ignore", "pipe", "pipe"] },
       );

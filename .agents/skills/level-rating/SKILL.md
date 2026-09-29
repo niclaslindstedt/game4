@@ -12,7 +12,7 @@ does it ask FOR — the clock, the corners, the climb, the air, the woods, the
 powder, the dark, the sky. `engine/rating/index.ts`'s header is the model;
 this is how it is used.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 level-rating --list`. Load **`skill-reflection`** at both ends,
 **`write-code`** beside this one for any code change, **`campaign`** when a
 map is about to be pinned, **`mapgen-improvement`** when the answer turns

@@ -18,7 +18,7 @@
 //     `dampShare`), so it sits lower and bottoms sooner — and bottoms at a
 //     lower speed into the slope (`harshShare`).
 
-import { clamp } from "../lib/math.ts";
+import { clamp } from "@niclaslindstedt/oss-game-framework/core/math";
 import { TUNING } from "./defs/tuning.ts";
 import { harshSpeedOf } from "./limits.ts";
 import type { DamagePart, GameEvent, GameState, SledState } from "./state.ts";

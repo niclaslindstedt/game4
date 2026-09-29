@@ -320,9 +320,9 @@ changelog:
 	@test -n "$(VERSION)" || { \
 		echo "usage: make changelog VERSION=X.Y.Z"; exit 2; \
 	}
-	node scripts/release/collate-changelog.mjs $(VERSION)
+	npx ogf-collate-changelog $(VERSION)
 
 # Print the semver bump (patch/minor/major) the release workflow will
 # auto-derive from the current .changes/unreleased/ fragments. Read-only.
 bump:
-	@node scripts/release/compute-bump.mjs
+	@npx ogf-compute-bump

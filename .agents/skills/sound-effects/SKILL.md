@@ -1,6 +1,6 @@
 ---
 name: sound-effects
-description: "Use when adding or tuning a SOUND — the engine (a twin two-stroke through a CVT: the block, the firing note, the pipe's rasp, the intake, the belt's whine), the snow and the air (the hiss on the groomer, the powder's rush, the carve, the track's clatter, the wind — the continuous BEDS), or a one-shot: a landing soft or hard, a trunk, a rival leaned on, a checkpoint's chime, a lap, a miss, a reset, the lights, GO, the flag. Every sound is synthesized at runtime from authored parameters under `pwa/src/game/audio/`; the game ships no audio file. Owns the vocabulary (`lib/voice.ts`), the instrument (`lib/synth.ts`), the bank, the route, the beds and the listener, the mixing budget, and the audition page — `make audition`, and `--meter` for the levels — which is the only honest way to judge any of it. NOT for music: the game has none, by design — its sound is its effects alone."
+description: "Use when adding or tuning a SOUND — the engine (a twin two-stroke through a CVT: the block, the firing note, the pipe's rasp, the intake, the belt's whine), the snow and the air (the hiss on the groomer, the powder's rush, the carve, the track's clatter, the wind — the continuous BEDS), or a one-shot: a landing soft or hard, a trunk, a rival leaned on, a checkpoint's chime, a lap, a miss, a reset, the lights, GO, the flag. Every sound is synthesized at runtime from authored parameters under `pwa/src/game/audio/`; the game ships no audio file. Owns the game's use of the vocabulary and the instrument (the framework's `audio/voice` and `audio/synth`), the bank, the route, the beds and the listener, the mixing budget, and the audition page — `make audition`, and `--meter` for the levels — which is the only honest way to judge any of it. NOT for music: the game has none, by design — its sound is its effects alone."
 ---
 
 # Designing sound effects
@@ -23,7 +23,7 @@ SWALLOWS TRANSIENTS. Four things in the instrument exist to reach that:
 | `attackMs` + `holdMs` on a NOISE | Every landing in snow. Powder SWELLS: a brown thump that opens over a few milliseconds with a pink puff over it. Never on the things that are not snow — a trunk cracking, the chassis bottoming, two machines meeting, the chimes. A bed is a LAYER and has no envelope at all. |
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs sound-effects --list`. Load
+`npx ogf-skill-lessons sound-effects --list`. Load
 **`skill-reflection`** at both ends, **`write-code`** beside this one, and
 **`game-feel`** whenever the acceptance test is "does it sound like riding".
 
@@ -31,8 +31,8 @@ SWALLOWS TRANSIENTS. Four things in the instrument exist to reach that:
 
 | File | Role |
 | --- | --- |
-| `pwa/src/lib/voice.ts` | **The vocabulary.** Every parameter a sound may be written in, the `Synth` interface, the `LayerSpec` / `LayerTarget` / `Layer` a bed is made of, and the arithmetic worth testing without a browser. DOM-free on purpose. |
-| `pwa/src/lib/synth.ts` | The instrument: `tone()` and `noise()` for one-shots, `layer()` for the beds, the echo bus, the master limiter, the context lifecycle (unlock, iOS interruption, zombie-context recovery). The ONLY module that touches WebAudio. |
+| framework `audio/voice` | **The vocabulary.** Every parameter a sound may be written in, the `Synth` interface, the `LayerSpec` / `LayerTarget` / `Layer` a bed is made of, and the arithmetic worth testing without a browser. DOM-free on purpose. |
+| framework `audio/synth` | The instrument: `tone()` and `noise()` for one-shots, `layer()` for the beds, the echo bus, the master limiter, the context lifecycle (unlock, iOS interruption, zombie-context recovery). The ONLY module that touches WebAudio. |
 | `pwa/src/game/audio/bank.ts` | **THE RACE'S SOUND DESIGN** (`RUN_BANK`): every discrete sound as data — a description and a list of voices. `land_soft`, `land_hard`, `hit_tree`, `bump`, `checkpoint`, `lap`, `missed`, `reset`, `count`, `go`, `finish`. |
 | `pwa/src/game/audio/route.ts` | **WHICH sound an event makes** and how big (`PlayShape`) — pure functions from `GameEvent` (`soundForEvent`, `soundsForStep`, `heardFrom`). |
 | `pwa/src/game/audio/engine-voice.ts` | The engine and the drive as SEVEN LAYERS (motor, hum, octave, rasp, bass, intake, belt): `engineTargets` is a pure function of the state. The note's pitch is arithmetic — `rpm / 60 × FIRINGS_PER_REV` (a twin two-stroke fires twice a revolution) — and the belt's is the TRACK's speed over `LUG_PITCH_M`. |
@@ -40,8 +40,8 @@ SWALLOWS TRANSIENTS. Four things in the instrument exist to reach that:
 | `pwa/src/game/audio/listener.ts` | **WHERE THE EAR IS.** `LISTENERS`, one row per camera rung: what each seat does to the engine, the snow, the wind and the one-shots. The beds and the router both read it. |
 | `pwa/src/game/audio/ride-bed.ts` | The scheduler: reads the player's `SledState` once a frame and turns it into every layer's target, through the seat's listener row. The field has no bed of its own yet. |
 | `pwa/src/game/audio/bird-voice.ts`, `bird-bank.ts`, `bird-bed.ts` | **THE WOOD'S VOICES.** Who cries and how often (`BIRD_CALLS`, plan-free), the cries themselves (`BIRD_BANK`, spread into `RUN_BANK`), and the scheduler that raises them off the birds' own plan (`birdPlanFor`) — a CUE drawn off each flock's scatter (`criesIn`), never an event and never `state.rng`. The grouse's whirr is the one cry a sled causes (`flushAt`). `tests/birds_test.ts` holds every call to a bank id. |
-| `pwa/src/game/audio/rack.ts` | The plumbing every bed shares: build a layer, rebuild one whose context died, steer it on its glide. |
-| `pwa/src/game/audio/play.ts`, `types.ts` | Firing one def through a shape; what a def and a shape ARE. |
+| framework `audio/rack` | The plumbing every bed shares: build a layer, rebuild one whose context died, steer it on its glide. |
+| framework `audio/play`, `audio/types` | Firing one def through a shape; what a def and a shape ARE. |
 | `pwa/src/game/audio/bus.ts` | One synth, the volume-scaled view the SOUND switch moves, and the unlock. |
 | `pwa/src/game/audio/index.ts` | The front door (`createRunAudio`): events in, the beds fed per frame, `silence()`. `App.tsx` is its one caller. |
 | `pwa/src/game/settings.ts` | The switch the player keeps (`sound`). |

@@ -22,7 +22,7 @@
 // the downslope of a kicker is fast and landing flat after overshooting it
 // is not.
 
-import { clamp, hypot } from "../lib/math.ts";
+import { clamp, hypot } from "@niclaslindstedt/oss-game-framework/core/math";
 import { TUNING } from "./defs/tuning.ts";
 import { SLED, inertiaOf } from "./defs/sled.ts";
 import { footprintOf } from "./footprint.ts";

@@ -17,7 +17,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
 
-import { parseArgs } from "./lib/cli.mjs";
+import { parseArgs } from "@niclaslindstedt/oss-game-framework/tooling/cli";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const { generateLevel } = await import(join(root, "engine/mapgen/index.ts"));

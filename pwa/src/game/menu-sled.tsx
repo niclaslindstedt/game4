@@ -24,7 +24,7 @@ import type { ComponentChildren } from "preact";
 import { useEffect, useRef, useState } from "preact/hooks";
 import { sledById, type SledId } from "@engine";
 
-import { COUNT_SECONDS, countAt } from "../lib/count.ts";
+import { COUNT_SECONDS, countAt } from "@niclaslindstedt/oss-game-framework/hud/count";
 import { MenuHead } from "./menu-knobs.tsx";
 import { SledPicker } from "./sled-picker.tsx";
 import { LIVERIES } from "./sled-liveries.ts";

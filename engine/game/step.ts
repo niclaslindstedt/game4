@@ -11,12 +11,12 @@
 // (`tricks.ts`); every rival's run by the same function; then every sled
 // against every other.
 
-import { createRng } from "../lib/prng.ts";
+import { createRng } from "@niclaslindstedt/oss-game-framework/core/prng";
 import { generateLevel, withDay, withSky } from "../mapgen/index.ts";
 import type { RegionId } from "../mapgen/regions.ts";
 import type { TimeOfDay } from "../mapgen/sun.ts";
 import type { Level, SkyOverride } from "../mapgen/types.ts";
-import { status } from "../output.ts";
+import { status } from "@niclaslindstedt/oss-game-framework/core/output";
 import { freeSpawn, freshProgress, standSled } from "./course.ts";
 import {
   FULL_ASSIST,

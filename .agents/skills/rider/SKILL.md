@@ -52,7 +52,7 @@ distance from `MOUNTS.grip` (`sled-body.ts`), so every machine's rider sits on
 its own seat.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs rider --list`. Load `skill-reflection` at
+`npx ogf-skill-lessons rider --list`. Load `skill-reflection` at
 both ends, `write-code` beside this for any code change, and `sled-design`
 when the machine he stands on is what moves.
 

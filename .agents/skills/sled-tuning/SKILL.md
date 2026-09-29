@@ -14,7 +14,7 @@ The answer is measured, never asserted. **Any change to `defs/sled.ts` owes
 `make ride` and `make sim`, before and after.**
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs sled-tuning --list`.
+`npx ogf-skill-lessons sled-tuning --list`.
 
 | Load beside this one | For |
 | --- | --- |

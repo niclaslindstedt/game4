@@ -42,7 +42,7 @@ What is ours alone is the rider leaving the machine and the snow he lands
 in — and the trench, which is snow's own way of stopping a sled.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs crash --list`.
+`npx ogf-skill-lessons crash --list`.
 
 | Load beside this one | For |
 | --- | --- |

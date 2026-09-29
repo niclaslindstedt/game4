@@ -13,7 +13,7 @@ for feel is a ride table, a picture or a run, looked at**, next to the
 reference. This skill owns that judgement and the levers behind it.
 
 **Read this skill's lessons first** —
-`node scripts/skill-lessons.mjs game-feel`. Record what a tuning session
+`npx ogf-skill-lessons game-feel`. Record what a tuning session
 learns at the end (`skill-reflection` owns the format).
 
 ## The reference: the arcade winter racers

@@ -13,7 +13,7 @@
 
 import type { GameEvent } from "@engine";
 
-import type { PlayShape } from "./types.ts";
+import type { PlayShape } from "@niclaslindstedt/oss-game-framework/audio/types";
 
 /** The speed INTO the slope at which a landing is as big as it gets, m/s,
  * and the share of that the gentlest touchdown is still worth — a small

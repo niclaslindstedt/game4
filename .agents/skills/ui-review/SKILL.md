@@ -22,7 +22,7 @@ are the phone's only controls), the cards (`splash-screen.tsx`,
 every UI change.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs ui-review --list`, then the ones this task
+`npx ogf-skill-lessons ui-review --list`, then the ones this task
 touches. Load **`skill-reflection`** at both ends of the session.
 
 ## Tooling

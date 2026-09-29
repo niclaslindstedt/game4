@@ -19,8 +19,6 @@ import {
 import {
   GHOST_FORMAT,
   createControlRecorder,
-  decodeStream,
-  encodeStream,
   ghostMatches,
   ghostStage,
   mapPrint,
@@ -121,17 +119,6 @@ describe("the grid", () => {
 });
 
 describe("the codec", () => {
-  it("round-trips a stream, long runs and all", () => {
-    const values = [...Array(600).fill(3), 7, 8, 8, ...Array(300).fill(254), 0];
-    expect(Array.from(decodeStream(encodeStream(values), values.length))).toEqual(values);
-  });
-
-  it("leaves a damaged tape's tail at zero rather than throwing", () => {
-    expect(Array.from(decodeStream("not base64!!", 4))).toEqual([0, 0, 0, 0]);
-    const short = encodeStream([5, 5]);
-    expect(Array.from(decodeStream(short, 4))).toEqual([5, 5, 0, 0]);
-  });
-
   it("hands back exactly the controls a step was ridden on", () => {
     const rec = createControlRecorder();
     const inputs: SledInput[] = [

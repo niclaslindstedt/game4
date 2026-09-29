@@ -1,6 +1,6 @@
 ---
 name: hud-and-menus
-description: "Use when changing WHAT THE PLAYER READS AND PRESSES DURING A RACE — a HUD readout (the race clock, the position, the lap and checkpoint count, the split, the air clock, the lights and GO, the missed-checkpoint arrow, the rev bar over the speed, the news column, the finish plate), the three presses in the top right (pause, reset, camera), the touch controls (the handlebar on the lower left, the lever on the lower right — wide open on touch, eased off UP, brake further UP) and the keyboard layout. Owns the DOM-free-payload split every one of these is built on (`snapshot.ts`, `input-model.ts`, `run-news.ts`, `thumb-guard.ts`, `hud-press.ts`), the thumb-guard discipline, and where each surface lives. The CARDS around a race — the attract screen, the front door, the loading card, the pause card, the settings — are `menu-system`. Load `ui-review` beside either for the screenshot sweep."
+description: "Use when changing WHAT THE PLAYER READS AND PRESSES DURING A RACE — a HUD readout (the race clock, the position, the lap and checkpoint count, the split, the air clock, the lights and GO, the missed-checkpoint arrow, the rev bar over the speed, the news column, the finish plate), the three presses in the top right (pause, reset, camera), the touch controls (the handlebar on the lower left, the lever on the lower right — wide open on touch, eased off UP, brake further UP) and the keyboard layout. Owns the DOM-free-payload split every one of these is built on (`snapshot.ts`, `input-model.ts`, `run-news.ts`, and the framework's `input/thumb-guard` and `input/hud-press`), the thumb-guard discipline, and where each surface lives. The CARDS around a race — the attract screen, the front door, the loading card, the pause card, the settings — are `menu-system`. Load `ui-review` beside either for the screenshot sweep."
 ---
 
 # The HUD and the controls: what the player reads and presses
@@ -13,7 +13,7 @@ lever's gesture and the news column without a browser
 (`tests/input_model_test.ts`, `tests/hud_test.ts`), and it is the first thing
 to preserve in any change here.
 
-**Read this skill's lessons first** — `node scripts/skill-lessons.mjs
+**Read this skill's lessons first** — `npx ogf-skill-lessons
 hud-and-menus --list`. Load **`skill-reflection`** at both ends,
 **`write-code`** beside this one, and **`ui-review`** for the fit-and-finish
 sweep. For what a readout MEANS (the air clock as a moment), `game-feel`.
@@ -25,12 +25,12 @@ are there.
 
 **Not built:** a replay bar. The sibling `game3` has it; port from there
 when one is asked for. **The shutter is built** (`shot-request.ts`,
-`screenshots.ts`, `shot-hud.ts`; `menu-system` owns the roll and the
+`screenshots.ts`, the framework's `shots/shot-hud`; `menu-system` owns the roll and the
 gallery): ENTER and H are two of `InputAction`'s presses, and the HUD's
 `bare` form (`data-bare`) keeps the thumbs and the corner presses with the
 readouts down — which is also what tells `readHudLayer` to leave the chrome
 out of a picture. A new HUD element is in every picture from the day it
-lands; an ANIMATED one is stilled at its computed value by `shot-hud.ts`,
+lands; an ANIMATED one is stilled at its computed value by `shots/shot-hud`,
 so check a picture taken mid-animation (`make screenshots ARGS="--surface
 gallery-roll"`). OPTIONS and
 its KEYS page are built and are `menu-system`'s; what they change HERE is
@@ -62,8 +62,8 @@ the layout the manager rides (`setBindings`) and how the thumbs read
 | Touch: the HANDLEBAR | `pwa/src/game/hud-touch.tsx`, lower LEFT — sideways travel steers, vertical travel leans |
 | Touch: the LEVER | `hud-touch.tsx`, lower RIGHT — anchored WIDE OPEN where the thumb lands; slid UP eases it to shut, further UP is the brake |
 | HOW THE THUMBS READ (OPTIONS ▸ CONTROLS): the lever's side, the travel, the inverted lean | `TouchFeel` in `input-model.ts` — every thumb function takes it, `barReachPx` draws the ring at the travel it asks for; the side is `Settings.touch.lever`, and the bar takes the other. The keys never pass through it |
-| A zone's grip on a finger, and every way it has to END | `pwa/src/game/thumb-guard.ts` (DOM-free, injected window) |
-| A BUTTON pressed while a zone is held | `pwa/src/game/hud-press.ts` — `click` comes only from the PRIMARY pointer, and a ridden sled has that finger spoken for, so every press over a race fires from `pointerup` |
+| A zone's grip on a finger, and every way it has to END | the framework's `input/thumb-guard` (DOM-free, injected window), used by `hud-touch.tsx` |
+| A BUTTON pressed while a zone is held | the framework's `input/hud-press` — `click` comes only from the PRIMARY pointer, and a ridden sled has that finger spoken for, so every press over a race fires from `pointerup` |
 | The `reset` edge | `SledInput.reset` is true for one step; `input-model.ts` is where a held key becomes one |
 
 ## The traps
@@ -89,8 +89,8 @@ the layout the manager rides (`setBindings`) and how the thumbs read
   not pause with the race).
 - **A PRESS OVER A RACE IS NEVER WIRED ON `onClick` ALONE.** A non-primary
   finger gets `pointerdown`/`pointerup` and no click at all, so an `onClick`
-  button is dead to exactly the rider who needs it. `hud-press.ts` is the
-  answer; a new press joins it.
+  button is dead to exactly the rider who needs it. The framework's `input/hud-press`
+  is the answer; a new press joins it.
 - **The thumb zones draw nothing until a thumb is down.** A picture shows a
   button in clear sky whether or not a zone lies over it; only
   `document.elementFromPoint` down each button's centreline answers it.

@@ -34,7 +34,7 @@ Three rules make that possible, and every step below serves one of them:
    everything.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs blender-assets --list`. Load
+`npx ogf-skill-lessons blender-assets --list`. Load
 `skill-reflection` at both ends, `lab-tooling` for any change to the driver
 or the lab, and the skill that owns the asset's SUBJECT (`sled-design` for a
 sled) — its judging rules apply to a model too.

@@ -10,7 +10,12 @@
 // maps (R15's exception) — an hour round or after sunset, and the moon then
 // the only light in the sky.
 
-import { moonAt, sunAt, type MoonPlace, type SunPlace } from "../lib/solar.ts";
+import {
+  moonAt,
+  sunAt,
+  type MoonPlace,
+  type SunPlace,
+} from "@niclaslindstedt/oss-game-framework/core/solar";
 import { declinationOf, type Level } from "../mapgen/index.ts";
 
 /** Where the sun stands over a run on `level`. */

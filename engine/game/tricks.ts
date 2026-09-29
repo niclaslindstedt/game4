@@ -80,7 +80,7 @@ import { TUNING } from "./defs/tuning.ts";
 import { harshShare } from "./damage.ts";
 import { harshSpeedOf } from "./limits.ts";
 import type { BailCause, GameEvent, GameState, SledState, TrickKind, TrickState } from "./state.ts";
-import { hypot } from "../lib/math.ts";
+import { hypot } from "@niclaslindstedt/oss-game-framework/core/math";
 
 const T = TUNING.tricks;
 const TAU = Math.PI * 2;

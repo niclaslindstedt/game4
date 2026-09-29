@@ -16,7 +16,7 @@ for the whole measuring workflow — and since the field IS the bot, a bot fix
 is also a change to how hard the player's race is.
 
 **Before starting, read this skill's lessons** —
-`node scripts/skill-lessons.mjs bot-improvement --list`. Load
+`npx ogf-skill-lessons bot-improvement --list`. Load
 **`skill-reflection`** at both ends of the session.
 
 ## The target: human capability, no handicaps
