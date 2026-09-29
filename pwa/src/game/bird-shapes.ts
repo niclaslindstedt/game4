@@ -270,11 +270,18 @@ export function buildBird(spec: BirdSpec, style: BirdStyle): THREE.BufferGeometr
  * the wing hinges grafted into its vertex shader. The species' own wrist is
  * a UNIFORM, so every species' material grafts the same source and three
  * links ONE program for the whole roster rather than one per species.
+ * A modelled bird (`bird-models.ts`) takes the same material, lit smooth.
  */
-export function birdMaterial(spec: BirdSpec, haze: HazeUniforms): THREE.MeshLambertMaterial {
+export function birdMaterial(
+  spec: BirdSpec,
+  haze: HazeUniforms,
+  flat = true,
+): THREE.MeshLambertMaterial {
   const material = new THREE.MeshLambertMaterial({
     vertexColors: true,
-    flatShading: true,
+    // The code's bird is a pile of facets; a modelled one carries its
+    // own normals and is lit smooth.
+    flatShading: flat,
     // The tail and the wings are sheets, and a folded wing turns its faces
     // every way; a face that is never culled is a face that is never a hole.
     side: THREE.DoubleSide,

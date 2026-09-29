@@ -14,17 +14,24 @@
 // the poles stand the track's own half-width plus a metre out from the
 // centreline, so the gate a sled must pass through is exactly the one it
 // sees.
+//
+// THE MARKS ARE MODELS where a build carries them (`gate-models.ts`: the
+// stake, the pennant, the marker and the inflatable itself, made in
+// Blender off the same numbers) and the code's own below otherwise; the
+// banner, the guy lines and the line dyed on the snow are the code's
+// either way — they are written, strung and laid on this map's ground.
 
 import * as THREE from "three";
 import type { Checkpoint, Level } from "@engine";
 
 import { PALETTE } from "../identity.ts";
+import { archModel, checkpointModel } from "./gate-models.ts";
 import { hazeMaterial, type HazeUniforms } from "./haze.ts";
-import { ARCH, archPlan, type ArchPlan } from "./start-arch.ts";
+import { ARCH, GATE, archPlan, type ArchPlan } from "./start-arch.ts";
 import { STRINGS } from "./strings.ts";
 import { LOOSE } from "./trail-stamp.ts";
 
-const POLE = 3.2;
+const POLE = GATE.pole;
 
 export type Gates = {
   group: THREE.Group;
@@ -130,6 +137,27 @@ function strand(a: THREE.Vector3, b: THREE.Vector3, r: number): THREE.BufferGeom
   return g;
 }
 
+/** The code's own checkpoint parts: a plain pole, a pennant of two
+ * triangles hung off its top, a cone for the marker. */
+function codeCheckpoint(): {
+  pole: THREE.BufferGeometry;
+  flag: THREE.BufferGeometry;
+  marker: THREE.BufferGeometry;
+} {
+  const pole = new THREE.CylinderGeometry(0.045, 0.055, POLE, 6);
+  pole.translate(0, POLE / 2, 0);
+  const { reach, drop } = GATE.pennant;
+  const flag = new THREE.BufferGeometry();
+  flag.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute([0, 0, 0, 0, -drop, 0, reach, -drop / 2, 0], 3),
+  );
+  flag.computeVertexNormals();
+  const marker = new THREE.ConeGeometry(GATE.marker.width / 2, GATE.marker.height, 4);
+  marker.rotateX(Math.PI);
+  return { pole, flag, marker };
+}
+
 function stakeTexture(): THREE.CanvasTexture {
   const canvas = document.createElement("canvas");
   canvas.width = 4;
@@ -154,28 +182,36 @@ export function createGates(level: Level, haze: HazeUniforms): Gates {
     mats.push(m);
     return m;
   };
-  const stakeTex = stakeTexture();
-  const stake = std({ map: stakeTex, roughness: 0.6 }, "gate-stake");
-  const texs: THREE.Texture[] = [stakeTex];
-  const flag = std({ color: 0xffffff, roughness: 0.8, side: THREE.DoubleSide }, "gate-flag");
+  // The modelled stake, pennant and marker carry their paint as vertex
+  // colours; the code's stake is banded by a texture.
+  const model = checkpointModel();
+  const texs: THREE.Texture[] = [];
+  let stake: THREE.MeshStandardMaterial;
+  if (model) {
+    stake = std({ vertexColors: true, roughness: 0.6 }, "gate-stake-model");
+  } else {
+    const stakeTex = stakeTexture();
+    texs.push(stakeTex);
+    stake = std({ map: stakeTex, roughness: 0.6 }, "gate-stake");
+  }
+  const flag = std(
+    { color: 0xffffff, vertexColors: !!model, roughness: 0.8, side: THREE.DoubleSide },
+    model ? "gate-flag-model" : "gate-flag",
+  );
   const marker = std(
-    { color: PALETTE.flag, emissive: PALETTE.flag, emissiveIntensity: 0.5, roughness: 0.6 },
-    "gate-marker",
+    {
+      color: model ? 0xffffff : PALETTE.flag,
+      vertexColors: !!model,
+      emissive: PALETTE.flag,
+      emissiveIntensity: 0.5,
+      roughness: 0.6,
+    },
+    model ? "gate-marker-model" : "gate-marker",
   );
   const hot = new THREE.Color(PALETTE.flag);
   const idle = new THREE.Color(PALETTE.flag).lerp(new THREE.Color(0x9aa4ad), 0.45);
 
-  const poleGeo = new THREE.CylinderGeometry(0.045, 0.055, POLE, 6);
-  poleGeo.translate(0, POLE / 2, 0);
-  // A flag: a pennant a metre long, hung off the pole's top.
-  const flagGeo = new THREE.BufferGeometry();
-  flagGeo.setAttribute(
-    "position",
-    new THREE.Float32BufferAttribute([0, 0, 0, 0, -0.6, 0, 0.95, -0.3, 0], 3),
-  );
-  flagGeo.computeVertexNormals();
-  const markerGeo = new THREE.ConeGeometry(0.3, 0.7, 4);
-  markerGeo.rotateX(Math.PI);
+  const { pole: poleGeo, flag: flagGeo, marker: markerGeo } = model ?? codeCheckpoint();
   geos.push(poleGeo, flagGeo, markerGeo);
 
   // Every pole and every flag is one instance of one of two meshes: a
@@ -237,13 +273,28 @@ export function createGates(level: Level, haze: HazeUniforms): Gates {
     const a = archPlan(level, cp);
     const fx = Math.sin(cp.heading);
     const fz = Math.cos(cp.heading);
-    // The fabric: the organiser's red, a nylon's soft sheen.
-    const fabric = std({ color: PALETTE.flag, roughness: 0.45 }, "arch-fabric");
-    const tube = new THREE.TubeGeometry(archPath(a), 140, ARCH.tube, 16, false);
-    geos.push(tube);
-    const body = new THREE.Mesh(tube, fabric);
-    body.castShadow = true;
-    group.add(body);
+    // The inflatable: the model stretched to this line (`archModel`),
+    // with its skirts and blowers on it, turned by the heading and set
+    // down on the higher foot's ground — or the code's own tube along the
+    // plan's path, its skirts and blowers placed below.
+    const modelled = archModel(a);
+    if (modelled) {
+      const dressed = std({ vertexColors: true, roughness: 0.55 }, "arch-model");
+      geos.push(modelled);
+      const body = new THREE.Mesh(modelled, dressed);
+      body.position.set(a.x, a.top - ARCH.top, a.z);
+      body.rotation.y = cp.heading;
+      body.castShadow = true;
+      group.add(body);
+    } else {
+      // The fabric: the organiser's red, a nylon's soft sheen.
+      const fabric = std({ color: PALETTE.flag, roughness: 0.45 }, "arch-fabric");
+      const tube = new THREE.TubeGeometry(archPath(a), 140, ARCH.tube, 16, false);
+      geos.push(tube);
+      const body = new THREE.Mesh(tube, fabric);
+      body.castShadow = true;
+      group.add(body);
+    }
 
     // The banner across the span's face, sized to the straight run between
     // the shoulders. ONE-SIDED, and hung twice back to back: a plane drawn
@@ -267,7 +318,8 @@ export function createGates(level: Level, haze: HazeUniforms): Gates {
     }
 
     // At each foot the skirt it is weighted down with and the blower that
-    // keeps it up; from each shoulder a guy line fore and aft to a stake.
+    // keeps it up (the model's own where there is one); from each
+    // shoulder a guy line fore and aft to a stake.
     const dark = std({ color: 0x23282e, roughness: 0.8 }, "arch-foot");
     const rope = std({ color: 0xe8ecef, roughness: 0.9 }, "arch-rope");
     const skirt = new THREE.CylinderGeometry(ARCH.tube * 1.25, ARCH.tube * 1.35, 0.8, 16);
@@ -277,16 +329,18 @@ export function createGates(level: Level, haze: HazeUniforms): Gates {
     geos.push(skirt, blower);
     a.feet.forEach((f, k) => {
       const side = k === 0 ? -1 : 1;
-      const s = new THREE.Mesh(skirt, dark);
-      s.position.set(f.x, f.y + ARCH.sink - 0.2, f.z);
-      s.castShadow = true;
-      const bx = f.x + a.rx * side * 1.3;
-      const bz = f.z + a.rz * side * 1.3;
-      const box = new THREE.Mesh(blower, dark);
-      box.position.set(bx, level.groundAt(bx, bz) - 0.05, bz);
-      box.rotation.y = cp.heading;
-      box.castShadow = true;
-      group.add(s, box);
+      if (!modelled) {
+        const s = new THREE.Mesh(skirt, dark);
+        s.position.set(f.x, f.y + ARCH.sink - 0.2, f.z);
+        s.castShadow = true;
+        const bx = f.x + a.rx * side * 1.3;
+        const bz = f.z + a.rz * side * 1.3;
+        const box = new THREE.Mesh(blower, dark);
+        box.position.set(bx, level.groundAt(bx, bz) - 0.05, bz);
+        box.rotation.y = cp.heading;
+        box.castShadow = true;
+        group.add(s, box);
+      }
       const shoulder = new THREE.Vector3(f.x, a.top - ARCH.corner * 0.3, f.z);
       for (const along of [-1, 1]) {
         const gx = f.x + a.rx * side * 1.5 + fx * along * 4.2;

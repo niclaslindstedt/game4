@@ -12,13 +12,19 @@
 // `make sled ARGS=--asset=…` sets it beside the builder's. Nothing it
 // writes is committed: the game ships no asset files, and every output
 // lands in the gitignored `previews/`. The `blender-assets` skill owns the
-// loop, and says how a new KIND (a tree, an animal, the rider) is added:
-// a row in `KINDS` and a builder beside `sled.py`.
+// loop, and says how a new KIND is added: a data module under
+// `scripts/blender/kinds/` and a builder beside `sled.py`. The kinds today:
+// the sleds and the rider (rigged, with clips), every kind of tree, every
+// bird and every animal of the wildlife, and the course's marks (the
+// checkpoint and the start arch) — the last four static, dressed by the
+// game off their materials' names.
 //
 //   node scripts/blender.mjs                                the Fox, both qualities
 //   node scripts/blender.mjs --id=ibex --quality=game
 //   node scripts/blender.mjs --id=all --quality=game   every sled, one after another
 //   node scripts/blender.mjs --quality=render --views=three,side --samples=32
+//   node scripts/blender.mjs --kind=bird --id=raven
+//   node scripts/blender.mjs --kind=beast --id=all --quality=game --views=none
 //
 // Blender is looked for at `BLENDER`, then the macOS app, then `blender` on
 // the PATH. It is run with `--python-use-system-env` and
@@ -27,7 +33,7 @@
 // Python's start for ever.
 
 import { spawn } from "node:child_process";
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import process from "node:process";
@@ -38,107 +44,17 @@ import { aliasEngine } from "@niclaslindstedt/oss-game-framework/tooling/alias";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const QUALITIES = ["render", "game"];
 
-/** THE KINDS OF ASSET: what the game's data for one is, and its builder. */
-const KINDS = {
-  sled: {
-    ids: async () => (await import("../engine/index.ts")).SLEDS.map((s) => s.id),
-    data: async (id) => {
-      const { SLEDS } = await import("../engine/index.ts");
-      const { SLED_LOOKS } = await import("../pwa/src/game/sled-looks.ts");
-      const { TRAVEL, BAR_TURN } = await import("../pwa/src/game/sled-gear.ts");
-      return {
-        spec: SLEDS.find((s) => s.id === id),
-        look: SLED_LOOKS[id],
-        gear: { travel: TRAVEL, barTurn: BAR_TURN },
-      };
-    },
-    builder: "sled.py",
-    fallback: "fox",
-  },
-  // A rider in a grid slot's kit: his body, the pose he is bound in, the
-  // helmet's measured shell sampled on a grid, and every clip sampled off
-  // the game's own pose (`rider-rig.ts`).
-  rider: {
-    ids: async () =>
-      (await import("../pwa/src/game/sled-body.ts")).SLED_STYLES.map((_, i) => `rider${i}`),
-    data: async (id) => {
-      const { SLED_STYLES } = await import("../pwa/src/game/sled-body.ts");
-      const { BODY, riderPose } = await import("../pwa/src/game/rider-pose.ts");
-      const helmet = await import("../pwa/src/game/rider-helmet.ts");
-      const { RIDING, riderBones, riderClips } = await import("../pwa/src/game/rider-rig.ts");
-      const rest = riderPose(RIDING);
-      // Fine enough that the port's and the cap's edges read clean in a
-      // still; the game quality takes every other point.
-      const [na, ne] = [144, 96];
-      const around = (i) => -Math.PI + (2 * Math.PI * i) / na;
-      const up = (j) => -Math.PI / 2 + (Math.PI * j) / ne;
-      return {
-        style: SLED_STYLES[Number(id.slice(5))].rider,
-        body: BODY,
-        rest: { pose: rest, bones: riderBones(rest) },
-        helmet: {
-          tilt: helmet.HELMET_TILT,
-          sit: helmet.HELMET_SIT,
-          around: na,
-          up: ne,
-          // The reach at every grid point (round from dead behind), and what
-          // the shell is in every cell.
-          reach: Array.from({ length: ne + 1 }, (_, j) =>
-            Array.from({ length: na }, (_, i) => helmet.helmetReach(around(i), up(j))),
-          ),
-          part: Array.from({ length: ne }, (_, j) =>
-            Array.from({ length: na }, (_, i) => helmet.helmetPart(around(i + 0.5), up(j + 0.5))),
-          ),
-        },
-        clips: riderClips().map((c) => ({
-          name: c.name,
-          seconds: c.seconds,
-          frames: c.poses.map(riderBones),
-        })),
-      };
-    },
-    builder: "rider.py",
-    fallback: "rider0",
-  },
-  // A KIND of tree: its ten variant rows (`tree-variants.ts`, the numbers
-  // the code's builder reads) with each one's silhouette sampled off
-  // `crownAt`, the reference size a model is made at, and — for the stills
-  // alone — the kind's colours under the boreal paint (linear RGB). The
-  // game dresses a model by its materials' names, so the glTF carries none.
-  tree: {
-    ids: async () => [...(await import("../engine/index.ts")).TREE_KINDS],
-    data: async (id) => {
-      const { TREE_VARIANTS, TREE_REFERENCE, crownAt } =
-        await import("../pwa/src/game/tree-variants.ts");
-      const { kindPaint, treePaint, SNOW, SNOW_SHADE } =
-        await import("../pwa/src/game/tree-shapes.ts");
-      const { regionLookOf } = await import("../pwa/src/game/region-look.ts");
-      const p = kindPaint(treePaint(regionLookOf("boreal")), id);
-      const rgb = (c) => [c.r, c.g, c.b];
-      return {
-        kind: id,
-        reference: TREE_REFERENCE,
-        variants: TREE_VARIANTS[id].map((v) => ({
-          ...v,
-          profile: Array.from({ length: 41 }, (_, i) => crownAt(v, i / 40)),
-        })),
-        paint: {
-          needle: rgb(p.needle),
-          dark: rgb(p.dark),
-          bark: rgb(p.bark),
-          upper: rgb(p.upper),
-          twigs: rgb(p.twigs),
-          accent: rgb(p.accent),
-          marks: rgb(p.marks),
-          snow: rgb(SNOW),
-          snowShade: rgb(SNOW_SHADE),
-        },
-      };
-    },
-    builder: "tree.py",
-    fallback: "spruce",
-  },
-};
+/** THE KINDS OF ASSET, each a module under `scripts/blender/kinds/`: what
+ * the game's data for one is (`data`), every id (`ids`), its builder and
+ * its default. A kind added there is a kind here; the driver names none. */
+const KINDS = Object.fromEntries(
+  await Promise.all(
+    readdirSync(join(root, "scripts", "blender", "kinds"))
+      .filter((f) => f.endsWith(".mjs"))
+      .sort()
+      .map(async (f) => [f.slice(0, -4), (await import(`./blender/kinds/${f}`)).kind]),
+  ),
+);
 
 const args = parseArgs(
   process.argv.slice(2),
@@ -151,7 +67,7 @@ const args = parseArgs(
     id: {
       kind: "string",
       default: "",
-      help: "which one (a sled's id), or all; the kind's default (fox) when left out",
+      help: "which one (a sled's id, a kind of tree, a bird…), or all; the kind's default when left out",
     },
     quality: {
       kind: "string",

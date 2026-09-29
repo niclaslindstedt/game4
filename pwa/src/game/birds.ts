@@ -26,6 +26,7 @@ import {
   residentCount,
   type BirdPlan,
 } from "./bird-plan.ts";
+import { birdModel } from "./bird-models.ts";
 import { BIRD_STYLES, birdMaterial, buildBird } from "./bird-shapes.ts";
 import type { HazeUniforms } from "./haze.ts";
 
@@ -60,14 +61,17 @@ export function createBirds(level: Level, haze: HazeUniforms): Birds {
   for (const spec of BIRDS) {
     const capacity = residentCount(plan, spec.id) + crossingCapacity(plan, spec.id);
     if (capacity === 0) continue;
-    const geometry = buildBird(spec, BIRD_STYLES[spec.id]);
+    // The species' model where one is loaded (`bird-models.ts`), else
+    // the code's own bird, flat-shaded as it is built to be.
+    const modelled = birdModel(spec, BIRD_STYLES[spec.id]);
+    const geometry = modelled ?? buildBird(spec, BIRD_STYLES[spec.id]);
     const flaps = new THREE.InstancedBufferAttribute(new Float32Array(capacity), 1);
     flaps.setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute("aFlap", flaps);
     const folds = new THREE.InstancedBufferAttribute(new Float32Array(capacity), 1);
     folds.setUsage(THREE.DynamicDrawUsage);
     geometry.setAttribute("aFold", folds);
-    const mesh = new THREE.InstancedMesh(geometry, birdMaterial(spec, haze), capacity);
+    const mesh = new THREE.InstancedMesh(geometry, birdMaterial(spec, haze, !modelled), capacity);
     mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.count = 0;
     // The instances move every frame and the mesh has no fixed extent; the

@@ -1,14 +1,14 @@
 ---
 name: blender-assets
-description: "Use when a game asset is to be MODELLED IN BLENDER off the game's own data — the sleds, the rider and every kind of tree today; an animal or any other drawn thing when its kind is added — for studio renders, a real-time glTF with LODs, or to find out how good an authored version of something the game builds in code could look. Owns `make blender` (`scripts/blender.mjs`, the registry of KINDS and the JSON each is handed), the Blender shelf (`scripts/blender/lib.py`: the helpers, the studio, the game-budget export) and each kind's builder (`scripts/blender/sled.py`, `rider.py`, `tree.py`), the RIG every model carries and the clips baked into it (the game-side contracts `sled-rig.ts` and `rider-rig.ts`), the lab sheet that sets a model beside the game's own (`make sled ARGS=--asset=…`), THE MODELS IN THE GAME (the `VITE_MODEL_SLEDS` / `VITE_MODEL_RIDERS` / `VITE_MODEL_TREES` build switches, `make models`, `pwa/models-plugin.ts`, `sled-models.ts`, `tree-models.ts`, the meshopt packer `scripts/lib/glb-pack.mjs`: packed, loaded, dressed, posed in place of the code's drawn parts), the frame a model is stated in and turned back from, the triangle budget and its LODs, installing and running Blender headless on macOS and Linux, reference photographs (local only, never committed, never named), and adding a new kind. Not the game's own builders (`sled-design`, `nature`, `rider`, `tree-shapes.ts`) — though they are what every model is held against."
+description: "Use when a game asset is to be MODELLED IN BLENDER off the game's own data — the sleds, the rider, every kind of tree, every bird and animal of the wildlife and the course's marks (the checkpoint and the start arch) today; any other drawn thing when its kind is added — for studio renders, a real-time glTF with LODs, or to find out how good an authored version of something the game builds in code could look. Owns `make blender` (`scripts/blender.mjs` and the KINDS under `scripts/blender/kinds/`, each the JSON the game's data for one is handed as), the Blender shelf (`scripts/blender/lib.py`: the helpers, the studio, the rig, the game-budget export; `static.py`: the role-painted static mesh the wildlife and the marks are built as) and each kind's builder (`scripts/blender/sled.py`, `rider.py`, `tree.py`, `bird.py`, `beast.py`, `gate.py`), the RIG every model carries and the clips baked into it (the game-side contracts `sled-rig.ts` and `rider-rig.ts`), the lab sheet that sets a model beside the game's own (`make sled ARGS=--asset=…`), THE MODELS IN THE GAME (the `VITE_MODEL_SLEDS` / `VITE_MODEL_RIDERS` / `VITE_MODEL_TREES` / `VITE_MODEL_BIRDS` / `VITE_MODEL_BEASTS` / `VITE_MODEL_GATES` build switches, `make models`, `pwa/models-plugin.ts`, `sled-models.ts`, `tree-models.ts`, `bird-models.ts`, `beast-models.ts`, `gate-models.ts` over `model-parts.ts`, the meshopt packer `scripts/lib/glb-pack.mjs`: packed, loaded, dressed, posed in place of the code's drawn parts), the frame a model is stated in and turned back from, the triangle budget and its LODs, installing and running Blender headless on macOS and Linux, reference photographs (local only, never committed, never named), and adding a new kind. Not the game's own builders (`sled-design`, `nature`, `rider`, `tree-shapes.ts`) — though they are what every model is held against."
 ---
 
 # Blender assets
 
-The game draws its **sleds, rider and trees from the models made here** —
-committed in `pwa/models/` by `make models` — and builds everything else
-(and, one switch away, the sleds, the rider and the trees too) in code
-(§ "The models in the game"). This skill is the other road, kept open on purpose — the same
+The game draws its **sleds, rider, trees, birds, animals and the course's
+marks from the models made here** — committed in `pwa/models/` by `make
+models` — and builds everything else (and, one switch away, every one of
+those too) in code (§ "The models in the game"). This skill is the other road, kept open on purpose — the same
 things MODELLED in Blender, off the same numbers, so that the question "how
 good could it look, and what would it cost?" is answered with a render, a
 triangle count and a picture in the game's own lab rather than a guess, and
@@ -43,10 +43,13 @@ sled) — its judging rules apply to a model too.
 
 | Piece | Role |
 | --- | --- |
-| `scripts/blender.mjs` | THE DRIVER (`make blender`): `KINDS` (per kind: its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`BONES`, `CLIPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error |
+| `scripts/blender.mjs` | THE DRIVER (`make blender`): loads every KIND under `scripts/blender/kinds/<kind>.mjs` (its ids, the JSON of the game's data for one, its builder, its default), finds Blender, runs each QUALITY, echoes what matters (`BONES`, `CLIPS`, `TRIANGLES`, what was saved, any traceback) and fails on a Python error. A kind's data module is in its own sources alone, so a kind added moves no other stamp |
 | `scripts/blender/lib.py` | THE SHELF every builder imports: the scene, `mat`, the geometry (`loft`, `superellipse`, `tube`, `cyl`, `box`, `ellipsoid`, `coil`, `catmull`, `resample`, boolean cutters), THE RIG (`rides`, `bone`, `marker`, `clip`, `morph`), and `finish()` — the rig built and skinned, the clips baked, the studio, the Cycles stills, the join into one skinned mesh, LOD0 and the decimated LODs as glTF |
 | `scripts/blender/rider.py` | THE RIDER BUILDER (`KIND=rider`, `ID=rider0…3` a grid slot's kit): one SUIT that bends (a man of the ANSUR II survey's mean measure in a racer's kit, lofted a piece a bone, remeshed into one skin, creased where a joint bends, cut along the hem, yoke, cuff and lap planes before it is coloured, weighted across each joint between the two bones that meet there) and rigid parts on one bone each — the helmet laid on the game's MEASURED shell (`helmetReach` / `helmetPart` sampled on a grid), the boots, the gloves |
 | `scripts/blender/tree.py` | THE TREE BUILDER (`KIND=tree`, `ID=<kind>` or `all`): a kind's ten variants off their own rows, each a full tree and a far sketch, one glTF a kind; no rig — the forest instances them (§ "The trees") |
+| `scripts/blender/static.py` | THE STATIC SHELF (the wildlife, the marks): `Sheet` (every face a ROLE, every vertex a tone), `loft`, `tube`, `fin`, `blob`, `role_mat`, `publish` (the root's extras, the export, the stills: `three`, `under`, `side`, `front`, `back`, `detail`) |
+| `scripts/blender/bird.py`, `beast.py`, `gate.py` | THE WILDLIFE AND THE MARKS: a bird off its roster row, an animal off its row and style, the checkpoint and the arch off `GATE` / `ARCH` (§ "The birds, the animals and the marks") |
+| `pwa/src/game/model-parts.ts`, `bird-models.ts`, `beast-models.ts`, `gate-models.ts` | THE STATIC MODELS IN THE GAME: one reader (`readStaticModel`: the parts by mesh name, a role a primitive, the root's extras), `Assembly` (dressed parts into one tagged geometry), and each kind's loader dressing off the game's own styles |
 | `pwa/src/game/tree-models.ts`, `scripts/lib/glb-pack.mjs` | THE TREES IN THE GAME: a kind's model read into the unit frame and dressed per map in the region's paint (`treeModel`), and the packer every published tree goes through (quantized, meshopt) |
 | `pwa/src/game/rider-rig.ts` | THE RIDER'S CONTRACT: `riderBones(pose)` (every bone's frame off a `RiderPose` — the game's own spans, rolled to face each joint's bend, the head turned as `rider.ts` turns it), `RIDING` (the pose he is bound in), `riderClips()` (every clip SAMPLED off the game's `riderPose` and `stepRiderSpring`), `rigRider` (a loaded model's bones set to a pose, or a clip played) |
 | `scripts/blender/sled.py` | THE SLED BUILDER: the cowl, the lamp pods, the screen, the bars, the seat and what rides behind it, the tunnel, the flap, the boards, the belt and its lugs, the rear suspension, the skis, spindles, A-arms and coil-overs — every dimension off the spec and the trace |
@@ -97,49 +100,12 @@ with `riderSeat(spec)`, the same function the builder seats him with. A new
 kind states its frame in its builder's header and its lab does the turn;
 never bake a turn into a model.
 
-## Modelling craft (what the sled taught)
+## Modelling craft
 
-- **Panels are a CAGE under a subdivision surface, with creases.** A
-  cross-section of a dozen keyed points (belly, lower corner, flank,
-  SHOULDER, upper flank, brow, crown) lofted through ~18 stations,
-  subdivided, with the shoulder creased hard (`crease_edge` 1.0), the brow
-  softer and the crown ridge softer still. That is what makes a cowl read
-  as moulded panels with a character line rather than a pod or a capsule —
-  and the cage is the low-poly base the game budget subdivides once.
-- **Paint follows the cage's bands**, assigned per cage FACE (below the
-  shoulder black, the band above it a stripe, the rest paint), so every
-  colour edge runs along a crease after subdivision. Colouring a fine mesh
-  face by face by its centroid stair-steps; a shader mask is clean in
-  Cycles but does not survive into glTF.
-- **What must stand proud is a VOLUME.** Lamps shrinkwrapped onto the cowl
-  read as sunk into it at any offset; a housing that rises out of the
-  shoulder and grows toward the nose, ending in a forward lens, pops.
-- **Read the class off the references, not off memory.** What moved the
-  sled from "vintage" to "current": the belly raised over the front
-  suspension (the trace already had the cutout — do not smooth it away),
-  a V-shaped nose in plan with a ridge, the lamps high on the shoulders
-  just ahead of the screen, angular ski loops reaching back along the ski.
-- **Use every point the trace carries.** The screen is FOUR corners (the
-  front edge base → top, the side edge foot → back): lofted off the front
-  edge alone, a touring screen came out a flat slab hovering over the bars;
-  wrapped from the front edge round to the side edge, its lower edge laid
-  on the cowl, it reads as the tall wrapped screen it is. The mirrors and a
-  race sled's plates are in the trace too — check `SledLook`'s fields
-  against the builder whenever a class looks thin.
-- **Lay what sits on a panel ON the cage** (`ring_at`, `cowl_top`): a flat
-  box for a number plate cuts through the curved cowl; a patch lofted off
-  the cage's own points follows it.
-- **A boolean needs a rim.** A hole placed off one edge of a plate goes
-  through that edge where the plate is shallow (a touring tunnel is 4 cm
-  deep at the tail), and the boolean then drops the whole panel — silently.
-  Place holes at mid-depth and skip them where the plate is too shallow.
-- **Hang what hangs from what it hangs on.** A traced flap that starts
-  below a shallow tunnel's deck floats; carry its top up to the deck.
-- **Every part is data-driven or class-proportional.** Where the trace says
-  nothing (a bumper's loop, a lever), place it off something it does say
-  (the nose, the grip) — so the same builder models all six classes; the
-  mountain sled got its bar handle and no screen, the touring machine its
-  backrest, grab handles and luggage, with no class-specific code.
+What each kind's first renders got wrong and the move that fixed it is a
+LESSON of this skill (`npx ogf-skill-lessons blender-assets --list`: the
+sled's cage-and-crease craft, the wildlife's keyed sections and fingers)
+— read the ones scoped to the builder you are in before the first pass.
 
 ## The budget
 
@@ -331,18 +297,50 @@ MODELS them; ~2 s a kind at game quality.
 `BLENDER=`; Cycles falls back to the CPU itself. Models made there differ
 from macOS ones only in their floats' last bits.
 
-## Adding a kind (animals, …)
+## The birds, the animals and the marks
 
-1. **The data.** A row in `KINDS` in `scripts/blender.mjs`: `ids()`, and
-   `data(id)` returning the game's OWN tables for one (a tree: its kind's
-   variant rows and `crownAt` from `tree-variants.ts`; an animal: its row
-   and shape from `beast-defs.ts` / `beast-shapes.ts`) — imported through
-   `aliasEngine`, never restated. The rider and the trees are the worked
-   examples.
+`KIND=bird`, `KIND=beast`, `KIND=gate` (`ID=checkpoint`, `start-arch`):
+STATIC models on the trees' pattern — no rig, no colour in the file, a face
+a ROLE the game paints (`birdRoleColour`, `beastRoleColour`,
+`gateRoleColour`), the tone's R a shade — one glTF each, published packed
+(`birds/<id>.glb`, `beasts/<id>.glb`, `gates/<id>.glb`), ~2 s a model;
+`make models SET=birds` (`beasts`, `gates`) one half.
+
+- **The frame** (`static.py`'s header): Blender x the game's x, z its y,
+  −y its z — the exporter's own turn of the game's frame, so the loader
+  turns NOTHING and left stays left. A bill and a nose point down −y; a
+  pennant streams along +x. (A sled is the other way: its trace is y
+  forward and its lab does a half turn.)
+- **The shader's tags come off the MESH NAMES**: `body` + `wing` (`aWing`);
+  `body`, `head` (all that grazes: `aHead`), `leg_lf` … `leg_rh` (`aLeg` =
+  1 + `LEG_PHASE`, `aHip` the root's `hip`), `tail`; the head's pivot on
+  the root. The code's own graft flaps, walks and grazes the model, lit
+  smooth.
+- **The arch is made at ONE reach** (`ARCH.modelReach`) and `archModel`
+  stretches it with `remap`: the span to the plan's reach, each leg down to
+  its own foot, the foot's hardware moved whole. The banner, the guy lines
+  and the dyed line stay the code's.
+- **Judge a bird FROM BELOW** (`--views=under`), an animal from the side;
+  then `make birds ARGS="--models --from=previews/blender --compare"` and
+  `make world` (which loads the committed models). The modelling
+  heuristics are the lessons.
+
+## Adding a kind (…)
+
+1. **The data.** A module `scripts/blender/kinds/<kind>.mjs` exporting
+   `kind`: `ids()`, and `data(id)` returning the game's OWN tables for one
+   (a tree: its kind's variant rows and `crownAt` from `tree-variants.ts`;
+   an animal: its row and style from `beast-defs.ts` / `beast-shapes.ts`)
+   — imported through `aliasEngine`, never restated — its `builder`, its
+   `fallback` id and a `help` line. The driver finds it by its file name.
 2. **The builder**, `scripts/blender/<kind>.py`: `from lib import *`, its
    frame stated in its header, `rides()` / `bone()` for the rig, `clip()`
-   for what it plays, `finish(name, OUT, SAMPLES, centre, size)` at the end. A helper two
-   kinds need goes into `lib.py`.
+   for what it plays, `finish(name, OUT, SAMPLES, centre, size)` at the end
+   — or, for a static kind, `from static import *`, a `Sheet` a part and
+   `publish(name, made, OUT, extras=…)`. A helper two kinds need goes into
+   `lib.py` or `static.py`. Its sources (the builder, its data module, the
+   shelf, the game data it reads) are a list in `pwa/models-plugin.ts` and
+   a half of `MODEL_HALVES`, stamped apart in `sources.json`.
 3. **The lab.** The kind's own lab owes an asset view like the sled lab's
    (`--asset=`), with the turn back into the game's frame in the lab, not
    in the model, and a rig sheet posing it by the game's own numbers beside
@@ -358,56 +356,45 @@ from macOS ones only in their floats' last bits.
 ## The models in the game
 
 Every build draws them — local, CI, the site's slots, a release, the
-desktop and store apps — unless SWITCHED BACK: `VITE_MODEL_SLEDS=0` (the
-code-built machines) and/or `VITE_MODEL_RIDERS=0` (the code-built rider),
-in the environment or the root `.env`; unset, empty or anything else is on
-(`model-switch.ts`). Every workflow's build step hands on the repository
-variables of the same names, so `make ci-models MODELS=off` switches every
-CI build back with no commit (`MODELS=on` returns them).
+desktop and store apps — unless SWITCHED BACK (`VITE_MODEL_SLEDS=0`,
+`VITE_MODEL_RIDERS=0`, `VITE_MODEL_TREES=0`, `VITE_MODEL_BIRDS=0`,
+`VITE_MODEL_BEASTS=0`, `VITE_MODEL_GATES=0` in the environment or the root
+`.env`; `model-switch.ts`). Every workflow's build step hands on the
+repository variables of the same names, so `make ci-models MODELS=off`
+switches every CI build back with no commit. `docs/configuration.md` is
+the description; what a session needs:
 
 - **Committed, stamped, drift-tested.** `make models` makes every sled and
-  `rider0` at game quality (no stills, ~2 min) and `scripts/models.mjs`
-  publishes their LOD0s into `pwa/models/<id>.glb` / `rider.glb` with
-  `sources.json`: the hash of `MODEL_SOURCES` (`pwa/models-plugin.ts` — the
-  builders, the driver, and the game data they read). `tests/models_test.ts`
-  recomputes it: a change to any source FAILS the suite until `make models`
-  is run and `pwa/models/` committed with it. CI therefore needs no Blender.
-  Add a file a builder reads to `MODEL_SOURCES`, or its changes go unseen.
-- **Packed by the build.** `pwa/models-plugin.ts` emits them as
-  `models/<id>.glb` and `models/rider.glb` into the bundle (before
-  `appPwa`, so the worker precaches them) and serves them the same way in
-  dev; a build whose model is missing FAILS, naming `make models`. `envDir`
-  is the repository root. About 7 MB in all (a machine ~1.1 MB, the rider
-  0.5 MB), ~1.6 MB in git a regeneration.
-- **Fetched before anything is built.** `loadModels()` runs where the
-  renderer's chunk lands (`use-render-kit.ts`) and where the sled card's
-  turntable chunk lands (`sled-picker.tsx`) — a builder that ran first drew
-  the code's machine on the card while the race drew the model.
+  `rider0` at game quality (no stills, ~2 min), every tree, bird, animal
+  and mark (seconds each), and `scripts/models.mjs` publishes the LOD0s
+  into `pwa/models/<id>.glb` / `rider.glb` and the static models packed
+  into `trees/`, `birds/`, `beasts/`, `gates/`, with `sources.json`: one
+  hash a half (`MODEL_HALVES` in `pwa/models-plugin.ts` — the builders,
+  the driver, the kind's data module, and the game data they read).
+  `tests/models_test.ts` recomputes each: a change to any source FAILS the
+  suite until `make models SET=<half>` is run and `pwa/models/` committed
+  with it. CI therefore needs no Blender. Add a file a builder reads to
+  its half's list, or its changes go unseen.
+- **Packed by the build** (`pwa/models-plugin.ts`, before `appPwa` so the
+  worker precaches them; a build whose model is missing FAILS, naming
+  `make models`) and **fetched before anything is built** — `loadModels()`
+  where the renderer's chunk lands (`use-render-kit.ts`) and where the
+  sled card's turntable lands (`sled-picker.tsx`).
 - **The code machine is still built and still the machine.** `attachModels`
-  (in `createSledModel`) hangs the model beside it and COLLAPSES the code's
-  drawn parts out of the merged draw (hidden parts get a zero bone,
-  `posed-merge.ts`); the lamps, the glow, the bound, the thrown rider, the
-  cockpit views' hidden rider and every reader of a `SledModel` go on as
-  they were. The model is posed each frame off the same readings: the
-  machine by `sled-rig.ts` (with the drawn furrow's `SINK_SHARE` and the
-  belt's run off `way`), the rider by `rider-rig.ts` at the figure's own
-  pose — on the seat or thrown (`ragdollPose`), his holder where the
-  figure's group stands.
-- **"Up" and "side" are the MACHINE's.** A rig written against the lab's
-  level floor (the world's up, the world's x) turned the skis about the
-  wrong axis the moment the machine pitched; `rigAsset` reads both off the
-  frame the loaded scene hangs in.
+  hangs the model beside it and COLLAPSES the code's drawn parts out of the
+  merged draw (`posed-merge.ts`); the lamps, the glow, the bound, the
+  thrown rider and every reader of a `SledModel` go on as they were. The
+  machine is posed by `sled-rig.ts`, the rider by `rider-rig.ts` at the
+  figure's own pose. "Up" and "side" are the MACHINE's (`rigAsset` reads
+  them off the loaded scene's frame), never the lab's floor.
 - **Dressed, not repainted by hand.** `dressOf` maps each material's NAME
   (as `sled.py` / `rider.py` name it — `tests/models_test.ts` reads them)
-  to the style's colour (paint, trim, seat, springs; the kit's jacket,
-  yoke, pants, helmet, peak, goggles), or to the code machine's OWN lamp,
-  taillight and glass materials, so `setLamps` lights the model's lenses
-  and the brake shows. Every other material is cloned and passed through
-  the world's `wrap` (the haze, a ghost's see-through). A livery's colours
-  reach a model; its pattern's decals do not (open work: a decal layer).
-- **One rider model for every kit**: `rider0` dressed per slot.
-- **Cost**: a machine's LOD0 (~16k triangles, a draw per material) and the
-  rider's (~9k) for every rider on the grid — the lower LODs are packed by
+  to the style's colour or to the code machine's own lamp, taillight and
+  glass materials, so `setLamps` lights the model's lenses; every other
+  material goes through the world's `wrap`. A livery's pattern decals do
+  not reach a model (open work). One rider model for every kit.
+- **Cost**: a machine's LOD0 ~16k triangles, the rider's ~9k, a bird
+  300–600, an animal 550–700, the arch ~3.5k; the lower LODs are packed by
   nothing yet (open work: rivals at range on LOD1).
 
 ## Skill self-improvement
