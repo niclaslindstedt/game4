@@ -10,7 +10,7 @@
 
 ## What
 
-Powder Run is an arcade snowmobile racer — no account, no download, free. The whole game is the sensation of a sled meeting snow: on the packed track the skis bite and the tread drives, and off it the sled wallows in deep powder at walking pace and climbs up onto the top of it as speed builds, the way a sled really floats. Hill crests kick you into the air, the throttle and the brake pitch the nose in flight, and a harsh landing costs you the speed you carried into it.
+Powder Run is an arcade snowmobile racer — nothing to sign up for, and nothing to install to play it in a browser. The whole game is the sensation of a sled meeting snow: on the packed track the skis bite and the tread drives, and off it the sled wallows in deep powder at walking pace and climbs up onto the top of it as speed builds, the way a sled really floats. Hill crests kick you into the air, the throttle and the brake pitch the nose in flight, and a harsh landing costs you the speed you carried into it.
 
 Every map is **generated from a seed** by a rules engine: a basin of rolling hills and ridges walled by mountain flanks, open powder meadows between forests of snow-loaded conifers, and a closed race loop graded into the ground with crests on it that are jumps. The race starts from a grid on the track behind the start line, and runs three laps against three rivals through checkpoints in order; stretches of the track lie drifted over with fresh snow, some maps barely any and some nearly half the loop. The sun's hour comes with the seed too; the same seed is the same map on every machine, so a URL is a map and a bug report is a repro.
 

@@ -2742,6 +2742,25 @@ canvas {
   opacity: 0.5;
 }
 
+/* The privacy policy, just ahead of the build in the foot strip: the same
+   quiet face, because it is a page a player looks for rather than a button
+   the card offers. It opens in the system browser (off-origin), never in the
+   game's own window. */
+.menu-privacy {
+  margin-left: auto;
+  padding-left: 0.4rem;
+  white-space: nowrap;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  color: var(--hud-info);
+  opacity: 0.75;
+  text-decoration: none;
+}
+
+.menu-privacy + .menu-version {
+  margin-left: 0;
+}
+
 /* ── A PAGE UNDER THE FRONT DOOR (menu-options.tsx, menu-keys.tsx) ─────────
    A head with the way out in it, then the rows (menu-knobs.tsx). OPTIONS is
    the longest card in the game, so the CARD scrolls — see `.menu-card`. */

@@ -21,11 +21,21 @@ export const APP_DESCRIPTION =
   "A snowmobile racing game that runs in your browser. Race a sled round a " +
   "packed-snow loop over generated hills and through snow-loaded forest, " +
   "cutting your own trail through the deep powder between — on your phone or " +
-  "desktop, offline once loaded. No account, no download.";
+  "desktop, offline once loaded. Nothing to sign up for, no download.";
 export const SITE_URL = "https://game4.niclaslindstedt.se";
-/** Where the source lives — the HUD's build label will link a build's commit
- * here, so the running app can always say exactly what it is. */
+/** Where the source lives — on the website, the HUD's build label and the
+ * menu's version link a build's commit here, so the running app can always say
+ * exactly what it is. The browser code never imports it: it reads
+ * `__SOURCE_URL__`, which a packaged build (`VITE_SHELL_BUILD=on`) leaves
+ * empty, so the label prints plain and the URL is not in its bundle. */
 export const REPO_URL = "https://github.com/niclaslindstedt/game4";
+/** The game's page on the publisher's app site, which carries its privacy
+ * policy (`privacy/`) and support page (`support/`). It is where the store
+ * listing and the packaged apps send a player: a phone or desktop build names
+ * neither the website above nor the source, and its bundle scripts refuse one
+ * that does (`scripts/lib/no-source.mjs`). The front door's PRIVACY link opens
+ * its privacy page in every build. */
+export const APPS_PAGE_URL = "https://apps.agilator.se/powder-run/";
 
 /** A clear winter day: fresh snow in the sun and blue in the shade, a pale
  * sky deepening overhead, dark pine at the edge of the fields, the grey of

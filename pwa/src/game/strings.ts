@@ -194,6 +194,9 @@ export const STRINGS = {
     `SEED ${seed} · TRICKS · ${points.toLocaleString("en-US")} PTS`,
 
   menuOptions: "OPTIONS",
+  /** The front door's link to the privacy policy on the publisher's app
+   * site — every build carries it, the store apps included. */
+  menuPrivacy: "PRIVACY",
   menuBack: "BACK",
 
   /* ── THE SLED CARD (menu-sled.tsx, sled-picker.tsx, sled-stats.ts) ─── */
