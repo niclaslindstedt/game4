@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// SYNTHETIC maps for the rule suites and the ride lab — the §23.8 sequel
+// SYNTHETIC maps for the rule suites and the ride lab — the sequel
 // test: the physics, the course, the bot and the simulator are all held to
 // maps no generator built, so the rule suite passes with the generator
 // deleted. Anything that needs a GENERATED map calls the generator itself.

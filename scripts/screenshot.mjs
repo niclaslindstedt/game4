@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // SCREENSHOTS of the real build: serves pwa/dist, opens the app in headless
 // Chromium, waits for the app to say the frame is ready, and captures it at
-// the three reference viewports (§35.2) — desktop landscape 1280×720, phone
+// the three reference viewports — desktop landscape 1280×720, phone
 // portrait 390×844 and phone LANDSCAPE 844×390, the phones at 2× and with a
 // TOUCHSCREEN — into the gitignored previews/. The third is the one the game
 // is actually held at, and the only one that reaches the short-landscape

@@ -2,7 +2,7 @@
 // WHAT A RACE SAYS: the line in the news column an engine event earns. Pure
 // — an event and the state it came off in, a line out — so the root suite
 // reads every rung without a browser, and `App.tsx` only calls it. Every
-// word is the strings table's (§39.1).
+// word is the strings table's.
 //
 // NEWS IS WHAT CHANGED THE RACE: a checkpoint taken and its clock, a lap
 // done, one missed, a tree met, a landing the suspension could not take, a

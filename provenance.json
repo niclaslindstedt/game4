@@ -1,0 +1,91 @@
+{
+  "about": "Every asset Powder Run ships, where it comes from and under what licence. The game ships no audio file, no font file and no texture file: every sound is synthesized, every hill, track and snowfield is geometry built by code at run time, and the sleds, the rider, the trees, the birds, the animals and the course's marks are glTF MODELS made in Blender off the game's own data by `make models` (the code-built ones stay one build switch away). Nothing here is third-party. A new kind of asset, or a new generator, changes this file in the same commit.",
+  "assets": [
+    {
+      "path": "pwa/public/icons/icon.svg",
+      "source": "authored",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "The app mark, drawn by hand. scripts/generate-icons.mjs and pwa/src/game/app-mark.ts restate its geometry."
+    },
+    {
+      "path": "pwa/public/icons/*.png",
+      "source": "generated",
+      "generator": "make icons (scripts/generate-icons.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0"
+    },
+    {
+      "path": "pwa/public/favicon.ico",
+      "source": "generated",
+      "generator": "make icons (scripts/generate-icons.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0"
+    },
+    {
+      "path": "native/assets/*.png",
+      "source": "generated",
+      "generator": "make icons (scripts/generate-icons.mjs) — icon-1024.png and pwa-192.png, copied in",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "The phone app's icon, splash icon and favicon are byte-for-byte copies of the generated web icons; nothing writes them here yet (see docs/conformance.md)."
+    },
+    {
+      "path": "tauri/src-tauri/icons/",
+      "source": "generated",
+      "generator": "tauri/scripts/icons.mjs (run by the desktop build)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "Build output, gitignored: pwa/public/icons/ re-encoded to RGBA for the desktop app."
+    },
+    {
+      "path": "pwa/models/*.glb",
+      "source": "generated",
+      "generator": "make models (scripts/blender.mjs over scripts/blender/sled.py and rider.py, then scripts/models.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "The modelled sleds and rider, made in Blender off the game's own data. Committed; tests/models_test.ts holds each to the stamp in pwa/models/sources.json."
+    },
+    {
+      "path": "pwa/models/trees/*.glb",
+      "source": "generated",
+      "generator": "make models SET=trees (scripts/blender.mjs over scripts/blender/tree.py, then scripts/models.mjs, which packs each through scripts/lib/glb-pack.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "Every kind of tree in its ten variants, modelled in Blender off the game's own rows (pwa/src/game/tree-variants.ts) and packed. Committed; tests/models_test.ts holds them to the trees' stamp, tests/tree_models_test.ts decodes every one."
+    },
+    {
+      "path": "pwa/models/birds/*.glb",
+      "source": "generated",
+      "generator": "make models SET=birds (scripts/blender.mjs over scripts/blender/bird.py, then scripts/models.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "Every species of the bird roster, modelled in Blender off its own row and packed. Committed; tests/wildlife_models_test.ts decodes every one."
+    },
+    {
+      "path": "pwa/models/beasts/*.glb",
+      "source": "generated",
+      "generator": "make models SET=beasts (scripts/blender.mjs over scripts/blender/beast.py, then scripts/models.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "Every species of the animal roster, modelled in Blender off its own row and packed. Committed; tests/wildlife_models_test.ts decodes every one."
+    },
+    {
+      "path": "pwa/models/gates/*.glb",
+      "source": "generated",
+      "generator": "make models SET=gates (scripts/blender.mjs over scripts/blender/gate.py, then scripts/models.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "The course's marks — the checkpoint stake, pennant and marker, and the start arch — modelled in Blender and packed. Committed; tests/gate_models_test.ts decodes them."
+    },
+    {
+      "path": "pwa/models/sources.json",
+      "source": "generated",
+      "generator": "make models (scripts/models.mjs)",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "The stamps of what the models were made from, one a half."
+    },
+    {
+      "path": "pwa/src/game/audio/",
+      "source": "authored",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "Every sound, bed and bird cry, as authored synthesis parameters, played on the shared framework's synthesized instrument (@niclaslindstedt/oss-game-framework, same licence). No audio file ships."
+    },
+    {
+      "path": "pwa/src/game/",
+      "source": "authored",
+      "licence": "PolyForm-Noncommercial-1.0.0",
+      "note": "The world's models and materials — the snow, the hills, the woods, the sky, the sleds and the rider — built as geometry and shaders by this code at run time (the modelled ones drawn from pwa/models/ unless a build switches them back). No texture file ships."
+    }
+  ]
+}

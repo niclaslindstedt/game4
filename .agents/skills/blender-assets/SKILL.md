@@ -360,7 +360,7 @@ desktop and store apps — unless SWITCHED BACK (`VITE_MODEL_SLEDS=0`,
 `VITE_MODEL_RIDERS=0`, `VITE_MODEL_TREES=0`, `VITE_MODEL_BIRDS=0`,
 `VITE_MODEL_BEASTS=0`, `VITE_MODEL_GATES=0` in the environment or the root
 `.env`; `model-switch.ts`). Every workflow's build step hands on the
-repository variables of the same names, so `make ci-models MODELS=off`
+repository secrets of the same names, so `make ci-models MODELS=off`
 switches every CI build back with no commit. `docs/configuration.md` is
 the description; what a session needs:
 

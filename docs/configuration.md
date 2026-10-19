@@ -61,19 +61,20 @@ Every dependency resolves from the public npm registry, so `npm install` needs n
 
 ## Build-time environment
 
-| Variable                           | Meaning                                                                                                                                                                                                                      |
-| ---------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `VITE_BASE`                        | Deploy base path: `/` (default), `/preview/`, `/branch/`. Drives the SW scope, the manifest identity, and every emitted URL.                                                                                                 |
-| `VITE_PWA_IGNORE_PATHS`            | Comma-separated absolute paths the built service worker must NOT claim. Only the root slot sets it (`/preview/,/branch/`) so nested slots own their own pages.                                                               |
-| `GITHUB_SHA` / `GITHUB_RUN_NUMBER` | Provided by CI; baked into the build label the HUD corner shows.                                                                                                                                                             |
-| `CHROMIUM_PATH`                    | The browser the screenshot and profile tools drive. Claude web sessions have one at `/opt/pw-browsers/chromium`.                                                                                                             |
-| `BLENDER`                          | The Blender executable `make blender` runs (else the macOS app, else `blender` on the PATH). Only the Blender lab reads it.                                                                                                  |
-| `VITE_MODEL_SLEDS`                 | `0` (or `off`) switches back to the code-built machines; unset, empty or anything else draws the modelled ones (`pwa/models/<id>.glb`, packed as `models/<id>.glb`). CI hands it the repository variable of the same name.   |
-| `VITE_MODEL_RIDERS`                | `0` (or `off`) switches back to the code-built rider; otherwise the modelled one (one model, dressed in each slot's kit, `pwa/models/rider.glb`). CI: the repository variable.                                               |
-| `VITE_MODEL_TREES`                 | `0` (or `off`) switches back to the code-built trees; otherwise the modelled ones (every kind's ten variants, `pwa/models/trees/<kind>.glb`, dressed in the region's paint). CI: the repository variable.                    |
-| `VITE_MODEL_BIRDS`                 | `0` (or `off`) switches back to the code-built birds; otherwise the modelled ones (one a species, `pwa/models/birds/<id>.glb`, painted in its style and flapped by the same shader). CI: the repository variable.            |
-| `VITE_MODEL_BEASTS`                | `0` (or `off`) switches back to the code-built animals; otherwise the modelled ones (one a species, `pwa/models/beasts/<id>.glb`, painted in its style and walked by the same shader). CI: the repository variable.          |
-| `VITE_MODEL_GATES`                 | `0` (or `off`) switches back to the code-built checkpoint stakes, pennants, markers and start arch; otherwise the modelled ones (`pwa/models/gates/<id>.glb`, the arch stretched to each line). CI: the repository variable. |
+| Variable                           | Meaning                                                                                                                                                                                                                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `VITE_BASE`                        | Deploy base path: `/` (default), `/preview/`, `/branch/`. Drives the SW scope, the manifest identity, and every emitted URL.                                                                                               |
+| `VITE_PWA_IGNORE_PATHS`            | Comma-separated absolute paths the built service worker must NOT claim. Only the root slot sets it (`/preview/,/branch/`) so nested slots own their own pages.                                                             |
+| `GITHUB_SHA` / `GITHUB_RUN_NUMBER` | Provided by CI; baked into the build label the HUD corner shows.                                                                                                                                                           |
+| `VITE_SHELL_BUILD`                 | `on` in the phone and desktop bundles (their `bundle-web.mjs` set it). The build links nothing back to the source or the website — see _The packaged apps_.                                                                |
+| `CHROMIUM_PATH`                    | The browser the screenshot and profile tools drive. Claude web sessions have one at `/opt/pw-browsers/chromium`.                                                                                                           |
+| `BLENDER`                          | The Blender executable `make blender` runs (else the macOS app, else `blender` on the PATH). Only the Blender lab reads it.                                                                                                |
+| `VITE_MODEL_SLEDS`                 | `0` (or `off`) switches back to the code-built machines; unset, empty or anything else draws the modelled ones (`pwa/models/<id>.glb`, packed as `models/<id>.glb`). CI hands it the repository secret of the same name.   |
+| `VITE_MODEL_RIDERS`                | `0` (or `off`) switches back to the code-built rider; otherwise the modelled one (one model, dressed in each slot's kit, `pwa/models/rider.glb`). CI: the repository secret.                                               |
+| `VITE_MODEL_TREES`                 | `0` (or `off`) switches back to the code-built trees; otherwise the modelled ones (every kind's ten variants, `pwa/models/trees/<kind>.glb`, dressed in the region's paint). CI: the repository secret.                    |
+| `VITE_MODEL_BIRDS`                 | `0` (or `off`) switches back to the code-built birds; otherwise the modelled ones (one a species, `pwa/models/birds/<id>.glb`, painted in its style and flapped by the same shader). CI: the repository secret.            |
+| `VITE_MODEL_BEASTS`                | `0` (or `off`) switches back to the code-built animals; otherwise the modelled ones (one a species, `pwa/models/beasts/<id>.glb`, painted in its style and walked by the same shader). CI: the repository secret.          |
+| `VITE_MODEL_GATES`                 | `0` (or `off`) switches back to the code-built checkpoint stakes, pennants, markers and start arch; otherwise the modelled ones (`pwa/models/gates/<id>.glb`, the arch stretched to each line). CI: the repository secret. |
 
 `.env.example` at the root documents the same set; copy it to `.env` (gitignored) to override locally — the build reads the root `.env` (`envDir` in `pwa/vite.config.ts`) for the client's switches and the packing alike, and the environment wins over it.
 
@@ -94,6 +95,18 @@ Each slot's manifest gets a distinct `id`/`scope`/`start_url` and install name (
 ## Releases
 
 `version-bump.yml` (manual dispatch, and the only entry point) checks the branch and the tree, prints the version it is about to cut, and calls `release.yml`, which derives the bump from `.changes/unreleased/` fragments, rewrites every version string via `scripts/update-versions.sh`, collates the CHANGELOG, commits `chore(release): vX.Y.Z`, tags, creates the GitHub Release as a draft, publishes it, and chains into `pages.yml` so `/` serves the new tag immediately. It is one dispatched run under the default `GITHUB_TOKEN` — no PAT. The desktop shell's packaging matrix (`release.yml`'s `desktop` job) runs between the draft and the publish, which waits until every platform's download is attached.
+
+The desktop package takes its identity from the deployment: `APP_BUNDLE_ID` (and the optional `APP_DISPLAY_NAME`) from the repository's secrets, merged over the committed development identifier; the release passes `--require-identity` and refuses to package without it. A macOS package is signed and notarized when the signing secrets are set — `.github/actions/apple-signing` imports the certificate into a throwaway keychain and reads the identity back out of it. All optional; without them the package is signed ad hoc:
+
+| Secret                        | Meaning                                                                                     |
+| ----------------------------- | ------------------------------------------------------------------------------------------- |
+| `MAC_CSC_LINK`                | The Developer ID Application certificate as a base64-encoded `.p12` (`base64 -i cert.p12`). |
+| `MAC_CSC_KEY_PASSWORD`        | The password that `.p12` was exported with.                                                 |
+| `APPLE_ID`                    | The Apple ID the notarization request is made as.                                           |
+| `APPLE_APP_SPECIFIC_PASSWORD` | An app-specific password for it, from appleid.apple.com.                                    |
+| `APPLE_TEAM_ID`               | The ten-character Developer Team ID the certificate belongs to.                             |
+
+The first two sign; the last three notarize. `MAC_SIGN_IDENTITY` overrides the identity read out of the certificate, and is needed only where the keychain holds more than one. [`tauri/RELEASING.md`](../tauri/RELEASING.md) is the desktop release, step by step.
 
 ## Identity
 
@@ -120,10 +133,22 @@ Every surface that cannot import the module restates what it needs: `pwa/index.h
 | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `pwa/index.html` head               | `noindex,nofollow,noarchive,nosnippet,noimageindex` and nothing else a crawler reads: no meta description, no canonical, no sitemap link, no Open Graph or Twitter card, no JSON-LD |
 | `pwa/index.html` body               | `#root` and a `<noscript>` line. No prerendered copy describing the game                                                                                                            |
-| `pwa/public/robots.txt`             | `Disallow: /`, advertising no sitemap                                                                                                                                               |
+| `pwa/public/robots.txt`             | `Allow: /`, advertising no sitemap — a crawler has to fetch a page to read its `noindex`                                                                                            |
 | `sitemap.xml`, `llms.txt`, `og.png` | not shipped, and not generated                                                                                                                                                      |
-| `privacy/`, `support/`              | still REACHABLE — a store review fetches them by URL — but `noindex,nofollow` and no canonical                                                                                      |
+| `privacy/`, `support/`              | still REACHABLE for the website's players, but `noindex,nofollow` and no canonical. A store listing names the app's own pages on apps.agilator.se instead                           |
 
-`robots.txt` alone would only ask a crawler not to fetch; a URL it already knows can still be listed. The per-page `noindex` is what covers that, which is why both are there. `tests/identity_test.ts` holds all of it: adding a discovery tag, a crawler file or prerendered body copy back fails the suite.
+A `Disallow` in `robots.txt` would only ask a crawler not to fetch — and a crawler that cannot fetch a page never reads its `noindex`, so a URL it already knows could still be listed. That is why `robots.txt` lets it in and the per-page `noindex` does the asking. `tests/identity_test.ts` holds all of it: adding a discovery tag, a crawler file or prerendered body copy back fails the suite.
 
-This is a deliberate deviation from OSS_GAME_SPEC §11.3, recorded as such in [spec-conformance.md](spec-conformance.md).
+There are no size budgets and no SEO tooling, by owner decision.
+
+## The packaged apps
+
+**The phone and desktop apps link nothing back to the source or the website, by owner decision.** Both bundle scripts build the site with `VITE_SHELL_BUILD=on`, which:
+
+- empties `__SOURCE_URL__`, so the HUD's build label and the menu's version stamp name the commit as plain text and the repository URL is not in the bundle at all;
+- leaves the website's own pages out of the webroot — `privacy/`, `support/` (which link to the source and its discussions) and `CNAME` (`WEB_ONLY` in `pwa/pwa-plugin.ts`).
+- emits no service worker: the shell ships the bundle and a new release replaces it, so there is nothing for a worker to fetch or prompt about, and the bundle scripts refuse a webroot that carries `sw.js`.
+
+The desktop Help menu and About panel send a player to the app's page on apps.agilator.se (`APPS_PAGE_URL` in `identity.ts`, restated in `tauri/shell/src/config.rs`), whose privacy and support pages are the ones the store listing names. `scripts/lib/no-source.mjs` then reads every file of the webroot as bytes and the bundle script refuses one that names `niclaslindstedt`, "Source code" or "Report an issue"; `make store-metadata` refuses a listing that names the source or the owner's domain. The website keeps every link.
+
+Every build — the website and both apps — carries a **PRIVACY** link in the front door's foot strip that opens the privacy policy on apps.agilator.se (`APPS_PAGE_URL` + `privacy/`) in the system browser, because a store app has to offer one from inside itself.

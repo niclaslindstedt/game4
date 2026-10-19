@@ -31,9 +31,8 @@
 // The thumb zones it hangs under all that are next door in hud-touch.tsx:
 // they are the one part of this screen that does NOT run off the snapshot
 // (they write into the input manager at pointer rate). Every word here comes
-// from strings.ts (§39.1).
+// from strings.ts.
 
-import { REPO_URL } from "../identity.ts";
 import { formatTime } from "@niclaslindstedt/oss-game-framework/hud/format";
 import { HudActions } from "./hud-actions.tsx";
 import { ComboTile, TricksChips } from "./hud-combo.tsx";
@@ -94,7 +93,7 @@ export function Hud({
   feel: TouchFeel;
   /** Which side of the glass the lever stands on; the bar takes the other. */
   lever: ZoneSide;
-  /** The TAB is away and the clock with it (§37.3) — not the pause card,
+  /** The TAB is away and the clock with it — not the pause card,
    * which is a surface of its own (`menu-pause.tsx`) and stands over all of
    * this. The two share a word and nothing else. */
   away: boolean;
@@ -296,13 +295,18 @@ export function Hud({
         <UpdateButton />
       </div>
 
-      {/* §38.3: the build says what it is — version and commit, linked to
-          the source — and beside it the map this frame is of. */}
+      {/* The build says what it is — version and commit, linked to
+          the source on the website and plain in a packaged build, which links
+          nothing back to it — and beside it the map this frame is of. */}
       <div class="hud-build">
         <span>{STRINGS.stage(snap.seed)}</span>
-        <a href={`${REPO_URL}/commit/${__COMMIT_SHA__}`} target="_blank" rel="noreferrer">
-          {__BUILD_LABEL__}
-        </a>
+        {__SOURCE_URL__ ? (
+          <a href={`${__SOURCE_URL__}/commit/${__COMMIT_SHA__}`} target="_blank" rel="noreferrer">
+            {__BUILD_LABEL__}
+          </a>
+        ) : (
+          <span>{__BUILD_LABEL__}</span>
+        )}
       </div>
 
       {away && (

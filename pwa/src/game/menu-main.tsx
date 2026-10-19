@@ -36,7 +36,7 @@
 
 import { useEffect, useRef } from "preact/hooks";
 
-import { APP_NAME, REPO_URL } from "../identity.ts";
+import { APP_NAME, APPS_PAGE_URL } from "../identity.ts";
 import { MarkTrails } from "./mark-trails.tsx";
 import { Glyph } from "./menu-glyphs.tsx";
 import { NO_HOLD, holdWait, tickHold, type HoldState } from "./menu-hold.ts";
@@ -45,17 +45,26 @@ import { STRINGS } from "./strings.ts";
 
 /** The build, bottom right, linking to the exact commit it was cut from. A
  * build with no commit behind it says so and links nowhere — a dead link is
- * worse than an honest label. */
+ * worse than an honest label. A packaged build names its commit but links
+ * nowhere either: it carries no link back to the source (`__SOURCE_URL__` is
+ * empty there). */
 function VersionStamp() {
   const label = `v${__APP_VERSION__}`;
   const sha = __COMMIT_SHA__;
   if (!sha || sha === "dev") {
     return <span class="menu-version menu-version-dev">{label} · dev</span>;
   }
+  if (!__SOURCE_URL__) {
+    return (
+      <span class="menu-version">
+        {label} · {sha}
+      </span>
+    );
+  }
   return (
     <a
       class="menu-version"
-      href={`${REPO_URL}/commit/${sha}`}
+      href={`${__SOURCE_URL__}/commit/${sha}`}
       target="_blank"
       rel="noreferrer noopener"
       title="Open this build's commit on GitHub"
@@ -224,6 +233,14 @@ export function MainMenu({
               <span class="menu-tile-name">{STRINGS.devTitle}</span>
             </button>
           )}
+          <a
+            class="menu-privacy"
+            href={`${APPS_PAGE_URL}privacy/`}
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            {STRINGS.menuPrivacy}
+          </a>
           <VersionStamp />
         </div>
       </div>

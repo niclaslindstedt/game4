@@ -6,7 +6,7 @@
 // (`campaign-plate.ts`). Stated beside the one table and spread into it
 // (`strings.ts`), so every word the player reads is still one `STRINGS` key
 // and the campaign's block is one file to read. Templates, never
-// concatenations at the call site (§39.2).
+// concatenations at the call site.
 
 import { formatTime, ordinal } from "@niclaslindstedt/oss-game-framework/hud/format";
 

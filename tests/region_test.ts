@@ -307,7 +307,7 @@ describe("a region is a kind of country, never a place", () => {
       } else if (
         /\.(ts|tsx|mjs|md)$/.test(name) &&
         // …nor the identity test, which names a real wordmark to forbid it.
-        !/CHANGELOG|OSS_GAME_SPEC|LICENSE|region_test|identity_test/.test(name)
+        !/CHANGELOG|LICENSE|region_test|identity_test/.test(name)
       ) {
         out.push(path);
       }

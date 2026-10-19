@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky cloud sled blender models model-registry ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android
+.PHONY: world sky cloud sled blender models model-registry ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android store-preflight store-metadata licences
 
 build:
 	npm run build
@@ -85,17 +85,17 @@ models:
 	node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/models.mjs $(if $(SET),--set $(SET),)
 
 # Switch the models on or off for every CI build — the repository
-# VARIABLES the workflows hand the build (needs gh, and the right to set
+# SECRETS the workflows hand the build (needs gh, and the right to set
 # them): `make ci-models MODELS=off` draws the code-built machines, rider
 # and trees on the next deploy with no commit; MODELS=on (or deleting the
-# variables) puts the models back. (SET=... on `make models` — the halves.)
+# secrets) puts the models back. (SET=... on `make models` — the halves.)
 ci-models:
 	@case "$(MODELS)" in \
-	  off) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh variable set VITE_MODEL_$$v --body 0 || exit 1; done ;; \
-	  on) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh variable set VITE_MODEL_$$v --body 1 || exit 1; done ;; \
+	  off) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh secret set VITE_MODEL_$$v --body 0 || exit 1; done ;; \
+	  on) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh secret set VITE_MODEL_$$v --body 1 || exit 1; done ;; \
 	  *) echo "usage: make ci-models MODELS=on|off" >&2; exit 2 ;; \
 	esac
-	@gh variable list | grep VITE_MODEL || true
+	@gh secret list | grep VITE_MODEL || true
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact
@@ -307,6 +307,12 @@ profile:
 bench:
 	npm run bench -- $(ARGS)
 
+# Every dependency's licence, read out of the three committed lockfiles and
+# held to the fleet's allow-list in the script (LGPL only for dev packages).
+# No install needed; CI's lint job runs it.
+licences:
+	node scripts/check-licences.mjs $(ARGS)
+
 shellcheck:
 	shellcheck scripts/*.sh .githooks/*
 
@@ -336,3 +342,24 @@ changelog:
 # auto-derive from the current .changes/unreleased/ fragments. Read-only.
 bump:
 	@npx ogf-compute-bump
+
+# ---------------------------------------------------------------------------
+# SHIPPING TO THE STORE (native/store/)
+# ---------------------------------------------------------------------------
+# One authored listing (native/store/listing.mts) compiles into the files the
+# upload tools read. The RULES are committed; the WORDS are not — see
+# native/store/README.md.
+
+# "Is this checkout wired up to ship?" — every gate between here and a
+# submission, what is missing and where to get it. `ARGS="--now"` narrows it to
+# the items that wait on no store account.
+store-preflight:
+	@node --experimental-strip-types --disable-warning=ExperimentalWarning \
+		scripts/store-preflight.mjs $(ARGS)
+
+# Compile the listing into native/store/store.config.json (for
+# `eas metadata:push`) and the fastlane metadata tree. `ARGS="--check"`
+# validates without writing.
+store-metadata:
+	node --experimental-strip-types --disable-warning=ExperimentalWarning \
+		scripts/generate-store-metadata.mjs $(ARGS)

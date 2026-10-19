@@ -3,7 +3,7 @@
   "productName": "Powder Run",
   "mainBinaryName": "powderrun",
   "version": "0.1.0",
-  "identifier": "se.agilator.powderrun",
+  "identifier": "dev.local.powderrun",
   "build": {
     "frontendDist": "./placeholder"
   },
@@ -31,7 +31,7 @@
     "externalBin": [],
     "category": "Racing Game",
     "shortDescription": "A snowmobile racing game over generated snowy hills",
-    "longDescription": "A snowmobile racing game that runs in your browser. Race a sled round a packed-snow loop over generated hills and through snow-loaded forest, cutting your own trail through the deep powder between — on your phone or desktop, offline once loaded. No account, no download.",
+    "longDescription": "A snowmobile racing game that runs in your browser. Race a sled round a packed-snow loop over generated hills and through snow-loaded forest, cutting your own trail through the deep powder between — on your phone or desktop, offline once loaded. Nothing to sign up for, no download.",
     "copyright": "Copyright © Niclas Lindstedt",
     "macOS": {
       "minimumSystemVersion": "10.15"

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE DEPENDENCY DIRECTION, walked — OSS_GAME_SPEC §23.7's "enforce
-// direction with a test, not with discipline". The arrows AGENTS.md states
+// THE DEPENDENCY DIRECTION, walked — enforced with a test, not with
+// discipline. The arrows AGENTS.md states
 // are read off the REAL import graph here: every `import`/`export … from`
 // in engine/, pwa/src/, scripts/ and tests/, resolved to the role it lands
 // in, and held to the four rules:
@@ -17,7 +17,7 @@
 //   4. the suite reaches the engine the way a host does — `@engine` — so a
 //      test cannot pin an internal a host could never see.
 //
-// Beside the graph, the §25 hygiene the same walk can check for free: no
+// Beside the graph, the engine's hygiene the same walk can check for free: no
 // wall clock, no global random source, no `Math.hypot` (whose last bit is
 // each browser's own) and no console in the engine's code
 // (the analyzer's report timer is the one recorded exception — dev-time,
@@ -154,7 +154,7 @@ const ENGINE_LINE_SRC = [join(FRAMEWORK_SRC, "core"), join(FRAMEWORK_SRC, "racin
  * phone that simply stops buzzing — so the suite holds them from both ends.
  *
  * The store app's import-free seam modules — the injected script, the
- * navigation rule, the pulse parser, the cloud ask — and the case below proves each of them
+ * navigation rule, the pulse parser, the cloud ask, the store listing — and the case below proves each of them
  * still IMPORTS NOTHING AT ALL: the root suite never installs `native/`'s
  * dependency tree, and a seam module that grew a native import would take
  * the whole suite down with it rather than fail one case. The desktop app's
@@ -165,9 +165,20 @@ const SHELL_SEAM = new Set<string>([
   "native/src/injected.ts",
   "native/src/navigation.ts",
   "native/src/rumble.ts",
+  // The store listing's RULES — categories, the age-rating answers, the field
+  // limits. It lives under `native/` because that is the shell it describes,
+  // and `tests/store_listing_test.ts` checks it from the root suite for the
+  // same reason the pairs above are checked from both ends: an answer that
+  // drifts from the build is silent until a reviewer finds it. It qualifies
+  // for the seam on the same terms — types and one literal, importing nothing.
+  "native/store/listing.mts",
+  // The committed SKELETON of the listing's words. The real copy.mts is
+  // gitignored, so this is what a fresh clone compiles and what the suite
+  // reads to check Apple's field limits are respected by the shape.
+  "native/store/copy.example.mts",
 ]);
 
-describe("the dependency direction (§23.7)", () => {
+describe("the dependency direction", () => {
   it("has a graph to walk", () => {
     // Floors, not counts: the engine and the app grow under this file, and
     // what it must never do is pass because a walk found nothing to read.
@@ -275,11 +286,11 @@ describe("the dependency direction (§23.7)", () => {
   });
 });
 
-describe("the engine's hygiene (§25)", () => {
+describe("the engine's hygiene", () => {
   /** The one wall-clock read the engine is allowed: the analyzer stamps its
    * report with how long it took. Dev-time only — `analyzeLevel` never
    * steps a run and the timing never feeds a decision. Anything else is a
-   * §25.1 violation and lands here by name. */
+   * determinism violation and lands here by name. */
   const CLOCK_ALLOWED = new Set(["engine/analysis/index.ts", "framework/core/clock.ts"]);
 
   it("has the framework's engine line to read", () => {

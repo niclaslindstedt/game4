@@ -109,7 +109,7 @@ export function startPrint(state: GameState): string {
 }
 
 /** What the bar over a recording is given: the facts, worded by
- * `strings.ts` (§39.1). */
+ * `strings.ts`. */
 export type ReplayBill = {
   mode: GameMode;
   sled: SledId;
