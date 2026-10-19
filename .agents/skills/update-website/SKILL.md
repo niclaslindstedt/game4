@@ -12,11 +12,11 @@ this skill exists.
 
 > **THE SITE IS NOT INDEXED, AND THAT IS THE DESIGN.** The web deploy carries
 > no crawlable description of itself: no meta description, canonical, Open
-> Graph, Twitter card or JSON-LD in the head, no prerendered body copy, a
-> `robots.txt` of `Disallow: /`, `noindex` on every page, and no
+> Graph, Twitter card or JSON-LD in the head, no prerendered body copy,
+> `noindex` on every page (which `robots.txt` lets a crawler in to read), and no
 > `sitemap.xml`, `llms.txt` or `og.png` shipped at all. **Do not "fix" any of
 > that.** A sweep that re-adds a discovery signal is a regression, and `tests/identity_test.ts` will fail it.
-> `docs/configuration.md` § *Discoverability* is the description, and it is
+> `docs/configuration.md`'s *Discoverability* section is the description, and it is
 > an owner decision: no SEO and no size budgets.
 
 The site is the game, deployed to GitHub Pages at the `SITE_URL` in three slots
@@ -29,7 +29,7 @@ icons, and the hand-authored static pages:
 | --- | --- | --- |
 | `index.html` head + `manifest.webmanifest` | `pwa/src/identity.ts` (name, title, description, palette) | `pwa/pwa-plugin.ts` at build time |
 | Icons, favicon | `pwa/public/icons/icon.svg` + the palette | `make icons` (`scripts/generate-icons.mjs`) — never hand-edit the PNGs. No `og.png`: there is no share card |
-| `robots.txt`, `CNAME` | hand-authored in `pwa/public/` | you — `CNAME` tracks `SITE_URL`; `robots.txt` stays `Disallow: /` |
+| `robots.txt`, `CNAME` | hand-authored in `pwa/public/` | you — `CNAME` tracks `SITE_URL`; `robots.txt` stays `Allow: /` with no `Sitemap:` line, so a crawler can read the `noindex` |
 | `privacy/`, `support/` pages | hand-authored in `pwa/public/` | you — the store listing will cite them later |
 | The head of `pwa/index.html` | `identity.ts` (title, palette) | you — the title and the theme colour only; nothing else in that head describes the game |
 | Identity strings in app code | `pwa/src/identity.ts` | never re-hardcode a brand string |
