@@ -219,11 +219,12 @@ export const RULES: StoreRules = {
     },
 
     // A name and a mailbox, not a phone number. Committed because they are
-    // the publisher's public contact details, which the listing shows anyway.
+    // the publisher's public contact details — the mailbox is the one the
+    // app's privacy and support pages publish.
     contact: {
       firstName: "Niclas",
       lastName: "Lindstedt",
-      email: "niclas@agilator.se",
+      email: "support@agilator.se",
       demoRequired: false,
     },
 
