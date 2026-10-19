@@ -51,7 +51,7 @@ import {
   type ShellCommand,
 } from "../pwa/src/shell-host.ts";
 
-const HOME = "http://localhost:9033";
+const HOME = "http://localhost:9053";
 
 describe("the shell's word", () => {
   it("writes the global the page reads, under the name the page reads it by", () => {
@@ -307,13 +307,13 @@ describe("isExternalUrl", () => {
   });
 
   it("judges by ORIGIN, so a lookalike host cannot pass by starting with ours", () => {
-    expect(isExternalUrl("http://localhost:9033.evil.test/", HOME)).toBe(true);
+    expect(isExternalUrl("http://localhost:9053.evil.test/", HOME)).toBe(true);
     expect(isExternalUrl("http://localhost:9034/", HOME)).toBe(true);
   });
 
   it("leaves every non-http scheme alone — those are the WebView's own loads", () => {
     expect(isExternalUrl("about:blank", HOME)).toBe(false);
-    expect(isExternalUrl("blob:http://localhost:9033/abc", HOME)).toBe(false);
+    expect(isExternalUrl("blob:http://localhost:9053/abc", HOME)).toBe(false);
     expect(isExternalUrl("data:text/html,<p>hi", HOME)).toBe(false);
   });
 

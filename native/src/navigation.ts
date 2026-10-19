@@ -21,7 +21,7 @@
  * there is nothing for a URL to be outside of.
  *
  * Compared by ORIGIN rather than by prefix, so a lookalike host cannot pass by
- * starting with ours (`http://localhost:9033.evil.test/`) and a deep link into
+ * starting with ours (`http://localhost:9053.evil.test/`) and a deep link into
  * our own site cannot fail by differing in its path.
  */
 export function isExternalUrl(url: string, origin: string | null): boolean {
@@ -38,7 +38,7 @@ export function isExternalUrl(url: string, origin: string | null): boolean {
   try {
     return new URL(url).origin !== home.origin;
   } catch {
-    // An http(s) URL this runtime cannot parse (`http://localhost:9033.evil.test/`
+    // An http(s) URL this runtime cannot parse (`http://localhost:9053.evil.test/`
     // — a port that isn't a number). It claims to be the web and cannot be shown
     // to be ours, and the WebView's own parser may well disagree with this one,
     // so it fails CLOSED: the load is cancelled and handed off rather than

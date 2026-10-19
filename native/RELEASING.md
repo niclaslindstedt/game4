@@ -41,8 +41,12 @@ Connect API key, the Play service account, and every console questionnaire.
 - **SKU** is yours and never shown; the slug is fine.
 - Creating the record assigns the numeric **Apple ID**. Put it, and the team id
   from the developer portal's Membership page, into `eas.json`'s
-  `submit.production.ios` — both are public identifiers, so both are committed
-  literals; EAS interpolates neither.
+  `submit.production.ios` as `ascAppId` and `appleTeamId` — both are public
+  identifiers, so both are committed literals; EAS interpolates neither. Until
+  then the two keys are **absent**, not empty: EAS rejects an `eas.json` with
+  an empty value or a `$comment` key, and every `eas` command fails on it —
+  `eas init` included. (The three `ascApiKey*` fields are `$VAR` references
+  on purpose: EAS interpolates the process environment into exactly those.)
 
 **Google.** [Play Console](https://play.google.com/console) → Create app, with
 the same package name.
@@ -90,6 +94,11 @@ make native-iphone      # the real thing, on a real phone, over USB
 The simulator (`make native-ios`) is enough for the shell's own code, but it
 has **no haptic engine** — the snow through the bars can only be judged on a
 device.
+
+EAS installs with the Node that `eas.json` pins — `"node"` in every build
+profile, the same major as `.nvmrc`. Without it EAS falls back to its image's
+default Node, whose npm 10 reads the lockfile npm 11 wrote as out of sync and
+stops the build at `npm ci`. Move the pin when `.nvmrc` moves.
 
 ## 4. Submit
 

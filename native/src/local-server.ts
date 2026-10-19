@@ -24,7 +24,15 @@ import Constants from "expo-constants";
 
 // A fixed loopback port — see the origin/storage note above. Chosen high and
 // arbitrary to avoid clashing with anything the OS hands out.
-const PORT = 9033;
+//
+// Every wrapper in the fleet has its own port — calendar 8231, contacts 8241,
+// time 8251, calc 8261, paint 8271, meds 8281, cycle 8291, baby 8301, notes
+// 8311, Storage Remote 8321, recorder 8331, hourglass 8341, stopwatch 8351,
+// checklist 8791, the games 9006 / 9007 / 9033 / 9043 / 9053 (this one) — so
+// no two contend for a port on a phone that has both. A new wrapper takes the
+// next free ten. (This app took 9033 before it had shipped, which the
+// jet-ski game holds; nothing was stored under the old origin on any phone.)
+const PORT = 9053;
 
 // Where the unzipped site lives, and the marker that records which bundle
 // produced it (so we only re-extract when the bundle actually changes).
@@ -111,7 +119,7 @@ async function ensureExtracted(): Promise<void> {
 }
 
 export type LocalServer = {
-  /** The origin to point the WebView at, e.g. `http://localhost:9033`. */
+  /** The origin to point the WebView at, e.g. `http://localhost:9053`. */
   origin: string;
   /** Stop the server (call on unmount). */
   stop: () => Promise<void>;
