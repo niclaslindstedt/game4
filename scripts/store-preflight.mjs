@@ -192,12 +192,15 @@ if (appleShots > 0) ok(`${appleShots} App Store screenshots staged`);
 else
   warn(
     "no App Store screenshots have been captured",
-    "`make store-shots`. Apple requires at least one per device family, and " +
+    "the store front's shot recipes (no `make store-shots` here yet — " +
+      "docs/conformance.md). Apple requires at least one per device family, and " +
       "fastlane uploads text only without them.",
   );
 
 const macShots = pngCount(at("tauri", "store", "screenshots", "mac-2880"));
-if (macShots > 0) ok(`${macShots} Mac App Store screenshots staged`);
+if (!SHIPS.macAppStore) {
+  // Not a storefront this game ships on: nothing to capture.
+} else if (macShots > 0) ok(`${macShots} Mac App Store screenshots staged`);
 else
   warn(
     "no Mac App Store screenshots have been captured",
@@ -207,19 +210,21 @@ else
   );
 
 const steamShots = pngCount(at("tauri", "store", "screenshots"));
-if (steamShots > 0) ok(`${steamShots} Steam screenshots staged`);
+if (!SHIPS.steam) {
+  // Not a storefront this game ships on: nothing to capture.
+} else if (steamShots > 0) ok(`${steamShots} Steam screenshots staged`);
 else
   warn(
     "no Steam screenshots have been captured",
     '`make store-shots ARGS="--only steam"`. Valve requires five at 1920×1080.',
   );
 
-// The icon set every storefront reads, and the one artifact here that is
-// generated from the app's own mark rather than drawn.
-const icons = ["icons/pwa-512.png", "icons/apple-touch-icon-180.png", "og.png"].filter(
+// The icon set every storefront reads, generated from the app's own mark. No
+// share card: the site is deliberately not indexed and ships none.
+const icons = ["icons/pwa-512.png", "icons/apple-touch-icon-180.png"].filter(
   (f) => !existsSync(at("pwa", "public", f)),
 );
-if (icons.length === 0) ok("the icon set and the share card are generated");
+if (icons.length === 0) ok("the icon set is generated");
 else warn(`missing generated art: ${icons.join(", ")}`, "`make icons`");
 
 // ---------------------------------------------------------------------------
