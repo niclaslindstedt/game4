@@ -213,7 +213,7 @@ export const RULES: StoreRules = {
       contests: "NONE",
       // The WebView serves the copy of the site bundled INSIDE the app from a
       // local HTTP server. It is not a browser and cannot be steered
-      // elsewhere: the HUD's build label hands its one link to Safari.
+      // elsewhere: the front door's PRIVACY link is handed to Safari.
       unrestrictedWebAccess: false,
       kidsAgeBand: null,
     },
