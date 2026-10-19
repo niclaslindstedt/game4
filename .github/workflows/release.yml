@@ -180,14 +180,14 @@ jobs:
         run: make build
         env:
           # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
-          # drawn unless a repository variable switches one back — `make
+          # drawn unless a repository secret switches one back — `make
           # ci-models MODELS=off`, no commit needed; unset is on.
-          VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
-          VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
-          VITE_MODEL_TREES: ${{ vars.VITE_MODEL_TREES }}
-          VITE_MODEL_BIRDS: ${{ vars.VITE_MODEL_BIRDS }}
-          VITE_MODEL_BEASTS: ${{ vars.VITE_MODEL_BEASTS }}
-          VITE_MODEL_GATES: ${{ vars.VITE_MODEL_GATES }}
+          VITE_MODEL_SLEDS: ${{ secrets.VITE_MODEL_SLEDS }}
+          VITE_MODEL_RIDERS: ${{ secrets.VITE_MODEL_RIDERS }}
+          VITE_MODEL_TREES: ${{ secrets.VITE_MODEL_TREES }}
+          VITE_MODEL_BIRDS: ${{ secrets.VITE_MODEL_BIRDS }}
+          VITE_MODEL_BEASTS: ${{ secrets.VITE_MODEL_BEASTS }}
+          VITE_MODEL_GATES: ${{ secrets.VITE_MODEL_GATES }}
       - name: make test
         run: make test
 
@@ -252,14 +252,14 @@ jobs:
       # what was tagged rather than from whatever main looks like by now.
       TAG: ${{ needs.release.outputs.tag }}
       # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
-      # drawn unless a repository variable switches one back — `make
+      # drawn unless a repository secret switches one back — `make
       # ci-models MODELS=off`, no commit needed; unset is on.
-      VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
-      VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
-      VITE_MODEL_TREES: ${{ vars.VITE_MODEL_TREES }}
-      VITE_MODEL_BIRDS: ${{ vars.VITE_MODEL_BIRDS }}
-      VITE_MODEL_BEASTS: ${{ vars.VITE_MODEL_BEASTS }}
-      VITE_MODEL_GATES: ${{ vars.VITE_MODEL_GATES }}
+      VITE_MODEL_SLEDS: ${{ secrets.VITE_MODEL_SLEDS }}
+      VITE_MODEL_RIDERS: ${{ secrets.VITE_MODEL_RIDERS }}
+      VITE_MODEL_TREES: ${{ secrets.VITE_MODEL_TREES }}
+      VITE_MODEL_BIRDS: ${{ secrets.VITE_MODEL_BIRDS }}
+      VITE_MODEL_BEASTS: ${{ secrets.VITE_MODEL_BEASTS }}
+      VITE_MODEL_GATES: ${{ secrets.VITE_MODEL_GATES }}
       # NOTARIZATION. The bundler acts on these three only once the app is
       # signed with a real Developer ID (the `Apple signing` step below), and
       # ignores them otherwise — so an unconfigured repo still packages, it
@@ -309,12 +309,22 @@ jobs:
 
       - name: Package
         shell: bash
-        run: npm run tauri:package
+        env:
+          # THE DEPLOYMENT'S IDENTITY — the same secrets, under the same names,
+          # the phone build reads. The identifier is also where the installed
+          # app keeps its progress, so `--require-identity` refuses to
+          # package a release under the development one.
+          APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+          APP_DISPLAY_NAME: ${{ secrets.APP_DISPLAY_NAME }}
+        run: npm run tauri:package -- --require-identity
 
       - name: Package (macOS, Intel)
         if: matrix.target == 'macos'
         shell: bash
-        run: npm run tauri:package -- --target x86_64-apple-darwin --skip-web --keep
+        env:
+          APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+          APP_DISPLAY_NAME: ${{ secrets.APP_DISPLAY_NAME }}
+        run: npm run tauri:package -- --target x86_64-apple-darwin --skip-web --keep --require-identity
 
       # Whatever this platform's packager produced — a job that listed
       # filenames would silently upload nothing the day a target changed

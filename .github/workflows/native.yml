@@ -3,7 +3,7 @@
 # so builds — which consume paid EAS build minutes and store credentials — only
 # run when a human asks. Requires an EXPO_TOKEN repo secret (an Expo access
 # token from https://expo.dev/settings/access-tokens) and, until the project
-# id is pinned in native/app.config.js, an EAS_PROJECT_ID repo variable; store
+# id is pinned in native/app.config.js, an EAS_PROJECT_ID repo secret; store
 # submission also needs the App Store Connect / Play credentials configured on
 # the EAS project. native/RELEASING.md is the run-through.
 name: native
@@ -68,22 +68,23 @@ jobs:
         run: npm run bundle
         env:
           # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
-          # drawn unless a repository variable switches one back — `make
+          # drawn unless a repository secret switches one back — `make
           # ci-models MODELS=off`, no commit needed; unset is on.
-          VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
-          VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
-          VITE_MODEL_TREES: ${{ vars.VITE_MODEL_TREES }}
-          VITE_MODEL_BIRDS: ${{ vars.VITE_MODEL_BIRDS }}
-          VITE_MODEL_BEASTS: ${{ vars.VITE_MODEL_BEASTS }}
-          VITE_MODEL_GATES: ${{ vars.VITE_MODEL_GATES }}
+          VITE_MODEL_SLEDS: ${{ secrets.VITE_MODEL_SLEDS }}
+          VITE_MODEL_RIDERS: ${{ secrets.VITE_MODEL_RIDERS }}
+          VITE_MODEL_TREES: ${{ secrets.VITE_MODEL_TREES }}
+          VITE_MODEL_BIRDS: ${{ secrets.VITE_MODEL_BIRDS }}
+          VITE_MODEL_BEASTS: ${{ secrets.VITE_MODEL_BEASTS }}
+          VITE_MODEL_GATES: ${{ secrets.VITE_MODEL_GATES }}
 
       - name: EAS build
         working-directory: native
         env:
-          EAS_PROJECT_ID: ${{ vars.EAS_PROJECT_ID }}
+          EAS_PROJECT_ID: ${{ secrets.EAS_PROJECT_ID }}
           # The store identifier — never committed (see app.config.js). A
           # production profile without it refuses to build.
           APP_BUNDLE_ID: ${{ secrets.APP_BUNDLE_ID }}
+          APP_DISPLAY_NAME: ${{ secrets.APP_DISPLAY_NAME }}
         run: |
           eas build \
             --non-interactive \

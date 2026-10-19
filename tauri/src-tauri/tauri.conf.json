@@ -3,7 +3,7 @@
   "productName": "Powder Run",
   "mainBinaryName": "powderrun",
   "version": "0.1.0",
-  "identifier": "se.agilator.powderrun",
+  "identifier": "dev.local.powderrun",
   "build": {
     "frontendDist": "./placeholder"
   },

@@ -85,17 +85,17 @@ models:
 	node --experimental-strip-types --disable-warning=ExperimentalWarning scripts/models.mjs $(if $(SET),--set $(SET),)
 
 # Switch the models on or off for every CI build — the repository
-# VARIABLES the workflows hand the build (needs gh, and the right to set
+# SECRETS the workflows hand the build (needs gh, and the right to set
 # them): `make ci-models MODELS=off` draws the code-built machines, rider
 # and trees on the next deploy with no commit; MODELS=on (or deleting the
-# variables) puts the models back. (SET=... on `make models` — the halves.)
+# secrets) puts the models back. (SET=... on `make models` — the halves.)
 ci-models:
 	@case "$(MODELS)" in \
-	  off) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh variable set VITE_MODEL_$$v --body 0 || exit 1; done ;; \
-	  on) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh variable set VITE_MODEL_$$v --body 1 || exit 1; done ;; \
+	  off) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh secret set VITE_MODEL_$$v --body 0 || exit 1; done ;; \
+	  on) for v in SLEDS RIDERS TREES BIRDS BEASTS GATES; do gh secret set VITE_MODEL_$$v --body 1 || exit 1; done ;; \
 	  *) echo "usage: make ci-models MODELS=on|off" >&2; exit 2 ;; \
 	esac
-	@gh variable list | grep VITE_MODEL || true
+	@gh secret list | grep VITE_MODEL || true
 
 # THE SKY LAB: every weather (R19) against every three hours of the clock,
 # day and night, on one seed seen from one place, as one labelled contact

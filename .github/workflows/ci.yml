@@ -101,14 +101,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # THE MODELLED MACHINES AND RIDERS (committed in pwa/models/) are
-      # drawn unless a repository variable switches one back — `make
+      # drawn unless a repository secret switches one back — `make
       # ci-models MODELS=off`, no commit needed; unset is on.
-      VITE_MODEL_SLEDS: ${{ vars.VITE_MODEL_SLEDS }}
-      VITE_MODEL_RIDERS: ${{ vars.VITE_MODEL_RIDERS }}
-      VITE_MODEL_TREES: ${{ vars.VITE_MODEL_TREES }}
-      VITE_MODEL_BIRDS: ${{ vars.VITE_MODEL_BIRDS }}
-      VITE_MODEL_BEASTS: ${{ vars.VITE_MODEL_BEASTS }}
-      VITE_MODEL_GATES: ${{ vars.VITE_MODEL_GATES }}
+      VITE_MODEL_SLEDS: ${{ secrets.VITE_MODEL_SLEDS }}
+      VITE_MODEL_RIDERS: ${{ secrets.VITE_MODEL_RIDERS }}
+      VITE_MODEL_TREES: ${{ secrets.VITE_MODEL_TREES }}
+      VITE_MODEL_BIRDS: ${{ secrets.VITE_MODEL_BIRDS }}
+      VITE_MODEL_BEASTS: ${{ secrets.VITE_MODEL_BEASTS }}
+      VITE_MODEL_GATES: ${{ secrets.VITE_MODEL_GATES }}
     steps:
       - uses: actions/checkout@v7
       - uses: ./.github/actions/setup
