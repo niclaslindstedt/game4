@@ -169,7 +169,7 @@ describe("the news column (run-news.ts)", () => {
   });
 });
 
-describe("the strings table (strings.ts, §39.1)", () => {
+describe("the strings table (strings.ts)", () => {
   /** Every source file of the app, strings.ts itself left out. */
   function appSources(dir: string): string {
     let out = "";

@@ -4,7 +4,7 @@
 // rides it (`shell.ts`), a load cut into phases (`run-loader.ts`), the URL
 // (`url-params.ts`), the attract card's timing (`splash.ts`), what is
 // remembered (`settings.ts`) and the game's own buttons (`run-actions.ts`).
-// The §37 clock and the cursor's walk are the framework's (`loop/run-clock`,
+// The fixed-step clock and the cursor's walk are the framework's (`loop/run-clock`,
 // `input/menu-cursor`), held by its own suite.
 
 import { describe, expect, it } from "vitest";

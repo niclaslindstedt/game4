@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE APP: the shell the game lives inside, and the §37 clock underneath it.
+// THE APP: the shell the game lives inside, and the fixed-step clock underneath it.
 //
 // SEVEN SURFACES, ONE CANVAS, AND THE SNOW NEVER STOPS — except under the
 // card standing over the PLAYER's own race, and under the BENCHMARK, whose
@@ -35,9 +35,9 @@
 //
 // THE LOOP: `requestAnimationFrame` hands the clock (the framework's `loop/run-clock`) the wall
 // time; the clock says how many fixed steps to take; each step samples the
-// input (§37.1, once per step) and calls `step`. The renderer draws the
+// input (once per step) and calls `step`. The renderer draws the
 // state once per frame; the HUD is refreshed from a snapshot at ~12 Hz. A
-// hidden tab pauses the clock (§37.3) and the HUD says so.
+// hidden tab pauses the clock and the HUD says so.
 //
 // THE RENDERER IS FETCHED, NOT BUNDLED (`use-render-kit.ts`):
 // `game/renderer.ts` is the one import that reaches three.js, so it arrives
@@ -152,7 +152,7 @@ export function App() {
   const [params] = useState(() => readParams(location.search));
   const [snap, setSnap] = useState<HudSnapshot | null>(null);
   const [flashes, setFlashes] = useState<HudFlash[]>([]);
-  /** The TAB is away and the clock with it (§37.3) — not the pause card. */
+  /** The TAB is away and the clock with it — not the pause card. */
   const [away, setAway] = useState(false);
   const [shell, setShell] = useState<Shell>(() =>
     params.rides
@@ -724,7 +724,7 @@ export function App() {
     };
     raf = requestAnimationFrame(frame);
 
-    // §37.3: a hidden tab is a paused race.
+    // A hidden tab is a paused race.
     const onVisibility = (): void => {
       if (document.hidden) {
         clock.pause();

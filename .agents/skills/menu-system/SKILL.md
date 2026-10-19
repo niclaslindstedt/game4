@@ -73,11 +73,11 @@ all.
 | Every parameter the app reads off its URL | `pwa/src/game/url-params.ts` — DOM-free |
 | ONE handler for a press, from a key, a HUD thumb or a desktop menu-bar row | `pwa/src/game/run-actions.ts` |
 | Standing a race up: the steps and what they are | `pwa/src/game/run-loader.ts` (the sequencing, a frame budget, DOM-free) + `app-load.ts` (the steps, a factory over `App.tsx`'s closures) |
-| The fixed-step clock under all of it | the framework's `loop/run-clock` (§37: the accumulator, the clamp, a hidden tab) |
+| The fixed-step clock under all of it | the framework's `loop/run-clock` (the accumulator, the clamp, a hidden tab) |
 | Walking a card on the keys | `pwa/src/game/menu-nav.ts` (the DOM half) over the framework's `input/menu-cursor` (the geometry, DOM-free) |
 | The marks the cards are read by | `pwa/src/game/menu-glyphs.tsx` — the flag on RACE, the speaker, the pause card's three, the sliders on OPTIONS and its groups' keyboard, dial and screen |
 | The new-build button | `pwa/src/game/update-button.tsx` over `pwa/src/lib/pwa-update.ts` |
-| Every word | `pwa/src/game/strings.ts` (§39.1) — no card carries a literal |
+| Every word | `pwa/src/game/strings.ts` — no card carries a literal |
 | The chrome | `pwa/src/styles.css` |
 
 ## The rules that are easy to undo by accident
@@ -88,7 +88,7 @@ all.
   it. A rule moved into a component stops being checked.
 - **THE PAUSE CARD FREEZES; NOTHING ELSE DOES** — and the absence is never
   paid down. Hold a race three seconds, resume, and the clock moves one frame,
-  not three seconds (§37.2, the rule a hidden tab gets too).
+  not three seconds (the rule a hidden tab gets too).
 - **RESUME IS THE WAY BACK, AND COSTS ONE PRESS.** Escape, the backdrop and the
   cursor's first landing all go back to the snow.
 - **A SETTING THE APP IGNORES IS WORSE THAN NO SETTING.** The player moves it,

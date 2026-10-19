@@ -9,7 +9,7 @@
 // rev fraction is against the engine's own redline, the lap and the
 // checkpoint count are the progress the engine keeps, the place is
 // `racePlace` and the standings are `fieldOrder`. A number that decided an
-// outcome would be a rule in the shell (§23.2), and there are none.
+// outcome would be a rule in the shell, and there are none.
 
 import {
   TUNING,

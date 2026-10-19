@@ -186,7 +186,7 @@ export function neutralTouch(): TouchChannel {
   return { steer: 0, lean: 0, bar: false, throttle: 0, brake: 0, lever: false };
 }
 
-/** The keyboard's ramped axes, screen-space. Advanced once per STEP (§37.1)
+/** The keyboard's ramped axes, screen-space. Advanced once per STEP
  * so a ramp is the same ramp on every display. */
 export type InputModel = {
   steer: number;
@@ -250,7 +250,7 @@ export function airLean(model: InputModel, keys: KeysHeld, airborne: boolean): n
 
 /** One step's input: advance the keyboard ramps by `dt`, merge the thumbs
  * in, apply the sign flip and hand the engine its structure. `reset` is the
- * edge the caller has banked since the last step (§37.1: a press is never
+ * edge the caller has banked since the last step (a press is never
  * lost between steps).
  *
  * Merging: a thumb on the bar owns steer and lean outright — a key held

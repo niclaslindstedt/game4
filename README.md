@@ -5,7 +5,6 @@
 [![ci](https://github.com/niclaslindstedt/game4/actions/workflows/ci.yml/badge.svg)](https://github.com/niclaslindstedt/game4/actions/workflows/ci.yml)
 [![release](https://github.com/niclaslindstedt/game4/actions/workflows/release.yml/badge.svg)](https://github.com/niclaslindstedt/game4/actions/workflows/release.yml)
 [![pages](https://github.com/niclaslindstedt/game4/actions/workflows/pages.yml/badge.svg)](https://github.com/niclaslindstedt/game4/actions/workflows/pages.yml)
-[![spec](https://img.shields.io/badge/OSS__GAME__SPEC-v1.1.0-blueviolet)](OSS_GAME_SPEC.md)
 [![license](https://img.shields.io/badge/license-PolyForm--NC-blue.svg)](LICENSE)
 
 ## What
@@ -140,11 +139,11 @@ Three layers, one direction of dependency: `engine/` is the whole game as a fram
 - [Troubleshooting](docs/troubleshooting.md) — what goes wrong playing and developing, and why
 - [Audio](docs/audio.md) — how every sound is synthesized and mixed
 - [Platforms](docs/platforms.md) — the web, the desktop app and the store app
-- [Spec conformance](docs/spec-conformance.md) — where this repo stands against [OSS_GAME_SPEC.md](OSS_GAME_SPEC.md), chapter by chapter
+- [Conformance](docs/conformance.md) — where this repo knowingly falls short of the rules it is built to, row by row
 
 ## Contributing
 
-Bugs and feature requests go to [GitHub Issues](https://github.com/niclaslindstedt/game4/issues); questions to [Discussions](https://github.com/niclaslindstedt/game4/discussions). Read [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow (conventional commits, changeset fragments, the labs-before-and-after rule for sled, snow and generator changes). This repository conforms to [OSS_GAME_SPEC.md](OSS_GAME_SPEC.md).
+Bugs and feature requests go to [GitHub Issues](https://github.com/niclaslindstedt/game4/issues); questions to [Discussions](https://github.com/niclaslindstedt/game4/discussions). Read [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow (conventional commits, changeset fragments, the labs-before-and-after rule for sled, snow and generator changes).
 
 ## License
 

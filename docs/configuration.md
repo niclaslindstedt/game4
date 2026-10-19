@@ -139,7 +139,7 @@ Every surface that cannot import the module restates what it needs: `pwa/index.h
 
 `robots.txt` alone would only ask a crawler not to fetch; a URL it already knows can still be listed. The per-page `noindex` is what covers that, which is why both are there. `tests/identity_test.ts` holds all of it: adding a discovery tag, a crawler file or prerendered body copy back fails the suite.
 
-This is a deliberate deviation from OSS_GAME_SPEC §11.3, recorded as such in [spec-conformance.md](spec-conformance.md).
+There are no size budgets and no SEO tooling, by owner decision.
 
 ## The packaged apps
 

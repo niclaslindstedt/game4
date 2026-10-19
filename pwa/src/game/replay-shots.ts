@@ -42,7 +42,7 @@
 
 import { racePlace, TUNING, type GameState } from "@engine";
 
-/** What a shot is OF. The word the bar prints is `strings.ts`'s (§39.1). */
+/** What a shot is OF. The word the bar prints is `strings.ts`'s. */
 export type ShotKind = "air" | "pass" | "bump" | "hit" | "wipeout" | "finish";
 
 /** ONE MOMENT WORTH A CAMERA, as the run wrote it down. Steps rather than

@@ -48,7 +48,7 @@ the layout the manager rides (`setBindings`) and how the thumbs read
 | THE MINIMAP: a round plate under the presses, the map turned HEADING-UP about the rider, the window opening with the speedo, the loop, every checkpoint (the owed one red, a missed one the warning red, a chevron on the rim once it is off the plate) and the field in its grid colours | `pwa/src/game/minimap-view.ts` (DOM-free: the pose, the continuous turn, the zoom, every mark — `tests/minimap_test.ts`), `minimap-bake.ts` (the ground painted ONCE per map, DOM-free, run in `minimap-worker.ts` and started as the map is loaded — `prepareMinimap`), `minimap.tsx` (one world group posed by one tweened CSS transform); colours from `sled-colours.ts` |
 | What an event SAYS in the news column | `pwa/src/game/run-news.ts` (pure: an event and the state in, a line out); words from `strings.ts` |
 | The FINISH PLATE: the place and the time, then the whole field's table, live, while the rest race home | `pwa/src/game/hud-result.tsx` |
-| Every word | `pwa/src/game/strings.ts` (§39.1) — templates, never concatenations at the call site |
+| Every word | `pwa/src/game/strings.ts` — templates, never concatenations at the call site |
 | What the speedo READS | `SledState.speed` — `|v|`, vertical included, written once by the engine; never re-derived here |
 | `__SH_READY__` | set in `App.tsx` once a race's frame is drawn — a HUD change that delays it is a screenshot lab that times out |
 

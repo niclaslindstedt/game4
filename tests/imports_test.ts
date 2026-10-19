@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// THE DEPENDENCY DIRECTION, walked — OSS_GAME_SPEC §23.7's "enforce
-// direction with a test, not with discipline". The arrows AGENTS.md states
+// THE DEPENDENCY DIRECTION, walked — enforced with a test, not with
+// discipline. The arrows AGENTS.md states
 // are read off the REAL import graph here: every `import`/`export … from`
 // in engine/, pwa/src/, scripts/ and tests/, resolved to the role it lands
 // in, and held to the four rules:
@@ -17,7 +17,7 @@
 //   4. the suite reaches the engine the way a host does — `@engine` — so a
 //      test cannot pin an internal a host could never see.
 //
-// Beside the graph, the §25 hygiene the same walk can check for free: no
+// Beside the graph, the engine's hygiene the same walk can check for free: no
 // wall clock, no global random source, no `Math.hypot` (whose last bit is
 // each browser's own) and no console in the engine's code
 // (the analyzer's report timer is the one recorded exception — dev-time,
@@ -178,7 +178,7 @@ const SHELL_SEAM = new Set<string>([
   "native/store/copy.example.mts",
 ]);
 
-describe("the dependency direction (§23.7)", () => {
+describe("the dependency direction", () => {
   it("has a graph to walk", () => {
     // Floors, not counts: the engine and the app grow under this file, and
     // what it must never do is pass because a walk found nothing to read.
@@ -286,11 +286,11 @@ describe("the dependency direction (§23.7)", () => {
   });
 });
 
-describe("the engine's hygiene (§25)", () => {
+describe("the engine's hygiene", () => {
   /** The one wall-clock read the engine is allowed: the analyzer stamps its
    * report with how long it took. Dev-time only — `analyzeLevel` never
    * steps a run and the timing never feeds a decision. Anything else is a
-   * §25.1 violation and lands here by name. */
+   * determinism violation and lands here by name. */
   const CLOCK_ALLOWED = new Set(["engine/analysis/index.ts", "framework/core/clock.ts"]);
 
   it("has the framework's engine line to read", () => {

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE WORDS OF THE DEVELOPER PAGE — the page, its overlay, the benchmark and
-// the unlocks — a block of the one strings table (`strings.ts`, §39.1),
+// the unlocks — a block of the one strings table (`strings.ts`),
 // stated next door and spread into `STRINGS` under the same names, the
 // `strings-gallery.ts` pattern.
 

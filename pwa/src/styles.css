@@ -1025,7 +1025,7 @@ canvas {
   }
 }
 
-/* §38.3 — the build corner: which build, which map. Small,
+/* The build corner: which build, which map. Small,
    under the instrument panel's line of sight, never in the way. */
 .hud-build {
   position: absolute;

@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// EVERY WORD THE PLAYER READS, in one table (OSS_GAME_SPEC §39.1). The HUD
+// EVERY WORD THE PLAYER READS, in one table. The HUD
 // and the cards reference a key here and never carry a literal of their own,
 // so a line can be fixed without a code review and a second language is a
 // second table rather than a rewrite. Composed lines are templates —
-// functions of their parameters — never concatenations at the call site
-// (§39.2). Developer diagnostics are deliberately not here.
+// functions of their parameters — never concatenations at the call site.
+// Developer diagnostics are deliberately not here.
 
 import type { TrickKind, TrickPart } from "@engine";
 
@@ -108,7 +108,7 @@ export const STRINGS = {
   pauseTitle: "Pause (Esc)",
   /** The build corner: which map this frame is of. */
   stage: (seed: number): string => `SEED ${seed}`,
-  /** The card the HUD puts up while the TAB is away (§37.3) — not the pause
+  /** The card the HUD puts up while the TAB is away — not the pause
    * card, which is next door in menu-pause.tsx and shares only the word. */
   paused: "PAUSED",
   pausedNote: "The race waits until you come back",

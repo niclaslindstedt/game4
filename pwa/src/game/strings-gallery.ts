@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // THE WORDS OF THE SHUTTER AND THE GALLERY — a block of the one strings table
-// (`strings.ts`, §39.1), stated next door and spread into `STRINGS` under
+// (`strings.ts`), stated next door and spread into `STRINGS` under
 // the same names, so nothing reads it by any other path. Split out because
 // it is a subject of its own (`screenshots.ts`, `menu-gallery.tsx`), and a
 // table that grew every such block in place would be the one file every
