@@ -188,16 +188,14 @@ export const RULES: StoreRules = {
       // NONE: nothing in the game is fantastical — the sleds, the rider and
       // the snow are drawn as they are.
       violenceCartoonOrFantasy: "NONE",
-      // INFREQUENT_OR_MILD. A trunk met hard, a nose-in landing or a rollover
-      // at speed throws the rider off the machine (engine/game/crash.ts): his
-      // body tumbles through the snow as a ragdoll and lies there until the
-      // reset stands him back up, and the camera follows him off the sled
-      // and slows as he lands (pwa/src/game/camera-death.ts). Nobody is
-      // shown hurt — there is no blood, no injury and no one else involved —
-      // but a person thrown from a vehicle is a realistic crash, so this is
-      // not NONE. Rivals only bump; the damage switch (off by default) bends
+      // NONE. A trunk met hard, a nose-in landing or a rollover at speed
+      // throws the rider off the machine (engine/game/crash.ts): his body
+      // tumbles through the snow as a ragdoll and the reset stands him back
+      // up, unhurt. Nobody is shown hurt — no blood, no injury, no death and
+      // no one else involved — so it is a racing game's wipeout, not
+      // violence. Rivals only bump; the damage switch (off by default) bends
       // a ski, never the rider.
-      violenceRealistic: "INFREQUENT_OR_MILD",
+      violenceRealistic: "NONE",
       violenceRealisticProlongedGraphicOrSadistic: "NONE",
       horrorOrFearThemes: "NONE",
       profanityOrCrudeHumor: "NONE",
