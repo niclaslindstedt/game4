@@ -1,5 +1,5 @@
 # SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-.PHONY: world sky cloud sled blender models model-registry ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android store-preflight store-metadata
+.PHONY: world sky cloud sled blender models model-registry ci-models birds trees forest build test lint fmt fmt-check release clean install icons sim level analyze rate difficulty routes ride audition screenshots profile bench hooks shellcheck actionlint changelog bump docs tauri tauri-test tauri-lint tauri-fmt desktop native-install native-bundle native-typecheck native-ios native-iphone native-android store-preflight store-metadata licences
 
 build:
 	npm run build
@@ -306,6 +306,12 @@ profile:
 # `make bench` · `make bench ARGS="--width 640 --height 360 --video low"`
 bench:
 	npm run bench -- $(ARGS)
+
+# Every dependency's licence, read out of the three committed lockfiles and
+# held to the fleet's allow-list in the script (LGPL only for dev packages).
+# No install needed; CI's lint job runs it.
+licences:
+	node scripts/check-licences.mjs $(ARGS)
 
 shellcheck:
 	shellcheck scripts/*.sh .githooks/*
