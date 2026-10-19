@@ -154,7 +154,7 @@ const ENGINE_LINE_SRC = [join(FRAMEWORK_SRC, "core"), join(FRAMEWORK_SRC, "racin
  * phone that simply stops buzzing — so the suite holds them from both ends.
  *
  * The store app's import-free seam modules — the injected script, the
- * navigation rule, the pulse parser, the cloud ask — and the case below proves each of them
+ * navigation rule, the pulse parser, the cloud ask, the store listing — and the case below proves each of them
  * still IMPORTS NOTHING AT ALL: the root suite never installs `native/`'s
  * dependency tree, and a seam module that grew a native import would take
  * the whole suite down with it rather than fail one case. The desktop app's
@@ -165,6 +165,17 @@ const SHELL_SEAM = new Set<string>([
   "native/src/injected.ts",
   "native/src/navigation.ts",
   "native/src/rumble.ts",
+  // The store listing's RULES — categories, the age-rating answers, the field
+  // limits. It lives under `native/` because that is the shell it describes,
+  // and `tests/store_listing_test.ts` checks it from the root suite for the
+  // same reason the pairs above are checked from both ends: an answer that
+  // drifts from the build is silent until a reviewer finds it. It qualifies
+  // for the seam on the same terms — types and one literal, importing nothing.
+  "native/store/listing.mts",
+  // The committed SKELETON of the listing's words. The real copy.mts is
+  // gitignored, so this is what a fresh clone compiles and what the suite
+  // reads to check Apple's field limits are respected by the shape.
+  "native/store/copy.example.mts",
 ]);
 
 describe("the dependency direction (§23.7)", () => {
