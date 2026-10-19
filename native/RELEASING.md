@@ -61,13 +61,13 @@ Every one of them is read from the ENVIRONMENT — this repository is public.
 [`.env.example`](.env.example) documents each value, where to get it, and what
 shape it is. In short:
 
-| What                                            | For                           | Where CI reads it              |
-| ----------------------------------------------- | ----------------------------- | ------------------------------ |
-| `EXPO_TOKEN` (a robot token)                    | driving EAS non-interactively | `EXPO_TOKEN` repo secret       |
+| What                                            | For                           | Where CI reads it            |
+| ----------------------------------------------- | ----------------------------- | ---------------------------- |
+| `EXPO_TOKEN` (a robot token)                    | driving EAS non-interactively | `EXPO_TOKEN` repo secret     |
 | `EAS_PROJECT_ID`                                | linking the build             | `EAS_PROJECT_ID` repo secret |
-| `APPLE_TEAM_ID`                                 | a LOCAL iPhone build only     | never — it is personal         |
-| `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH` | `eas submit` to Apple         | exported before the submit     |
-| `PLAY_SERVICE_ACCOUNT_PATH`                     | `eas submit` to Play          | exported before the submit     |
+| `APPLE_TEAM_ID`                                 | a LOCAL iPhone build only     | never — it is personal       |
+| `ASC_KEY_ID` / `ASC_ISSUER_ID` / `ASC_KEY_PATH` | `eas submit` to Apple         | exported before the submit   |
+| `PLAY_SERVICE_ACCOUNT_PATH`                     | `eas submit` to Play          | exported before the submit   |
 
 iOS signing credentials for CLOUD builds live on the Expo project, not here.
 `APPLE_TEAM_ID` is only ever read by a local device build.
