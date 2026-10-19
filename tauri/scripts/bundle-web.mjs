@@ -5,12 +5,11 @@
 // offline, and updates only when a new build ships.
 //
 // The website build is a `vite build` with the default base `/`, which is
-// exactly what a single-origin shell wants — the service worker it emits is
-// still in the bundle, and the page leaves it unregistered on its own once it
-// sees the shell's global (`pwa/src/shell-host.ts`). It is built with
+// exactly what a single-origin shell wants. It is built with
 // VITE_SHELL_BUILD=on, which leaves every link back to the source and the
-// website out of it (pwa/vite.config.ts), and a dist/ that still names them is
-// refused before it is copied (scripts/lib/no-source.mjs).
+// website out of it, and the service worker too (pwa/vite.config.ts); a dist/
+// that still names the source or carries a worker is refused before it is
+// copied (scripts/lib/no-source.mjs).
 //
 // `--skip-build` copies whatever the last build left in `pwa/dist/`, for
 // iterating on the shell without paying for the site each time. Every release
@@ -25,7 +24,7 @@ import { cpSync, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { refuseSourceLinks } from "../../scripts/lib/no-source.mjs";
+import { refuseServiceWorker, refuseSourceLinks } from "../../scripts/lib/no-source.mjs";
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_DIR = resolve(APP_DIR, "..");
@@ -73,6 +72,7 @@ if (!existsSync(join(DIST_DIR, "index.html"))) {
 }
 
 refuseSourceLinks(DIST_DIR);
+refuseServiceWorker(DIST_DIR);
 
 // Replace wholesale rather than merge: a stale chunk left behind from a
 // previous build is the exact failure mode that shows up as a blank window

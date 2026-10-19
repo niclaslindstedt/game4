@@ -35,7 +35,9 @@ type AppPwaOptions = {
    * nested under this base, e.g. `/preview/` under `/`). */
   ignorePaths?: string[];
   /** A build for the phone or desktop app (`VITE_SHELL_BUILD=on`), which
-   * leaves out the website's own pages — see `WEB_ONLY`. */
+   * leaves out the website's own pages — see `WEB_ONLY` — and the service
+   * worker: the shell ships the bundle, so there is no newer build for a
+   * worker to fetch or prompt about. */
   shellBuild?: boolean;
 };
 
@@ -317,11 +319,13 @@ export function appPwa({
       const totalBytes = Object.values(assets).reduce((a, b) => a + b, 0);
 
       this.emitFile({ type: "asset", fileName: "manifest.webmanifest", source: manifestSource });
-      this.emitFile({
-        type: "asset",
-        fileName: "sw.js",
-        source: buildServiceWorker(cacheId, base, version, precache, ignorePaths),
-      });
+      if (!shellBuild) {
+        this.emitFile({
+          type: "asset",
+          fileName: "sw.js",
+          source: buildServiceWorker(cacheId, base, version, precache, ignorePaths),
+        });
+      }
       this.emitFile({
         type: "asset",
         fileName: "version.json",

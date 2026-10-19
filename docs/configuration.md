@@ -147,6 +147,7 @@ There are no size budgets and no SEO tooling, by owner decision.
 
 - empties `__SOURCE_URL__`, so the HUD's build label and the menu's version stamp name the commit as plain text and the repository URL is not in the bundle at all;
 - leaves the website's own pages out of the webroot — `privacy/`, `support/` (which link to the source and its discussions) and `CNAME` (`WEB_ONLY` in `pwa/pwa-plugin.ts`).
+- emits no service worker: the shell ships the bundle and a new release replaces it, so there is nothing for a worker to fetch or prompt about, and the bundle scripts refuse a webroot that carries `sw.js`.
 
 The desktop Help menu and About panel send a player to the app's page on apps.agilator.se (`APPS_PAGE_URL` in `identity.ts`, restated in `tauri/shell/src/config.rs`), whose privacy and support pages are the ones the store listing names. `scripts/lib/no-source.mjs` then reads every file of the webroot as bytes and the bundle script refuses one that names `niclaslindstedt`, "Source code" or "Report an issue"; `make store-metadata` refuses a listing that names the source or the owner's domain. The website keeps every link.
 

@@ -28,7 +28,7 @@ import { fileURLToPath } from "node:url";
 
 import { zipSync } from "fflate";
 
-import { refuseSourceLinks } from "../../scripts/lib/no-source.mjs";
+import { refuseServiceWorker, refuseSourceLinks } from "../../scripts/lib/no-source.mjs";
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const REPO_DIR = resolve(APP_DIR, "..");
@@ -91,6 +91,7 @@ if (count === 0 || !files["index.html"]) {
 }
 
 refuseSourceLinks(DIST_DIR);
+refuseServiceWorker(DIST_DIR);
 
 // Deterministic zip: pin every entry to the ZIP epoch (1980-01-01) so the
 // artifact is reproducible and doesn't drift by build time.

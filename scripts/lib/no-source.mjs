@@ -12,7 +12,7 @@
 // hide in any of them — and one that still names any of these fails the bundle
 // script before anything is zipped or copied.
 
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 
 /** What a packaged build must not contain, matched without regard to case. */
@@ -59,6 +59,19 @@ export function refuseSourceLinks(dir) {
   console.error(
     "  Was it built with VITE_SHELL_BUILD=on? A --skip-build reuses whatever the last " +
       "build left, and a plain website build carries the links.\n",
+  );
+  process.exit(1);
+}
+
+/** Exit the bundle script if `dir` still carries a service worker. A packaged
+ * build ships its own bundle and is updated by a new release, never by a
+ * worker; `VITE_SHELL_BUILD=on` leaves it out (`pwa/pwa-plugin.ts`), so one
+ * here means the build was not a shell build. */
+export function refuseServiceWorker(dir) {
+  if (!existsSync(join(dir, "sw.js"))) return;
+  console.error(
+    `\n✗ refusing this bundle: ${dir} carries sw.js, and a phone or desktop build ships no ` +
+      "service worker. Was it built with VITE_SHELL_BUILD=on?\n",
   );
   process.exit(1);
 }
